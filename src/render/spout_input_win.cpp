@@ -122,7 +122,7 @@ bool SpoutInput::receive(const std::string& preferred, const std::string& exclud
         }
     }
     if (wanted.empty()) {
-        if (impl_->active()) {
+        if (active()) {
             impl_->spout.ReleaseReceiver();
             impl_->current.clear();
             impl_->receiving = false;

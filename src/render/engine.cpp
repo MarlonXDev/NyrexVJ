@@ -33,13 +33,16 @@ uniform float uOpacity;
 uniform int uMode;
 uniform vec4 uGrade;
 void main() {
-    vec3 c = applyGrade(texture(uTex, vUv).rgb, uGrade);
+    vec4 t = texture(uTex, vUv);
+    vec3 c = applyGrade(t.a > 0.001 ? t.rgb / t.a : t.rgb, uGrade) * t.a;
     if (uMode == 2) {
         fragColor = vec4(c * uOpacity, 1.0);
     } else if (uMode == 3) {
-        fragColor = vec4(mix(vec3(1.0), c, uOpacity), 1.0);
-    } else {
+        fragColor = vec4(vec3(1.0 - t.a * uOpacity) + c * uOpacity, 1.0);
+    } else if (uMode == 1) {
         fragColor = vec4(c, uOpacity);
+    } else {
+        fragColor = vec4(c * uOpacity, t.a * uOpacity);
     }
 }
 )glsl";
@@ -87,10 +90,11 @@ vec3 blendColors(vec3 b, vec3 s, int mode) {
 }
 
 void main() {
-    vec3 s = clamp(applyGrade(texture(uTex, vUv).rgb, uGrade), 0.0, 1.0);
+    vec4 t = texture(uTex, vUv);
+    vec3 s = clamp(applyGrade(t.a > 0.001 ? t.rgb / t.a : t.rgb, uGrade), 0.0, 1.0);
     vec3 b = texture(uBack, vUv).rgb;
     vec3 r = clamp(blendColors(b, s, uMode), 0.0, 1.0);
-    fragColor = vec4(mix(b, r, uOpacity), 1.0);
+    fragColor = vec4(mix(b, r, uOpacity * t.a), 1.0);
 }
 )glsl";
 
@@ -234,6 +238,28 @@ void main() {
 }
 )glsl";
 
+const char* kMediaBody = R"glsl(
+uniform sampler2D uTex;
+uniform vec2 uFit;
+uniform float uPremult;
+uniform float uBackdrop;
+void main() {
+    vec2 p = (vUv - 0.5) * uFit + 0.5;
+    vec2 inside = step(vec2(0.0), p) * step(p, vec2(1.0));
+    float mask = inside.x * inside.y;
+    vec4 t = texture(uTex, vec2(p.x, 1.0 - p.y));
+    float a = t.a * mask;
+    vec3 c = (uPremult > 0.5 ? t.rgb : t.rgb * t.a) * mask;
+    if (uBackdrop > 0.5) {
+        vec2 g = floor(vUv * vec2(16.0, 9.0));
+        vec3 back = mix(vec3(0.10), vec3(0.16), mod(g.x + g.y, 2.0));
+        fragColor = vec4(c + back * (1.0 - a), 1.0);
+    } else {
+        fragColor = vec4(c, a);
+    }
+}
+)glsl";
+
 const char* kThumbBody = R"glsl(
 uniform sampler2D uTex;
 uniform vec2 uTexel;
@@ -261,7 +287,7 @@ void applyBlend(int mode) {
         glBlendFunc(GL_DST_COLOR, GL_ZERO);
         break;
     default:
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         break;
     }
 }
@@ -343,6 +369,17 @@ bool Engine::buildPrograms() {
     spoutProgram_.flip = glGetUniformLocation(spoutProgram_.id, "uFlip");
     spoutLastUse_.fill(-1.0e9);
 
+    error.clear();
+    mediaProgram_.id = buildProgram(clipVertexSource(), std::string(kPassHeader) + kMediaBody, &error);
+    if (!mediaProgram_.id) {
+        logLine("Media shader failed: " + error);
+        return false;
+    }
+    mediaProgram_.tex = glGetUniformLocation(mediaProgram_.id, "uTex");
+    mediaProgram_.fit = glGetUniformLocation(mediaProgram_.id, "uFit");
+    mediaProgram_.premult = glGetUniformLocation(mediaProgram_.id, "uPremult");
+    mediaProgram_.backdrop = glGetUniformLocation(mediaProgram_.id, "uBackdrop");
+
     clips_.assign(clipLibrary().size(), ClipProgram{});
     effects_.assign(effectLibrary().size(), EffectProgram{});
 
@@ -354,7 +391,19 @@ bool Engine::buildPrograms() {
     if (!sceneRenderer_.init()) {
         logLine("3D clips are unavailable");
     }
+    media_.clear();
+    media_.resize(clipLibrary().size());
+    for (size_t i = 0; i < media_.size(); ++i) {
+        media_[i] = makeMedia(clipLibrary()[i]);
+    }
     return true;
+}
+
+std::unique_ptr<MediaPlayer> Engine::makeMedia(const ClipDef& def) const {
+    if (def.kind == ClipKind::ImageFile || def.kind == ClipKind::VideoFile) {
+        return std::make_unique<MediaPlayer>(def.name, def.path, def.kind == ClipKind::VideoFile);
+    }
+    return nullptr;
 }
 
 std::unique_ptr<ScenePlayer> Engine::makeScene(const ClipDef& def) const {
@@ -394,12 +443,119 @@ void Engine::syncLibrary() {
     }
     clips_.resize(library.size());
     scenes_.resize(library.size());
+    media_.resize(library.size());
     clipThumbs_.resize(library.size());
     for (size_t i = before; i < library.size(); ++i) {
         clipThumbs_[i].create(kThumbWidth, kThumbHeight);
         scenes_[i] = makeScene(library[i]);
+        media_[i] = makeMedia(library[i]);
+        if (media_[i]) {
+            deferredMediaThumbs_.push_back(i);
+        }
         if (library[i].kind == ClipKind::ScenePack) {
             deferredThumbs_.push_back(i);
+        }
+    }
+}
+
+bool Engine::isMediaClip(int clip) const {
+    return clip >= 0 && static_cast<size_t>(clip) < media_.size() && media_[static_cast<size_t>(clip)];
+}
+
+MediaPlayer* Engine::mediaPlayer(int clip) {
+    return isMediaClip(clip) ? media_[static_cast<size_t>(clip)].get() : nullptr;
+}
+
+int Engine::loadedMediaCount() const {
+    int count = 0;
+    for (const std::unique_ptr<MediaPlayer>& player : media_) {
+        if (player && player->state() == MediaState::Ready) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+bool Engine::ensureMedia(size_t index) {
+    if (index >= media_.size() || !media_[index]) {
+        return false;
+    }
+    MediaPlayer& player = *media_[index];
+    player.touch();
+    if (player.poll() != MediaState::Ready) {
+        return false;
+    }
+    if (!player.update(player.lastClock())) {
+        return false;
+    }
+    if (!player.thumbnailDone) {
+        renderMediaThumbnail(index);
+    }
+    return true;
+}
+
+void Engine::renderMediaThumbnail(size_t index) {
+    MediaPlayer& player = *media_[index];
+    player.thumbnailDone = true;
+    if (index >= clipThumbs_.size() || !clipThumbs_[index].fbo) {
+        return;
+    }
+    clipThumbs_[index].bind();
+    glDisable(GL_BLEND);
+    drawMedia(player, 1.0f, true, player.lastClock());
+}
+
+bool Engine::drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock) {
+    glClearColor(0.0f, 0.0f, 0.0f, backdrop ? 1.0f : 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    if (!player.update(clock) || player.texture() == 0 || player.width() <= 0 || player.height() <= 0) {
+        return false;
+    }
+    const float source = static_cast<float>(player.width()) / static_cast<float>(player.height());
+    const float target = static_cast<float>(out_.width) / static_cast<float>(out_.height);
+    const float zoom = std::max(scale, 0.05f);
+    glUseProgram(mediaProgram_.id);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, player.texture());
+    glUniform1i(mediaProgram_.tex, 0);
+    glUniform2f(mediaProgram_.fit, std::max(target / source, 1.0f) / zoom, std::max(source / target, 1.0f) / zoom);
+    glUniform1f(mediaProgram_.premult, player.premultiplied() ? 1.0f : 0.0f);
+    glUniform1f(mediaProgram_.backdrop, backdrop ? 1.0f : 0.0f);
+    triangle_.draw();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return true;
+}
+
+void Engine::serviceMedia() {
+    constexpr double kImageIdleSeconds = 120.0;
+    constexpr double kVideoIdleSeconds = 6.0;
+    for (const Layer& layer : comp.layers) {
+        for (const int cell : layer.cells) {
+            if (cell >= 0 && static_cast<size_t>(cell) < media_.size() && media_[static_cast<size_t>(cell)] && !media_[static_cast<size_t>(cell)]->isVideo()) {
+                ensureMedia(static_cast<size_t>(cell));
+            }
+        }
+    }
+    if (!deferredMediaThumbs_.empty()) {
+        const size_t i = deferredMediaThumbs_.front();
+        if (i >= media_.size() || !media_[i] || media_[i]->state() == MediaState::Failed) {
+            deferredMediaThumbs_.erase(deferredMediaThumbs_.begin());
+        } else {
+            ensureMedia(i);
+            if (media_[i]->thumbnailDone || media_[i]->state() == MediaState::Failed) {
+                deferredMediaThumbs_.erase(deferredMediaThumbs_.begin());
+            }
+        }
+    }
+    for (std::unique_ptr<MediaPlayer>& player : media_) {
+        if (!player || player->state() != MediaState::Ready) {
+            continue;
+        }
+        if (player->idleSeconds() > (player->isVideo() ? kVideoIdleSeconds : kImageIdleSeconds)) {
+            player->release();
+            if (!player->isVideo()) {
+                logLine("Image '" + player->label() + "' was unloaded because it was not used for two minutes");
+            }
         }
     }
 }
@@ -546,6 +702,11 @@ GpuMemory Engine::gpuMemory() const {
         memory.thumbnails += bytes(target);
     }
     memory.sceneDepth = sceneRenderer_.depthBytes();
+    for (const std::unique_ptr<MediaPlayer>& player : media_) {
+        if (player) {
+            memory.media += static_cast<size_t>(player->gpuBytes());
+        }
+    }
     for (const std::unique_ptr<ScenePlayer>& player : scenes_) {
         if (player && player->state() == SceneState::Ready) {
             memory.sceneGeometry += player->stats().gpuBytes;
@@ -568,6 +729,9 @@ bool Engine::ensureClip(size_t index) {
     }
     if (index < scenes_.size() && scenes_[index]) {
         return ensureScene(index);
+    }
+    if (index < media_.size() && media_[index]) {
+        return ensureMedia(index);
     }
     ClipProgram& clip = clips_[index];
     if (clip.tried) {
@@ -669,6 +833,10 @@ void Engine::shutdown() {
         glDeleteProgram(spoutProgram_.id);
         spoutProgram_ = SpoutProgram{};
     }
+    if (mediaProgram_.id) {
+        glDeleteProgram(mediaProgram_.id);
+        mediaProgram_ = MediaProgram{};
+    }
     for (ClipProgram& clip : clips_) {
         if (clip.id) {
             glDeleteProgram(clip.id);
@@ -677,6 +845,8 @@ void Engine::shutdown() {
     clips_.clear();
     deferredThumbs_.clear();
     scenes_.clear();
+    media_.clear();
+    deferredMediaThumbs_.clear();
     sceneRenderer_.shutdown();
     for (EffectProgram& effect : effects_) {
         if (effect.id) {
@@ -1249,6 +1419,10 @@ void Engine::renderClipThumbnails(int maxCount) {
     while (nextThumb_ < clips_.size() && done < maxCount) {
         const size_t i = nextThumb_++;
         ++done;
+        if (i < media_.size() && media_[i]) {
+            deferredMediaThumbs_.push_back(i);
+            continue;
+        }
         if (i < scenes_.size() && scenes_[i]) {
             if ((clipLibrary()[i].kind == ClipKind::BuiltinScene || clipLibrary()[i].kind == ClipKind::ScenePack) && !ensureScene(i) && scenes_[i]->state() == SceneState::Loading) {
                 deferredThumbs_.push_back(i);
@@ -1307,6 +1481,8 @@ void Engine::drawLayerSource(int clipIndex, const Layer& layer, float scale, dou
         frame.colorB = layer.colorB;
         frame.rainbow = layer.rainbow;
         sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, target);
+    } else if (media_[static_cast<size_t>(clipIndex)]) {
+        drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock);
     } else if (!spoutClip || !drawSpout(clipDef.sceneIndex, scale)) {
         drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clock), static_cast<float>(beat_), comp.bpm, static_cast<float>(target.width), static_cast<float>(target.height), layer.colorA, layer.colorB, layer.rainbow, scale);
     }
@@ -1567,6 +1743,7 @@ void Engine::render() {
     }
     renderClipThumbnails(2);
     serviceScenes();
+    serviceMedia();
     serviceSpout();
 
     feedbackUsed_.fill(false);

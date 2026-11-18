@@ -35,17 +35,42 @@ jobs:
         shell: pwsh
         run: python scripts/check_i18n.py
 
+      - name: Get the FFmpeg headers and libraries
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $url = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.1-latest-win64-lgpl-shared-7.1.zip'
+          Invoke-WebRequest -Uri $url -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg-sdk
+          $root = (Get-ChildItem ffmpeg-sdk -Directory | Select-Object -First 1).FullName
+          if (-not (Test-Path "$root/include/libavcodec/avcodec.h")) {
+            Write-Error "The FFmpeg archive has no headers"
+            exit 1
+          }
+          "FFMPEG_SDK=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Configure
         shell: pwsh
         run: |
           $release = if ($env:GITHUB_REF -like 'refs/tags/v*') { 'ON' } else { 'OFF' }
-          cmake -S . -B build -A x64 -DNYREXVJ_RELEASE=$release -DNYREXVJ_BUILD_NUMBER=${{ github.run_number }}
+          $arguments = @('-S', '.', '-B', 'build', '-A', 'x64', "-DNYREXVJ_RELEASE=$release", "-DNYREXVJ_BUILD_NUMBER=${{ github.run_number }}")
+          if ($env:FFMPEG_SDK) {
+            $arguments += "-DNYREXVJ_FFMPEG_ROOT=$($env:FFMPEG_SDK)"
+          }
+          cmake @arguments
 
       - name: Build
         run: cmake --build build --config Release --parallel
 
       - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure
+        shell: pwsh
+        run: |
+          if ($env:FFMPEG_SDK) {
+            New-Item -ItemType Directory -Path build/Release/ffmpeg -Force | Out-Null
+            Copy-Item "$($env:FFMPEG_SDK)/bin/*.dll" build/Release/ffmpeg/
+            $env:NYREXVJ_REQUIRE_VIDEO = '1'
+          }
+          ctest --test-dir build -C Release --output-on-failure
 
       - name: Package
         shell: pwsh

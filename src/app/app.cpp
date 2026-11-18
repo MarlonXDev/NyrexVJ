@@ -37,6 +37,20 @@ Composition emptyComposition() {
 
 bool App::init(GLFWwindow* window, const StartOptions& options) {
     window_ = window;
+    static App* dropTarget = nullptr;
+    dropTarget = this;
+    glfwSetDropCallback(window, [](GLFWwindow*, int count, const char** paths) {
+        if (dropTarget == nullptr || count <= 0 || paths == nullptr) {
+            return;
+        }
+        std::vector<std::string> list;
+        for (int i = 0; i < count; ++i) {
+            if (paths[i] != nullptr) {
+                list.emplace_back(paths[i]);
+            }
+        }
+        dropTarget->queueDroppedFiles(list);
+    });
     ImGuiIO& io = ImGui::GetIO();
     iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v6.ini").string();
     io.IniFilename = iniPath_.c_str();
@@ -299,6 +313,68 @@ void App::autosaveTick(double dt) {
     }
 }
 
+void App::queueDroppedFiles(const std::vector<std::string>& paths) {
+    pendingImports_.insert(pendingImports_.end(), paths.begin(), paths.end());
+}
+
+void App::serviceImports() {
+    if (importJob_.valid() && importJob_.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        const std::vector<ImportResult> results = importJob_.get();
+        int added = 0;
+        int existing = 0;
+        int rejected = 0;
+        std::string firstName;
+        for (const ImportResult& result : results) {
+            if (result.kind == ImportKind::Media || result.kind == ImportKind::Model) {
+                if (result.added) {
+                    ++added;
+                    if (firstName.empty()) {
+                        firstName = result.name;
+                    }
+                } else {
+                    ++existing;
+                }
+            } else {
+                ++rejected;
+            }
+        }
+        if (added > 0) {
+            rescanLibrary();
+            engine_.syncLibrary();
+            assetsDirty_ = true;
+        }
+        std::string message;
+        if (added == 1) {
+            message = std::string(tr("Added: ")) + firstName;
+        } else if (added > 1) {
+            message = std::to_string(added) + " " + tr("files added");
+        } else if (existing > 0) {
+            message = tr("Already in the library");
+        }
+        if (rejected > 0) {
+            if (!message.empty()) {
+                message += "  |  ";
+            }
+            message += std::to_string(rejected) + " " + tr("files skipped (images, videos and 3D models up to 256 MiB only)");
+        }
+        if (!message.empty()) {
+            toast(message);
+        }
+    }
+    if (!importJob_.valid() && !pendingImports_.empty()) {
+        std::vector<std::string> paths;
+        paths.swap(pendingImports_);
+        importJob_ = std::async(std::launch::async, [paths]() {
+            std::vector<ImportResult> out;
+            for (const std::string& path : paths) {
+                out.push_back(importAsset(path));
+            }
+            return out;
+        });
+        toast(tr("Importing files..."));
+    }
+}
+
 void App::toast(const std::string& message) {
     toastText_ = message;
     toastUntil_ = ImGui::GetTime() + 4.0;
@@ -401,8 +477,9 @@ void App::frame(double dt) {
         const int added = rescanLibrary();
         engine_.syncLibrary();
         assetsDirty_ = true;
-        toast(added > 0 ? std::string(tr("New 3D models found: ")) + std::to_string(added) : std::string(tr("No new 3D models found")));
+        toast(added > 0 ? std::string(tr("New files found: ")) + std::to_string(added) : std::string(tr("No new files found")));
     }
+    serviceImports();
 
     drawMenuBar();
     drawStatusBar();

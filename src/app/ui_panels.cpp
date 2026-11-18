@@ -322,10 +322,20 @@ void App::drawClipPanel() {
         ImGui::TextColored(ui::kAccent, "%s", tr("Spout input"));
     } else if (engine_.isSceneClip(clip)) {
         ImGui::TextColored(ui::kAccent, "%s", def.kind == ClipKind::ModelFile ? tr("3D model file") : tr("3D scene"));
+    } else if (def.kind == ClipKind::VideoFile) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Video file"));
+    } else if (def.kind == ClipKind::ImageFile) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Image file"));
     } else if (def.is3d) {
         ImGui::TextColored(ui::kAccent, "3D");
     }
     ImGui::EndGroup();
+
+    if (MediaPlayer* media = engine_.mediaPlayer(clip)) {
+        media->touch();
+        ImGui::Spacing();
+        drawMediaControls(*media);
+    }
 
     if (def.kind == ClipKind::SpoutSource) {
         ImGui::Spacing();

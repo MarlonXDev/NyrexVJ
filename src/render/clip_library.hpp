@@ -11,7 +11,9 @@ enum class ClipKind {
     BuiltinScene,
     ModelFile,
     ScenePack,
-    SpoutSource
+    SpoutSource,
+    ImageFile,
+    VideoFile
 };
 
 struct ClipDef {
@@ -22,11 +24,13 @@ struct ClipDef {
     int sceneIndex = -1;
     std::string path = {};
 
-    bool isScene() const { return kind != ClipKind::Shader && kind != ClipKind::SpoutSource; }
+    bool isScene() const { return kind == ClipKind::BuiltinScene || kind == ClipKind::ModelFile || kind == ClipKind::ScenePack; }
+    bool isMedia() const { return kind == ClipKind::ImageFile || kind == ClipKind::VideoFile; }
 };
 
 constexpr size_t kMaxModelClips = 64;
 constexpr size_t kMaxPackClips = 128;
+constexpr size_t kMaxMediaClips = 128;
 
 struct AssetFile {
     std::string name;
@@ -37,9 +41,13 @@ struct AssetFile {
 std::string modelDirectory();
 std::string texturesDirectory();
 std::string clipsDirectory();
+std::string mediaDirectory();
 std::vector<AssetFile> listModelAssets();
 std::vector<AssetFile> listTextureAssets();
 std::vector<AssetFile> listPackAssets();
+std::vector<AssetFile> listMediaAssets();
+std::string imageClipName(const std::string& stem);
+std::string videoClipName(const std::string& stem);
 std::string packClipName(const std::string& stem);
 
 const std::vector<ClipDef>& clipLibrary();

@@ -7,6 +7,7 @@
 
 #include "core/log.hpp"
 #include "core/settings.hpp"
+#include "media/media_image.hpp"
 #include "render/clip_library_extra.hpp"
 #include "scene3d/procedural.hpp"
 
@@ -161,6 +162,53 @@ void main() {
 }
 )glsl";
 
+int appendMediaClips(std::vector<ClipDef>& clips) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path directory = mediaDirectory();
+    fs::create_directories(directory, ec);
+    std::vector<fs::path> files;
+    for (fs::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code entryEc;
+        if (!it->is_regular_file(entryEc) || entryEc) {
+            continue;
+        }
+        const std::string name = utf8(it->path().filename());
+        if (isImageFileName(name) || isVideoFileName(name)) {
+            files.push_back(it->path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    std::set<std::string> taken;
+    size_t count = 0;
+    for (const ClipDef& clip : clips) {
+        taken.insert(lowerCase(clip.name));
+        if (clip.isMedia()) {
+            ++count;
+        }
+    }
+    int added = 0;
+    for (const fs::path& file : files) {
+        if (count >= kMaxMediaClips) {
+            logLine("More than " + std::to_string(kMaxMediaClips) + " media files found, the rest is ignored");
+            break;
+        }
+        const bool video = isVideoFileName(utf8(file.filename()));
+        const std::string name = video ? videoClipName(utf8(file.stem())) : imageClipName(utf8(file.stem()));
+        if (!taken.insert(lowerCase(name)).second) {
+            continue;
+        }
+        ClipDef def;
+        def.name = name;
+        def.kind = video ? ClipKind::VideoFile : ClipKind::ImageFile;
+        def.path = utf8(file);
+        clips.push_back(std::move(def));
+        ++count;
+        ++added;
+    }
+    return added;
+}
+
 void appendSpoutClips(std::vector<ClipDef>& clips) {
     for (int slot = 0; slot < kSpoutInputSlots; ++slot) {
         ClipDef def;
@@ -185,6 +233,7 @@ void appendSceneClips(std::vector<ClipDef>& clips) {
 
     appendModelClips(clips);
     appendPackClips(clips);
+    appendMediaClips(clips);
 }
 
 const char* kVertex = R"glsl(#version 330 core
@@ -680,8 +729,25 @@ std::string clipsDirectory() {
     return (std::filesystem::path(userDataDir()) / "clips").string();
 }
 
+std::string mediaDirectory() {
+    return (std::filesystem::path(userDataDir()) / "media").string();
+}
+
 std::string packClipName(const std::string& stem) {
     return "Scene: " + stem;
+}
+
+std::string imageClipName(const std::string& stem) {
+    return "Image: " + stem;
+}
+
+std::string videoClipName(const std::string& stem) {
+    return "Video: " + stem;
+}
+
+std::vector<AssetFile> listMediaAssets() {
+    std::vector<AssetFile> files = listFiles(mediaDirectory(), {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".gif", ".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"});
+    return files;
 }
 
 std::vector<AssetFile> listModelAssets() {
@@ -710,7 +776,7 @@ const std::vector<ClipDef>& clipLibrary() {
 }
 
 int rescanLibrary() {
-    return appendModelClips(mutableLibrary()) + appendPackClips(mutableLibrary());
+    return appendModelClips(mutableLibrary()) + appendPackClips(mutableLibrary()) + appendMediaClips(mutableLibrary());
 }
 
 int clipIndexByName(const std::string& name) {

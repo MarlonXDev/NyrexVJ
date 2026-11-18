@@ -5,6 +5,7 @@
 #include "core/settings.hpp"
 #include "render/clip_library.hpp"
 #include "render/gl_util.hpp"
+#include "render/media_player.hpp"
 #include "render/scene_player.hpp"
 #include "render/spout_input.hpp"
 
@@ -21,8 +22,9 @@ struct GpuMemory {
     size_t thumbnails = 0;
     size_t sceneDepth = 0;
     size_t sceneGeometry = 0;
+    size_t media = 0;
 
-    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry; }
+    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media; }
 };
 
 class Engine {
@@ -67,6 +69,9 @@ public:
     SceneRenderer& sceneRenderer() { return sceneRenderer_; }
     void reloadScene(int clip);
     int loadedSceneCount() const;
+    bool isMediaClip(int clip) const;
+    MediaPlayer* mediaPlayer(int clip);
+    int loadedMediaCount() const;
     GpuMemory gpuMemory() const;
     void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
     bool gpuTimingAvailable() const { return gpuQueries_[0] != 0; }
@@ -166,6 +171,14 @@ private:
         GLint flip = -1;
     };
 
+    struct MediaProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint fit = -1;
+        GLint premult = -1;
+        GLint backdrop = -1;
+    };
+
     struct Transition {
         bool active = false;
         bool frozen = false;
@@ -192,6 +205,11 @@ private:
     std::unique_ptr<ScenePlayer> makeScene(const ClipDef& def) const;
     void renderSceneThumbnail(size_t index);
     void serviceScenes();
+    bool ensureMedia(size_t index);
+    std::unique_ptr<MediaPlayer> makeMedia(const ClipDef& def) const;
+    void renderMediaThumbnail(size_t index);
+    void serviceMedia();
+    bool drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock);
     bool ensureEffect(size_t index);
     void uploadAudio();
     void computeEffective();
@@ -224,6 +242,9 @@ private:
     TransitionProgram transition_program_;
     ThumbProgram thumb_;
     SpoutProgram spoutProgram_;
+    MediaProgram mediaProgram_;
+    std::vector<std::unique_ptr<MediaPlayer>> media_;
+    std::vector<size_t> deferredMediaThumbs_;
     std::array<SpoutInput, kSpoutInputSlots> spoutSlots_;
     std::array<std::string, kSpoutInputSlots> spoutNames_;
     std::string spoutExcluded_;

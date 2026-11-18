@@ -4,6 +4,8 @@
 #include "core/log.hpp"
 #include "core/novelty.hpp"
 #include "core/preset.hpp"
+#include "media/media_image.hpp"
+#include "media/video_decoder.hpp"
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
@@ -17,7 +19,9 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <string>
+#include <system_error>
 
 namespace nvj {
 
@@ -164,6 +168,8 @@ bool matchesKind(const ClipDef& clip, int kind) {
         return clip.kind == ClipKind::ScenePack;
     case 5:
         return clip.kind == ClipKind::SpoutSource;
+    case 6:
+        return clip.isMedia();
     default:
         return true;
     }
@@ -188,6 +194,78 @@ void App::drawSceneDetails(const ScenePlayer& player) {
         ImGui::Text("%s: %.2f MB", tr("GPU memory"), static_cast<double>(player.stats().gpuBytes) / (1024.0 * 1024.0));
         ImGui::Text("%s: %.0f ms", tr("Load time"), player.loadMilliseconds());
         break;
+    }
+}
+
+void App::drawMediaDetails(const MediaPlayer& player, bool tooltip) {
+    switch (player.state()) {
+    case MediaState::Idle:
+        ImGui::TextDisabled("%s", tr("Not loaded yet"));
+        break;
+    case MediaState::Loading:
+        ImGui::TextDisabled("%s", tr("Loading..."));
+        break;
+    case MediaState::Failed:
+        ImGui::PushTextWrapPos(tooltip ? ImGui::GetFontSize() * 26.0f : 0.0f);
+        ImGui::Text("%s: %s", tr("Load failed"), player.error().c_str());
+        ImGui::PopTextWrapPos();
+        break;
+    case MediaState::Ready: {
+        ImGui::Text("%s: %d x %d", tr("Size"), player.width(), player.height());
+        if (player.isVideo()) {
+            const VideoInfo& info = player.videoInfo();
+            if (info.width != info.decodedWidth || info.height != info.decodedHeight) {
+                ImGui::Text("%s: %d x %d", tr("Original size"), info.width, info.height);
+            }
+            ImGui::Text("%s: %.2f", tr("Frame rate"), info.fps);
+            ImGui::Text("%s: %.1f s", tr("Duration"), info.duration);
+            ImGui::Text("%s: %s", tr("Codec"), info.codec.c_str());
+            if (info.hasAlpha) {
+                ImGui::Text("%s", tr("Has transparency"));
+            }
+        }
+        ImGui::Text("%s: %.2f MB", tr("GPU memory"), static_cast<double>(player.gpuBytes()) / (1024.0 * 1024.0));
+        break;
+    }
+    }
+}
+
+void App::drawMediaControls(MediaPlayer& player) {
+    ImGui::SeparatorText(player.isVideo() ? tr("Video") : tr("Image"));
+    drawMediaDetails(player, false);
+    if (player.state() == MediaState::Failed) {
+        if (player.isVideo()) {
+            const VideoSupport support = videoSupport();
+            if (!support.compiled) {
+                ImGui::PushTextWrapPos(0.0f);
+                ImGui::TextDisabled("%s", tr("This build of NyrexVJ was made without video support."));
+                ImGui::PopTextWrapPos();
+            } else if (!support.loaded) {
+                ImGui::Spacing();
+                ImGui::PushTextWrapPos(0.0f);
+                ImGui::TextColored(ui::kAccent, "%s", tr("Video clips need the FFmpeg libraries"));
+                ImGui::TextDisabled("%s", tr("Get a shared FFmpeg build (LGPL, version 7.1) and copy these files into the folder below:"));
+                for (const std::string& file : support.files) {
+                    ImGui::BulletText("%s", file.c_str());
+                }
+                ImGui::TextDisabled("%s", support.folder.c_str());
+                ImGui::PopTextWrapPos();
+                if (ImGui::SmallButton(tr("Open FFmpeg folder"))) {
+                    std::error_code ec;
+                    std::filesystem::create_directories(pathFromUtf8(support.folder), ec);
+                    platform::openFolder(support.folder);
+                }
+                ImGui::SameLine();
+                if (ImGui::SmallButton(tr("Check again"))) {
+                    retryVideoSupport();
+                    player.retry();
+                }
+                return;
+            }
+        }
+        if (ImGui::SmallButton(trId("Try again", "mediaRetry"))) {
+            player.retry();
+        }
     }
 }
 
@@ -286,8 +364,16 @@ void App::drawClipTile(int index, const ImVec2& size) {
             draw->AddText(ImGui::GetFont(), tagSize, ImVec2(pillMin.x + 4.0f, pillMin.y + 2.0f), ImGui::GetColorU32(ui::kBlack), tagText);
         }
     }
+    const char* badge = nullptr;
     if (clip.kind == ClipKind::SpoutSource) {
-        const char* label = tr("Spout");
+        badge = tr("Spout");
+    } else if (clip.kind == ClipKind::VideoFile) {
+        badge = tr("Video");
+    } else if (clip.kind == ClipKind::ImageFile) {
+        badge = tr("Image");
+    }
+    if (badge != nullptr) {
+        const char* label = badge;
         const ImVec2 badgeSize = ImGui::CalcTextSize(label);
         const ImVec2 badgeMin(imageMax.x - badgeSize.x - 10.0f, pos.y + 4.0f);
         const ImVec2 badgeMax(imageMax.x - 4.0f, pos.y + 8.0f + badgeSize.y);
@@ -323,6 +409,9 @@ void App::drawClipTile(int index, const ImVec2& size) {
         if (engine_.isSceneClip(index)) {
             ImGui::TextDisabled("%s", tr("3D scene"));
             drawSceneDetails(*engine_.scenePlayer(index));
+        }
+        if (MediaPlayer* player = engine_.mediaPlayer(index)) {
+            drawMediaDetails(*player, true);
         }
         ImGui::Separator();
         ImGui::TextDisabled("%s", tr("Click: put it into the selected cell and play it"));
@@ -361,8 +450,8 @@ void App::drawClipTile(int index, const ImVec2& size) {
 
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout")};
-    for (int k = 0; k < 6; ++k) {
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media")};
+    for (int k = 0; k < 7; ++k) {
         if (k > 0) {
             ImGui::SameLine(0.0f, 4.0f);
         }
@@ -408,9 +497,15 @@ void App::drawLibraryClips() {
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("3D models: put .glb or .gltf files into this folder, then press Scan again"));
     ImGui::TextDisabled("%s", modelDirectory().c_str());
+    ImGui::TextDisabled("%s", tr("Images and videos: drag files onto this window or put them into this folder"));
+    ImGui::TextDisabled("%s", mediaDirectory().c_str());
     ImGui::PopTextWrapPos();
     if (ImGui::SmallButton(tr("Open models folder"))) {
         platform::openFolder(modelDirectory());
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Open media folder"))) {
+        platform::openFolder(mediaDirectory());
     }
     ImGui::SameLine();
     if (ImGui::SmallButton(trId("Scan again", "scanModels"))) {
@@ -430,6 +525,7 @@ void App::drawLibraryAssets() {
         assetModels_ = listModelAssets();
         assetTextures_ = listTextureAssets();
         assetPacks_ = listPackAssets();
+        assetMedia_ = listMediaAssets();
         assetsDirty_ = false;
     }
     ImGui::PushTextWrapPos(0.0f);
@@ -445,6 +541,10 @@ void App::drawLibraryAssets() {
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Scenes folder"))) {
         platform::openFolder(clipsDirectory());
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Media folder"))) {
+        platform::openFolder(mediaDirectory());
     }
     if (ImGui::SmallButton(trId("Scan again", "scanModels"))) {
         rescanModels_ = true;
@@ -477,6 +577,29 @@ void App::drawLibraryAssets() {
     };
     section(tr("Models"), assetModels_, true);
     section(tr("Textures"), assetTextures_, false);
+    ImGui::SeparatorText(tr("Images and videos"));
+    if (assetMedia_.empty()) {
+        ImGui::TextDisabled("%s", tr("Nothing found"));
+    }
+    for (const AssetFile& file : assetMedia_) {
+        ImGui::PushID(file.path.c_str());
+        const std::string stem = pathToUtf8(pathFromUtf8(file.name).stem());
+        const bool video = isVideoFileName(file.name);
+        if (ImGui::Selectable(file.name.c_str(), false)) {
+            const int clip = clipIndexByName(video ? videoClipName(stem) : imageClipName(stem));
+            if (clip >= 0) {
+                selectedLibraryClip_ = clip;
+                assignClipToSelectedCell(clip);
+            } else {
+                toast(tr("Press Scan again first"));
+            }
+        }
+        const std::string size = formatBytes(file.bytes);
+        ImGui::SameLine(std::max(ImGui::GetContentRegionMax().x - ImGui::CalcTextSize(size.c_str()).x - 6.0f, 0.0f));
+        ImGui::TextDisabled("%s", size.c_str());
+        ImGui::SetItemTooltip("%s", tr("Click to put it into the selected cell"));
+        ImGui::PopID();
+    }
     ImGui::SeparatorText(tr("Your scenes"));
     if (assetPacks_.empty()) {
         ImGui::TextDisabled("%s", tr("No saved scenes yet"));

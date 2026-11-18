@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0 - 2026-11-18
+
+- 10 new blend modes, 14 in total: Subtract, Difference, Exclusion, Overlay, Soft Light, Hard Light, Lighten, Darken, Color Dodge and Linear Burn join Normal, Add, Screen and Multiply. Old presets and sessions load unchanged.
+- Undo and redo in the main window: the new Edit menu, Ctrl+Z and Ctrl+Y (or Ctrl+Shift+Z) take back and bring back every change to the layers, clips, effects and the master. Playing columns, tempo and the active deck are never rolled back, so undo cannot disturb a running show. The Clip Creator keeps its own undo.
+- Preview without playing: Ctrl+click on a clip (or Preview without playing in its right click menu) shows it in the Preview window while the output keeps playing what it played. The Preview window says whether it shows Live or Preview and has a Play now button that sends the shown clip on air.
+- Performance: the status bar shows CPU and GPU time per frame, Settings, Performance has a frame time graph with percentiles, a budget in frames per second that turns the numbers red when you miss it and a cost estimate of the loaded composition. NyrexVJ --bench-comp FRAMES measures the loaded composition, --bench-all every factory look, and --bench-budget MS makes the exit code 2 when the average frame is too slow, so a slow look is found before the show.
+- Clip Creator cameras: a scene can hold up to eight named cameras. Pick the one that plays or let the clip cut between all of them every few beats. The old single camera of existing scenes stays the first camera and older versions of NyrexVJ still play it.
+- Crash protection: the session is saved every 30 seconds and the last ten autosaves are kept in the recovery folder together with the unsaved Clip Creator scene. After a crash or a power cut the next start asks which autosave to continue from instead of loading the old state blindly, offers the unsaved Creator scene and shows the crash report and the end of the log for bug reports. Session files are now written in a way that cannot leave half a file behind.
+
 ## 0.10.0 - 2026-11-18
 
 - Spout input: four new clips, Spout Input 1 to 4, show the picture of another program that sends through Spout, for example Unreal Engine, TouchDesigner or a game (Windows). Pick the sender in the Clip window or leave it on Automatic. The image is fitted into the layer, takes effects like every other clip, connects again by itself when the sender returns and shows a placeholder while there is none.

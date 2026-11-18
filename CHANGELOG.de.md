@@ -1,5 +1,14 @@
 # Änderungsprotokoll
 
+## 0.11.0 - 2026-11-18
+
+- 10 neue Mischmodi, insgesamt 14: Subtrahieren, Differenz, Ausschluss, Überlagern, Weiches Licht, Hartes Licht, Heller, Dunkler, Abwedeln und Linear nachbelichten kommen zu Normal, Addieren, Aufhellen und Multiplizieren dazu. Alte Presets und Sitzungen laden unverändert.
+- Rückgängig und Wiederholen im Hauptfenster: Das neue Menü Bearbeiten, Strg+Z und Strg+Y (oder Strg+Umschalt+Z) nehmen jede Änderung an Ebenen, Clips, Effekten und Master zurück und holen sie wieder. Laufende Spalten, Tempo und das aktive Deck werden nie zurückgedreht, damit Rückgängig keine laufende Show stört. Der Clip Creator behält sein eigenes Rückgängig.
+- Vorschau ohne Abspielen: Strg+Klick auf einen Clip (oder Ohne Abspielen ansehen im Rechtsklick-Menü) zeigt ihn im Vorschau-Fenster, während die Ausgabe weiterspielt, was sie spielte. Das Vorschau-Fenster zeigt an, ob es Live oder Vorschau zeigt, und hat einen Knopf Jetzt abspielen, der den gezeigten Clip auf Sendung schickt.
+- Leistung: Die Statusleiste zeigt CPU- und GPU-Zeit pro Bild, Einstellungen, Leistung hat einen Bildzeit-Graphen mit Perzentilen, ein Budget in Bildern pro Sekunde, das die Zahlen rot färbt, wenn du es verfehlst, und eine Kostenschätzung der geladenen Komposition. NyrexVJ --bench-comp BILDER misst die geladene Komposition, --bench-all jeden Werks-Look, und --bench-budget MS setzt den Exit-Code auf 2, wenn das mittlere Bild zu langsam ist, so wird ein langsamer Look vor der Show gefunden.
+- Kameras im Clip Creator: Eine Szene kann bis zu acht benannte Kameras haben. Wähle die, die läuft, oder lass den Clip alle paar Beats zwischen allen schneiden. Die alte einzelne Kamera bestehender Szenen bleibt die erste Kamera, und ältere Versionen von NyrexVJ spielen sie weiterhin.
+- Absturzschutz: Die Sitzung wird alle 30 Sekunden gespeichert, und die letzten zehn Autosaves liegen im Ordner recovery zusammen mit der ungespeicherten Clip-Creator-Szene. Nach einem Absturz oder Stromausfall fragt der nächste Start, von welchem Autosave du weitermachen willst, statt den alten Stand blind zu laden, bietet die ungespeicherte Creator-Szene an und zeigt den Absturzbericht und das Ende des Logs für Fehlerberichte. Sitzungsdateien werden jetzt so geschrieben, dass keine halbe Datei zurückbleiben kann.
+
 ## 0.10.0 - 2026-11-18
 
 - Spout-Eingang: Vier neue Clips, Spout Input 1 bis 4, zeigen das Bild eines anderen Programms, das per Spout sendet, zum Beispiel Unreal Engine, TouchDesigner oder ein Spiel (Windows). Wähle den Sender im Clip-Fenster oder lass ihn auf Automatisch. Das Bild wird in die Ebene eingepasst, nimmt Effekte wie jeder andere Clip, verbindet sich von selbst wieder, wenn der Sender zurückkehrt, und zeigt einen Platzhalter, solange keiner da ist.

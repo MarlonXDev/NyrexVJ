@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.10.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
+> Status: v0.11.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
 
 ## Download
 

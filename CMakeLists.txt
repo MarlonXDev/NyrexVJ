@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.5.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.6.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -114,6 +114,11 @@ set(NYREXVJ_CORE_SOURCES
     src/audio/synthetic_source.cpp
     src/render/clip_library.cpp
     src/render/clips_extra.cpp
+    src/scene3d/glb_writer.cpp
+    src/scene3d/gltf.cpp
+    src/scene3d/image_decode.cpp
+    src/scene3d/procedural.cpp
+    src/scene3d/scene_model.cpp
     src/core/composition.cpp
     src/render/effect_library.cpp
     src/render/effects_extra.cpp
@@ -139,13 +144,14 @@ endif()
 add_library(nvj_core STATIC ${NYREXVJ_CORE_SOURCES})
 target_include_directories(nvj_core PUBLIC src)
 target_include_directories(nvj_core SYSTEM PUBLIC third_party/json)
+target_include_directories(nvj_core SYSTEM PRIVATE third_party/stb)
 target_compile_definitions(nvj_core PUBLIC
     NYREXVJ_VERSION="${NYREXVJ_VERSION_STRING}"
     NYREXVJ_BUILD_NUMBER=${NYREXVJ_BUILD_NUMBER}
 )
 
 if(WIN32)
-    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32 ws2_32 winmm)
+    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32 ws2_32 winmm psapi)
 else()
     find_package(Threads REQUIRED)
     target_link_libraries(nvj_core PUBLIC Threads::Threads)
@@ -154,6 +160,7 @@ endif()
 set(NYREXVJ_APP_SOURCES
     src/main.cpp
     src/app/app.cpp
+    src/app/bench.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
     src/app/ui_deck.cpp
@@ -164,6 +171,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/engine.cpp
     src/render/gl_util.cpp
     src/render/output_window.cpp
+    src/render/scene_player.cpp
     src/render/stb_impl.cpp
 )
 
@@ -207,6 +215,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_control_tests PRIVATE nvj_core)
     target_include_directories(nvj_control_tests PRIVATE tests)
     add_test(NAME nvj_control_tests COMMAND nvj_control_tests)
+    add_executable(nvj_scene3d_tests tests/test_scene3d.cpp)
+    target_link_libraries(nvj_scene3d_tests PRIVATE nvj_core)
+    target_include_directories(nvj_scene3d_tests PRIVATE tests)
+    target_include_directories(nvj_scene3d_tests SYSTEM PRIVATE third_party/stb)
+    add_test(NAME nvj_scene3d_tests COMMAND nvj_scene3d_tests)
     add_executable(nvj_i18n_tests tests/test_i18n.cpp)
     target_link_libraries(nvj_i18n_tests PRIVATE nvj_core)
     target_include_directories(nvj_i18n_tests PRIVATE tests)

@@ -2,12 +2,77 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
+#include <set>
 
+#include "core/log.hpp"
 #include "render/clip_library_extra.hpp"
+#include "scene3d/procedural.hpp"
 
 namespace nvj {
 
 namespace {
+
+std::string lowerCase(std::string text) {
+    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return text;
+}
+
+std::string utf8(const std::filesystem::path& path) {
+    const std::u8string text = path.u8string();
+    return std::string(text.begin(), text.end());
+}
+
+void appendSceneClips(std::vector<ClipDef>& clips) {
+    const std::vector<BuiltinSceneInfo>& builtin = builtinScenes();
+    for (size_t i = 0; i < builtin.size(); ++i) {
+        ClipDef def;
+        def.name = builtin[i].name;
+        def.is3d = true;
+        def.kind = ClipKind::BuiltinScene;
+        def.sceneIndex = static_cast<int>(i);
+        clips.push_back(std::move(def));
+    }
+
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path directory = modelDirectory();
+    fs::create_directories(directory, ec);
+    std::vector<fs::path> files;
+    for (fs::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code entryEc;
+        if (!it->is_regular_file(entryEc) || entryEc) {
+            continue;
+        }
+        const std::string extension = lowerCase(it->path().extension().string());
+        if (extension == ".glb" || extension == ".gltf") {
+            files.push_back(it->path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    std::set<std::string> taken;
+    for (const ClipDef& clip : clips) {
+        taken.insert(lowerCase(clip.name));
+    }
+    size_t count = 0;
+    for (const fs::path& file : files) {
+        if (count >= kMaxModelClips) {
+            logLine("More than " + std::to_string(kMaxModelClips) + " model files found, the rest is ignored");
+            break;
+        }
+        const std::string name = "Model: " + utf8(file.stem());
+        if (!taken.insert(lowerCase(name)).second) {
+            continue;
+        }
+        ClipDef def;
+        def.name = name;
+        def.is3d = true;
+        def.kind = ClipKind::ModelFile;
+        def.path = utf8(file);
+        clips.push_back(std::move(def));
+        ++count;
+    }
+}
 
 const char* kVertex = R"glsl(#version 330 core
 out vec2 vUv;
@@ -483,9 +548,14 @@ void main() {
 )glsl", false});
 
     appendExtraClips(clips);
+    appendSceneClips(clips);
     return clips;
 }
 
+}
+
+std::string modelDirectory() {
+    return (std::filesystem::path(userDataDir()) / "models").string();
 }
 
 const std::vector<ClipDef>& clipLibrary() {

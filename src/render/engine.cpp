@@ -3,9 +3,11 @@
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
 #include "core/log.hpp"
+#include "scene3d/procedural.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 
 namespace nvj {
 
@@ -256,6 +258,27 @@ bool Engine::buildPrograms() {
 
     clips_.assign(clipLibrary().size(), ClipProgram{});
     effects_.assign(effectLibrary().size(), EffectProgram{});
+
+    scenes_.clear();
+    scenes_.resize(clipLibrary().size());
+    for (size_t i = 0; i < scenes_.size(); ++i) {
+        const ClipDef& def = clipLibrary()[i];
+        if (def.kind == ClipKind::BuiltinScene) {
+            const size_t sceneIndex = static_cast<size_t>(def.sceneIndex);
+            scenes_[i] = std::make_unique<ScenePlayer>(def.name, [sceneIndex]() {
+                GltfResult result;
+                result.scene = builtinScenes()[sceneIndex].build();
+                result.ok = true;
+                return result;
+            });
+        } else if (def.kind == ClipKind::ModelFile) {
+            const std::string path = def.path;
+            scenes_[i] = std::make_unique<ScenePlayer>(def.name, [path]() { return loadGltfFile(std::filesystem::path(std::u8string(path.begin(), path.end()))); });
+        }
+    }
+    if (!sceneRenderer_.init()) {
+        logLine("3D clips are unavailable");
+    }
     return true;
 }
 
@@ -295,9 +318,97 @@ bool Engine::init() {
     return true;
 }
 
+bool Engine::ensureScene(size_t index) {
+    if (index >= scenes_.size() || !scenes_[index] || !sceneRenderer_.ready()) {
+        return false;
+    }
+    ScenePlayer& player = *scenes_[index];
+    if (player.poll() != SceneState::Ready) {
+        return false;
+    }
+    if (!player.thumbnailDone) {
+        renderSceneThumbnail(index);
+    }
+    return true;
+}
+
+void Engine::renderSceneThumbnail(size_t index) {
+    ScenePlayer& player = *scenes_[index];
+    player.thumbnailDone = true;
+    if (index >= clipThumbs_.size() || !clipThumbs_[index].fbo) {
+        return;
+    }
+    const AudioFeatures sample = virtualAudio(2.3, 2.6);
+    const Layer defaults;
+    SceneFrame frame;
+    frame.time = 2.6f;
+    frame.bass = sample.bass;
+    frame.level = sample.level;
+    frame.kick = sample.kick;
+    frame.colorA = defaults.colorA;
+    frame.colorB = defaults.colorB;
+    sceneRenderer_.draw(player, frame, clipThumbs_[index]);
+}
+
+void Engine::serviceScenes() {
+    for (const Layer& layer : comp.layers) {
+        for (const int cell : layer.cells) {
+            if (cell >= 0 && static_cast<size_t>(cell) < scenes_.size() && scenes_[static_cast<size_t>(cell)]) {
+                ensureScene(static_cast<size_t>(cell));
+            }
+        }
+    }
+    for (size_t k = 0; k < deferredThumbs_.size();) {
+        const size_t i = deferredThumbs_[k];
+        const bool done = ensureScene(i) || scenes_[i]->state() == SceneState::Failed;
+        if (done) {
+            deferredThumbs_.erase(deferredThumbs_.begin() + static_cast<long>(k));
+        } else {
+            ++k;
+        }
+    }
+}
+
+GpuMemory Engine::gpuMemory() const {
+    const auto bytes = [](const RenderTarget& target) {
+        return target.fbo ? static_cast<size_t>(target.width) * static_cast<size_t>(target.height) * 4 : static_cast<size_t>(0);
+    };
+    GpuMemory memory;
+    for (const RenderTarget* target : {&layerA_, &layerB_, &compA_, &compB_, &out_, &deckTex_[0], &deckTex_[1], &transTex_}) {
+        memory.targets += bytes(*target);
+    }
+    for (const RenderTarget& target : feedback_) {
+        memory.targets += bytes(target);
+    }
+    for (const RenderTarget& target : clipThumbs_) {
+        memory.thumbnails += bytes(target);
+    }
+    for (const RenderTarget& target : previews_) {
+        memory.thumbnails += bytes(target);
+    }
+    memory.sceneDepth = sceneRenderer_.depthBytes();
+    for (const std::unique_ptr<ScenePlayer>& player : scenes_) {
+        if (player && player->state() == SceneState::Ready) {
+            memory.sceneGeometry += player->stats().gpuBytes;
+        }
+    }
+    return memory;
+}
+
+bool Engine::isSceneClip(int clip) const {
+    return clip >= 0 && static_cast<size_t>(clip) < scenes_.size() && scenes_[static_cast<size_t>(clip)];
+}
+
+ScenePlayer* Engine::scenePlayer(int clip) {
+    return isSceneClip(clip) ? scenes_[static_cast<size_t>(clip)].get() : nullptr;
+}
+
 bool Engine::ensureClip(size_t index) {
     if (index >= clips_.size()) {
         return false;
+    }
+    if (index < scenes_.size() && scenes_[index]) {
+        return ensureScene(index);
     }
     ClipProgram& clip = clips_[index];
     if (clip.tried) {
@@ -361,6 +472,11 @@ bool Engine::ensureEffect(size_t index) {
 int Engine::prepareAll(std::string& report) {
     int failed = 0;
     for (size_t i = 0; i < clips_.size(); ++i) {
+        if (i < scenes_.size() && scenes_[i] && sceneRenderer_.ready() && !scenes_[i]->wait()) {
+            ++failed;
+            report += "scene " + clipLibrary()[i].name + ": " + scenes_[i]->error() + "\n";
+            continue;
+        }
         if (!ensureClip(i)) {
             ++failed;
             report += "clip " + clipLibrary()[i].name + "\n";
@@ -383,6 +499,9 @@ void Engine::shutdown() {
         }
     }
     clips_.clear();
+    deferredThumbs_.clear();
+    scenes_.clear();
+    sceneRenderer_.shutdown();
     for (EffectProgram& effect : effects_) {
         if (effect.id) {
             glDeleteProgram(effect.id);
@@ -880,6 +999,12 @@ void Engine::renderClipThumbnails(int maxCount) {
     while (nextThumb_ < clips_.size() && done < maxCount) {
         const size_t i = nextThumb_++;
         ++done;
+        if (i < scenes_.size() && scenes_[i]) {
+            if (clipLibrary()[i].kind == ClipKind::BuiltinScene && !ensureScene(i) && scenes_[i]->state() == SceneState::Loading) {
+                deferredThumbs_.push_back(i);
+            }
+            continue;
+        }
         if (!ensureClip(i) || !clipThumbs_[i].fbo) {
             continue;
         }
@@ -1023,7 +1148,20 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
 
         layerA_.bind();
         glDisable(GL_BLEND);
-        drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clocks[li]), static_cast<float>(beat_), comp.bpm, w, h, layer.colorA, layer.colorB, layer.rainbow, effective[li].scale);
+        if (scenes_[static_cast<size_t>(clipIndex)]) {
+            SceneFrame frame;
+            frame.time = static_cast<float>(clocks[li]);
+            frame.scale = effective[li].scale;
+            frame.bass = audio_.bass;
+            frame.level = audio_.level;
+            frame.kick = audio_.kick;
+            frame.colorA = layer.colorA;
+            frame.colorB = layer.colorB;
+            frame.rainbow = layer.rainbow;
+            sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, layerA_);
+        } else {
+            drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clocks[li]), static_cast<float>(beat_), comp.bpm, w, h, layer.colorA, layer.colorB, layer.rainbow, effective[li].scale);
+        }
 
         RenderTarget* result = runChain(layer.fx, chainBase + l, &layerA_, &layerB_);
         if (updatePreviews) {
@@ -1086,6 +1224,7 @@ void Engine::render() {
     }
 
     renderClipThumbnails(2);
+    serviceScenes();
 
     feedbackUsed_.fill(false);
     uploadAudio();

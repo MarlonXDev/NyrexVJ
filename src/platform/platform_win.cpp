@@ -5,6 +5,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <psapi.h>
 #include <shellapi.h>
 #include <winhttp.h>
 
@@ -436,6 +437,15 @@ bool openUrl(const std::string& url) {
 bool openFolder(const std::string& path) {
     std::wstring wide = widen(path);
     return reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", wide.c_str(), nullptr, nullptr, SW_SHOWNORMAL)) > 32;
+}
+
+size_t processMemoryBytes() {
+    PROCESS_MEMORY_COUNTERS counters{};
+    counters.cb = sizeof(counters);
+    if (!GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters))) {
+        return 0;
+    }
+    return static_cast<size_t>(counters.WorkingSetSize);
 }
 
 }

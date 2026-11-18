@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.6.0 - 2026-11-18
+
+- 3D-Clips: drei neue Clips, die echte 3D-Modelle statt Shader sind, Torus Knot Mesh, Crystal Cluster Mesh und Orbit Rings Mesh. Sie haben Tiefe, Beleuchtung und Animation, folgen Farben, Tempo und Größe der Ebene, pulsieren mit Bass und Kick und nehmen Effekte wie jeder andere Clip.
+- Eigene 3D-Modelle: Lege .glb- oder .gltf-Dateien, mit Texturen und Animation, in den neuen Modellordner (der Bibliothek-Tab öffnet ihn, danach NyrexVJ einmal neu starten) und sie erscheinen in der Bibliothek als Model: Name. Modelle laden im Hintergrund, ohne das Bild anzuhalten, und beschädigte oder zu große Dateien werden mit einer Meldung abgelehnt, statt abzustürzen.
+- Tooltips in der Bibliothek: Zeige auf einen 3D-Clip, um Eckpunkte, Dreiecke, Grafikspeicher und Ladezeit zu sehen. Ebenen, die dasselbe Modell spielen, teilen es sich im Speicher.
+- Messmodus für Entwickler: NyrexVJ --bench-scene 4:300:"Torus Knot Mesh" meldet Bildzeiten und Speicher mit mehreren 3D-Ebenen gleichzeitig.
+
 ## 0.5.0 - 2026-11-18
 
 - Live-Steuerung per OSC: Schalte sie unter Einstellungen, Steuerung ein (standardmäßig aus, Port 9010, nur dieser Computer, außer du erlaubst andere). NyrexVJ reagiert dann auf 207 Adressen unter /nyrex/ für den Master, die 16 Decks, die 8 Spalten, jeden Clip, Deckkraft, Tempo, Größe und Farbe jeder Ebene, Bypass, Solo, Leeren sowie alle Effektschalter und Parameter. Sende einen Wert von 0 bis 1 oder gar nichts, um einen Auslöser zu feuern. Das klappt mit TouchDesigner, Max, Pure Data, Python-Skripten und allem anderen, das OSC spricht.

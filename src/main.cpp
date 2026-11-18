@@ -1,4 +1,5 @@
 #include "app/app.hpp"
+#include "app/bench.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 #include "app/theme.hpp"
@@ -24,6 +25,8 @@ struct Options {
     bool checkShaders = false;
     std::string screenshot;
     std::string dumpOutput;
+    std::string benchScene;
+    std::string benchOut;
     std::vector<std::pair<int, int>> switches;
     std::vector<std::pair<int, std::string>> dumps;
     std::vector<std::pair<int, nvj::MidiMessage>> midi;
@@ -43,6 +46,10 @@ Options parseOptions(int argc, char** argv) {
             options.screenshot = argv[++i];
         } else if (arg == "--dump-output" && hasValue) {
             options.dumpOutput = argv[++i];
+        } else if (arg == "--bench-scene" && hasValue) {
+            options.benchScene = argv[++i];
+        } else if (arg == "--bench-out" && hasValue) {
+            options.benchOut = argv[++i];
         } else if (arg == "--decks" && hasValue) {
             options.start.decks = argv[++i];
         } else if (arg == "--transition" && hasValue) {
@@ -219,6 +226,18 @@ int main(int argc, char** argv) {
     double last = glfwGetTime();
     int frameCount = 0;
     int exitCode = 0;
+
+    if (!options.benchScene.empty()) {
+        glfwSwapInterval(0);
+        const int benchExit = nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut);
+        app.shutdown();
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return benchExit;
+    }
 
     if (options.checkShaders || options.frames > 0) {
         std::string report;

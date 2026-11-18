@@ -35,3 +35,13 @@ This is a proposed direction, **not** approval to build a new renderer.
 - Measure frame times and memory with multiple simultaneous 3D clips.
 - Decide scene serialization and asset packaging only after testing.
 - Confirm supported material, animation, and lighting scope with maintainers.
+
+## Prototype results (2026-11-18, Issue #6)
+Status of the validation list above, see [SCENE3D.md](../SCENE3D.md) for details.
+
+- **Integration point:** done. A scene clip renders into the layer texture through its own framebuffer with a shared depth renderbuffer, then the unchanged effect chain and compositor run. No renderer rewrite was needed.
+- **One glTF/GLB scene in a compositor-compatible texture:** done, including textures, node hierarchy and looping animation. Verified headless on Linux and through the unit tests; the Windows build runs in CI, a real Windows GPU run is still outstanding.
+- **Frame times and memory with several 3D clips:** memory measured (shared depth buffer 8 MiB at 1080p, geometry shared between layers). Frame times only on a software renderer, which proves the benchmark but not the performance. **Open:** run `--bench-scene` on the target GPU.
+- **Scene serialization and asset packaging:** not decided on purpose. Models are plain `.glb` or `.gltf` files in a folder, presets reference them by name.
+- **Material, animation and lighting scope:** prototype scope is base colour, node animation and fixed lights. **Open:** maintainers confirm or change it.
+- **Safe loading:** size, count, depth, path and range limits with tests; loading never runs on the render thread. **Open:** cancellation of very slow loads.

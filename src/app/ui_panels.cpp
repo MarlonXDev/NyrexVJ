@@ -197,6 +197,81 @@ void App::drawLayer() {
     int activeClip = layer.activeColumn >= 0 ? layer.cells[static_cast<size_t>(layer.activeColumn)] : -1;
     ImGui::TextDisabled("%s", activeClip >= 0 ? library[static_cast<size_t>(activeClip)].name.c_str() : tr("no clip"));
 
+    ImGui::SeparatorText(tr("Video"));
+    ImGui::SliderFloat(trId("Opacity", "layerOpacity"), &layer.opacity, 0.0f, 1.0f, "%.2f");
+    if (ImGui::BeginCombo(trId("Blend", "layerBlend"), tr(blendName(layer.blend)))) {
+        for (int b = 0; b < BlendModeCount; ++b) {
+            if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
+                layer.blend = b;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ui::toggleButton("B", layer.bypass);
+    ImGui::SetItemTooltip("%s", tr("Bypass: skip this layer"));
+    ImGui::SameLine();
+    ui::toggleButton("S", layer.solo);
+    ImGui::SetItemTooltip("%s", tr("Solo: show only this layer"));
+
+    if (ImGui::CollapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        drawMods(layer.mods, false);
+    }
+    if (ImGui::CollapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        drawEffectRack(layer.fx);
+    }
+    ImGui::End();
+}
+
+void App::drawSceneControls(ScenePlayer& player) {
+    drawSceneDetails(player);
+    ImGui::PushID("scenecontrols");
+    if (player.state() == SceneState::Loading) {
+        if (ImGui::SmallButton(trId("Cancel loading", "sceneCancel"))) {
+            player.cancel();
+        }
+    } else if (player.state() == SceneState::Failed) {
+        if (ImGui::SmallButton(trId("Try again", "sceneRetry"))) {
+            player.retry();
+        }
+    }
+    ImGui::PopID();
+}
+
+void App::drawClipPanel() {
+    ImGui::Begin(trId("Clip", "clip"));
+    selectedLayer_ = std::clamp(selectedLayer_, 0, kLayerCount - 1);
+    selectedColumn_ = std::clamp(selectedColumn_, 0, kColumnCount - 1);
+    Layer& layer = engine_.comp.layers[static_cast<size_t>(selectedLayer_)];
+    const std::vector<ClipDef>& library = clipLibrary();
+    int clip = layer.cells[static_cast<size_t>(selectedColumn_)];
+    if (clip < 0 && layer.activeColumn >= 0) {
+        clip = layer.cells[static_cast<size_t>(layer.activeColumn)];
+    }
+
+    if (clip < 0) {
+        ImGui::TextWrapped("%s", tr("Select a clip in the deck, or click a clip in the Library to put it into the selected cell."));
+        ImGui::End();
+        return;
+    }
+
+    const ClipDef& def = library[static_cast<size_t>(clip)];
+    ImGui::Image(ui::texId(engine_.clipThumbnail(clip)), ImVec2(112.0f, 63.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+    ImGui::SameLine();
+    ImGui::BeginGroup();
+    ImGui::TextUnformatted(def.name.c_str());
+    ImGui::TextDisabled("%s", ui::cellLabel(selectedLayer_, selectedColumn_).c_str());
+    if (engine_.isSceneClip(clip)) {
+        ImGui::TextColored(ui::kAccent, "%s", def.kind == ClipKind::ModelFile ? tr("3D model file") : tr("3D scene"));
+    } else if (def.is3d) {
+        ImGui::TextColored(ui::kAccent, "3D");
+    }
+    ImGui::EndGroup();
+
+    if (engine_.isSceneClip(clip)) {
+        ImGui::Spacing();
+        drawSceneControls(*engine_.scenePlayer(clip));
+    }
+
     ImGui::SeparatorText(tr("Look"));
     ImGui::SliderFloat(trId("Speed", "layerSpeed"), &layer.speed, 0.1f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
     ImGui::SliderFloat(trId("Scale", "layerScale"), &layer.scale, 0.25f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
@@ -223,14 +298,8 @@ void App::drawLayer() {
         ImGui::EndCombo();
     }
 
-    if (ImGui::CollapsingHeader(trId("Grade", "hdrGrade"))) {
+    if (ImGui::CollapsingHeader(trId("Grade", "hdrGrade"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawGrade(layer.grade);
-    }
-    if (ImGui::CollapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
-        drawMods(layer.mods, false);
-    }
-    if (ImGui::CollapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
-        drawEffectRack(layer.fx);
     }
     ImGui::End();
 }
@@ -309,39 +378,6 @@ void App::drawMaster() {
     ImGui::SliderFloat(trId("Level", "masterLevel"), &comp.master.level, 0.0f, 1.0f, "%.2f");
     ImGui::SameLine();
     ui::toggleButton(trId("Blackout", "blackout"), engine_.blackout);
-
-    float bpm = comp.bpm;
-    ImGui::SetNextItemWidth(110.0f);
-    if (ImGui::DragFloat("BPM", &bpm, 0.1f, 40.0f, 240.0f, "%.1f")) {
-        comp.bpm = std::clamp(bpm, 40.0f, 240.0f);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(trId("Tap", "tap"))) {
-        engine_.tap();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(trId("Resync", "resync"))) {
-        engine_.resync();
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("/2")) {
-        comp.bpm = std::clamp(comp.bpm * 0.5f, 40.0f, 240.0f);
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("x2")) {
-        comp.bpm = std::clamp(comp.bpm * 2.0f, 40.0f, 240.0f);
-    }
-    ImGui::SameLine();
-    ImGui::TextDisabled("%s %d", tr("Beat"), static_cast<int>(std::floor(engine_.beat())) % 4 + 1);
-
-    if (audio_.active()) {
-        const AudioFeatures& features = audio_.features();
-        ImGui::Checkbox(trId("Sync BPM to audio", "syncBpm"), &settings_.audioSyncBpm);
-        if (features.bpm > 0.0f) {
-            ImGui::SameLine();
-            ImGui::TextDisabled("%.1f", features.bpm);
-        }
-    }
 
     if (ImGui::BeginCombo(trId("Resolution", "resolution"), kResolutions[comp.resolution].label)) {
         for (int i = 0; i < kResolutionCount; ++i) {

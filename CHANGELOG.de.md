@@ -1,5 +1,15 @@
 # Änderungsprotokoll
 
+## 0.8.0 - 2026-11-18
+
+- Neues Fensterlayout im Stil von Resolume Arena: Das Clip-Raster mit seinen Ebenenköpfen füllt den oberen Bereich, die Deck-Knöpfe und die Tempozeile liegen direkt darunter, Vorschau und Ausgabe sitzen unten links, Master und Ebene teilen sich ein Fenster mit Reitern, der gewählte Clip hat ein eigenes Clip-Fenster und der Browser mit Presets, Bibliothek und Audio steht rechts. Das Fensterlayout wird mit diesem Update einmal zurückgesetzt (Einstellungen, Aussehen, Fensterlayout zurücksetzen geht jederzeit).
+- Pause-Knopf in der Tempozeile: Er friert alle Bewegung, Clips, Beat- und Ebenenuhren ein, während Deck-Übergänge weiterlaufen. Der neue Reiter Ebene neben Master und das neue Clip-Fenster sammeln alles zur gewählten Ebene und zum gewählten Clip, auch die Regler der 3D-Modelle.
+- 8 neue Clips, insgesamt 46: Neon Sigil (leuchtende heilige Geometrie), Neon Lattice, Neon Corridor, Chaos Smoke, Tesseract (ein rotierender 4D-Würfel), Laser Web, Mandelbox Fly (ein Flug durch ein beleuchtetes Fraktal) und Prism Bloom. Alle folgen den Ebenenfarben und bewegen sich zur Musik.
+- 8 neue Effekte, insgesamt 76: Kaleido Neon, Mandala Fold, Hue Feedback, Star Burst, Chrome Liquid, Image Terrain, Hyperspace und Shatter. Sie machen aus jedem Bild Neon-Kaleidoskope, endlose Mandalas, farbwechselnde Rückkopplungsspuren, Lichtsterne, flüssiges Chrom, eine Landschaft zum Überfliegen, einen Sprung in den Hyperraum oder splitterndes Glas, das beim Kick auseinanderfliegt.
+- 8 neue, härtere Werkpresets, insgesamt 26: Hyperdrive, Neon Cathedral, Chrome Meltdown, Shatter Storm, Mandala Machine, Terrain Flight, Tesseract Club und Feedback Galaxy. "Decks mit Werks-Looks füllen" beginnt jetzt mit diesen acht.
+- Neues ist mit einem kleinen "neu" hinter dem Namen markiert, in der Presets-Liste, bei den Clips und bei den Effekten der Bibliothek. Die Markierung gehört zu der Version, die das Element gebracht hat, und verschwindet mit der nächsten Nebenversion von selbst, sie zeigt also immer nur, was wirklich neu ist.
+- 3D-Modelle: Die Bibliothek hat einen Knopf Neu einlesen, der neue Modelldateien ohne Neustart findet, und das Laden eines Modells hat jetzt ein Zeitlimit von 60 Sekunden und einen Knopf Laden abbrechen, damit eine riesige Datei den Ladevorgang nicht lange aufhalten kann.
+
 ## 0.7.0 - 2026-11-18
 
 - Bibliothek: Klicke einen Clip an, um ihn in die gewählte Zelle zu legen und abzuspielen, oder ziehe ihn auf eine beliebige Zelle oder auf einen Spaltenkopf, dann füllt er den gewählten Layer. Die Bibliothek hat ein Suchfeld, Filter (Alle, 2D, 3D, Modelle), größere Kacheln und ein Rechtsklick-Menü. Das Ziehen aus der Bibliothek startete vorher nicht, das ist behoben.

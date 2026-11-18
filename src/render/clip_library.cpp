@@ -23,17 +23,7 @@ std::string utf8(const std::filesystem::path& path) {
     return std::string(text.begin(), text.end());
 }
 
-void appendSceneClips(std::vector<ClipDef>& clips) {
-    const std::vector<BuiltinSceneInfo>& builtin = builtinScenes();
-    for (size_t i = 0; i < builtin.size(); ++i) {
-        ClipDef def;
-        def.name = builtin[i].name;
-        def.is3d = true;
-        def.kind = ClipKind::BuiltinScene;
-        def.sceneIndex = static_cast<int>(i);
-        clips.push_back(std::move(def));
-    }
-
+int appendModelClips(std::vector<ClipDef>& clips) {
     namespace fs = std::filesystem;
     std::error_code ec;
     const fs::path directory = modelDirectory();
@@ -51,10 +41,14 @@ void appendSceneClips(std::vector<ClipDef>& clips) {
     }
     std::sort(files.begin(), files.end());
     std::set<std::string> taken;
+    size_t count = 0;
     for (const ClipDef& clip : clips) {
         taken.insert(lowerCase(clip.name));
+        if (clip.kind == ClipKind::ModelFile) {
+            ++count;
+        }
     }
-    size_t count = 0;
+    int added = 0;
     for (const fs::path& file : files) {
         if (count >= kMaxModelClips) {
             logLine("More than " + std::to_string(kMaxModelClips) + " model files found, the rest is ignored");
@@ -71,7 +65,23 @@ void appendSceneClips(std::vector<ClipDef>& clips) {
         def.path = utf8(file);
         clips.push_back(std::move(def));
         ++count;
+        ++added;
     }
+    return added;
+}
+
+void appendSceneClips(std::vector<ClipDef>& clips) {
+    const std::vector<BuiltinSceneInfo>& builtin = builtinScenes();
+    for (size_t i = 0; i < builtin.size(); ++i) {
+        ClipDef def;
+        def.name = builtin[i].name;
+        def.is3d = true;
+        def.kind = ClipKind::BuiltinScene;
+        def.sceneIndex = static_cast<int>(i);
+        clips.push_back(std::move(def));
+    }
+
+    appendModelClips(clips);
 }
 
 const char* kVertex = R"glsl(#version 330 core
@@ -558,9 +568,21 @@ std::string modelDirectory() {
     return (std::filesystem::path(userDataDir()) / "models").string();
 }
 
-const std::vector<ClipDef>& clipLibrary() {
-    static const std::vector<ClipDef> library = buildLibrary();
+namespace {
+
+std::vector<ClipDef>& mutableLibrary() {
+    static std::vector<ClipDef> library = buildLibrary();
     return library;
+}
+
+}
+
+const std::vector<ClipDef>& clipLibrary() {
+    return mutableLibrary();
+}
+
+int rescanModelClips() {
+    return appendModelClips(mutableLibrary());
 }
 
 int clipIndexByName(const std::string& name) {

@@ -1,5 +1,6 @@
 #include "render/clip_library.hpp"
 #include "core/composition.hpp"
+#include "core/novelty.hpp"
 #include "render/effect_library.hpp"
 #include "core/preset.hpp"
 #include "core/settings.hpp"
@@ -542,6 +543,38 @@ void testUpdater() {
 
 }
 
+void testNovelty() {
+    const char* clips[] = {"Neon Sigil", "Neon Lattice", "Neon Corridor", "Chaos Smoke", "Tesseract", "Laser Web", "Mandelbox Fly", "Prism Bloom"};
+    const char* effects[] = {"Kaleido Neon", "Mandala Fold", "Hue Feedback", "Star Burst", "Chrome Liquid", "Image Terrain", "Hyperspace", "Shatter"};
+    const char* presets[] = {"Hyperdrive", "Neon Cathedral", "Chrome Meltdown", "Shatter Storm", "Mandala Machine", "Terrain Flight", "Tesseract Club", "Feedback Galaxy"};
+    for (const char* name : clips) {
+        CHECK(nvj::clipIndexByName(name) >= 0);
+        CHECK(nvj::isNewClipIn(name, "0.8.0"));
+        CHECK(nvj::isNewClipIn(name, "0.8.4-dev"));
+        CHECK(nvj::isNewClipIn(name, "v0.8.1"));
+        CHECK(!nvj::isNewClipIn(name, "0.9.0"));
+        CHECK(!nvj::isNewClipIn(name, "0.7.2"));
+        CHECK(!nvj::isNewClipIn(name, "1.8.0"));
+        CHECK(!nvj::isNewClipIn(name, ""));
+        CHECK(!nvj::isNewClipIn(name, "garbage"));
+    }
+    for (const char* name : effects) {
+        CHECK(nvj::effectIndexByName(name) >= 0);
+        CHECK(nvj::isNewEffectIn(name, "0.8.0"));
+        CHECK(!nvj::isNewEffectIn(name, "0.9.0"));
+    }
+    for (const char* name : presets) {
+        CHECK(nvj::factoryPresetIndex(name) >= 0);
+        CHECK(nvj::isNewPresetIn(name, "0.8.2"));
+        CHECK(!nvj::isNewPresetIn(name, "0.9.0"));
+    }
+    CHECK(!nvj::isNewClipIn("Plasma", "0.8.0"));
+    CHECK(!nvj::isNewEffectIn("Glow", "0.8.0"));
+    CHECK(!nvj::isNewPresetIn("Neon Club", "0.8.0"));
+    CHECK(!nvj::isNewClipIn("Hyperdrive", "0.8.0"));
+    CHECK(!nvj::isNewPresetIn("Neon Sigil", "0.8.0"));
+}
+
 int main() {
     testSha256();
     testVersions();
@@ -551,6 +584,7 @@ int main() {
     testPresets();
     testDecks();
     testPresetFiles();
+    testNovelty();
     testUpdater();
     std::printf("%d checks, %d failed\n", gChecks, gFailures);
     return gFailures == 0 ? 0 : 1;

@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 
 namespace nvj::ui {
 
@@ -37,6 +38,17 @@ inline const Palette kPalettes[] = {
     {"Violet", {0.55f, 0.25f, 1.00f}, {0.00f, 0.85f, 0.90f}},
     {"Mono", {1.00f, 1.00f, 1.00f}, {0.35f, 0.35f, 0.35f}},
 };
+
+inline std::string cellLabel(int layer, int column) {
+    return std::string(tr("Layer ")) + std::to_string(layer + 1) + ", " + tr("Column ") + std::to_string(column + 1);
+}
+
+inline void newTag(const ImVec2& textStart, const char* label, float lineHeight) {
+    const float size = ImGui::GetFontSize() * 0.66f;
+    const float x = textStart.x + ImGui::CalcTextSize(label).x + 7.0f;
+    const float y = textStart.y + (lineHeight - size) * 0.5f;
+    ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), size, ImVec2(x, y), ImGui::GetColorU32(kAccent), tr("new"));
+}
 
 inline ImTextureID texId(unsigned int texture) {
     return static_cast<ImTextureID>(static_cast<std::uintptr_t>(texture));

@@ -33,7 +33,7 @@ Composition emptyComposition() {
 bool App::init(GLFWwindow* window, const StartOptions& options) {
     window_ = window;
     ImGuiIO& io = ImGui::GetIO();
-    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v5.ini").string();
+    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v6.ini").string();
     io.IniFilename = iniPath_.c_str();
     needsLayout_ = !std::filesystem::exists(iniPath_);
 
@@ -303,6 +303,13 @@ void App::frame(double dt) {
     }
     output_.render(engine_.outputTexture(), engine_.width(), engine_.height());
 
+    if (rescanModels_) {
+        rescanModels_ = false;
+        const int added = rescanModelClips();
+        engine_.syncLibrary();
+        toast(added > 0 ? std::string(tr("New 3D models found: ")) + std::to_string(added) : std::string(tr("No new 3D models found")));
+    }
+
     drawMenuBar();
     drawStatusBar();
     ImGuiID dock = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
@@ -313,8 +320,10 @@ void App::frame(double dt) {
     handleShortcuts();
     drawDeck();
     drawOutput();
-    drawLayer();
+    drawPreview();
     drawMaster();
+    drawLayer();
+    drawClipPanel();
     drawBrowser();
     drawSettingsWindow();
     drawUpdateCard();
@@ -332,17 +341,21 @@ void App::buildLayout(ImGuiID dock) {
     ImGui::DockBuilderAddNode(dock, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dock, ImGui::GetMainViewport()->WorkSize);
     ImGuiID bottom = 0;
-    ImGuiID top = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.50f, nullptr, &bottom);
+    ImGuiID top = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.52f, nullptr, &bottom);
     ImGuiID rest = 0;
-    ImGuiID output = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Left, 0.28f, nullptr, &rest);
+    ImGuiID monitors = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Left, 0.25f, nullptr, &rest);
+    ImGuiID preview = 0;
+    ImGuiID output = ImGui::DockBuilderSplitNode(monitors, ImGuiDir_Up, 0.56f, nullptr, &preview);
     ImGuiID rest2 = 0;
-    ImGuiID layer = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.30f, nullptr, &rest2);
+    ImGuiID master = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.34f, nullptr, &rest2);
     ImGuiID browser = 0;
-    ImGuiID master = ImGui::DockBuilderSplitNode(rest2, ImGuiDir_Left, 0.48f, nullptr, &browser);
+    ImGuiID clip = ImGui::DockBuilderSplitNode(rest2, ImGuiDir_Left, 0.42f, nullptr, &browser);
     ImGui::DockBuilderDockWindow("###deck", top);
     ImGui::DockBuilderDockWindow("###output", output);
-    ImGui::DockBuilderDockWindow("###layer", layer);
+    ImGui::DockBuilderDockWindow("###preview", preview);
     ImGui::DockBuilderDockWindow("###master", master);
+    ImGui::DockBuilderDockWindow("###layer", master);
+    ImGui::DockBuilderDockWindow("###clip", clip);
     ImGui::DockBuilderDockWindow("###browser", browser);
     ImGui::DockBuilderFinish(dock);
 }

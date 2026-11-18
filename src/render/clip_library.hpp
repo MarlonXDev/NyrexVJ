@@ -28,6 +28,7 @@ constexpr size_t kMaxModelClips = 64;
 std::string modelDirectory();
 
 const std::vector<ClipDef>& clipLibrary();
+int rescanModelClips();
 int clipIndexByName(const std::string& name);
 const std::string& clipVertexSource();
 std::string clipFragmentSource(const ClipDef& clip);

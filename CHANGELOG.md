@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 - 2026-11-18
+
+- New window layout in the style of Resolume Arena: the clip grid with its layer headers fills the top, the deck buttons and the tempo row sit right below it, the preview and the output are at the bottom left, Master and Layer share one tabbed window, the selected clip has its own Clip window and the Browser with Presets, Library and Audio is on the right. The window layout is reset once by this update (Settings, Appearance, Reset window layout does it any time).
+- Pause button in the tempo row: it freezes all motion, clips, beat and layer clocks, while deck transitions keep running. The new Layer tab next to Master and the new Clip window collect everything about the selected layer and clip, including the controls of 3D models.
+- 8 new clips, 46 in total: Neon Sigil (glowing sacred geometry), Neon Lattice, Neon Corridor, Chaos Smoke, Tesseract (a rotating 4D cube), Laser Web, Mandelbox Fly (a flight through a lit fractal) and Prism Bloom. All of them follow the layer colours and move with the music.
+- 8 new effects, 76 in total: Kaleido Neon, Mandala Fold, Hue Feedback, Star Burst, Chrome Liquid, Image Terrain, Hyperspace and Shatter. They turn any picture into neon kaleidoscopes, endless mandalas, colour-shifting feedback trails, light stars, liquid chrome, a landscape you fly over, a jump into hyperspace or shattering glass that bursts on the kick.
+- 8 new, harder factory presets, 26 in total: Hyperdrive, Neon Cathedral, Chrome Meltdown, Shatter Storm, Mandala Machine, Terrain Flight, Tesseract Club and Feedback Galaxy. "Fill the decks with factory looks" now starts with these eight.
+- New things are marked with a small "new" behind their name in the Presets list, the Library clips and the Library effects. The marker belongs to the version that added the item and disappears by itself with the next minor version, so it only ever shows what is really new.
+- 3D models: the Library has a Scan again button that finds new model files without restarting, and loading a model now has a time limit of 60 seconds and a Cancel loading button, so a huge file can no longer hold up the load for long.
+
 ## 0.7.0 - 2026-11-18
 
 - Library: click a clip to put it into the selected cell and play it, or drag it onto any cell or onto a column header, which fills the selected layer. The Library has a search box, filters (All, 2D, 3D, Models), larger tiles and a right click menu. Dragging from the Library did not start before, this is fixed.

@@ -553,6 +553,341 @@ void main() {
     fragColor = vec4(col, 1.0);
 }
 )glsl", false});
+
+    clips.push_back({"Neon Sigil", R"glsl(
+float segd(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+void main() {
+    vec2 p = centered() * 0.98;
+    float t = uTime * 0.11 + uBeat * 0.012;
+    float bass = uAudio.x;
+    float n = 6.0;
+    float seg = 2.0 * PI / n;
+    float a = atan(p.y, p.x) + t * 0.5;
+    float r = length(p);
+    a = abs(mod(a, seg) - seg * 0.5);
+    vec2 q = vec2(cos(a), sin(a)) * r;
+    vec3 col = vec3(0.0);
+    float sc = 1.0;
+    for (int i = 0; i < 7; ++i) {
+        float fi = float(i);
+        q = abs(q);
+        q -= vec2(0.24 + 0.07 * sin(t * 2.0 + fi), 0.11 + 0.05 * cos(t * 1.7 + fi * 1.4));
+        q = rot(0.6 + 0.4 * sin(t + fi * 0.9)) * q;
+        q *= 1.3;
+        sc *= 1.3;
+        float d1 = segd(q, vec2(0.0), vec2(0.6, 0.0)) / sc;
+        float d2 = segd(q, vec2(0.6, 0.0), vec2(0.4, 0.42)) / sc;
+        float d3 = abs(length(q - vec2(0.3, 0.12)) - 0.2) / sc;
+        float d = min(min(d1, d2), d3);
+        float w = 0.0022 * (1.0 + 1.6 * uKick + bass);
+        float core = 1.0 - ss(w, w * 2.4, d);
+        float halo = 0.0018 / (d + 0.0018);
+        vec3 c = duo(fi / 6.0 + 0.1 * sin(uTime * 0.3));
+        col += c * (core * 1.6 + halo * 0.3) * (1.0 - fi * 0.11);
+    }
+    col *= ss(2.2, 0.3, r);
+    col += duo(0.5) * exp(-r * 3.0) * 0.14 * (0.5 + uKick);
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Neon Lattice", R"glsl(
+float polyd(vec2 p, float n, float r) {
+    float a = atan(p.y, p.x) + PI;
+    float s = 2.0 * PI / n;
+    return cos(floor(0.5 + a / s) * s - a) * length(p) - r;
+}
+
+void main() {
+    vec2 p = centered() * 1.05;
+    float t = uTime * 0.2 + uBeat * 0.03;
+    float pulse = 1.0 + 0.05 * exp(-fract(uBeat) * 4.0) + uAudio.x * 0.05;
+    p = abs(p);
+    if (p.y > p.x) {
+        p = p.yx;
+    }
+    vec3 col = vec3(0.0);
+    for (int k = 0; k < 11; ++k) {
+        float fk = float(k);
+        float sides = 3.0 + mod(fk * 2.0, 5.0);
+        float dir = mod(fk, 2.0) < 0.5 ? 1.0 : -1.0;
+        float radius = (0.1 + fk * 0.105) * pulse;
+        vec2 q = rot(t * dir * (0.4 + 0.05 * fk) + fk * 0.5) * p;
+        float d = abs(polyd(q, sides, radius));
+        float w = 0.0035 * (1.0 + uKick);
+        float line = 1.0 - ss(w, w * 2.2, d);
+        float halo = 0.003 / (d + 0.003);
+        vec3 c = duo(mod(fk, 2.0));
+        col += c * (line * 1.2 + halo * 0.28);
+    }
+    float spokes = abs(fract(atan(p.y, p.x) * 4.0 / PI + t * 0.1) - 0.5);
+    col += duo(1.0) * (1.0 - ss(0.0, 0.012, spokes)) * 0.25 * ss(1.4, 0.2, length(p));
+    col *= ss(1.9, 0.3, length(p));
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Neon Corridor", R"glsl(
+void main() {
+    vec2 p = centered() * 0.6;
+    float speed = uTime * 0.9 + uBeat * 0.1;
+    float m = max(abs(p.x) * 0.75, abs(p.y));
+    float depth = 0.55 / max(m, 0.001);
+    float z = depth + speed;
+    bool side = abs(p.x) * 0.75 > abs(p.y);
+    float u = side ? p.y / max(abs(p.x) * 0.75, 0.0001) : p.x * 0.75 / max(abs(p.y), 0.0001);
+    float chevron = abs(fract(z * 0.8 + abs(u) * 0.9) - 0.5);
+    float rib = 1.0 - ss(0.0, 0.07 + 0.018 / depth, chevron);
+    float lane = abs(fract(u * 2.0 + 0.5) - 0.5);
+    float rail = 1.0 - ss(0.0, 0.025, lane);
+    float cross = ss(0.45, 0.5, abs(fract(z) - 0.5));
+    vec3 cA = duo(0.0);
+    vec3 cB = duo(1.0);
+    vec3 col = cA * rib * (side ? 0.8 : 1.2) + cB * rail * 0.55 + mix(cA, cB, 0.5) * cross * 0.3;
+    col *= exp(-depth * 0.05) * ss(0.0, 0.3, m) * (0.9 + uKick * 0.8);
+    col += cB * exp(-m * 14.0) * 0.12;
+    col += vec3(1.0) * exp(-length(p) * 12.0) * 0.45 * (0.4 + uAudio.x);
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Chaos Smoke", R"glsl(
+void main() {
+    vec2 p = centered() * 0.55;
+    float t = uTime * 0.06 + uBeat * 0.004;
+    p = rot(t * 0.7) * p;
+    vec2 q = vec2(fbm(p + t), fbm(p + vec2(5.2, 1.3) - t));
+    vec2 r = vec2(fbm(p + 3.6 * q + vec2(1.7, 9.2) + t * 1.6), fbm(p + 3.6 * q + vec2(8.3, 2.8) - t * 1.3));
+    float f = fbm(p * 1.1 + 4.2 * r + uAudio.x * 0.3);
+    float ridge = 1.0 - abs(2.0 * f - 1.0);
+    ridge = pow(ridge, 2.4);
+    vec3 n = normalize(vec3(-dFdx(f) * 36.0, -dFdy(f) * 36.0, 1.0));
+    vec3 light = normalize(vec3(0.5, 0.65, 0.6));
+    float diff = max(dot(n, light), 0.0);
+    float spec = pow(max(dot(reflect(-light, n), vec3(0.0, 0.0, 1.0)), 0.0), 18.0);
+    float shade = clamp(diff * 0.75 + ridge * 0.9 + spec * 0.8, 0.0, 1.5);
+    shade *= 0.55 + 0.45 * ss(0.15, 0.85, f);
+    vec3 tint = mix(vec3(1.0), duo(0.5 + 0.5 * sin(f * 4.0 + uTime * 0.15)), 0.14);
+    vec3 col = vec3(pow(shade, 1.35)) * tint * (1.0 + 0.5 * uKick);
+    col *= 1.0 - 0.5 * ss(0.4, 1.7, length(p));
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Tesseract", R"glsl(
+float segd(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.000001), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+vec2 proj(vec4 v, float t, float scale) {
+    float c1 = cos(t * 0.7);
+    float s1 = sin(t * 0.7);
+    float c2 = cos(t * 0.43);
+    float s2 = sin(t * 0.43);
+    float c3 = cos(t * 0.31);
+    float s3 = sin(t * 0.31);
+    v.xw = mat2(c1, -s1, s1, c1) * v.xw;
+    v.yz = mat2(c2, -s2, s2, c2) * v.yz;
+    v.zw = mat2(c3, -s3, s3, c3) * v.zw;
+    float k = 1.0 / (2.6 - v.w);
+    vec3 w3 = v.xyz * k;
+    float k2 = 1.0 / (3.2 - w3.z);
+    return w3.xy * k2 * scale;
+}
+
+void main() {
+    vec2 p = centered();
+    float t = uTime * 0.5 + uBeat * 0.06;
+    float scale = 2.5 * (1.0 + 0.06 * exp(-fract(uBeat) * 4.0) + uAudio.x * 0.08);
+    vec3 col = vec3(0.0);
+    for (int layer = 0; layer < 2; ++layer) {
+        float fl = float(layer);
+        float s = scale * (1.0 - fl * 0.42);
+        float tt = t + fl * 1.7;
+        for (int i = 0; i < 16; ++i) {
+            vec4 a = vec4((i & 1) == 0 ? -1.0 : 1.0, (i & 2) == 0 ? -1.0 : 1.0, (i & 4) == 0 ? -1.0 : 1.0, (i & 8) == 0 ? -1.0 : 1.0);
+            vec2 pa = proj(a, tt, s);
+            for (int k = 0; k < 4; ++k) {
+                int j = i ^ (1 << k);
+                if (j < i) {
+                    continue;
+                }
+                vec4 b = vec4((j & 1) == 0 ? -1.0 : 1.0, (j & 2) == 0 ? -1.0 : 1.0, (j & 4) == 0 ? -1.0 : 1.0, (j & 8) == 0 ? -1.0 : 1.0);
+                vec2 pb = proj(b, tt, s);
+                float d = segd(p, pa, pb);
+                float w = 0.005 * (1.0 + uKick);
+                float core = 1.0 - ss(w, w * 2.0, d);
+                float halo = 0.004 / (d + 0.004);
+                vec3 c = duo(float(k) / 3.0 * 0.9 + fl * 0.5);
+                col += c * (core * 1.4 + halo * 0.22) * (1.0 - fl * 0.35);
+            }
+        }
+    }
+    col *= ss(2.8, 0.2, length(p));
+    fragColor = vec4(col, 1.0);
+}
+)glsl", true});
+
+    clips.push_back({"Laser Web", R"glsl(
+float segd(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.000001), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+vec2 node(int i, float t) {
+    float fi = float(i);
+    float a = (0.5 + 0.5 * sin(fi * 2.399963 + t * (0.35 + 0.08 * sin(fi)))) * 0.7853981;
+    float r = 0.22 + 0.7 * fract(fi * 0.381966 + 0.08 * sin(t * 0.5 + fi)) + 0.1 * sin(t * 0.6 + fi * 1.7);
+    return vec2(cos(a), sin(a)) * r;
+}
+
+void main() {
+    vec2 p = centered() * 0.78;
+    float t = uTime * 0.35 + uBeat * 0.04;
+    float a = atan(p.y, p.x);
+    float r = length(p);
+    float seg = PI / 4.0;
+    a = abs(mod(a, seg * 2.0) - seg) ;
+    p = vec2(cos(a), sin(a)) * r;
+    vec3 col = vec3(0.0);
+    vec2 pts[11];
+    for (int i = 0; i < 11; ++i) {
+        pts[i] = node(i, t);
+    }
+    for (int i = 0; i < 11; ++i) {
+        float dn = length(p - pts[i]);
+        col += duo(float(i % 2)) * (0.006 / (dn + 0.006)) * 0.9;
+        for (int j = i + 1; j < 11; ++j) {
+            float dist = length(pts[i] - pts[j]);
+            float reach = 0.7 + 0.25 * uKick + 0.2 * uAudio.y;
+            if (dist < reach) {
+                float d = segd(p, pts[i], pts[j]);
+                float fade = 1.0 - dist / reach;
+                float line = 1.0 - ss(0.0016, 0.0045, d);
+                float halo = 0.0016 / (d + 0.0016);
+                col += mix(duo(0.0), duo(1.0), fade) * (line * 1.1 + halo * 0.3) * (0.3 + fade * 1.3);
+            }
+        }
+    }
+    col *= ss(2.0, 0.2, r);
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Mandelbox Fly", R"glsl(
+float de(vec3 p, out float trap) {
+    vec3 z = p;
+    float dr = 1.0;
+    trap = 1e9;
+    for (int i = 0; i < 7; ++i) {
+        z = clamp(z, -1.0, 1.0) * 2.0 - z;
+        float r2 = dot(z, z);
+        if (r2 < 0.25) {
+            z *= 4.0;
+            dr *= 4.0;
+        } else if (r2 < 1.0) {
+            float k = 1.0 / r2;
+            z *= k;
+            dr *= k;
+        }
+        z = z * 2.0 + p;
+        dr = dr * 2.0 + 1.0;
+        trap = min(trap, dot(z, z));
+    }
+    return length(z) / abs(dr);
+}
+
+float deOnly(vec3 p) {
+    float tr;
+    return de(p, tr);
+}
+
+void main() {
+    vec2 p = centered() * 0.42;
+    float t = uTime * 0.1 + uBeat * 0.008;
+    vec3 ro = vec3(18.0 * cos(t), 6.0 * sin(t * 0.7) + 2.0, 18.0 * sin(t));
+    vec3 fwd = normalize(-ro);
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+    vec3 up = cross(fwd, right);
+    vec3 rd = normalize(fwd + p.x * right + p.y * up);
+    float dist = 0.0;
+    float trap = 0.0;
+    float steps = 0.0;
+    bool hit = false;
+    for (int i = 0; i < 80; ++i) {
+        float tr;
+        float d = de(ro + rd * dist, tr);
+        trap = tr;
+        steps += 1.0;
+        if (d < 0.0006 * dist) {
+            hit = true;
+            break;
+        }
+        if (dist > 60.0) {
+            break;
+        }
+        dist += d;
+    }
+    vec3 col = vec3(0.0);
+    float glow = steps / 80.0;
+    if (hit) {
+        vec3 pos = ro + rd * dist;
+        float e = 0.002 * dist;
+        vec3 n = normalize(vec3(deOnly(pos + vec3(e, 0.0, 0.0)) - deOnly(pos - vec3(e, 0.0, 0.0)), deOnly(pos + vec3(0.0, e, 0.0)) - deOnly(pos - vec3(0.0, e, 0.0)), deOnly(pos + vec3(0.0, 0.0, e)) - deOnly(pos - vec3(0.0, 0.0, e))));
+        vec3 l = normalize(vec3(0.6, 0.8, -0.4));
+        float diff = max(dot(n, l), 0.0);
+        float rim = pow(1.0 - max(dot(n, -rd), 0.0), 2.5);
+        float ao = 1.0 - glow * 1.1;
+        vec3 base = mix(duo(0.0), duo(1.0), clamp(log(trap + 1.0) * 0.35, 0.0, 1.0));
+        col = base * (0.15 + diff * 0.9) * clamp(ao, 0.0, 1.0) + duo(1.0) * rim * 0.7 * clamp(ao + 0.3, 0.0, 1.0);
+        col *= exp(-max(dist - 12.0, 0.0) * 0.03);
+    }
+    col += duo(1.0) * pow(glow, 2.5) * 0.9;
+    col += duo(0.0) * 0.015;
+    col *= 1.0 + 0.5 * uKick;
+    fragColor = vec4(col, 1.0);
+}
+)glsl", true});
+
+    clips.push_back({"Prism Bloom", R"glsl(
+void main() {
+    vec2 p = centered() * 1.1;
+    float t = uTime * 0.18 + uBeat * 0.02;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+    vec3 col = vec3(0.0);
+    for (int k = 0; k < 9; ++k) {
+        float fk = float(k);
+        float petals = 6.0 + floor(fk * 0.5) * 2.0;
+        float dir = mod(fk, 2.0) < 0.5 ? 1.0 : -1.0;
+        float phase = a * petals + t * dir * (1.0 + 0.2 * fk);
+        float base = 0.1 + fk * 0.1;
+        float edge = base * (1.0 + 0.55 * cos(phase) * (0.6 + 0.4 * sin(t + fk)));
+        edge *= 1.0 + 0.05 * exp(-fract(uBeat) * 4.0) + uAudio.x * 0.04;
+        float d = abs(r - edge);
+        float w = 0.0045 * (1.0 + uKick);
+        float line = 1.0 - ss(w, w * 2.5, d);
+        float halo = 0.0036 / (d + 0.0036);
+        float fill = ss(0.0, 0.5, 0.5 + 0.5 * cos(phase)) * ss(edge + 0.02, edge - 0.18, r) * 0.1;
+        vec3 c = duo(fk / 8.0);
+        col += c * (line * 1.7 + halo * 0.3 + fill);
+    }
+    col += vec3(1.0, 0.95, 0.9) * exp(-r * 7.0) * (0.45 + uKick * 0.6);
+    col *= ss(2.4, 0.2, r);
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
 }
 
 }

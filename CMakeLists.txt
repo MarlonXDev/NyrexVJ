@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.7.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.8.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -124,6 +124,7 @@ set(NYREXVJ_CORE_SOURCES
     src/render/effects_extra.cpp
     src/core/factory_presets.cpp
     src/core/log.cpp
+    src/core/novelty.cpp
     src/core/preset.cpp
     src/core/settings.cpp
     src/core/sha256.cpp

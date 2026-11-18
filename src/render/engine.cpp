@@ -15,6 +15,8 @@ namespace {
 
 constexpr int kThumbWidth = 160;
 constexpr int kThumbHeight = 90;
+constexpr int kPreviewWidth = 320;
+constexpr int kPreviewHeight = 180;
 
 const char* kPassHeader = R"glsl(#version 330 core
 in vec2 vUv;
@@ -262,24 +264,44 @@ bool Engine::buildPrograms() {
     scenes_.clear();
     scenes_.resize(clipLibrary().size());
     for (size_t i = 0; i < scenes_.size(); ++i) {
-        const ClipDef& def = clipLibrary()[i];
-        if (def.kind == ClipKind::BuiltinScene) {
-            const size_t sceneIndex = static_cast<size_t>(def.sceneIndex);
-            scenes_[i] = std::make_unique<ScenePlayer>(def.name, [sceneIndex]() {
-                GltfResult result;
-                result.scene = builtinScenes()[sceneIndex].build();
-                result.ok = true;
-                return result;
-            });
-        } else if (def.kind == ClipKind::ModelFile) {
-            const std::string path = def.path;
-            scenes_[i] = std::make_unique<ScenePlayer>(def.name, [path]() { return loadGltfFile(std::filesystem::path(std::u8string(path.begin(), path.end()))); });
-        }
+        scenes_[i] = makeScene(clipLibrary()[i]);
     }
     if (!sceneRenderer_.init()) {
         logLine("3D clips are unavailable");
     }
     return true;
+}
+
+std::unique_ptr<ScenePlayer> Engine::makeScene(const ClipDef& def) const {
+    if (def.kind == ClipKind::BuiltinScene) {
+        const size_t sceneIndex = static_cast<size_t>(def.sceneIndex);
+        return std::make_unique<ScenePlayer>(def.name, [sceneIndex](const GltfLimits&) {
+            GltfResult result;
+            result.scene = builtinScenes()[sceneIndex].build();
+            result.ok = true;
+            return result;
+        });
+    }
+    if (def.kind == ClipKind::ModelFile) {
+        const std::string path = def.path;
+        return std::make_unique<ScenePlayer>(def.name, [path](const GltfLimits& limits) { return loadGltfFile(std::filesystem::path(std::u8string(path.begin(), path.end())), limits); });
+    }
+    return nullptr;
+}
+
+void Engine::syncLibrary() {
+    const std::vector<ClipDef>& library = clipLibrary();
+    const size_t before = clips_.size();
+    if (library.size() <= before) {
+        return;
+    }
+    clips_.resize(library.size());
+    scenes_.resize(library.size());
+    clipThumbs_.resize(library.size());
+    for (size_t i = before; i < library.size(); ++i) {
+        clipThumbs_[i].create(kThumbWidth, kThumbHeight);
+        scenes_[i] = makeScene(library[i]);
+    }
 }
 
 bool Engine::init() {
@@ -310,7 +332,7 @@ bool Engine::init() {
         thumb.create(kThumbWidth, kThumbHeight);
     }
     for (RenderTarget& preview : previews_) {
-        preview.create(kThumbWidth, kThumbHeight);
+        preview.create(kPreviewWidth, kPreviewHeight);
         clearTarget(preview);
     }
     nextThumb_ = 0;
@@ -710,8 +732,9 @@ void Engine::computeEffectiveFor(const std::array<Layer, kLayerCount>& layers, c
 }
 
 void Engine::update(double dt) {
-    time_ += dt;
-    beat_ += dt * static_cast<double>(comp.bpm) / 60.0;
+    const double step = paused ? 0.0 : dt;
+    time_ += step;
+    beat_ += step * static_cast<double>(comp.bpm) / 60.0;
     if (transition_.active) {
         transition_.elapsed += static_cast<float>(dt);
         if (transition_.elapsed >= transition_.duration) {
@@ -734,9 +757,9 @@ void Engine::update(double dt) {
     computeEffective();
     for (int l = 0; l < kLayerCount; ++l) {
         const size_t i = static_cast<size_t>(l);
-        layerClock_[i] += dt * static_cast<double>(effective_[i].speed);
+        layerClock_[i] += step * static_cast<double>(effective_[i].speed);
         if (transition_.active && !transition_.frozen) {
-            outClocks_[i] += dt * static_cast<double>(outEffective_[i].speed);
+            outClocks_[i] += step * static_cast<double>(outEffective_[i].speed);
         }
     }
 }

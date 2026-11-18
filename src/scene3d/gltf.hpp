@@ -2,6 +2,7 @@
 
 #include "scene3d/scene_model.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -21,10 +22,13 @@ struct GltfLimits {
     int maxImageDimension = 4096;
     size_t maxImageBytes = 192u * 1024u * 1024u;
     int maxJsonDepth = 64;
+    double maxSeconds = 60.0;
+    const std::atomic<bool>* cancel = nullptr;
 };
 
 struct GltfResult {
     bool ok = false;
+    bool interrupted = false;
     std::string error;
     std::vector<std::string> warnings;
     double milliseconds = 0.0;

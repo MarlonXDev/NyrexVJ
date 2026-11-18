@@ -392,12 +392,181 @@ Composition crystalLines() {
     return comp;
 }
 
+Composition hyperdrive() {
+    Composition comp = customDeck("Hyperdrive", 142.0f,
+        {"Warp Speed", "Mandelbox Fly", "Tesseract", "Neon Corridor", "Tunnel", "Cube Tunnel 3D", "Laser Web", "Starfield"},
+        {"Laser Fan", "Neon Lattice", "Sunburst", "Rings Burst", "Lightning", "Laser Web", "Grid Pulse", "Pulse"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Strobe", "Pulse", "Laser Fan", "Starfield", "Grid Pulse", "Equalizer", "Bars", "Rings Burst"});
+    setColors(comp.layers[0], {0.2f, 0.55f, 1.0f}, {1.0f, 0.35f, 0.1f});
+    setColors(comp.layers[1], {0.1f, 0.9f, 1.0f}, {1.0f, 0.2f, 0.7f});
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.25f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.12f);
+    setFx(comp.master.fx[0], "Hyperspace", {0.7f, 0.6f, 0.45f, 0.55f});
+    setReact(comp.master.fx[0], BandKick, 0, 0.35f);
+    setFx(comp.master.fx[1], "Chromatic Aberration", {0.2f, 0.6f, 0.4f});
+    setReact(comp.master.fx[1], BandKick, 0, 0.5f);
+    setFx(comp.master.fx[2], "Glow", {0.5f, 0.5f, 0.3f});
+    setFx(comp.master.fx[3], "Vignette", {0.5f, 0.6f, 0.2f});
+    return comp;
+}
+
+Composition neonCathedral() {
+    Composition comp = customDeck("Neon Cathedral", 128.0f,
+        {"Neon Sigil", "Neon Lattice", "Laser Web", "Prism Bloom", "Crystal Cavern", "Neon Corridor", "Tesseract", "Kaleido"},
+        {"Crystal Lines", "Neon Sigil", "Laser Fan", "Rings Burst", "Sunburst", "Pulse", "Hex Grid", "Lightning"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Strobe", "Laser Fan", "Starfield", "Grid Pulse", "Equalizer", "Bars", "Rings Burst"});
+    setColors(comp.layers[0], {1.0f, 0.15f, 0.65f}, {0.15f, 0.8f, 1.0f});
+    setColors(comp.layers[1], {0.5f, 0.2f, 0.9f}, {0.05f, 0.7f, 0.65f});
+    comp.layers[1].opacity = 0.25f;
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.18f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.15f);
+    setFx(comp.master.fx[0], "Kaleido Neon", {0.4f, 0.45f, 0.1f, 0.5f});
+    setReact(comp.master.fx[0], BandBass, 1, 0.25f);
+    setFx(comp.master.fx[1], "Glow", {0.15f, 0.45f, 0.3f});
+    setFx(comp.master.fx[2], "RGB Split", {0.15f, 0.0f, 0.6f});
+    setGate(comp.master.fx[2], BandKick, 0.5f);
+    setFx(comp.master.fx[3], "Vignette", {0.7f, 0.6f, 0.2f});
+    return comp;
+}
+
+Composition chromeMeltdown() {
+    Composition comp = customDeck("Chrome Meltdown", 118.0f,
+        {"Liquid Marble", "Chaos Smoke", "Metaballs", "Milky Wave", "Plasma", "Noise Flow", "Julia", "Prism Bloom"},
+        {"Metaballs", "Prism Bloom", "Liquid Marble", "Chaos Smoke", "Milky Wave", "Pulse", "Sunburst", "Noise Flow"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"});
+    setColors(comp.layers[0], {0.02f, 0.06f, 0.25f}, {0.45f, 0.65f, 1.0f});
+    setColors(comp.layers[1], {0.6f, 0.2f, 0.05f}, {0.5f, 0.15f, 0.9f});
+    comp.layers[1].blend = BlendScreen;
+    comp.layers[1].opacity = 0.3f;
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.2f);
+    setFx(comp.master.fx[0], "Chrome Liquid", {0.3f, 0.45f, 0.4f, 0.45f});
+    setReact(comp.master.fx[0], BandBass, 0, 0.3f);
+    setFx(comp.master.fx[1], "Star Burst", {0.5f, 0.6f, 0.8f, 0.5f});
+    setReact(comp.master.fx[1], BandKick, 1, 0.3f);
+    setFx(comp.master.fx[2], "Chromatic Aberration", {0.15f, 0.6f, 0.4f});
+    setFx(comp.master.fx[3], "Vignette", {0.55f, 0.6f, 0.2f});
+    return comp;
+}
+
+Composition shatterStorm() {
+    Composition comp = customDeck("Shatter Storm", 150.0f,
+        {"Lightning", "Chaos Smoke", "Fire", "Sunburst", "Laser Fan", "Neon Sigil", "Voronoi", "Mandelbrot"},
+        {"Lightning", "Laser Web", "Sunburst", "Rings Burst", "Fire", "Pulse", "Strobe", "Laser Fan"},
+        {"Starfield", "Lightning", "Warp Speed", "Pulse", "Strobe", "Sunburst", "Fire", "Rings Burst"},
+        {"Strobe", "Pulse", "Laser Fan", "Lightning", "Grid Pulse", "Equalizer", "Bars", "Rings Burst"});
+    setColors(comp.layers[0], {1.0f, 0.2f, 0.05f}, {1.0f, 0.85f, 0.3f});
+    setColors(comp.layers[1], {1.0f, 0.95f, 0.8f}, {1.0f, 0.4f, 0.1f});
+    comp.layers[1].blend = BlendAdd;
+    comp.layers[1].opacity = 0.8f;
+    setActive(comp.layers[0], 2);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.22f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.18f);
+    setFx(comp.master.fx[0], "Shatter", {0.5f, 0.3f, 0.75f, 0.45f});
+    setReact(comp.master.fx[0], BandKick, 1, 0.6f);
+    setFx(comp.master.fx[1], "Light Rays", {0.25f, 0.6f, 0.65f, 0.6f});
+    setFx(comp.master.fx[2], "Film Grain", {0.3f, 0.3f, 0.2f, 0.2f});
+    setFx(comp.master.fx[3], "Vignette", {0.6f, 0.6f, 0.2f});
+    return comp;
+}
+
+Composition mandalaMachine() {
+    Composition comp = customDeck("Mandala Machine", 124.0f,
+        {"Neon Sigil", "Kaleido", "Mandelbrot", "Julia", "Prism Bloom", "Crystal Lines", "Hex Grid", "Neon Lattice"},
+        {"Prism Bloom", "Neon Sigil", "Rings Burst", "Sunburst", "Voronoi", "Kaleido", "Pulse", "Grid Pulse"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"});
+    comp.layers[0].rainbow = true;
+    setColors(comp.layers[1], {1.0f, 0.5f, 0.1f}, {0.2f, 0.7f, 1.0f});
+    comp.layers[1].blend = BlendScreen;
+    comp.layers[1].opacity = 0.45f;
+    setActive(comp.layers[0], 3);
+    setActive(comp.layers[1], 6);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.15f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.12f);
+    setFx(comp.master.fx[0], "Mandala Fold", {0.6f, 0.45f, 0.3f, 0.65f});
+    setReact(comp.master.fx[0], BandMid, 2, 0.35f);
+    setFx(comp.master.fx[1], "Glow", {0.4f, 0.5f, 0.3f});
+    setFx(comp.master.fx[2], "Chromatic Aberration", {0.15f, 0.6f, 0.4f});
+    setFx(comp.master.fx[3], "Vignette", {0.55f, 0.6f, 0.2f});
+    return comp;
+}
+
+Composition terrainFlight() {
+    Composition comp = customDeck("Terrain Flight", 122.0f,
+        {"Hex Grid", "Voronoi", "Plasma", "Metaballs", "Noise Flow", "Mandelbrot", "Julia", "Liquid Marble"},
+        {"Grid Pulse", "Hex Grid", "Voronoi", "Rings Burst", "Pulse", "Sunburst", "Noise Flow", "Starfield"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"});
+    setColors(comp.layers[0], {1.0f, 0.55f, 0.1f}, {0.1f, 0.75f, 1.0f});
+    comp.layers[1].opacity = 0.3f;
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.1f);
+    setFx(comp.master.fx[0], "Image Terrain", {0.6f, 0.5f, 0.75f, 0.45f});
+    setReact(comp.master.fx[0], BandBass, 0, 0.3f);
+    setFx(comp.master.fx[1], "Glow", {0.5f, 0.5f, 0.3f});
+    setFx(comp.master.fx[2], "Chromatic Aberration", {0.15f, 0.6f, 0.4f});
+    setFx(comp.master.fx[3], "Vignette", {0.5f, 0.6f, 0.2f});
+    return comp;
+}
+
+Composition tesseractClub() {
+    Composition comp = customDeck("Tesseract Club", 130.0f,
+        {"Tesseract", "Cube Tunnel 3D", "Laser Web", "Neon Lattice", "Cube Field 3D", "Neon Corridor", "Gyroid 3D", "Sphere Grid 3D"},
+        {"Neon Lattice", "Laser Fan", "Grid Pulse", "Rings Burst", "Pulse", "Torus 3D", "Hex Grid", "Strobe"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Strobe", "Pulse", "Laser Fan", "Starfield", "Grid Pulse", "Equalizer", "Bars", "Rings Burst"});
+    setColors(comp.layers[0], {0.1f, 0.85f, 1.0f}, {1.0f, 0.15f, 0.6f});
+    setColors(comp.layers[1], {0.6f, 0.3f, 1.0f}, {0.1f, 1.0f, 0.8f});
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.2f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.14f);
+    setFx(comp.master.fx[0], "Mirror Corridor");
+    setFx(comp.master.fx[1], "Glow", {0.55f, 0.5f, 0.3f});
+    setFx(comp.master.fx[2], "Chromatic Aberration", {0.2f, 0.6f, 0.4f});
+    setReact(comp.master.fx[2], BandKick, 0, 0.5f);
+    setFx(comp.master.fx[3], "Vignette", {0.5f, 0.6f, 0.2f});
+    return comp;
+}
+
+Composition feedbackGalaxy() {
+    Composition comp = customDeck("Feedback Galaxy", 96.0f,
+        {"Starfield", "Chaos Smoke", "Mandelbox Fly", "Milky Wave", "Julia", "Prism Bloom", "Liquid Marble", "Plasma"},
+        {"Chaos Smoke", "Starfield", "Prism Bloom", "Rings Burst", "Sunburst", "Pulse", "Noise Flow", "Milky Wave"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"});
+    setColors(comp.layers[0], {0.4f, 0.2f, 1.0f}, {0.1f, 0.85f, 0.95f});
+    setColors(comp.layers[1], {1.0f, 0.3f, 0.7f}, {0.3f, 0.5f, 1.0f});
+    comp.layers[1].blend = BlendScreen;
+    comp.layers[1].opacity = 0.4f;
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.12f);
+    setFx(comp.master.fx[0], "Hue Feedback", {0.8f, 0.6f, 0.6f, 0.45f});
+    setFx(comp.master.fx[1], "Star Burst", {0.45f, 0.6f, 0.45f, 0.6f});
+    setReact(comp.master.fx[1], BandKick, 1, 0.3f);
+    setFx(comp.master.fx[2], "Glow", {0.55f, 0.55f, 0.3f});
+    setFx(comp.master.fx[3], "Vignette", {0.6f, 0.6f, 0.2f});
+    return comp;
+}
+
 std::vector<Composition> buildFactory() {
-    return {neonClub(), milkyRed(), crystalCavern(), crystalLines(), acidRainbow(), deepSpace(), synthwaveNight(), laserShow(), minimalMono(), showcase3d(), warpTunnel(), audioReactor(), fractalDream(), cyberRain(), inferno(), worlds3d(), crystalCube(), popArt()};
+    return {neonClub(), hyperdrive(), neonCathedral(), chromeMeltdown(), shatterStorm(), mandalaMachine(), terrainFlight(), tesseractClub(), feedbackGalaxy(), milkyRed(), crystalCavern(), crystalLines(), acidRainbow(), deepSpace(), synthwaveNight(), laserShow(), minimalMono(), showcase3d(), warpTunnel(), audioReactor(), fractalDream(), cyberRain(), inferno(), worlds3d(), crystalCube(), popArt()};
 }
 
 const std::vector<std::string>& bankNames() {
-    static const std::vector<std::string> names = {"Neon Club", "Milky Red", "Crystal Cavern", "Crystal Lines", "Warp Tunnel", "Inferno", "Acid Rainbow", "Synthwave Night", "Laser Show", "Fractal Dream", "Deep Space", "Audio Reactor", "Cyber Rain", "Crystal Cube", "3D Worlds", "Pop Art"};
+    static const std::vector<std::string> names = {"Hyperdrive", "Neon Cathedral", "Chrome Meltdown", "Shatter Storm", "Mandala Machine", "Terrain Flight", "Tesseract Club", "Feedback Galaxy", "Neon Club", "Crystal Cavern", "Inferno", "Warp Tunnel", "Synthwave Night", "Laser Show", "Acid Rainbow", "Cyber Rain"};
     return names;
 }
 }

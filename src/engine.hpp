@@ -1,44 +1,20 @@
 #pragma once
 
+#include "composition.hpp"
 #include "gl_util.hpp"
 
+#include <array>
 #include <deque>
 #include <vector>
 
 namespace nvj {
 
-enum BlendMode {
-    BlendNormal = 0,
-    BlendAdd,
-    BlendScreen,
-    BlendMultiply,
-    BlendModeCount
-};
-
-struct Layer {
-    std::vector<int> cells;
-    int activeColumn = -1;
-    float opacity = 1.0f;
-    int blend = BlendNormal;
-    bool bypass = false;
-    bool solo = false;
-    double triggerTime = 0.0;
-};
-
-struct MasterEffects {
-    float hue = 0.0f;
-    bool invert = false;
-    bool mirrorX = false;
-    bool mirrorY = false;
-    float pixelate = 0.0f;
-    float rgbSplit = 0.0f;
-};
-
 class Engine {
 public:
-    bool init(int width, int height, int layerCount, int columnCount);
+    bool init();
     void shutdown();
-    bool setResolution(int width, int height);
+    bool setResolutionIndex(int index);
+    void applyComposition(const Composition& source);
     void update(double dt);
     void render();
     void trigger(int layer, int column);
@@ -46,17 +22,19 @@ public:
     void clearLayer(int layer);
     void tap();
     void resync();
+    bool readOutput(std::vector<unsigned char>& rgba, int& width, int& height);
 
     GLuint outputTexture() const { return out_.texture; }
     int width() const { return out_.width; }
     int height() const { return out_.height; }
     double beat() const { return beat_; }
+    double time() const { return time_; }
+    GLuint clipThumbnail(int clip) const;
+    GLuint layerPreview(int layer) const;
+    bool layerLive(int layer) const;
 
-    std::vector<Layer> layers;
-    int columns = 0;
-    MasterEffects fx;
-    float master = 1.0f;
-    float bpm = 128.0f;
+    Composition comp;
+    bool blackout = false;
 
 private:
     struct ClipProgram {
@@ -65,18 +43,73 @@ private:
         GLint beat = -1;
         GLint bpm = -1;
         GLint res = -1;
+        GLint colorA = -1;
+        GLint colorB = -1;
+        GLint rainbow = -1;
+        GLint scale = -1;
     };
 
+    struct EffectProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint prev = -1;
+        GLint params = -1;
+        GLint time = -1;
+        GLint beat = -1;
+        GLint aspect = -1;
+        GLint res = -1;
+        bool usesPrevious = false;
+    };
+
+    struct CompositeProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint opacity = -1;
+        GLint mode = -1;
+        GLint grade = -1;
+    };
+
+    struct FinalProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint level = -1;
+        GLint grade = -1;
+    };
+
+    struct ThumbProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint texel = -1;
+    };
+
+    bool buildPrograms();
     bool createTargets(int width, int height);
     void destroyTargets();
+    void destroyFeedback();
+    void renderClipThumbnails();
+    void drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale);
+    RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, int chain, RenderTarget* source, RenderTarget* scratch);
+    void downsample(const RenderTarget& source, const RenderTarget& target);
+    void blit(const RenderTarget& source, const RenderTarget& target);
 
     std::vector<ClipProgram> clips_;
-    GLuint composite_ = 0;
-    GLuint final_ = 0;
-    RenderTarget layerTarget_;
-    RenderTarget comp_;
+    std::vector<EffectProgram> effects_;
+    CompositeProgram composite_;
+    FinalProgram final_;
+    ThumbProgram thumb_;
+    RenderTarget layerA_;
+    RenderTarget layerB_;
+    RenderTarget compA_;
+    RenderTarget compB_;
     RenderTarget out_;
+    std::vector<RenderTarget> clipThumbs_;
+    std::array<RenderTarget, kLayerCount> previews_;
+    std::array<bool, kLayerCount> live_{};
+    std::array<RenderTarget, (kLayerCount + 1) * kEffectSlots> feedback_;
+    std::array<bool, (kLayerCount + 1) * kEffectSlots> feedbackUsed_{};
+    std::array<double, kLayerCount> layerClock_{};
     FullscreenTriangle triangle_;
+    int currentResolution_ = -1;
     double time_ = 0.0;
     double beat_ = 0.0;
     std::deque<double> taps_;

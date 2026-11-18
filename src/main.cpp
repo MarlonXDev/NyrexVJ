@@ -1,5 +1,6 @@
 #include "app.hpp"
 #include "log.hpp"
+#include "platform.hpp"
 #include "theme.hpp"
 
 #include <glad/gl.h>
@@ -20,21 +21,46 @@ namespace {
 
 struct Options {
     int frames = 0;
-    int column = -1;
     std::string screenshot;
+    std::string dumpOutput;
+    nvj::StartOptions start;
 };
 
 Options parseOptions(int argc, char** argv) {
     Options options;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if (arg == "--frames" && i + 1 < argc) {
+        bool hasValue = i + 1 < argc;
+        if (arg == "--frames" && hasValue) {
             options.frames = std::atoi(argv[++i]);
-        } else if (arg == "--column" && i + 1 < argc) {
-            options.column = std::atoi(argv[++i]) - 1;
-        } else if (arg == "--screenshot" && i + 1 < argc) {
+        } else if (arg == "--column" && hasValue) {
+            options.start.column = std::atoi(argv[++i]) - 1;
+        } else if (arg == "--screenshot" && hasValue) {
             options.screenshot = argv[++i];
+        } else if (arg == "--dump-output" && hasValue) {
+            options.dumpOutput = argv[++i];
+        } else if (arg == "--preset" && hasValue) {
+            options.start.preset = argv[++i];
+        } else if (arg == "--clip" && hasValue) {
+            options.start.clip = argv[++i];
+        } else if (arg == "--effect" && hasValue) {
+            options.start.effect = argv[++i];
+        } else if (arg == "--resolution" && hasValue) {
+            options.start.resolution = std::atoi(argv[++i]);
+        } else if (arg == "--select-layer" && hasValue) {
+            options.start.selectLayer = std::atoi(argv[++i]) - 1;
+        } else if (arg == "--tab" && hasValue) {
+            options.start.tab = std::atoi(argv[++i]);
+        } else if (arg == "--output") {
+            options.start.openOutput = true;
+        } else if (arg == "--fresh") {
+            options.start.fresh = true;
+        } else if (arg == "--no-update-check") {
+            options.start.skipUpdateCheck = true;
         }
+    }
+    if (options.frames > 0) {
+        options.start.skipUpdateCheck = true;
     }
     return options;
 }
@@ -52,11 +78,23 @@ bool saveScreenshot(const std::string& path, int width, int height) {
     return stbi_write_png(path.c_str(), width, height, 3, pixels.data(), width * 3) != 0;
 }
 
+bool saveOutput(const std::string& path, nvj::Engine& engine) {
+    std::vector<unsigned char> pixels;
+    int width = 0;
+    int height = 0;
+    if (!engine.readOutput(pixels, width, height)) {
+        return false;
+    }
+    stbi_flip_vertically_on_write(1);
+    return stbi_write_png(path.c_str(), width, height, 4, pixels.data(), width * 4) != 0;
+}
+
 }
 
 int main(int argc, char** argv) {
     Options options = parseOptions(argc, argv);
 
+    nvj::platform::cleanupOldBinary();
     nvj::logInit();
     nvj::logLine(std::string("NyrexVJ ") + NYREXVJ_VERSION);
 
@@ -71,7 +109,7 @@ int main(int argc, char** argv) {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
-    GLFWwindow* window = glfwCreateWindow(1600, 900, "NyrexVJ", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1600, 900, (std::string("NyrexVJ ") + NYREXVJ_VERSION).c_str(), nullptr, nullptr);
     if (!window) {
         nvj::logLine("Could not create a window with an OpenGL 3.3 core context");
         glfwTerminate();
@@ -105,17 +143,13 @@ int main(int argc, char** argv) {
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
     nvj::App app;
-    if (!app.init(window)) {
+    if (!app.init(window, options.start)) {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
         glfwDestroyWindow(window);
         glfwTerminate();
         return 1;
-    }
-
-    if (options.column >= 0) {
-        app.engine().triggerColumn(options.column);
     }
 
     double last = glfwGetTime();
@@ -160,6 +194,14 @@ int main(int argc, char** argv) {
                     exitCode = 1;
                 }
             }
+            if (!options.dumpOutput.empty()) {
+                if (saveOutput(options.dumpOutput, app.engine())) {
+                    nvj::logLine("Output saved to " + options.dumpOutput);
+                } else {
+                    nvj::logLine("Output dump failed");
+                    exitCode = 1;
+                }
+            }
             break;
         }
 
@@ -179,5 +221,8 @@ int main(int argc, char** argv) {
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
+    if (app.wantsRestart()) {
+        nvj::platform::relaunchSelf();
+    }
     return exitCode;
 }

@@ -19,6 +19,12 @@ std::chrono::steady_clock::time_point gStart = std::chrono::steady_clock::now();
 
 std::string userDataDir() {
     namespace fs = std::filesystem;
+    const char* dataOverride = std::getenv("NYREXVJ_DATA_DIR");
+    if (dataOverride && *dataOverride) {
+        std::error_code overrideEc;
+        fs::create_directories(fs::path(dataOverride), overrideEc);
+        return fs::path(dataOverride).string();
+    }
     fs::path base;
 #ifdef _WIN32
     const char* appData = std::getenv("APPDATA");

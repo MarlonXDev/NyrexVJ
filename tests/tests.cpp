@@ -1,0 +1,456 @@
+#include "clip_library.hpp"
+#include "composition.hpp"
+#include "effect_library.hpp"
+#include "preset.hpp"
+#include "settings.hpp"
+#include "sha256.hpp"
+#include "update_logic.hpp"
+#include "updater.hpp"
+
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <chrono>
+#include <set>
+#include <string>
+#include <thread>
+#include <vector>
+
+namespace {
+
+int gFailures = 0;
+int gChecks = 0;
+
+void check(bool condition, const char* expression, int line) {
+    ++gChecks;
+    if (!condition) {
+        ++gFailures;
+        std::fprintf(stderr, "FAILED line %d: %s\n", line, expression);
+    }
+}
+
+#define CHECK(expr) check((expr), #expr, __LINE__)
+
+void testSha256() {
+    CHECK(nvj::sha256Hex(std::string()) == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    CHECK(nvj::sha256Hex(std::string("abc")) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    CHECK(nvj::sha256Hex(std::string("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")) == "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1");
+    std::string million(1000000, 'a');
+    CHECK(nvj::sha256Hex(million) == "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
+    nvj::Sha256 streaming;
+    streaming.update(reinterpret_cast<const unsigned char*>("a"), 1);
+    streaming.update(reinterpret_cast<const unsigned char*>("bc"), 2);
+    CHECK(streaming.finalHex() == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+}
+
+void testVersions() {
+    nvj::Version a = nvj::parseVersion("v0.2.0");
+    nvj::Version b = nvj::parseVersion("0.2.0-dev");
+    nvj::Version c = nvj::parseVersion("0.10.1");
+    nvj::Version d = nvj::parseVersion("1.0");
+    CHECK(a.valid && a.major == 0 && a.minor == 2 && a.patch == 0 && !a.dev);
+    CHECK(b.valid && b.dev);
+    CHECK(c.valid && c.minor == 10 && c.patch == 1);
+    CHECK(d.valid && d.major == 1 && d.minor == 0 && d.patch == 0);
+    CHECK(!nvj::parseVersion("nightly").valid);
+    CHECK(!nvj::parseVersion("").valid);
+    CHECK(nvj::compareVersions(b, a) < 0);
+    CHECK(nvj::compareVersions(a, b) > 0);
+    CHECK(nvj::compareVersions(a, a) == 0);
+    CHECK(nvj::compareVersions(a, c) < 0);
+    CHECK(nvj::compareVersions(c, d) < 0);
+    CHECK(nvj::versionToString(b) == "0.2.0-dev");
+    CHECK(nvj::parseBuildNumber("Nightly build 57 (abc1234)") == 57);
+    CHECK(nvj::parseBuildNumber("Build #12") == 12);
+    CHECK(nvj::parseBuildNumber("no number here") == 0);
+}
+
+void testReleaseParsing() {
+    const char* json = R"({
+        "tag_name": "v0.3.0",
+        "name": "NyrexVJ 0.3.0",
+        "body": "Notes",
+        "html_url": "https://github.com/MarlonXDev/NyrexVJ/releases/tag/v0.3.0",
+        "draft": false,
+        "prerelease": false,
+        "assets": [
+            {"name": "NyrexVJ.exe", "browser_download_url": "https://example.test/NyrexVJ.exe"},
+            {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.test/SHA256SUMS.txt"},
+            {"name": "other.zip", "browser_download_url": "https://example.test/other.zip"}
+        ]
+    })";
+    nvj::ReleaseInfo release;
+    std::string error;
+    CHECK(nvj::parseRelease(json, release, error));
+    CHECK(release.tag == "v0.3.0");
+    CHECK(release.exeUrl == "https://example.test/NyrexVJ.exe");
+    CHECK(release.sumsUrl == "https://example.test/SHA256SUMS.txt");
+    CHECK(release.version.valid && release.version.minor == 3);
+
+    nvj::CurrentBuild current;
+    current.version = nvj::parseVersion("0.2.0");
+    CHECK(nvj::isUpdateAvailable(release, nvj::UpdateChannel::Stable, current));
+    current.version = nvj::parseVersion("0.3.0");
+    CHECK(!nvj::isUpdateAvailable(release, nvj::UpdateChannel::Stable, current));
+    current.version = nvj::parseVersion("0.3.0-dev");
+    CHECK(nvj::isUpdateAvailable(release, nvj::UpdateChannel::Stable, current));
+
+    const char* nightly = R"json({"tag_name":"nightly","name":"Nightly build 58 (abc1234)","prerelease":true,
+        "assets":[{"name":"NyrexVJ.exe","browser_download_url":"https://example.test/n.exe"}]})json";
+    nvj::ReleaseInfo night;
+    CHECK(nvj::parseRelease(nightly, night, error));
+    CHECK(night.buildNumber == 58);
+    nvj::CurrentBuild local;
+    local.buildNumber = 57;
+    CHECK(nvj::isUpdateAvailable(night, nvj::UpdateChannel::Nightly, local));
+    local.buildNumber = 58;
+    CHECK(!nvj::isUpdateAvailable(night, nvj::UpdateChannel::Nightly, local));
+
+    nvj::ReleaseInfo bad;
+    CHECK(!nvj::parseRelease("not json", bad, error));
+    CHECK(!nvj::parseRelease("{\"message\":\"Not Found\"}", bad, error));
+    CHECK(!nvj::parseRelease("[]", bad, error));
+
+    nvj::ReleaseInfo noAsset;
+    CHECK(nvj::parseRelease("{\"tag_name\":\"v9.0.0\"}", noAsset, error));
+    CHECK(!nvj::isUpdateAvailable(noAsset, nvj::UpdateChannel::Stable, current));
+}
+
+void testHashFile() {
+    const std::string hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+    std::string found;
+    CHECK(nvj::findHash(hash + "  NyrexVJ.exe\r\n", "NyrexVJ.exe", found) && found == hash);
+    CHECK(nvj::findHash("deadbeef  nope.txt\n" + hash + " *NyrexVJ.exe\n", "NyrexVJ.exe", found) && found == hash);
+    std::string upper;
+    for (char c : hash) {
+        upper.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+    }
+    CHECK(nvj::findHash(upper + "  NyrexVJ.exe", "NyrexVJ.exe", found) && found == hash);
+    CHECK(!nvj::findHash(hash + "  other.exe\n", "NyrexVJ.exe", found));
+    CHECK(!nvj::findHash("", "NyrexVJ.exe", found));
+}
+
+void testLibraries() {
+    const auto& clips = nvj::clipLibrary();
+    const auto& effects = nvj::effectLibrary();
+    CHECK(clips.size() >= 16);
+    CHECK(effects.size() >= 20);
+    std::set<std::string> clipNames;
+    for (const auto& clip : clips) {
+        CHECK(!clip.body.empty());
+        clipNames.insert(clip.name);
+    }
+    CHECK(clipNames.size() == clips.size());
+    std::set<std::string> effectNames;
+    for (const auto& effect : effects) {
+        CHECK(effect.paramCount() >= 1);
+        CHECK(effect.body.find("vec4 effect(") != std::string::npos);
+        effectNames.insert(effect.name);
+    }
+    CHECK(effectNames.size() == effects.size());
+    CHECK(nvj::clipIndexByName("plasma") == 0);
+    CHECK(nvj::clipIndexByName("does not exist") == -1);
+    CHECK(nvj::effectIndexByName("glow") >= 0);
+    CHECK(nvj::effectIndexByName("Tunnel Map") >= 0);
+    nvj::EffectSlot slot;
+    nvj::setEffect(slot, nvj::effectIndexByName("Trails"));
+    CHECK(slot.effect >= 0 && slot.enabled);
+    nvj::setEffect(slot, -1);
+    CHECK(slot.effect == -1);
+}
+
+bool sameComposition(const nvj::Composition& a, const nvj::Composition& b) {
+    return nvj::compositionToJson(a) == nvj::compositionToJson(b);
+}
+
+void testPresets() {
+    const auto& presets = nvj::factoryPresets();
+    CHECK(presets.size() >= 6);
+    std::set<std::string> names;
+    for (const nvj::Composition& preset : presets) {
+        names.insert(preset.name);
+        std::vector<std::string> warnings;
+        nvj::Composition loaded;
+        std::string error;
+        CHECK(nvj::compositionFromJson(nvj::compositionToJson(preset), loaded, error, &warnings));
+        CHECK(warnings.empty());
+        CHECK(sameComposition(preset, loaded));
+        bool anyActive = false;
+        for (const nvj::Layer& layer : preset.layers) {
+            for (int cell : layer.cells) {
+                CHECK(cell >= 0);
+            }
+            anyActive = anyActive || layer.activeColumn >= 0;
+        }
+        CHECK(anyActive);
+        for (const nvj::EffectSlot& slot : preset.master.fx) {
+            for (float value : slot.params) {
+                CHECK(value >= 0.0f && value <= 1.0f);
+            }
+        }
+    }
+    CHECK(names.size() == presets.size());
+    CHECK(nvj::factoryPresetIndex("Neon Club") == 0);
+    CHECK(nvj::factoryPresetIndex("Nope") == -1);
+
+    nvj::Composition broken;
+    std::string error;
+    std::vector<std::string> warnings;
+    const char* text = R"({"layers":[{"cells":["Plasma","Nonexistent",null],"active":1,"opacity":5,"blend":"Add","fx":[{"effect":"Bogus"},{"effect":"Glow","params":[2,-1,0.5]}]}],"bpm":9999})";
+    CHECK(nvj::compositionFromJson(text, broken, error, &warnings));
+    CHECK(warnings.size() == 2);
+    CHECK(broken.bpm == 240.0f);
+    CHECK(broken.layers[0].opacity == 1.0f);
+    CHECK(broken.layers[0].blend == nvj::BlendAdd);
+    CHECK(broken.layers[0].activeColumn == -1);
+    CHECK(broken.layers[0].fx[0].effect == -1);
+    CHECK(broken.layers[0].fx[1].effect >= 0);
+    CHECK(broken.layers[0].fx[1].params[0] == 1.0f);
+    CHECK(broken.layers[0].fx[1].params[1] == 0.0f);
+    CHECK(!nvj::compositionFromJson("garbage", broken, error));
+    CHECK(!nvj::compositionFromJson("{}", broken, error));
+}
+
+void testPresetFiles() {
+    std::filesystem::path dir = std::filesystem::temp_directory_path() / "nyrexvj_test_data";
+    std::filesystem::remove_all(dir);
+#ifdef _WIN32
+    _putenv_s("NYREXVJ_DATA_DIR", dir.string().c_str());
+#else
+    setenv("NYREXVJ_DATA_DIR", dir.string().c_str(), 1);
+#endif
+    CHECK(nvj::sanitizePresetName("  a/b:c*?.  ") == "a_b_c__");
+    CHECK(nvj::sanitizePresetName("   ").empty());
+    CHECK(nvj::sanitizePresetName(std::string(200, 'x')).size() == 64);
+
+    nvj::Composition comp = nvj::defaultComposition();
+    std::string error;
+    CHECK(nvj::listUserPresets().empty());
+    CHECK(nvj::saveUserPreset(comp, "My Look", error));
+    CHECK(nvj::saveUserPreset(comp, "Another", error));
+    CHECK(!nvj::saveUserPreset(comp, "   ", error));
+    std::vector<std::string> names = nvj::listUserPresets();
+    CHECK(names.size() >= 2);
+    CHECK(names.front() == "Another");
+    nvj::Composition loaded;
+    CHECK(nvj::loadUserPreset("My Look", loaded, error));
+    CHECK(loaded.name == "My Look");
+    CHECK(loaded.layers[0].activeColumn == comp.layers[0].activeColumn);
+    CHECK(!nvj::loadUserPreset("Missing", loaded, error));
+    CHECK(nvj::deleteUserPreset("My Look"));
+    CHECK(!nvj::deleteUserPreset("My Look"));
+
+    CHECK(!nvj::loadSession(loaded));
+    CHECK(nvj::saveSession(comp));
+    CHECK(nvj::loadSession(loaded));
+    CHECK(sameComposition(comp, loaded));
+
+    nvj::Settings settings;
+    CHECK(!nvj::loadSettings(settings));
+    settings.checkUpdates = false;
+    settings.channel = nvj::UpdateChannel::Stable;
+    settings.outputMonitor = 2;
+    CHECK(nvj::saveSettings(settings));
+    nvj::Settings back;
+    CHECK(nvj::loadSettings(back));
+    CHECK(!back.checkUpdates && back.channel == nvj::UpdateChannel::Stable && back.outputMonitor == 2);
+
+    std::filesystem::remove_all(dir);
+}
+
+bool waitIdle(nvj::Updater& updater) {
+    for (int i = 0; i < 1000; ++i) {
+        if (!updater.busy()) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    return false;
+}
+
+std::vector<unsigned char> fakeBinary(size_t size, unsigned char fill) {
+    std::vector<unsigned char> data(size, fill);
+    data[0] = 'M';
+    data[1] = 'Z';
+    return data;
+}
+
+struct FakeServer {
+    std::string releaseJson;
+    std::vector<unsigned char> exe;
+    std::string sums;
+    int apiStatus = 200;
+    bool replaced = false;
+    std::vector<unsigned char> installed;
+};
+
+nvj::UpdaterBackend makeBackend(FakeServer* server) {
+    nvj::UpdaterBackend backend;
+    backend.get = [server](const std::string& url, nvj::platform::HttpResult& result, const nvj::platform::ProgressFn& progress) {
+        result = nvj::platform::HttpResult{};
+        if (url.find("api.github.com") != std::string::npos) {
+            if (server->apiStatus != 200) {
+                result.status = server->apiStatus;
+                result.error = "HTTP " + std::to_string(server->apiStatus);
+                return false;
+            }
+            result.body.assign(server->releaseJson.begin(), server->releaseJson.end());
+        } else if (url == "https://example.test/SHA256SUMS.txt") {
+            result.body.assign(server->sums.begin(), server->sums.end());
+        } else if (url == "https://example.test/NyrexVJ.exe") {
+            if (progress) {
+                progress(server->exe.size() / 2, server->exe.size());
+            }
+            result.body = server->exe;
+        } else {
+            result.status = 404;
+            result.error = "HTTP 404";
+            return false;
+        }
+        result.status = 200;
+        return true;
+    };
+    backend.replace = [server](const std::vector<unsigned char>& data, std::string&) {
+        server->installed = data;
+        server->replaced = true;
+        return true;
+    };
+    return backend;
+}
+
+std::string releaseJsonWithAssets(const std::string& tag, bool withSums) {
+    std::string json = "{\"tag_name\":\"" + tag + "\",\"name\":\"Release\",\"assets\":[{\"name\":\"NyrexVJ.exe\",\"browser_download_url\":\"https://example.test/NyrexVJ.exe\"}";
+    if (withSums) {
+        json += ",{\"name\":\"SHA256SUMS.txt\",\"browser_download_url\":\"https://example.test/SHA256SUMS.txt\"}";
+    }
+    json += "]}";
+    return json;
+}
+
+void testUpdater() {
+    {
+        FakeServer server;
+        server.releaseJson = releaseJsonWithAssets("v0.0.1", true);
+        nvj::Updater updater;
+        updater.setBackend(makeBackend(&server));
+        updater.setChannel(nvj::UpdateChannel::Stable);
+        updater.checkAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::UpToDate);
+    }
+    {
+        FakeServer server;
+        server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
+        server.exe = fakeBinary(700 * 1024, 7);
+        server.sums = nvj::sha256Hex(server.exe) + "  NyrexVJ.exe\n";
+        nvj::Updater updater;
+        updater.setBackend(makeBackend(&server));
+        updater.setChannel(nvj::UpdateChannel::Stable);
+        updater.checkAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::Available);
+        CHECK(updater.status().release.tag == "v9.0.0");
+        updater.installAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::ReadyToRestart);
+        CHECK(server.replaced);
+        CHECK(server.installed == server.exe);
+    }
+    {
+        FakeServer server;
+        server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
+        server.exe = fakeBinary(700 * 1024, 7);
+        server.sums = nvj::sha256Hex(fakeBinary(700 * 1024, 8)) + "  NyrexVJ.exe\n";
+        nvj::Updater updater;
+        updater.setBackend(makeBackend(&server));
+        updater.setChannel(nvj::UpdateChannel::Stable);
+        updater.checkAsync();
+        CHECK(waitIdle(updater));
+        updater.installAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::Failed);
+        CHECK(!server.replaced);
+    }
+    {
+        FakeServer server;
+        server.releaseJson = releaseJsonWithAssets("v9.0.0", false);
+        server.exe = fakeBinary(700 * 1024, 7);
+        nvj::Updater updater;
+        updater.setBackend(makeBackend(&server));
+        updater.setChannel(nvj::UpdateChannel::Stable);
+        updater.checkAsync();
+        CHECK(waitIdle(updater));
+        updater.installAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::Failed);
+        CHECK(!server.replaced);
+    }
+    {
+        FakeServer server;
+        server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
+        server.exe = fakeBinary(700 * 1024, 7);
+        server.exe[0] = 'X';
+        server.sums = nvj::sha256Hex(server.exe) + "  NyrexVJ.exe\n";
+        nvj::Updater updater;
+        updater.setBackend(makeBackend(&server));
+        updater.setChannel(nvj::UpdateChannel::Stable);
+        updater.checkAsync();
+        CHECK(waitIdle(updater));
+        updater.installAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::Failed);
+        CHECK(!server.replaced);
+    }
+    {
+        FakeServer server;
+        server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
+        server.exe = fakeBinary(1000, 7);
+        server.sums = nvj::sha256Hex(server.exe) + "  NyrexVJ.exe\n";
+        nvj::Updater updater;
+        updater.setBackend(makeBackend(&server));
+        updater.setChannel(nvj::UpdateChannel::Stable);
+        updater.checkAsync();
+        CHECK(waitIdle(updater));
+        updater.installAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::Failed);
+        CHECK(!server.replaced);
+    }
+    {
+        FakeServer server;
+        server.apiStatus = 404;
+        nvj::Updater updater;
+        updater.setBackend(makeBackend(&server));
+        updater.checkAsync();
+        CHECK(waitIdle(updater));
+        CHECK(updater.status().state == nvj::UpdateState::Failed);
+        CHECK(updater.status().message.find("private") != std::string::npos);
+        updater.installAsync();
+        CHECK(waitIdle(updater));
+        CHECK(!server.replaced);
+    }
+    {
+        nvj::Updater updater;
+        nvj::UpdaterBackend backend;
+        backend.supported = false;
+        updater.setBackend(backend);
+        updater.checkAsync();
+        CHECK(updater.status().state == nvj::UpdateState::Unsupported);
+    }
+}
+
+}
+
+int main() {
+    testSha256();
+    testVersions();
+    testReleaseParsing();
+    testHashFile();
+    testLibraries();
+    testPresets();
+    testPresetFiles();
+    testUpdater();
+    std::printf("%d checks, %d failed\n", gChecks, gFailures);
+    return gFailures == 0 ? 0 : 1;
+}

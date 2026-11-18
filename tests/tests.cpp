@@ -1,11 +1,11 @@
-#include "clip_library.hpp"
-#include "composition.hpp"
-#include "effect_library.hpp"
-#include "preset.hpp"
-#include "settings.hpp"
-#include "sha256.hpp"
-#include "update_logic.hpp"
-#include "updater.hpp"
+#include "render/clip_library.hpp"
+#include "core/composition.hpp"
+#include "render/effect_library.hpp"
+#include "core/preset.hpp"
+#include "core/settings.hpp"
+#include "core/sha256.hpp"
+#include "update/update_logic.hpp"
+#include "update/updater.hpp"
 
 #include <cctype>
 #include <cstdio>

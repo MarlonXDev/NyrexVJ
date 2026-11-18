@@ -1,0 +1,30 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: NyrexVJ version
+      description: Shown in the title of the welcome screen (Help, What's new)
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Windows version and GPU
+      placeholder: Windows 11, NVIDIA RTX 3060
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Paste the end of the log file from %APPDATA%\NyrexVJ (File, Open data folder)
+      render: text

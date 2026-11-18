@@ -1,0 +1,100 @@
+#pragma once
+
+#include "audio/audio_system.hpp"
+#include "core/i18n.hpp"
+#include "core/settings.hpp"
+#include "render/engine.hpp"
+#include "render/output_window.hpp"
+#include "render/spout_output.hpp"
+#include "update/updater.hpp"
+
+#include <imgui.h>
+
+#include <string>
+#include <vector>
+
+struct GLFWwindow;
+
+namespace nvj {
+
+struct StartOptions {
+    std::string preset;
+    std::string clip;
+    std::string effect;
+    std::string language;
+    int column = -1;
+    int resolution = -1;
+    int selectLayer = -1;
+    int tab = -1;
+    bool openOutput = false;
+    bool fresh = false;
+    bool skipUpdateCheck = false;
+    bool audioDemo = false;
+    bool forceWelcome = false;
+    bool skipWelcome = false;
+};
+
+class App {
+public:
+    bool init(GLFWwindow* window, const StartOptions& options);
+    void frame(double dt);
+    void shutdown();
+    Engine& engine() { return engine_; }
+    bool wantsRestart() const { return restart_; }
+
+private:
+    void buildLayout(ImGuiID dock);
+    void handleShortcuts();
+    void drawMenuBar();
+    void drawDeck();
+    void drawOutput();
+    void drawLayer();
+    void drawMaster();
+    void drawBrowser();
+    void drawPresetsTab();
+    void drawLibraryTab();
+    void drawAudioTab();
+    void drawSettingsTab();
+    void drawWelcome();
+    void drawGrade(ColorGrade& grade);
+    void drawMods(std::array<AudioMod, kModSlots>& mods, bool master);
+    void drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots);
+    void drawOutputControls();
+    void drawSpoutControls();
+    void loadComposition(const Composition& comp, const std::string& message);
+    void saveCurrentPreset();
+    void refreshUserPresets();
+    void toast(const std::string& message);
+    void openOutputWindow(bool fullscreen);
+    void updateAudio(double dt);
+    void setLanguageAndSave(Language language);
+    void openWelcome(bool firstRun);
+
+    Engine engine_;
+    Settings settings_;
+    Updater updater_;
+    OutputWindow output_;
+    AudioSystem audio_;
+    SpoutOutput spout_;
+    GLFWwindow* window_ = nullptr;
+    std::string iniPath_;
+    bool needsLayout_ = false;
+    bool restart_ = false;
+    int selectedLayer_ = 0;
+    int focusTab_ = -1;
+    int outputMonitor_ = 0;
+    char presetName_[64] = {};
+    char spoutName_[64] = {};
+    std::string selectedUserPreset_;
+    std::vector<std::string> userPresets_;
+    std::string toastText_;
+    double toastUntil_ = 0.0;
+    double autosaveTimer_ = 0.0;
+    bool shutDown_ = false;
+    bool welcomeOpen_ = false;
+    bool welcomeRequested_ = false;
+    bool welcomeFirstRun_ = false;
+    std::string welcomeSince_;
+};
+
+}

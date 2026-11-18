@@ -31,6 +31,10 @@ jobs:
             exit 1
           }
 
+      - name: Check translations
+        shell: pwsh
+        run: python scripts/check_i18n.py
+
       - name: Configure
         shell: pwsh
         run: |
@@ -52,6 +56,8 @@ jobs:
           Copy-Item LICENSE dist/NyrexVJ/
           Copy-Item README.md dist/NyrexVJ/
           Copy-Item CHANGELOG.md dist/NyrexVJ/
+          Copy-Item CHANGELOG.de.md dist/NyrexVJ/
+          Copy-Item README.de.md dist/NyrexVJ/
           Compress-Archive -Path dist/NyrexVJ -DestinationPath dist/NyrexVJ-windows-x64.zip
           $hash = (Get-FileHash dist/NyrexVJ.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  NyrexVJ.exe" | Out-File -FilePath dist/SHA256SUMS.txt -Encoding ascii

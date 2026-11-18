@@ -1,7 +1,7 @@
-#include "app.hpp"
-#include "log.hpp"
-#include "platform.hpp"
-#include "theme.hpp"
+#include "app/app.hpp"
+#include "core/log.hpp"
+#include "platform/platform.hpp"
+#include "app/theme.hpp"
 
 #include <glad/gl.h>
 
@@ -21,6 +21,7 @@ namespace {
 
 struct Options {
     int frames = 0;
+    bool checkShaders = false;
     std::string screenshot;
     std::string dumpOutput;
     nvj::StartOptions start;
@@ -57,10 +58,23 @@ Options parseOptions(int argc, char** argv) {
             options.start.fresh = true;
         } else if (arg == "--no-update-check") {
             options.start.skipUpdateCheck = true;
+        } else if (arg == "--check-shaders") {
+            options.checkShaders = true;
+        } else if (arg == "--lang" && hasValue) {
+            options.start.language = argv[++i];
+        } else if (arg == "--audio-demo") {
+            options.start.audioDemo = true;
+        } else if (arg == "--welcome") {
+            options.start.forceWelcome = true;
+        } else if (arg == "--no-welcome") {
+            options.start.skipWelcome = true;
         }
     }
     if (options.frames > 0) {
         options.start.skipUpdateCheck = true;
+        if (!options.start.forceWelcome) {
+            options.start.skipWelcome = true;
+        }
     }
     return options;
 }
@@ -155,6 +169,25 @@ int main(int argc, char** argv) {
     double last = glfwGetTime();
     int frameCount = 0;
     int exitCode = 0;
+
+    if (options.checkShaders || options.frames > 0) {
+        std::string report;
+        int failed = app.engine().prepareAll(report);
+        if (failed > 0) {
+            nvj::logLine("Shader failures: " + std::to_string(failed) + "\n" + report);
+        } else if (options.checkShaders) {
+            nvj::logLine("All shaders compiled");
+        }
+        if (options.checkShaders) {
+            app.shutdown();
+            ImGui_ImplOpenGL3_Shutdown();
+            ImGui_ImplGlfw_Shutdown();
+            ImGui::DestroyContext();
+            glfwDestroyWindow(window);
+            glfwTerminate();
+            return failed > 0 ? 1 : 0;
+        }
+    }
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

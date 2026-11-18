@@ -1,0 +1,16 @@
+name: Feature request
+description: An idea for a clip, effect or feature
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: What should NyrexVJ do and what would you use it for
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference
+      description: Links or screenshots of something similar, for example from another VJ program

@@ -25,6 +25,10 @@ struct Settings {
     bool audioSyncBpm = false;
     bool spoutEnabled = false;
     std::string spoutName = "NyrexVJ";
+    bool oscEnabled = false;
+    int oscPort = 9010;
+    bool oscAllowRemote = false;
+    std::string midiDevice;
 };
 
 bool loadSettings(Settings& settings);

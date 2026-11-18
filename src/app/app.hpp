@@ -1,6 +1,8 @@
 #pragma once
 
+#include "app/engine_host.hpp"
 #include "audio/audio_system.hpp"
+#include "control/control_system.hpp"
 #include "core/i18n.hpp"
 #include "core/settings.hpp"
 #include "render/engine.hpp"
@@ -17,6 +19,18 @@ struct GLFWwindow;
 
 namespace nvj {
 
+enum SettingsPage {
+    SettingsGeneral = 0,
+    SettingsAudio,
+    SettingsOutput,
+    SettingsControl,
+    SettingsUpdates,
+    SettingsInterface,
+    SettingsShortcuts,
+    SettingsAbout,
+    SettingsPageCount
+};
+
 struct StartOptions {
     std::string preset;
     std::string clip;
@@ -31,6 +45,7 @@ struct StartOptions {
     int selectLayer = -1;
     int tab = -1;
     int settingsPage = -1;
+    int oscPort = 0;
     bool openOutput = false;
     bool fresh = false;
     bool skipUpdateCheck = false;
@@ -45,6 +60,7 @@ public:
     void frame(double dt);
     void shutdown();
     Engine& engine() { return engine_; }
+    ControlSystem& control() { return control_; }
     bool wantsRestart() const { return restart_; }
     bool wantsVsync() const { return settings_.vsync; }
 
@@ -64,6 +80,10 @@ private:
     void drawSettingsWindow();
     void drawSettingsPage(int page);
     void drawUpdateSection();
+    void drawControlPage();
+    void drawOscSection();
+    void drawMidiSection();
+    void drawBindingsSection();
     void drawAudioSource();
     void drawUpdateCard();
     void drawStatusBar();
@@ -88,6 +108,8 @@ private:
     void openWelcome(bool firstRun);
 
     Engine engine_;
+    EngineControlHost controlHost_{engine_};
+    ControlSystem control_{engine_.comp, controlHost_};
     Settings settings_;
     Updater updater_;
     OutputWindow output_;
@@ -122,6 +144,8 @@ private:
     bool renameRequested_ = false;
     char deckNameBuffer_[48] = {};
     int appliedVsync_ = -1;
+    int oscOverridePort_ = 0;
+    char targetFilter_[64] = {};
 };
 
 }

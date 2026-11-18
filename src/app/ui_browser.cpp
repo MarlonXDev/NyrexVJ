@@ -10,6 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -103,9 +104,41 @@ void App::drawPresetsTab() {
     }
 }
 
-void App::drawSceneTooltip(const ScenePlayer& player) {
-    ImGui::BeginTooltip();
-    ImGui::TextUnformatted(tr("3D scene"));
+namespace {
+
+std::string lowerText(const std::string& text) {
+    std::string result = text;
+    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return result;
+}
+
+bool matchesFilter(const std::string& name, const char* filter) {
+    if (!filter || !*filter) {
+        return true;
+    }
+    return lowerText(name).find(lowerText(filter)) != std::string::npos;
+}
+
+bool matchesKind(const ClipDef& clip, int kind) {
+    switch (kind) {
+    case 1:
+        return !clip.is3d;
+    case 2:
+        return clip.is3d;
+    case 3:
+        return clip.kind == ClipKind::ModelFile;
+    default:
+        return true;
+    }
+}
+
+std::string cellLabel(int layer, int column) {
+    return std::string(tr("Layer ")) + std::to_string(layer + 1) + ", " + tr("Column ") + std::to_string(column + 1);
+}
+
+}
+
+void App::drawSceneDetails(const ScenePlayer& player) {
     switch (player.state()) {
     case SceneState::Idle:
         ImGui::TextDisabled("%s", tr("Not loaded yet"));
@@ -123,12 +156,195 @@ void App::drawSceneTooltip(const ScenePlayer& player) {
         ImGui::Text("%s: %.0f ms", tr("Load time"), player.loadMilliseconds());
         break;
     }
-    ImGui::EndTooltip();
 }
 
-void App::drawLibraryTab() {
+void App::assignClipToSelectedCell(int clip) {
     const std::vector<ClipDef>& library = clipLibrary();
-    ImGui::TextDisabled("%s", tr("Drag a clip onto a deck cell"));
+    if (clip < 0 || clip >= static_cast<int>(library.size())) {
+        return;
+    }
+    selectedLayer_ = std::clamp(selectedLayer_, 0, kLayerCount - 1);
+    selectedColumn_ = std::clamp(selectedColumn_, 0, kColumnCount - 1);
+    engine_.comp.layers[static_cast<size_t>(selectedLayer_)].cells[static_cast<size_t>(selectedColumn_)] = clip;
+    engine_.trigger(selectedLayer_, selectedColumn_);
+    toast(library[static_cast<size_t>(clip)].name + "  >  " + cellLabel(selectedLayer_, selectedColumn_));
+}
+
+void App::assignClipToFreeCell(int clip, int layer) {
+    const std::vector<ClipDef>& library = clipLibrary();
+    if (clip < 0 || clip >= static_cast<int>(library.size()) || layer < 0 || layer >= kLayerCount) {
+        return;
+    }
+    Layer& target = engine_.comp.layers[static_cast<size_t>(layer)];
+    for (int c = 0; c < kColumnCount; ++c) {
+        if (target.cells[static_cast<size_t>(c)] < 0) {
+            target.cells[static_cast<size_t>(c)] = clip;
+            selectedLayer_ = layer;
+            selectedColumn_ = c;
+            engine_.trigger(layer, c);
+            toast(library[static_cast<size_t>(clip)].name + "  >  " + cellLabel(layer, c));
+            return;
+        }
+    }
+    toast(tr("This layer has no free cell"));
+}
+
+void App::addEffectToLayer(int effect, int layer) {
+    const std::vector<EffectDef>& library = effectLibrary();
+    if (effect < 0 || effect >= static_cast<int>(library.size()) || layer < 0 || layer >= kLayerCount) {
+        return;
+    }
+    Layer& target = engine_.comp.layers[static_cast<size_t>(layer)];
+    for (EffectSlot& slot : target.fx) {
+        if (slot.effect < 0) {
+            setEffect(slot, effect);
+            selectedLayer_ = layer;
+            toast(library[static_cast<size_t>(effect)].name + "  >  " + tr("Layer ") + std::to_string(layer + 1));
+            return;
+        }
+    }
+    toast(tr("All effect slots are used"));
+}
+
+void App::addEffectToMaster(int effect) {
+    const std::vector<EffectDef>& library = effectLibrary();
+    if (effect < 0 || effect >= static_cast<int>(library.size())) {
+        return;
+    }
+    for (EffectSlot& slot : engine_.comp.master.fx) {
+        if (slot.effect < 0) {
+            setEffect(slot, effect);
+            toast(library[static_cast<size_t>(effect)].name + "  >  " + tr("Master"));
+            return;
+        }
+    }
+    toast(tr("All effect slots are used"));
+}
+
+void App::drawClipTile(int index, const ImVec2& size) {
+    const std::vector<ClipDef>& library = clipLibrary();
+    const ClipDef& clip = library[static_cast<size_t>(index)];
+    ImGui::PushID(index);
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const bool clicked = ImGui::InvisibleButton("clip", size);
+    const bool hovered = ImGui::IsItemHovered();
+    const bool selected = selectedLibraryClip_ == index;
+
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    const float labelHeight = ImGui::GetTextLineHeight() + 6.0f;
+    const ImVec2 imageMax(pos.x + size.x, pos.y + size.y - labelHeight);
+    const ImVec2 max(pos.x + size.x, pos.y + size.y);
+    draw->AddRectFilled(pos, max, ImGui::GetColorU32(hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), 3.0f);
+    draw->AddImage(ui::texId(engine_.clipThumbnail(index)), pos, imageMax, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f), IM_COL32_WHITE);
+    draw->PushClipRect(ImVec2(pos.x, imageMax.y), max, true);
+    draw->AddText(ImVec2(pos.x + 6.0f, imageMax.y + 3.0f), IM_COL32(230, 230, 235, 255), clip.name.c_str());
+    draw->PopClipRect();
+    if (clip.is3d) {
+        const ImVec2 badgeSize = ImGui::CalcTextSize("3D");
+        const ImVec2 badgeMin(imageMax.x - badgeSize.x - 10.0f, pos.y + 4.0f);
+        const ImVec2 badgeMax(imageMax.x - 4.0f, pos.y + 8.0f + badgeSize.y);
+        draw->AddRectFilled(badgeMin, badgeMax, IM_COL32(0, 0, 0, 170), 3.0f);
+        draw->AddText(ImVec2(badgeMin.x + 3.0f, badgeMin.y + 2.0f), ImGui::GetColorU32(ui::kAccent), "3D");
+    }
+    if (selected) {
+        draw->AddRect(pos, max, ImGui::GetColorU32(ui::kAccent), 3.0f, 0, 2.5f);
+    } else if (hovered) {
+        draw->AddRect(pos, max, ImGui::GetColorU32(ui::kAccentHover), 3.0f, 0, 1.5f);
+    } else {
+        draw->AddRect(pos, max, ImGui::GetColorU32(ImGuiCol_Border), 3.0f);
+    }
+
+    if (clicked) {
+        selectedLibraryClip_ = index;
+        assignClipToSelectedCell(index);
+    }
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
+        ImGui::SetDragDropPayload("NVJ_CLIP", &index, sizeof(int));
+        ImGui::Image(ui::texId(engine_.clipThumbnail(index)), ImVec2(96.0f, 54.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+        ImGui::TextUnformatted(clip.name.c_str());
+        ImGui::EndDragDropSource();
+    } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted(clip.name.c_str());
+        if (engine_.isSceneClip(index)) {
+            ImGui::TextDisabled("%s", tr("3D scene"));
+            drawSceneDetails(*engine_.scenePlayer(index));
+        }
+        ImGui::Separator();
+        ImGui::TextDisabled("%s", tr("Click: put it into the selected cell and play it"));
+        ImGui::TextDisabled("%s", tr("Drag it onto any cell or column"));
+        ImGui::TextDisabled("%s", tr("Right click for more"));
+        ImGui::EndTooltip();
+    }
+    if (ImGui::BeginPopupContextItem("clipmenu")) {
+        ImGui::TextDisabled("%s", clip.name.c_str());
+        ImGui::Separator();
+        const std::string selectedLabel = std::string(tr("Put into the selected cell")) + "  (" + cellLabel(selectedLayer_, selectedColumn_) + ")";
+        if (ImGui::MenuItem(selectedLabel.c_str())) {
+            selectedLibraryClip_ = index;
+            assignClipToSelectedCell(index);
+        }
+        if (ImGui::BeginMenu(tr("Put into the next free cell of"))) {
+            for (int l = kLayerCount - 1; l >= 0; --l) {
+                const std::string label = std::string(tr("Layer ")) + std::to_string(l + 1);
+                if (ImGui::MenuItem(label.c_str())) {
+                    selectedLibraryClip_ = index;
+                    assignClipToFreeCell(index, l);
+                }
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::PopID();
+}
+
+void App::drawLibraryClips() {
+    const std::vector<ClipDef>& library = clipLibrary();
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models")};
+    for (int k = 0; k < 4; ++k) {
+        if (k > 0) {
+            ImGui::SameLine(0.0f, 4.0f);
+        }
+        ImGui::PushID(k);
+        if (ui::accentButton(kinds[k], libraryKind_ == k)) {
+            libraryKind_ = k;
+        }
+        ImGui::PopID();
+    }
+
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float spacing = style.ItemSpacing.x;
+    const float avail = ImGui::GetContentRegionAvail().x - style.ScrollbarSize * 0.5f;
+    const int columns = std::max(1, static_cast<int>((avail + spacing) / (132.0f + spacing)));
+    const float tileWidth = (avail - spacing * static_cast<float>(columns - 1)) / static_cast<float>(columns);
+    const ImVec2 tileSize(tileWidth, tileWidth * 9.0f / 16.0f + ImGui::GetTextLineHeight() + 6.0f);
+
+    int shown = 0;
+    int total = 0;
+    for (const ClipDef& clip : library) {
+        if (matchesKind(clip, libraryKind_)) {
+            ++total;
+        }
+    }
+    ImGui::BeginChild("clipTiles", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None);
+    for (int i = 0; i < static_cast<int>(library.size()); ++i) {
+        const ClipDef& clip = library[static_cast<size_t>(i)];
+        if (!matchesKind(clip, libraryKind_) || !matchesFilter(clip.name, libraryFilter_)) {
+            continue;
+        }
+        if (shown % columns != 0) {
+            ImGui::SameLine();
+        }
+        drawClipTile(i, tileSize);
+        ++shown;
+    }
+    if (shown == 0) {
+        ImGui::TextDisabled("%s", tr("Nothing found"));
+    }
+    ImGui::Spacing();
+    ImGui::TextDisabled("%d / %d %s", shown, total, tr("clips"));
+    ImGui::Spacing();
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("3D models: put .glb or .gltf files into this folder, then restart NyrexVJ"));
     ImGui::TextDisabled("%s", modelDirectory().c_str());
@@ -136,37 +352,81 @@ void App::drawLibraryTab() {
     if (ImGui::SmallButton(tr("Open models folder"))) {
         platform::openFolder(modelDirectory());
     }
-    const float thumbW = 96.0f;
-    const float thumbH = 54.0f;
-    const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
-    for (int i = 0; i < static_cast<int>(library.size()); ++i) {
-        const ClipDef& clip = library[static_cast<size_t>(i)];
+    ImGui::EndChild();
+}
+
+void App::drawLibraryEffects() {
+    const std::vector<EffectDef>& effects = effectLibrary();
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Click: add to the first free slot of the selected layer"));
+    ImGui::PopTextWrapPos();
+    ImGui::BeginChild("effectRows", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None);
+    int shown = 0;
+    for (int i = 0; i < static_cast<int>(effects.size()); ++i) {
+        const EffectDef& effect = effects[static_cast<size_t>(i)];
+        if (!matchesFilter(effect.name, libraryFilter_)) {
+            continue;
+        }
         ImGui::PushID(i);
-        ImGui::BeginGroup();
-        ImGui::Image(ui::texId(engine_.clipThumbnail(i)), ImVec2(thumbW, thumbH), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
-        ImGui::PushClipRect(ImGui::GetItemRectMin(), ImVec2(ImGui::GetItemRectMin().x + thumbW, ImGui::GetItemRectMax().y + ImGui::GetTextLineHeightWithSpacing()), true);
-        ImGui::TextUnformatted(clip.name.c_str());
-        ImGui::PopClipRect();
-        ImGui::EndGroup();
-        if (ImGui::IsItemHovered() && engine_.isSceneClip(i)) {
-            drawSceneTooltip(*engine_.scenePlayer(i));
+        if (ImGui::Selectable(effect.name.c_str(), selectedLibraryEffect_ == i)) {
+            selectedLibraryEffect_ = i;
+            addEffectToLayer(i, selectedLayer_);
+        }
+        if (effect.is3d) {
+            const ImVec2 badgeSize = ImGui::CalcTextSize("3D");
+            ImGui::SameLine(ImGui::GetContentRegionMax().x - badgeSize.x - 6.0f);
+            ImGui::TextColored(ui::kAccent, "3D");
         }
         if (ImGui::BeginDragDropSource()) {
-            ImGui::SetDragDropPayload("NVJ_CLIP", &i, sizeof(int));
-            ImGui::TextUnformatted(clip.name.c_str());
+            ImGui::SetDragDropPayload("NVJ_EFFECT", &i, sizeof(int));
+            ImGui::TextUnformatted(effect.name.c_str());
             ImGui::EndDragDropSource();
         }
-        float nextX = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + thumbW;
-        if (i + 1 < static_cast<int>(library.size()) && nextX < right) {
-            ImGui::SameLine();
+        if (ImGui::BeginPopupContextItem("effectmenu")) {
+            ImGui::TextDisabled("%s", effect.name.c_str());
+            ImGui::Separator();
+            for (int l = kLayerCount - 1; l >= 0; --l) {
+                const std::string label = std::string(tr("Add to layer ")) + std::to_string(l + 1);
+                if (ImGui::MenuItem(label.c_str())) {
+                    addEffectToLayer(i, l);
+                }
+            }
+            if (ImGui::MenuItem(tr("Add to master"))) {
+                addEffectToMaster(i);
+            }
+            ImGui::EndPopup();
+        }
+        ImGui::PopID();
+        ++shown;
+    }
+    if (shown == 0) {
+        ImGui::TextDisabled("%s", tr("Nothing found"));
+    }
+    ImGui::Spacing();
+    ImGui::TextDisabled("%d / %d %s", shown, static_cast<int>(effects.size()), tr("effects"));
+    ImGui::EndChild();
+}
+
+void App::drawLibraryTab() {
+    const char* modes[] = {tr("Clips"), tr("Effects")};
+    for (int m = 0; m < 2; ++m) {
+        if (m > 0) {
+            ImGui::SameLine(0.0f, 4.0f);
+        }
+        ImGui::PushID(m);
+        if (ui::accentButton(modes[m], libraryMode_ == m, ImVec2(86.0f, 0.0f))) {
+            libraryMode_ = m;
         }
         ImGui::PopID();
     }
-
-    ImGui::SeparatorText(tr("Effects"));
-    const std::vector<EffectDef>& effects = effectLibrary();
-    for (const EffectDef& effect : effects) {
-        ImGui::BulletText("%s%s", effect.name.c_str(), effect.is3d ? "  (3D)" : "");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    ImGui::InputTextWithHint("##libraryfilter", tr("Search"), libraryFilter_, sizeof(libraryFilter_));
+    ImGui::Spacing();
+    if (libraryMode_ == 0) {
+        drawLibraryClips();
+    } else {
+        drawLibraryEffects();
     }
 }
 
@@ -267,7 +527,7 @@ void App::drawAudioTab() {
 
     ImVec2 dot = ImGui::GetCursorScreenPos();
     const float kick = std::clamp(features.kick, 0.0f, 1.0f);
-    draw->AddCircleFilled(ImVec2(dot.x + 8.0f, dot.y + 9.0f), 7.0f, ImGui::GetColorU32(ImVec4(1.0f, 0.45f + 0.4f * kick, 0.0f + 0.5f * kick, 0.25f + 0.75f * kick)));
+    draw->AddCircleFilled(ImVec2(dot.x + 8.0f, dot.y + 9.0f), 7.0f, ImGui::GetColorU32(ImVec4(ui::kAccent.x, ui::kAccent.y + (1.0f - ui::kAccent.y) * 0.5f * kick, ui::kAccent.z + (1.0f - ui::kAccent.z) * 0.5f * kick, 0.25f + 0.75f * kick)));
     ImGui::Dummy(ImVec2(18.0f, 18.0f));
     ImGui::SameLine();
     if (audio_.active() && features.bpm > 0.0f) {

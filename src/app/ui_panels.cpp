@@ -6,6 +6,7 @@
 #include "render/effect_library.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -82,17 +83,38 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
         ImGui::SetNextItemWidth(-FLT_MIN);
         const char* preview = slot.effect >= 0 ? library[static_cast<size_t>(slot.effect)].name.c_str() : tr("- empty -");
         if (ImGui::BeginCombo("##effect", preview)) {
-            if (ImGui::Selectable(tr("- empty -"), slot.effect < 0)) {
+            if (ImGui::IsWindowAppearing()) {
+                effectPickFilter_[0] = '\0';
+                ImGui::SetKeyboardFocusHere();
+            }
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::InputTextWithHint("##effectfilter", tr("Search"), effectPickFilter_, sizeof(effectPickFilter_));
+            std::string needle = effectPickFilter_;
+            std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+            if (needle.empty() && ImGui::Selectable(tr("- empty -"), slot.effect < 0)) {
                 setEffect(slot, -1);
             }
             for (int i = 0; i < static_cast<int>(library.size()); ++i) {
                 const EffectDef& def = library[static_cast<size_t>(i)];
+                if (!needle.empty()) {
+                    std::string lowered = def.name;
+                    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+                    if (lowered.find(needle) == std::string::npos) {
+                        continue;
+                    }
+                }
                 std::string label = def.is3d ? def.name + "  [3D]" : def.name;
                 if (ImGui::Selectable(label.c_str(), slot.effect == i)) {
                     setEffect(slot, i);
                 }
             }
             ImGui::EndCombo();
+        }
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NVJ_EFFECT")) {
+                setEffect(slot, *static_cast<const int*>(payload->Data));
+            }
+            ImGui::EndDragDropTarget();
         }
         if (slot.effect >= 0) {
             const EffectDef& def = library[static_cast<size_t>(slot.effect)];

@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.6.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output, the output window, a settings window, OSC and MIDI control, a first 3D model player (glTF/GLB), English and German and the auto-updater work. Video clips are not implemented yet.
+> Status: v0.7.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output, the output window, a settings window, OSC and MIDI control, a first 3D model player (glTF/GLB), English and German and the auto-updater work. Video clips are not implemented yet.
 
 ## Download
 
@@ -29,7 +29,8 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 - **Audio reactive.** Pick system audio (your DJ program), a microphone, a line-in or a demo signal. Layers, the master and every effect parameter can follow Bass, Mid, High, Level or Kick, and an effect can be set to Gate so it only shows while the music is loud.
 - **Live control.** Play it from a MIDI controller (learn a knob with one click, Windows) or remote control it over OSC from TouchDesigner, Max, Python and more.
 - **OBS in two clicks.** Spout output with a sender name of your choice. In OBS add the source "Spout2 Capture" and select the sender.
-- **38 clips, 58 effects, 18 presets.** Fractals, raymarched 3D scenes, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals and three real 3D models.
+- **38 clips, 68 effects, 18 presets.** Fractals, raymarched 3D scenes, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals, three real 3D models and ten 3D effects such as Crystal Tunnel, Mirror Corridor, Glass Orb and Carousel.
+- **Nine colour themes.** Settings, Appearance switches the whole interface between Orange (default), Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono.
 - **Your own 3D models.** Drop .glb or .gltf files into the models folder and play them like any clip, with textures, animation and audio reaction.
 - **Settings window.** One place for audio, output, Spout, updates, language and interface size, plus a status bar that shows FPS, tempo, deck and audio at a glance.
 - **English and German.** English is the default, switch any time under Help, Language.
@@ -99,7 +100,7 @@ Spout is Windows only. The output window (F11) with OBS window capture keeps wor
 Every layer has four effect slots, and so does the master.
 
 <p align="center">
-  <img src="docs/gallery-effects.jpg" alt="All 58 effects" width="100%">
+  <img src="docs/gallery-effects.jpg" alt="Effect gallery" width="100%">
 </p>
 
 The effect gallery shows each effect with default settings on the Plasma clip (Duotone on Mandelbrot and Line Art on Crystal Cavern, because Plasma has almost no brightness contrast).
@@ -132,7 +133,9 @@ Not supported yet: skinned characters, morph targets, lights and cameras from th
 | Right-click a cell | Assign or clear a clip |
 | Right-click a deck button | Rename, copy, fill, clear or remove the deck |
 | Right-click a slider | Reset it to its default |
-| Drag from Library to a cell | Assign a clip |
+| Click a clip in the Library | Put it into the selected cell and play it |
+| Drag from Library to a cell or column header | Assign a clip |
+| Click or drag an effect in the Library | Add it to the selected layer |
 | B / S / X on a layer | Bypass / solo / stop the layer |
 
 ## Live control
@@ -256,7 +259,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--select-layer N` | Select layer N (1-based) |
 | `--resolution IDX` | Output resolution index |
 | `--tab IDX` | Browser tab to show (0 Presets, 1 Library, 2 Audio) |
-| `--settings IDX` | Open the settings window on page IDX (0 to 7, 3 is Control) |
+| `--settings IDX` | Open the settings window on page IDX (0 to 7, 4 is Control) |
 | `--osc-port N` | Listen for OSC on port N even if it is switched off in the settings |
 | `--midi-inject FRAME:STATUS:D1:D2` | With `--frames`, feed a MIDI message to the mappings at that frame |
 | `--decks A,B,C` | Fill decks 1, 2, 3 with these factory looks |

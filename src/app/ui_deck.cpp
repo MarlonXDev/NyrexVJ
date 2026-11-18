@@ -74,7 +74,7 @@ void App::drawDeckBar() {
             ImGui::PushStyleColor(ImGuiCol_Text, ui::kBlack);
             colors = 3;
         } else if (outgoing) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.25f, 0.02f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Button, ui::kAccentDim);
             colors = 1;
         } else if (!used) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.085f, 0.085f, 0.095f, 1.0f));
@@ -213,9 +213,32 @@ void App::drawDeck() {
             ImGui::TableSetColumnIndex(c + 1);
             ImGui::PushID(c);
             std::string label = std::string(tr("Column ")) + std::to_string(c + 1);
+            bool playing = false;
+            for (const Layer& other : comp.layers) {
+                playing = playing || other.activeColumn == c;
+            }
+            int headerColors = 0;
+            if (playing) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ui::kAccentDim);
+                ++headerColors;
+            }
+            if (c == selectedColumn_) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ui::kAccentHover);
+                ++headerColors;
+            }
             if (ImGui::Button(label.c_str(), ImVec2(cellW, 0.0f))) {
                 engine_.triggerColumn(c);
+                selectedColumn_ = c;
             }
+            ImGui::PopStyleColor(headerColors);
+            if (ImGui::BeginDragDropTarget()) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NVJ_CLIP")) {
+                    selectedColumn_ = c;
+                    assignClipToSelectedCell(*static_cast<const int*>(payload->Data));
+                }
+                ImGui::EndDragDropTarget();
+            }
+            ImGui::SetItemTooltip("%s", tr("Plays this column. Drop a clip here to put it into the selected layer."));
             ImGui::PopID();
         }
 
@@ -224,7 +247,7 @@ void App::drawDeck() {
             ImGui::TableNextRow(ImGuiTableRowFlags_None, 84.0f);
             ImGui::TableSetColumnIndex(0);
             if (row == selectedLayer_) {
-                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(ImVec4(0.20f, 0.10f, 0.02f, 1.0f)));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(ui::kSelectionBg));
             }
             ImGui::PushID(row);
             ImGui::Image(ui::texId(engine_.layerPreview(row)), ImVec2(96.0f, 54.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
@@ -268,8 +291,12 @@ void App::drawDeck() {
                 if (ImGui::InvisibleButton("cell", size)) {
                     engine_.trigger(row, c);
                     selectedLayer_ = row;
+                    selectedColumn_ = c;
                 }
                 bool hovered = ImGui::IsItemHovered();
+                if (hovered && !ImGui::IsMouseDown(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+                    ImGui::SetTooltip("%s", clip >= 0 ? tr("Click to play. Drag to copy it to another cell. Right click for more.") : tr("Empty cell. Drag a clip here or click a clip in the Library."));
+                }
 
                 ImDrawList* draw = ImGui::GetWindowDrawList();
                 ImVec2 max(pos.x + size.x, pos.y + size.y);
@@ -283,6 +310,10 @@ void App::drawDeck() {
                     draw->PopClipRect();
                 } else {
                     draw->AddRectFilled(pos, max, IM_COL32(19, 19, 22, 255));
+                }
+                if (row == selectedLayer_ && c == selectedColumn_) {
+                    draw->AddTriangleFilled(pos, ImVec2(pos.x + 19.0f, pos.y), ImVec2(pos.x, pos.y + 19.0f), IM_COL32(0, 0, 0, 230));
+                    draw->AddTriangleFilled(pos, ImVec2(pos.x + 14.0f, pos.y), ImVec2(pos.x, pos.y + 14.0f), ImGui::GetColorU32(ui::kAccentHover));
                 }
                 if (active) {
                     draw->AddRect(pos, max, ImGui::GetColorU32(ui::kAccent), 0.0f, 0, 2.5f);
@@ -300,6 +331,8 @@ void App::drawDeck() {
                 if (ImGui::BeginDragDropTarget()) {
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NVJ_CLIP")) {
                         layer.cells[static_cast<size_t>(c)] = *static_cast<const int*>(payload->Data);
+                        selectedLayer_ = row;
+                        selectedColumn_ = c;
                     }
                     ImGui::EndDragDropTarget();
                 }

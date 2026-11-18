@@ -17,6 +17,7 @@ struct Settings {
     UpdateChannel channel = UpdateChannel::Nightly;
     int outputMonitor = 0;
     std::string language = "en";
+    std::string theme = "orange";
     std::string lastSeenVersion;
     std::string audioDevice;
     float audioGain = 1.0f;

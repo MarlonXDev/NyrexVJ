@@ -70,6 +70,80 @@ int appendModelClips(std::vector<ClipDef>& clips) {
     return added;
 }
 
+int appendPackClips(std::vector<ClipDef>& clips) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path directory = clipsDirectory();
+    fs::create_directories(directory, ec);
+    std::vector<fs::path> files;
+    for (fs::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code entryEc;
+        if (!it->is_regular_file(entryEc) || entryEc) {
+            continue;
+        }
+        if (lowerCase(it->path().extension().string()) == ".nyxclip") {
+            files.push_back(it->path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    std::set<std::string> taken;
+    size_t count = 0;
+    for (const ClipDef& clip : clips) {
+        taken.insert(lowerCase(clip.name));
+        if (clip.kind == ClipKind::ScenePack) {
+            ++count;
+        }
+    }
+    int added = 0;
+    for (const fs::path& file : files) {
+        if (count >= kMaxPackClips) {
+            logLine("More than " + std::to_string(kMaxPackClips) + " clip packs found, the rest is ignored");
+            break;
+        }
+        const std::string name = packClipName(utf8(file.stem()));
+        if (!taken.insert(lowerCase(name)).second) {
+            continue;
+        }
+        ClipDef def;
+        def.name = name;
+        def.is3d = true;
+        def.kind = ClipKind::ScenePack;
+        def.path = utf8(file);
+        clips.push_back(std::move(def));
+        ++count;
+        ++added;
+    }
+    return added;
+}
+
+std::vector<AssetFile> listFiles(const std::string& directory, std::initializer_list<const char*> extensions) {
+    namespace fs = std::filesystem;
+    std::vector<AssetFile> out;
+    std::error_code ec;
+    fs::create_directories(fs::path(std::u8string(directory.begin(), directory.end())), ec);
+    for (fs::directory_iterator it(fs::path(std::u8string(directory.begin(), directory.end())), ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code entryEc;
+        if (!it->is_regular_file(entryEc) || entryEc) {
+            continue;
+        }
+        const std::string extension = lowerCase(it->path().extension().string());
+        bool match = false;
+        for (const char* wanted : extensions) {
+            match = match || extension == wanted;
+        }
+        if (!match) {
+            continue;
+        }
+        AssetFile file;
+        file.name = utf8(it->path().filename());
+        file.path = utf8(it->path());
+        file.bytes = static_cast<unsigned long long>(it->file_size(entryEc));
+        out.push_back(std::move(file));
+    }
+    std::sort(out.begin(), out.end(), [](const AssetFile& a, const AssetFile& b) { return lowerCase(a.name) < lowerCase(b.name); });
+    return out;
+}
+
 void appendSceneClips(std::vector<ClipDef>& clips) {
     const std::vector<BuiltinSceneInfo>& builtin = builtinScenes();
     for (size_t i = 0; i < builtin.size(); ++i) {
@@ -82,6 +156,7 @@ void appendSceneClips(std::vector<ClipDef>& clips) {
     }
 
     appendModelClips(clips);
+    appendPackClips(clips);
 }
 
 const char* kVertex = R"glsl(#version 330 core
@@ -568,6 +643,30 @@ std::string modelDirectory() {
     return (std::filesystem::path(userDataDir()) / "models").string();
 }
 
+std::string texturesDirectory() {
+    return (std::filesystem::path(userDataDir()) / "textures").string();
+}
+
+std::string clipsDirectory() {
+    return (std::filesystem::path(userDataDir()) / "clips").string();
+}
+
+std::string packClipName(const std::string& stem) {
+    return "Scene: " + stem;
+}
+
+std::vector<AssetFile> listModelAssets() {
+    return listFiles(modelDirectory(), {".glb", ".gltf"});
+}
+
+std::vector<AssetFile> listTextureAssets() {
+    return listFiles(texturesDirectory(), {".png", ".jpg", ".jpeg"});
+}
+
+std::vector<AssetFile> listPackAssets() {
+    return listFiles(clipsDirectory(), {".nyxclip"});
+}
+
 namespace {
 
 std::vector<ClipDef>& mutableLibrary() {
@@ -581,8 +680,8 @@ const std::vector<ClipDef>& clipLibrary() {
     return mutableLibrary();
 }
 
-int rescanModelClips() {
-    return appendModelClips(mutableLibrary());
+int rescanLibrary() {
+    return appendModelClips(mutableLibrary()) + appendPackClips(mutableLibrary());
 }
 
 int clipIndexByName(const std::string& name) {

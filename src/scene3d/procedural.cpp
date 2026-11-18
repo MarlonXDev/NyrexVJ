@@ -1,5 +1,7 @@
 #include "scene3d/procedural.hpp"
 
+#include "scene3d/builtin_docs.hpp"
+
 #include <cmath>
 #include <string>
 #include <utility>
@@ -313,6 +315,10 @@ const std::vector<BuiltinSceneInfo>& builtinScenes() {
         {"Torus Knot Mesh", &makeTorusKnotScene},
         {"Crystal Cluster Mesh", &makeCrystalClusterScene},
         {"Orbit Rings Mesh", &makeOrbitRingsScene},
+        {"Chrome Orbs Mesh", &makeChromeOrbsScene},
+        {"Neon Cubes Mesh", &makeNeonCubesScene},
+        {"Gold Knot Mesh", &makeGoldKnotScene},
+        {"Pulse Columns Mesh", &makePulseColumnsScene},
     };
     return scenes;
 }

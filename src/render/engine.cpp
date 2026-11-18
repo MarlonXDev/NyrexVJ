@@ -4,6 +4,7 @@
 #include "render/effect_library.hpp"
 #include "core/log.hpp"
 #include "scene3d/procedural.hpp"
+#include "scene3d/scene_pack.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -282,6 +283,18 @@ std::unique_ptr<ScenePlayer> Engine::makeScene(const ClipDef& def) const {
             return result;
         });
     }
+    if (def.kind == ClipKind::ScenePack) {
+        const std::string path = def.path;
+        return std::make_unique<ScenePlayer>(def.name, [path](const GltfLimits& limits) {
+            GltfResult result;
+            ScenePack pack;
+            if (!readScenePackFile(pathFromUtf8(path), pack, result.error)) {
+                return result;
+            }
+            AssetSource source({pathFromUtf8(modelDirectory()), pathFromUtf8(texturesDirectory())}, std::make_shared<ScenePack>(pack));
+            return buildSceneFromDoc(pack.doc, source.assets(), limits);
+        });
+    }
     if (def.kind == ClipKind::ModelFile) {
         const std::string path = def.path;
         return std::make_unique<ScenePlayer>(def.name, [path](const GltfLimits& limits) { return loadGltfFile(std::filesystem::path(std::u8string(path.begin(), path.end())), limits); });
@@ -301,7 +314,33 @@ void Engine::syncLibrary() {
     for (size_t i = before; i < library.size(); ++i) {
         clipThumbs_[i].create(kThumbWidth, kThumbHeight);
         scenes_[i] = makeScene(library[i]);
+        if (library[i].kind == ClipKind::ScenePack) {
+            deferredThumbs_.push_back(i);
+        }
     }
+}
+
+void Engine::reloadScene(int clip) {
+    ScenePlayer* player = scenePlayer(clip);
+    if (player == nullptr) {
+        return;
+    }
+    player->release();
+    player->thumbnailDone = false;
+    const size_t index = static_cast<size_t>(clip);
+    if (std::find(deferredThumbs_.begin(), deferredThumbs_.end(), index) == deferredThumbs_.end()) {
+        deferredThumbs_.push_back(index);
+    }
+}
+
+int Engine::loadedSceneCount() const {
+    int count = 0;
+    for (const std::unique_ptr<ScenePlayer>& player : scenes_) {
+        if (player && player->state() == SceneState::Ready) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 bool Engine::init() {
@@ -365,6 +404,8 @@ void Engine::renderSceneThumbnail(size_t index) {
     SceneFrame frame;
     frame.time = 2.6f;
     frame.bass = sample.bass;
+    frame.mid = sample.mid;
+    frame.high = sample.high;
     frame.level = sample.level;
     frame.kick = sample.kick;
     frame.colorA = defaults.colorA;
@@ -373,9 +414,13 @@ void Engine::renderSceneThumbnail(size_t index) {
 }
 
 void Engine::serviceScenes() {
+    constexpr double kUnloadAfterSeconds = 120.0;
+    std::vector<char> referenced(scenes_.size(), 0);
     for (const Layer& layer : comp.layers) {
         for (const int cell : layer.cells) {
             if (cell >= 0 && static_cast<size_t>(cell) < scenes_.size() && scenes_[static_cast<size_t>(cell)]) {
+                referenced[static_cast<size_t>(cell)] = 1;
+                scenes_[static_cast<size_t>(cell)]->touch();
                 ensureScene(static_cast<size_t>(cell));
             }
         }
@@ -386,7 +431,14 @@ void Engine::serviceScenes() {
         if (done) {
             deferredThumbs_.erase(deferredThumbs_.begin() + static_cast<long>(k));
         } else {
+            referenced[i] = 1;
             ++k;
+        }
+    }
+    for (size_t i = 0; i < scenes_.size(); ++i) {
+        if (scenes_[i] && !referenced[i] && scenes_[i]->state() == SceneState::Ready && scenes_[i]->idleSeconds() > kUnloadAfterSeconds) {
+            scenes_[i]->release();
+            logLine("3D scene '" + scenes_[i]->label() + "' was unloaded because it was not used for two minutes");
         }
     }
 }
@@ -1023,7 +1075,7 @@ void Engine::renderClipThumbnails(int maxCount) {
         const size_t i = nextThumb_++;
         ++done;
         if (i < scenes_.size() && scenes_[i]) {
-            if (clipLibrary()[i].kind == ClipKind::BuiltinScene && !ensureScene(i) && scenes_[i]->state() == SceneState::Loading) {
+            if ((clipLibrary()[i].kind == ClipKind::BuiltinScene || clipLibrary()[i].kind == ClipKind::ScenePack) && !ensureScene(i) && scenes_[i]->state() == SceneState::Loading) {
                 deferredThumbs_.push_back(i);
             }
             continue;
@@ -1176,6 +1228,8 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
             frame.time = static_cast<float>(clocks[li]);
             frame.scale = effective[li].scale;
             frame.bass = audio_.bass;
+            frame.mid = audio_.mid;
+            frame.high = audio_.high;
             frame.level = audio_.level;
             frame.kick = audio_.kick;
             frame.colorA = layer.colorA;

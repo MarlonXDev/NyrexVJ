@@ -305,7 +305,7 @@ void App::frame(double dt) {
 
     if (rescanModels_) {
         rescanModels_ = false;
-        const int added = rescanModelClips();
+        const int added = rescanLibrary();
         engine_.syncLibrary();
         toast(added > 0 ? std::string(tr("New 3D models found: ")) + std::to_string(added) : std::string(tr("No new 3D models found")));
     }

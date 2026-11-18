@@ -60,6 +60,9 @@ public:
     GLuint clipThumbnail(int clip) const;
     bool isSceneClip(int clip) const;
     ScenePlayer* scenePlayer(int clip);
+    SceneRenderer& sceneRenderer() { return sceneRenderer_; }
+    void reloadScene(int clip);
+    int loadedSceneCount() const;
     GpuMemory gpuMemory() const;
     GLuint layerPreview(int layer) const;
     bool layerLive(int layer) const;

@@ -19,8 +19,15 @@ struct SceneFrame {
     float time = 0.0f;
     float scale = 1.0f;
     float bass = 0.0f;
+    float mid = 0.0f;
+    float high = 0.0f;
     float level = 0.0f;
     float kick = 0.0f;
+    bool editor = false;
+    bool editorCamera = false;
+    float editYaw = 0.0f;
+    float editPitch = 0.3f;
+    float editDistance = 1.0f;
     std::array<float, 3> colorA{0.0f, 0.8f, 1.0f};
     std::array<float, 3> colorB{1.0f, 0.2f, 0.7f};
     bool rainbow = false;
@@ -47,6 +54,10 @@ public:
     const std::string& error() const { return error_; }
     const SceneStats& stats() const { return stats_; }
     const std::vector<std::string>& warnings() const { return warnings_; }
+    void touch();
+    double idleSeconds() const;
+    const Scene& scene() const { return scene_; }
+    float fitRadius() const { return radius_; }
     double loadMilliseconds() const { return loadMs_; }
     double uploadMilliseconds() const { return uploadMs_; }
     bool thumbnailDone = false;
@@ -81,14 +92,16 @@ private:
     int animation_ = -1;
     double loadMs_ = 0.0;
     double uploadMs_ = 0.0;
+    double lastUse_ = 0.0;
 };
 
 class SceneRenderer {
 public:
     bool init();
     void shutdown();
-    bool ready() const { return program_ != 0; }
-    size_t depthBytes() const { return (static_cast<size_t>(main_.width) * static_cast<size_t>(main_.height) + static_cast<size_t>(thumb_.width) * static_cast<size_t>(thumb_.height)) * 4; }
+    bool ready() const { return classic_.id != 0; }
+    bool pbrReady() const { return pbr_.id != 0; }
+    size_t depthBytes() const;
     void draw(const ScenePlayer& player, const SceneFrame& frame, const RenderTarget& target);
 
 private:
@@ -100,25 +113,53 @@ private:
         int height = 0;
     };
 
+    struct Program {
+        GLuint id = 0;
+        GLint viewProj = -1;
+        GLint model = -1;
+        GLint normalMat = -1;
+        GLint base = -1;
+        GLint hasTex = -1;
+        GLint tex = -1;
+        GLint camera = -1;
+        GLint palette = -1;
+        GLint colorA = -1;
+        GLint colorB = -1;
+        GLint rainbow = -1;
+        GLint time = -1;
+        GLint kick = -1;
+        GLint metal = -1;
+        GLint rough = -1;
+        GLint emissive = -1;
+        GLint boost = -1;
+        GLint flags = -1;
+        GLint cutoff = -1;
+        GLint normalScale = -1;
+        GLint texMr = -1;
+        GLint texNormal = -1;
+        GLint texEmissive = -1;
+        GLint follow = -1;
+        GLint lightCount = -1;
+        GLint lightPos = -1;
+        GLint lightColor = -1;
+        GLint skyTop = -1;
+        GLint skyHorizon = -1;
+        GLint skyGround = -1;
+        GLint skyIntensity = -1;
+        GLint sunDir = -1;
+        GLint sunColor = -1;
+        GLint exposure = -1;
+    };
+
     bool prepare(Surface& surface, const RenderTarget& target);
     void destroy(Surface& surface);
+    void locate(Program& program);
 
-    GLuint program_ = 0;
-    GLint viewProj_ = -1;
-    GLint model_ = -1;
-    GLint normalMat_ = -1;
-    GLint base_ = -1;
-    GLint hasTex_ = -1;
-    GLint tex_ = -1;
-    GLint camera_ = -1;
-    GLint palette_ = -1;
-    GLint colorA_ = -1;
-    GLint colorB_ = -1;
-    GLint rainbow_ = -1;
-    GLint time_ = -1;
-    GLint kick_ = -1;
+    Program classic_;
+    Program pbr_;
     Surface main_;
     Surface thumb_;
+    Surface editor_;
 };
 
 }

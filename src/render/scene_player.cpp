@@ -77,6 +77,179 @@ void main() {
 }
 )glsl";
 
+const char* kScenePbrFragment = R"glsl(#version 330 core
+in vec3 vNormal;
+in vec3 vWorld;
+in vec2 vUv;
+in vec4 vColor;
+out vec4 fragColor;
+uniform vec4 uBase;
+uniform float uMetal;
+uniform float uRough;
+uniform vec4 uEmissive;
+uniform float uBoost;
+uniform int uFlags;
+uniform float uCutoff;
+uniform float uNormalScale;
+uniform sampler2D uTex;
+uniform sampler2D uTexMr;
+uniform sampler2D uTexNormal;
+uniform sampler2D uTexEmissive;
+uniform vec3 uCamera;
+uniform float uFollow;
+uniform vec3 uColorA;
+uniform vec3 uColorB;
+uniform float uRainbow;
+uniform float uTime;
+uniform float uKick;
+uniform int uLightCount;
+uniform vec4 uLightPos[4];
+uniform vec3 uLightColor[4];
+uniform vec3 uSkyTop;
+uniform vec3 uSkyHorizon;
+uniform vec3 uSkyGround;
+uniform float uSkyIntensity;
+uniform vec3 uSunDir;
+uniform vec3 uSunColor;
+uniform float uExposure;
+const float PI = 3.14159265;
+
+vec3 toLinear(vec3 c) {
+    return pow(max(c, vec3(0.0)), vec3(2.2));
+}
+
+vec3 skyEnv(vec3 d) {
+    float h = d.y;
+    vec3 c = h >= 0.0 ? mix(uSkyHorizon, uSkyTop, pow(h, 0.45)) : mix(uSkyHorizon, uSkyGround, pow(-h, 0.45));
+    float sun = pow(max(dot(d, uSunDir), 0.0), 96.0);
+    float card = smoothstep(0.30, 0.0, abs(h - 0.25)) * 0.55;
+    c += uSunColor * sun * 5.0 + uSkyHorizon * card;
+    return c * uSkyIntensity;
+}
+
+vec3 diffuseEnv(vec3 n) {
+    vec3 c = mix(uSkyGround, uSkyTop, smoothstep(-0.8, 0.8, n.y));
+    c = mix(c, uSkyHorizon, 0.35 * (1.0 - abs(n.y)));
+    return c * uSkyIntensity;
+}
+
+vec3 envBrdf(vec3 f0, float rough, float nov) {
+    const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+    const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+    vec4 r = rough * c0 + c1;
+    float a004 = min(r.x * r.x, exp2(-9.28 * nov)) * r.x + r.y;
+    vec2 ab = vec2(-1.04, 1.04) * a004 + r.zw;
+    return f0 * ab.x + ab.y;
+}
+
+vec3 perturb(vec3 n, vec3 p, vec2 uv, vec3 m) {
+    vec3 dp1 = dFdx(p);
+    vec3 dp2 = dFdy(p);
+    vec2 duv1 = dFdx(uv);
+    vec2 duv2 = dFdy(uv);
+    vec3 dp2perp = cross(dp2, n);
+    vec3 dp1perp = cross(n, dp1);
+    vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+    float inv = inversesqrt(max(max(dot(t, t), dot(b, b)), 1e-12));
+    return normalize(mat3(t * inv, b * inv, n) * m);
+}
+
+vec3 aces(vec3 x) {
+    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+void main() {
+    vec3 n = normalize(vNormal);
+    if (!gl_FrontFacing) {
+        n = -n;
+    }
+    vec4 albedo = uBase * vColor;
+    if ((uFlags & 1) != 0) {
+        vec4 t = texture(uTex, vUv);
+        albedo.rgb *= toLinear(t.rgb);
+        albedo.a *= t.a;
+    }
+    if ((uFlags & 16) != 0 && albedo.a < uCutoff) {
+        discard;
+    }
+    float metal = uMetal;
+    float rough = uRough;
+    if ((uFlags & 2) != 0) {
+        vec4 mr = texture(uTexMr, vUv);
+        rough *= mr.g;
+        metal *= mr.b;
+    }
+    rough = clamp(rough, 0.045, 1.0);
+    metal = clamp(metal, 0.0, 1.0);
+    if ((uFlags & 4) != 0) {
+        vec3 m = texture(uTexNormal, vUv).xyz * 2.0 - 1.0;
+        m.xy *= uNormalScale;
+        n = perturb(n, vWorld, vUv, m);
+    }
+    vec3 base = albedo.rgb;
+    if (uFollow > 0.5) {
+        float l = clamp(pow(dot(base, vec3(0.2126, 0.7152, 0.0722)), 0.4545), 0.0, 1.0);
+        vec3 tint = mix(uColorA, uColorB, l);
+        if (uRainbow > 0.5) {
+            tint = 0.5 + 0.5 * cos(6.28318 * (l * 0.6 + uTime * 0.05 + vec3(0.0, 0.33, 0.67)));
+        }
+        base = toLinear(tint) * (0.1 + 0.9 * l);
+    }
+    float glowColor = max(max(uEmissive.r, uEmissive.g), uEmissive.b);
+    vec3 emissive = uEmissive.rgb * uEmissive.a;
+    if ((uFlags & 8) != 0) {
+        emissive *= toLinear(texture(uTexEmissive, vUv).rgb);
+    }
+    emissive += glowColor > 0.001 ? uEmissive.rgb * uBoost : base * uBoost;
+
+    vec3 v = normalize(uCamera - vWorld);
+    float nov = max(dot(n, v), 1e-4);
+    vec3 f0 = mix(vec3(0.04), base, metal);
+    vec3 diffuseColor = base * (1.0 - metal);
+    float a = rough * rough;
+    float a2 = a * a;
+    vec3 color = vec3(0.0);
+    for (int i = 0; i < 4; ++i) {
+        if (i >= uLightCount) {
+            break;
+        }
+        vec3 l;
+        float atten = 1.0;
+        if (uLightPos[i].w > 0.5) {
+            vec3 d = uLightPos[i].xyz - vWorld;
+            float dist2 = dot(d, d);
+            l = d * inversesqrt(max(dist2, 1e-6));
+            atten = 1.0 / (1.0 + dist2);
+        } else {
+            l = normalize(uLightPos[i].xyz);
+        }
+        float nol = max(dot(n, l), 0.0);
+        if (nol <= 0.0) {
+            continue;
+        }
+        vec3 h = normalize(l + v);
+        float noh = max(dot(n, h), 0.0);
+        float voh = max(dot(v, h), 0.0);
+        float dd = noh * noh * (a2 - 1.0) + 1.0;
+        float D = a2 / (PI * dd * dd);
+        float vis = 0.5 / (nol * sqrt(nov * nov * (1.0 - a2) + a2) + nov * sqrt(nol * nol * (1.0 - a2) + a2));
+        vec3 F = f0 + (1.0 - f0) * pow(1.0 - voh, 5.0);
+        vec3 spec = D * vis * F;
+        vec3 diff = (1.0 - F) * diffuseColor / PI;
+        color += (diff + spec) * uLightColor[i] * atten * nol;
+    }
+    vec3 r = reflect(-v, n);
+    vec3 specEnv = mix(skyEnv(r), diffuseEnv(r), clamp(rough * 1.15, 0.0, 1.0));
+    color += diffuseColor * diffuseEnv(n) + specEnv * envBrdf(f0, rough, nov);
+    color += emissive;
+    color *= uExposure * (1.0 + 0.12 * uKick);
+    color = aces(color);
+    color = pow(color, vec3(1.0 / 2.2));
+    fragColor = vec4(color, 1.0);
+}
+)glsl";
+
 double nowMs() {
     using Clock = std::chrono::steady_clock;
     return std::chrono::duration<double, std::milli>(Clock::now().time_since_epoch()).count();
@@ -84,6 +257,14 @@ double nowMs() {
 
 constexpr float kFov = 0.8f;
 
+}
+
+void ScenePlayer::touch() {
+    lastUse_ = nowMs();
+}
+
+double ScenePlayer::idleSeconds() const {
+    return (nowMs() - lastUse_) * 0.001;
 }
 
 ScenePlayer::ScenePlayer(std::string label, Loader loader) : label_(std::move(label)), loader_(std::move(loader)) {}
@@ -146,6 +327,7 @@ SceneState ScenePlayer::poll() {
     }
     uploadMs_ = nowMs() - uploadStart;
     state_ = SceneState::Ready;
+    lastUse_ = nowMs();
     for (const std::string& warning : warnings_) {
         logLine("3D scene '" + label_ + "': " + warning);
     }
@@ -289,26 +471,58 @@ bool ScenePlayer::upload() {
     return true;
 }
 
+void SceneRenderer::locate(Program& p) {
+    const auto at = [&](const char* name) { return glGetUniformLocation(p.id, name); };
+    p.viewProj = at("uViewProj");
+    p.model = at("uModel");
+    p.normalMat = at("uNormalMat");
+    p.base = at("uBase");
+    p.hasTex = at("uHasTex");
+    p.tex = at("uTex");
+    p.camera = at("uCamera");
+    p.palette = at("uPalette");
+    p.colorA = at("uColorA");
+    p.colorB = at("uColorB");
+    p.rainbow = at("uRainbow");
+    p.time = at("uTime");
+    p.kick = at("uKick");
+    p.metal = at("uMetal");
+    p.rough = at("uRough");
+    p.emissive = at("uEmissive");
+    p.boost = at("uBoost");
+    p.flags = at("uFlags");
+    p.cutoff = at("uCutoff");
+    p.normalScale = at("uNormalScale");
+    p.texMr = at("uTexMr");
+    p.texNormal = at("uTexNormal");
+    p.texEmissive = at("uTexEmissive");
+    p.follow = at("uFollow");
+    p.lightCount = at("uLightCount");
+    p.lightPos = at("uLightPos");
+    p.lightColor = at("uLightColor");
+    p.skyTop = at("uSkyTop");
+    p.skyHorizon = at("uSkyHorizon");
+    p.skyGround = at("uSkyGround");
+    p.skyIntensity = at("uSkyIntensity");
+    p.sunDir = at("uSunDir");
+    p.sunColor = at("uSunColor");
+    p.exposure = at("uExposure");
+}
+
 bool SceneRenderer::init() {
     std::string error;
-    program_ = buildProgram(kSceneVertex, kSceneFragment, &error);
-    if (!program_) {
+    classic_.id = buildProgram(kSceneVertex, kSceneFragment, &error);
+    if (!classic_.id) {
         logLine("3D scene shader failed: " + error);
         return false;
     }
-    viewProj_ = glGetUniformLocation(program_, "uViewProj");
-    model_ = glGetUniformLocation(program_, "uModel");
-    normalMat_ = glGetUniformLocation(program_, "uNormalMat");
-    base_ = glGetUniformLocation(program_, "uBase");
-    hasTex_ = glGetUniformLocation(program_, "uHasTex");
-    tex_ = glGetUniformLocation(program_, "uTex");
-    camera_ = glGetUniformLocation(program_, "uCamera");
-    palette_ = glGetUniformLocation(program_, "uPalette");
-    colorA_ = glGetUniformLocation(program_, "uColorA");
-    colorB_ = glGetUniformLocation(program_, "uColorB");
-    rainbow_ = glGetUniformLocation(program_, "uRainbow");
-    time_ = glGetUniformLocation(program_, "uTime");
-    kick_ = glGetUniformLocation(program_, "uKick");
+    locate(classic_);
+    pbr_.id = buildProgram(kSceneVertex, kScenePbrFragment, &error);
+    if (!pbr_.id) {
+        logLine("3D PBR shader failed: " + error);
+    } else {
+        locate(pbr_);
+    }
     return true;
 }
 
@@ -325,10 +539,21 @@ void SceneRenderer::destroy(Surface& surface) {
 void SceneRenderer::shutdown() {
     destroy(main_);
     destroy(thumb_);
-    if (program_) {
-        glDeleteProgram(program_);
-        program_ = 0;
+    destroy(editor_);
+    for (Program* program : {&classic_, &pbr_}) {
+        if (program->id) {
+            glDeleteProgram(program->id);
+        }
+        *program = Program{};
     }
+}
+
+size_t SceneRenderer::depthBytes() const {
+    size_t total = 0;
+    for (const Surface* surface : {&main_, &thumb_, &editor_}) {
+        total += static_cast<size_t>(surface->width) * static_cast<size_t>(surface->height) * 4;
+    }
+    return total;
 }
 
 bool SceneRenderer::prepare(Surface& surface, const RenderTarget& target) {
@@ -363,10 +588,13 @@ bool SceneRenderer::prepare(Surface& surface, const RenderTarget& target) {
 }
 
 void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, const RenderTarget& target) {
-    if (!program_ || player.state() != SceneState::Ready || !target.texture) {
+    if (!classic_.id || player.state() != SceneState::Ready || !target.texture) {
         return;
     }
-    Surface& surface = target.width >= 512 ? main_ : thumb_;
+    const Scene& scene = player.scene_;
+    const bool usePbr = scene.shading == Shading::Pbr && pbr_.id != 0;
+    const Program& p = usePbr ? pbr_ : classic_;
+    Surface& surface = frame.editor ? editor_ : (target.width >= 512 ? main_ : thumb_);
     if (!prepare(surface, target)) {
         return;
     }
@@ -379,48 +607,151 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     glClearDepth(1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    SceneAudio audio;
+    audio.bass = frame.bass;
+    audio.mid = frame.mid;
+    audio.high = frame.high;
+    audio.level = frame.level;
+    audio.kick = frame.kick;
+
+    const SceneCamera& camera = scene.camera;
+    const float fov = camera.authored ? std::clamp(camera.fovDegrees, 15.0f, 110.0f) * 0.0174532925f : kFov;
     const float zoom = std::clamp(frame.scale, 0.2f, 4.0f);
-    const float distance = player.radius_ / std::sin(kFov * 0.5f) * 1.04f / zoom * (1.0f - 0.04f * frame.kick);
-    const float yaw = frame.time * 0.4f;
-    const float pitch = 0.32f + 0.12f * std::sin(frame.time * 0.31f);
+    float distance = player.radius_ / std::sin(fov * 0.5f) * 1.04f / zoom;
+    float yaw;
+    float pitch;
+    if (camera.authored) {
+        distance *= camera.distance * std::clamp(1.0f - bindingSum(camera.bindings, BindTarget::Zoom, audio), 0.3f, 3.0f);
+        yaw = camera.yawDegrees * 0.0174532925f + frame.time * camera.orbitSpeed;
+        pitch = (camera.pitchDegrees + camera.pitchSway * std::sin(frame.time * 0.31f)) * 0.0174532925f;
+    } else {
+        distance *= 1.0f - 0.04f * frame.kick;
+        yaw = frame.time * 0.4f;
+        pitch = 0.32f + 0.12f * std::sin(frame.time * 0.31f);
+    }
+    if (frame.editorCamera) {
+        yaw = frame.editYaw;
+        pitch = std::clamp(frame.editPitch, -1.5f, 1.5f);
+        distance = player.radius_ / std::sin(fov * 0.5f) * 1.04f * std::clamp(frame.editDistance, 0.05f, 20.0f);
+    }
     const Vec3 eye = player.center_ + Vec3{std::cos(pitch) * std::sin(yaw), std::sin(pitch), std::cos(pitch) * std::cos(yaw)} * distance;
     const float aspect = static_cast<float>(target.width) / static_cast<float>(std::max(target.height, 1));
-    const Mat4 viewProj = perspective(kFov, aspect, distance * 0.04f, distance + player.radius_ * 6.0f) * lookAt(eye, player.center_, {0.0f, 1.0f, 0.0f});
-    const float pulse = 1.0f + 0.07f * frame.kick + 0.04f * frame.bass;
+    const Mat4 viewProj = perspective(fov, aspect, std::max(distance * 0.02f, 1e-3f), distance + player.radius_ * 8.0f) * lookAt(eye, player.center_, {0.0f, 1.0f, 0.0f});
+    const float pulse = camera.authored ? 1.0f : 1.0f + 0.07f * frame.kick + 0.04f * frame.bass;
     const Mat4 pivot = translation(player.center_) * scaling({pulse, pulse, pulse}) * translation(player.center_ * -1.0f);
 
-    glUseProgram(program_);
-    glUniformMatrix4fv(viewProj_, 1, GL_FALSE, viewProj.m.data());
-    glUniform3f(camera_, eye.x, eye.y, eye.z);
-    glUniform1f(palette_, player.scene_.paletteTint ? 1.0f : 0.0f);
-    glUniform3f(colorA_, frame.colorA[0], frame.colorA[1], frame.colorA[2]);
-    glUniform3f(colorB_, frame.colorB[0], frame.colorB[1], frame.colorB[2]);
-    glUniform1f(rainbow_, frame.rainbow ? 1.0f : 0.0f);
-    glUniform1f(time_, frame.time);
-    glUniform1f(kick_, frame.kick);
-    glUniform1i(tex_, 0);
+    glUseProgram(p.id);
+    glUniformMatrix4fv(p.viewProj, 1, GL_FALSE, viewProj.m.data());
+    glUniform3f(p.camera, eye.x, eye.y, eye.z);
+    glUniform1f(p.palette, scene.paletteTint ? 1.0f : 0.0f);
+    glUniform3f(p.colorA, frame.colorA[0], frame.colorA[1], frame.colorA[2]);
+    glUniform3f(p.colorB, frame.colorB[0], frame.colorB[1], frame.colorB[2]);
+    glUniform1f(p.rainbow, frame.rainbow ? 1.0f : 0.0f);
+    glUniform1f(p.time, frame.time);
+    glUniform1f(p.kick, frame.kick);
+    glUniform1i(p.tex, 0);
     glActiveTexture(GL_TEXTURE0);
+
+    if (usePbr) {
+        float positions[16] = {};
+        float colors[12] = {};
+        int count = 0;
+        Vec3 sunDir{0.5f, 0.8f, 0.6f};
+        std::array<float, 3> sunColor{1.0f, 0.95f, 0.9f};
+        bool sunSet = false;
+        const auto addLight = [&](bool point, Vec3 position, std::array<float, 3> color, float intensity) {
+            if (count >= static_cast<int>(kSceneMaxLights)) {
+                return;
+            }
+            positions[count * 4 + 0] = position.x;
+            positions[count * 4 + 1] = position.y;
+            positions[count * 4 + 2] = position.z;
+            positions[count * 4 + 3] = point ? 1.0f : 0.0f;
+            for (int c = 0; c < 3; ++c) {
+                colors[count * 3 + c] = color[static_cast<size_t>(c)] * intensity;
+            }
+            if (!point && !sunSet) {
+                sunDir = normalize(position);
+                sunColor = color;
+                sunSet = true;
+            }
+            ++count;
+        };
+        if (scene.lights.empty()) {
+            addLight(false, {0.5f, 0.8f, 0.6f}, {1.0f, 0.96f, 0.9f}, 3.2f);
+            addLight(false, {-0.6f, -0.2f, -0.5f}, {0.6f, 0.7f, 1.0f}, 0.8f);
+            addLight(false, {0.0f, 0.3f, -1.0f}, {1.0f, 1.0f, 1.0f}, 1.5f);
+        } else {
+            for (const SceneLight& light : scene.lights) {
+                const float reactive = std::max(1.0f + bindingSum(light.bindings, BindTarget::Light, audio), 0.0f);
+                addLight(light.point, light.position, light.color, light.intensity * reactive);
+            }
+        }
+        glUniform1i(p.lightCount, count);
+        glUniform4fv(p.lightPos, 4, positions);
+        glUniform3fv(p.lightColor, 4, colors);
+        glUniform3f(p.skyTop, scene.sky.top[0], scene.sky.top[1], scene.sky.top[2]);
+        glUniform3f(p.skyHorizon, scene.sky.horizon[0], scene.sky.horizon[1], scene.sky.horizon[2]);
+        glUniform3f(p.skyGround, scene.sky.ground[0], scene.sky.ground[1], scene.sky.ground[2]);
+        glUniform1f(p.skyIntensity, scene.sky.intensity);
+        glUniform3f(p.sunDir, sunDir.x, sunDir.y, sunDir.z);
+        glUniform3f(p.sunColor, sunColor[0], sunColor[1], sunColor[2]);
+        glUniform1f(p.exposure, scene.exposure);
+        glUniform1i(p.texMr, 1);
+        glUniform1i(p.texNormal, 2);
+        glUniform1i(p.texEmissive, 3);
+    }
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     bool culling = true;
-    for (const SceneInstance& instance : evaluateScene(player.scene_, player.animation_, frame.time)) {
+    const auto textureOf = [&](int index) -> GLuint {
+        return index >= 0 && index < static_cast<int>(player.textures_.size()) ? player.textures_[static_cast<size_t>(index)] : 0;
+    };
+    for (const SceneInstance& instance : evaluateScene(scene, player.animation_, frame.time, &audio)) {
         if (instance.mesh < 0 || instance.mesh >= static_cast<int>(player.meshes_.size())) {
             continue;
         }
         const ScenePlayer::GpuMesh& mesh = player.meshes_[static_cast<size_t>(instance.mesh)];
         const Mat4 model = pivot * instance.world;
         const std::array<float, 9> normal = normalMatrix(model);
-        glUniformMatrix4fv(model_, 1, GL_FALSE, model.m.data());
-        glUniformMatrix3fv(normalMat_, 1, GL_FALSE, normal.data());
+        glUniformMatrix4fv(p.model, 1, GL_FALSE, model.m.data());
+        glUniformMatrix3fv(p.normalMat, 1, GL_FALSE, normal.data());
         SceneMaterial material;
-        if (mesh.material >= 0 && mesh.material < static_cast<int>(player.scene_.materials.size())) {
-            material = player.scene_.materials[static_cast<size_t>(mesh.material)];
+        if (mesh.material >= 0 && mesh.material < static_cast<int>(scene.materials.size())) {
+            material = scene.materials[static_cast<size_t>(mesh.material)];
         }
-        glUniform4f(base_, material.baseColor[0], material.baseColor[1], material.baseColor[2], material.baseColor[3]);
-        const bool textured = material.baseTexture >= 0 && material.baseTexture < static_cast<int>(player.textures_.size());
-        glUniform1i(hasTex_, textured ? 1 : 0);
-        glBindTexture(GL_TEXTURE_2D, textured ? player.textures_[static_cast<size_t>(material.baseTexture)] : 0);
+        glUniform4f(p.base, material.baseColor[0], material.baseColor[1], material.baseColor[2], material.baseColor[3]);
+        const GLuint baseTexture = textureOf(material.baseTexture);
+        if (usePbr) {
+            const GLuint mrTexture = textureOf(material.metallicRoughnessTexture);
+            const GLuint normalTexture = textureOf(material.normalTexture);
+            const GLuint emissiveTexture = textureOf(material.emissiveTexture);
+            int flags = 0;
+            flags |= baseTexture ? 1 : 0;
+            flags |= mrTexture ? 2 : 0;
+            flags |= normalTexture ? 4 : 0;
+            flags |= emissiveTexture ? 8 : 0;
+            flags |= material.alphaMode == AlphaMode::Mask ? 16 : 0;
+            glUniform1i(p.flags, flags);
+            glUniform1f(p.metal, material.metallic);
+            glUniform1f(p.rough, material.roughness);
+            glUniform4f(p.emissive, material.emissive[0], material.emissive[1], material.emissive[2], material.emissiveStrength);
+            glUniform1f(p.boost, instance.emissive);
+            glUniform1f(p.cutoff, material.alphaCutoff);
+            glUniform1f(p.normalScale, material.normalScale);
+            glUniform1f(p.follow, material.followPalette ? 1.0f : 0.0f);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, mrTexture);
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, normalTexture);
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, emissiveTexture);
+            glActiveTexture(GL_TEXTURE0);
+        } else {
+            glUniform1i(p.hasTex, baseTexture ? 1 : 0);
+        }
+        glBindTexture(GL_TEXTURE_2D, baseTexture);
         const bool wantCulling = !material.doubleSided;
         if (wantCulling != culling) {
             if (wantCulling) {
@@ -435,6 +766,13 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     }
 
     glBindVertexArray(0);
+    if (usePbr) {
+        for (const GLenum unit : {GL_TEXTURE3, GL_TEXTURE2, GL_TEXTURE1}) {
+            glActiveTexture(unit);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+    }
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);

@@ -115,6 +115,7 @@ set(NYREXVJ_CORE_SOURCES
     src/render/clip_library.cpp
     src/render/clips_extra.cpp
     src/core/clip_pack.cpp
+    src/scene3d/builtin_docs.cpp
     src/scene3d/doc_build.cpp
     src/scene3d/glb_writer.cpp
     src/scene3d/gltf.cpp

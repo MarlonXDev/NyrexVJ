@@ -138,6 +138,7 @@ set(NYREXVJ_CORE_SOURCES
     src/control/control_targets.cpp
     src/control/midi_map.cpp
     src/control/osc.cpp
+    src/control/osc_out.cpp
     src/update/update_logic.cpp
     src/update/updater.cpp
 )

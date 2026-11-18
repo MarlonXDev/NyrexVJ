@@ -651,6 +651,23 @@ const Translation kGerman[] = {
     {"the scene has no objects that can be drawn", "die Szene hat keine Objekte, die gezeichnet werden können"},
     {"unsafe model name", "unsicherer Modellname"},
     {"unsafe texture name", "unsicherer Texturname"},
+    {"Send OSC data", "OSC-Daten senden"},
+    {"OSC output", "OSC-Ausgabe"},
+    {"OSC output is off", "OSC-Ausgabe ist aus"},
+    {"OSC output sends tempo, beats, audio levels and chosen values to other programs, for example Unreal Engine. All messages start with /nyrex/out/.", "Die OSC-Ausgabe schickt Tempo, Beats, Audiopegel und gewählte Werte an andere Programme, zum Beispiel Unreal Engine. Alle Nachrichten beginnen mit /nyrex/out/."},
+    {"Address", "Adresse"},
+    {"Updates per second", "Updates pro Sekunde"},
+    {"Send spectrum bands", "Spektrumbänder senden"},
+    {"Data is sent to another address. Only use addresses in a network you trust.", "Die Daten gehen an eine andere Adresse. Nutze nur Adressen in einem Netzwerk, dem du vertraust."},
+    {"Sending to ", "Sendet an "},
+    {"packets", "Pakete"},
+    {"Parameters to send", "Zu sendende Parameter"},
+    {"Each parameter sends the 0 to 1 value of one control as /nyrex/out/param/<name>.", "Jeder Parameter sendet den Wert (0 bis 1) eines Reglers als /nyrex/out/param/<Name>."},
+    {"Add parameter", "Parameter hinzufügen"},
+    {"Choose the value to send", "Wert zum Senden wählen"},
+    {"The OSC output port must be between 1 and 65535", "Der OSC-Ausgabeport muss zwischen 1 und 65535 liegen"},
+    {"The OSC output address must be an IPv4 address or localhost", "Die OSC-Ausgabeadresse muss eine IPv4-Adresse oder localhost sein"},
+    {"Could not create the OSC output socket", "Der OSC-Ausgabe-Socket konnte nicht erstellt werden"},
 };
 
 }

@@ -82,6 +82,14 @@ float logRange(float low, float high, float t) {
     return low * std::pow(high / low, t);
 }
 
+float unlerp(float low, float high, float value) {
+    return std::clamp((value - low) / (high - low), 0.0f, 1.0f);
+}
+
+float unlog(float low, float high, float value) {
+    return std::clamp(std::log(std::max(value, low) / low) / std::log(high / low), 0.0f, 1.0f);
+}
+
 }
 
 const std::vector<ControlTarget>& controlTargets() {
@@ -165,6 +173,45 @@ bool ControlRouter::state(int index) const {
         return slotFor(target).enabled;
     default:
         return false;
+    }
+}
+
+float ControlRouter::value(int index) const {
+    const auto& targets = controlTargets();
+    if (index < 0 || index >= static_cast<int>(targets.size())) {
+        return 0.0f;
+    }
+    const ControlTarget& target = targets[static_cast<size_t>(index)];
+    if (target.kind == ControlKind::Trigger) {
+        return 0.0f;
+    }
+    if (target.kind == ControlKind::Toggle) {
+        return state(index) ? 1.0f : 0.0f;
+    }
+    const ColorGrade& grade = target.layer >= 0 ? comp_.layers[static_cast<size_t>(target.layer)].grade : comp_.master.grade;
+    switch (target.item) {
+    case ControlItem::Level:
+        return std::clamp(comp_.master.level, 0.0f, 1.0f);
+    case ControlItem::Bpm:
+        return unlerp(40.0f, 240.0f, comp_.bpm);
+    case ControlItem::Hue:
+        return unlerp(-0.5f, 0.5f, grade.hue);
+    case ControlItem::Saturation:
+        return unlerp(0.0f, 2.0f, grade.saturation);
+    case ControlItem::Brightness:
+        return unlerp(-0.5f, 0.5f, grade.brightness);
+    case ControlItem::Contrast:
+        return unlerp(0.5f, 2.0f, grade.contrast);
+    case ControlItem::Opacity:
+        return std::clamp(comp_.layers[static_cast<size_t>(target.layer)].opacity, 0.0f, 1.0f);
+    case ControlItem::Speed:
+        return unlog(0.1f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].speed);
+    case ControlItem::Scale:
+        return unlog(0.25f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].scale);
+    case ControlItem::EffectParam:
+        return std::clamp(slotFor(target).params[static_cast<size_t>(target.param)], 0.0f, 1.0f);
+    default:
+        return 0.0f;
     }
 }
 

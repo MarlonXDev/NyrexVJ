@@ -68,6 +68,7 @@ public:
     bool set(int target, float value, bool edgeOnly);
     bool toggle(int target);
     bool state(int target) const;
+    float value(int target) const;
 
 private:
     void setContinuous(const ControlTarget& target, float value);

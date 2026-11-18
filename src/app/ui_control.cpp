@@ -3,6 +3,7 @@
 #include "app/ui_common.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <cctype>
 #include <cfloat>
 #include <string>
@@ -122,10 +123,155 @@ void App::drawControlPage() {
     }
     ImGui::SeparatorText("OSC");
     drawOscSection();
+    ImGui::SeparatorText(tr("OSC output"));
+    drawOscOutSection();
     ImGui::SeparatorText("MIDI");
     drawMidiSection();
     ImGui::SeparatorText(tr("Mappings"));
     drawBindingsSection();
+}
+
+void App::drawOscOutSection() {
+    auto persist = [this]() { saveSettings(settings_); };
+    ImGui::TextWrapped("%s", tr("OSC output sends tempo, beats, audio levels and chosen values to other programs, for example Unreal Engine. All messages start with /nyrex/out/."));
+    if (ImGui::Checkbox(trId("Send OSC data", "oscOutEnable"), &settings_.oscOutEnabled)) {
+        persist();
+    }
+    ImGui::BeginDisabled(!settings_.oscOutEnabled);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(tr("Address"));
+    ImGui::SameLine();
+    char host[64] = {};
+    std::snprintf(host, sizeof(host), "%s", settings_.oscOutHost.c_str());
+    ImGui::SetNextItemWidth(150.0f);
+    ImGui::InputText("##oscOutHost", host, sizeof(host));
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        settings_.oscOutHost = host[0] ? host : "127.0.0.1";
+        persist();
+    }
+    ImGui::SameLine();
+    ImGui::TextUnformatted("Port");
+    ImGui::SameLine();
+    int port = settings_.oscOutPort;
+    ImGui::SetNextItemWidth(90.0f);
+    ImGui::InputInt("##oscOutPort", &port, 0, 0);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        settings_.oscOutPort = std::clamp(port, 1, 65535);
+        persist();
+    }
+    int rate = settings_.oscOutRate;
+    ImGui::SetNextItemWidth(160.0f);
+    if (ImGui::SliderInt(trId("Updates per second", "oscOutRate"), &rate, 10, 120)) {
+        settings_.oscOutRate = rate;
+    }
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        persist();
+    }
+    if (ImGui::Checkbox(trId("Send spectrum bands", "oscOutSpectrum"), &settings_.oscOutSpectrum)) {
+        persist();
+    }
+    ImGui::EndDisabled();
+    if (settings_.oscOutEnabled && settings_.oscOutHost != "127.0.0.1" && settings_.oscOutHost != "localhost") {
+        ImGui::TextColored(ImVec4(1.0f, 0.65f, 0.2f, 1.0f), "%s", tr("Data is sent to another address. Only use addresses in a network you trust."));
+    }
+
+    ImGui::Spacing();
+    if (!settings_.oscOutEnabled) {
+        ImGui::TextDisabled("%s", tr("OSC output is off"));
+    } else if (oscOut_.sending()) {
+        ImGui::TextColored(kGood, "%s%s:%d", tr("Sending to "), settings_.oscOutHost.c_str(), settings_.oscOutPort);
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%llu %s)", oscOut_.packets(), tr("packets"));
+    } else if (!oscOut_.error().empty()) {
+        ImGui::TextColored(kBad, "%s", trMessage(oscOut_.error()).c_str());
+    }
+
+    if (ImGui::TreeNode(trId("Parameters to send", "oscOutParams"))) {
+        ImGui::TextWrapped("%s", tr("Each parameter sends the 0 to 1 value of one control as /nyrex/out/param/<name>."));
+        const auto& targets = controlTargets();
+        int removeIndex = -1;
+        for (size_t i = 0; i < settings_.oscOutParams.size(); ++i) {
+            OscOutParam& param = settings_.oscOutParams[i];
+            ImGui::PushID(static_cast<int>(i));
+            char name[40] = {};
+            std::snprintf(name, sizeof(name), "%s", param.name.c_str());
+            ImGui::SetNextItemWidth(120.0f);
+            ImGui::InputText("##name", name, sizeof(name));
+            if (ImGui::IsItemDeactivatedAfterEdit()) {
+                std::string clean;
+                for (const char* c = name; *c; ++c) {
+                    if (validOscParamName(std::string(1, *c))) {
+                        clean += *c;
+                    }
+                }
+                param.name = clean.empty() ? "param" : clean.substr(0, 32);
+                persist();
+            }
+            ImGui::SameLine();
+            const int index = controlTargetIndex(param.target);
+            const std::string label = index < 0 ? param.target : targetLabel(targets[static_cast<size_t>(index)]);
+            if (ImGui::Button((label + "##pick").c_str(), ImVec2(std::max(120.0f, ImGui::GetContentRegionAvail().x - 70.0f), 0.0f))) {
+                oscOutPick_ = static_cast<int>(i);
+                oscOutFilter_[0] = '\0';
+                ImGui::OpenPopup("##pickOutTarget");
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Remove"))) {
+                removeIndex = static_cast<int>(i);
+            }
+            ImGui::TextDisabled("/nyrex/out/param/%s", param.name.c_str());
+            ImGui::PopID();
+        }
+        if (removeIndex >= 0) {
+            settings_.oscOutParams.erase(settings_.oscOutParams.begin() + removeIndex);
+            persist();
+        }
+        ImGui::BeginDisabled(settings_.oscOutParams.size() >= kOscMaxParams);
+        if (ImGui::Button(trId("Add parameter", "oscOutAdd"))) {
+            settings_.oscOutParams.push_back({"param" + std::to_string(settings_.oscOutParams.size() + 1), "master/level"});
+            persist();
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SetNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_Appearing);
+        if (ImGui::BeginPopup("##pickOutTarget")) {
+            ImGui::TextColored(ui::kAccent, "%s", tr("Choose the value to send"));
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            if (ImGui::IsWindowAppearing()) {
+                ImGui::SetKeyboardFocusHere();
+            }
+            ImGui::InputTextWithHint("##pickOutFilter", tr("Search"), oscOutFilter_, sizeof(oscOutFilter_));
+            const std::string filter = lower(oscOutFilter_);
+            std::vector<std::pair<int, std::string>> shown;
+            for (size_t i = 0; i < targets.size(); ++i) {
+                if (targets[i].kind == ControlKind::Trigger) {
+                    continue;
+                }
+                std::string entry = targetLabel(targets[i]);
+                if (filter.empty() || lower(entry).find(filter) != std::string::npos || lower(targets[i].id).find(filter) != std::string::npos) {
+                    shown.emplace_back(static_cast<int>(i), std::move(entry));
+                }
+            }
+            ImGui::BeginChild("pickOutList", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders);
+            ImGuiListClipper clipper;
+            clipper.Begin(static_cast<int>(shown.size()));
+            while (clipper.Step()) {
+                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row) {
+                    const auto& entry = shown[static_cast<size_t>(row)];
+                    ImGui::PushID(row);
+                    if (ImGui::Selectable(entry.second.c_str()) && oscOutPick_ >= 0 && oscOutPick_ < static_cast<int>(settings_.oscOutParams.size())) {
+                        settings_.oscOutParams[static_cast<size_t>(oscOutPick_)].target = targets[static_cast<size_t>(entry.first)].id;
+                        persist();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::EndChild();
+            ImGui::EndPopup();
+        }
+        ImGui::TreePop();
+    }
 }
 
 void App::drawOscSection() {

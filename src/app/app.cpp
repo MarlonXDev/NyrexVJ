@@ -232,6 +232,7 @@ void App::shutdown() {
     settings_.spoutName = spoutName_;
     saveSettings(settings_);
     spout_.stop();
+    oscOut_.stop();
     audio_.select("");
     output_.close();
     shutdownCreator();
@@ -312,6 +313,21 @@ void App::frame(double dt) {
     control_.update(dt);
     updateAudio(dt);
     engine_.update(dt);
+    OscOutConfig oscOut;
+    oscOut.enabled = settings_.oscOutEnabled;
+    oscOut.host = settings_.oscOutHost;
+    oscOut.port = settings_.oscOutPort;
+    oscOut.rate = settings_.oscOutRate;
+    oscOut.spectrum = settings_.oscOutSpectrum;
+    oscOut.inputPort = control.oscEnabled ? control.oscPort : 0;
+    oscOut.version = NYREXVJ_VERSION;
+    oscOut.params = settings_.oscOutParams;
+    oscOut_.configure(oscOut);
+    OscOutFrame oscFrame;
+    oscFrame.audio = engine_.audio();
+    oscFrame.bpm = engine_.comp.bpm;
+    oscFrame.beat = engine_.beat();
+    oscOut_.update(dt, oscFrame, control_.router());
     engine_.render();
     if (spout_.active()) {
         spout_.send(engine_.outputTexture(), engine_.width(), engine_.height());

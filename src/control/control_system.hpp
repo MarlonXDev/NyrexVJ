@@ -30,6 +30,7 @@ public:
     void refreshMidiDevices();
 
     bool handleOsc(const OscMessage& message);
+    const ControlRouter& router() const { return router_; }
 
     bool oscListening() const { return socket_.isOpen(); }
     int oscPort() const { return config_.oscPort; }

@@ -695,6 +695,10 @@ const Translation kGerman[] = {
     {"Redone", "Wiederholt"},
     {"Nothing to undo", "Nichts zum Rückgängigmachen"},
     {"Nothing to redo", "Nichts zum Wiederholen"},
+    {"Click to play. Ctrl+click to preview without playing. Drag to copy it to another cell. Right click for more.", "Klick spielt ab. Strg+Klick zeigt nur die Vorschau. Ziehen kopiert in eine andere Zelle. Rechtsklick für mehr."},
+    {"Preview without playing", "Nur Vorschau, nicht abspielen"},
+    {"Live", "Live"},
+    {"Play now", "Jetzt abspielen"},
 };
 
 }

@@ -354,13 +354,18 @@ void App::drawDeck() {
                 ImVec2 pos = ImGui::GetCursorScreenPos();
                 ImVec2 size(cellW, cellH);
                 if (ImGui::InvisibleButton("cell", size)) {
-                    engine_.trigger(row, c);
-                    selectedLayer_ = row;
-                    selectedColumn_ = c;
+                    if (ImGui::GetIO().KeyCtrl) {
+                        selectedLayer_ = row;
+                        selectedColumn_ = c;
+                    } else {
+                        engine_.trigger(row, c);
+                        selectedLayer_ = row;
+                        selectedColumn_ = c;
+                    }
                 }
                 bool hovered = ImGui::IsItemHovered();
                 if (hovered && !ImGui::IsMouseDown(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
-                    ImGui::SetTooltip("%s", clip >= 0 ? tr("Click to play. Drag to copy it to another cell. Right click for more.") : tr("Empty cell. Drag a clip here or click a clip in the Library."));
+                    ImGui::SetTooltip("%s", clip >= 0 ? tr("Click to play. Ctrl+click to preview without playing. Drag to copy it to another cell. Right click for more.") : tr("Empty cell. Drag a clip here or click a clip in the Library."));
                 }
 
                 ImDrawList* draw = ImGui::GetWindowDrawList();
@@ -403,6 +408,10 @@ void App::drawDeck() {
                 }
 
                 if (ImGui::BeginPopupContextItem("cellmenu")) {
+                    if (ImGui::MenuItem(tr("Preview without playing"), nullptr, false, clip >= 0)) {
+                        selectedLayer_ = row;
+                        selectedColumn_ = c;
+                    }
                     if (ImGui::MenuItem(tr("Clear cell"), nullptr, false, clip >= 0)) {
                         layer.cells[static_cast<size_t>(c)] = -1;
                         if (active) {
@@ -455,7 +464,10 @@ void App::drawOutput() {
 }
 
 void App::drawPreview() {
-    ImGui::Begin(trId("Preview", "preview"));
+    if (!ImGui::Begin(trId("Preview", "preview"))) {
+        ImGui::End();
+        return;
+    }
     selectedLayer_ = std::clamp(selectedLayer_, 0, kLayerCount - 1);
     selectedColumn_ = std::clamp(selectedColumn_, 0, kColumnCount - 1);
     const Layer& layer = engine_.comp.layers[static_cast<size_t>(selectedLayer_)];
@@ -465,7 +477,11 @@ void App::drawPreview() {
     if (live) {
         texture = engine_.layerPreview(selectedLayer_);
     } else if (clip >= 0) {
-        texture = engine_.clipThumbnail(clip);
+        engine_.requestPreview(selectedLayer_, selectedColumn_);
+        texture = engine_.previewTexture();
+        if (!texture) {
+            texture = engine_.clipThumbnail(clip);
+        }
     }
 
     ImVec2 avail = ImGui::GetContentRegionAvail();
@@ -487,6 +503,18 @@ void App::drawPreview() {
     std::string label = ui::cellLabel(selectedLayer_, selectedColumn_);
     if (clip >= 0) {
         label += "   " + library[static_cast<size_t>(clip)].name;
+    }
+    if (clip >= 0) {
+        if (live) {
+            ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_CheckMark), "%s", tr("Live"));
+        } else {
+            ImGui::TextColored(ImVec4(0.55f, 0.85f, 1.0f, 1.0f), "%s", tr("Preview"));
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Play now"))) {
+                engine_.trigger(selectedLayer_, selectedColumn_);
+            }
+        }
+        ImGui::SameLine();
     }
     ImGui::TextDisabled("%s", label.c_str());
     ImGui::End();

@@ -18,6 +18,8 @@ constexpr int kThumbWidth = 160;
 constexpr int kThumbHeight = 90;
 constexpr int kPreviewWidth = 320;
 constexpr int kPreviewHeight = 180;
+constexpr int kPreviewBusWidth = 480;
+constexpr int kPreviewBusHeight = 270;
 
 const char* kPassHeader = R"glsl(#version 330 core
 in vec2 vUv;
@@ -652,6 +654,11 @@ int Engine::prepareAll(std::string& report) {
 }
 
 void Engine::shutdown() {
+    previewA_.destroy();
+    previewB_.destroy();
+    for (RenderTarget& target : previewFeedback_) {
+        target.destroy();
+    }
     for (SpoutInput& slot : spoutSlots_) {
         slot.release();
     }
@@ -1265,7 +1272,86 @@ void Engine::blit(const RenderTarget& source, const RenderTarget& target) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots, int chain, RenderTarget* source, RenderTarget* scratch) {
+void Engine::drawLayerSource(int clipIndex, const Layer& layer, float scale, double clock, const RenderTarget& target) {
+    const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
+    const bool spoutClip = clipDef.kind == ClipKind::SpoutSource;
+    if (spoutClip) {
+        prepareSpout(clipDef.sceneIndex);
+    }
+    target.bind();
+    glDisable(GL_BLEND);
+    if (scenes_[static_cast<size_t>(clipIndex)]) {
+        SceneFrame frame;
+        frame.time = static_cast<float>(clock);
+        frame.scale = scale;
+        frame.bass = audio_.bass;
+        frame.mid = audio_.mid;
+        frame.high = audio_.high;
+        frame.level = audio_.level;
+        frame.kick = audio_.kick;
+        frame.colorA = layer.colorA;
+        frame.colorB = layer.colorB;
+        frame.rainbow = layer.rainbow;
+        sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, target);
+    } else if (!spoutClip || !drawSpout(clipDef.sceneIndex, scale)) {
+        drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clock), static_cast<float>(beat_), comp.bpm, static_cast<float>(target.width), static_cast<float>(target.height), layer.colorA, layer.colorB, layer.rainbow, scale);
+    }
+}
+
+void Engine::requestPreview(int layer, int column) {
+    previewLayer_ = std::clamp(layer, 0, kLayerCount - 1);
+    previewColumn_ = std::clamp(column, 0, kColumnCount - 1);
+    previewRequested_ = true;
+}
+
+void Engine::renderPreview() {
+    previewResult_ = nullptr;
+    if (!previewRequested_) {
+        if (previewA_.fbo) {
+            previewA_.destroy();
+            previewB_.destroy();
+            for (RenderTarget& target : previewFeedback_) {
+                target.destroy();
+            }
+            previewClip_ = -1;
+        }
+        return;
+    }
+    previewRequested_ = false;
+    const size_t layerIndex = static_cast<size_t>(previewLayer_);
+    const Layer& layer = comp.layers[layerIndex];
+    if (layer.activeColumn == previewColumn_ && live_[layerIndex]) {
+        return;
+    }
+    const int clipIndex = layer.cells[static_cast<size_t>(previewColumn_)];
+    if (clipIndex < 0 || clipIndex >= static_cast<int>(clips_.size()) || !ensureClip(static_cast<size_t>(clipIndex))) {
+        return;
+    }
+    if (!previewA_.fbo && !(previewA_.create(kPreviewBusWidth, kPreviewBusHeight) && previewB_.create(kPreviewBusWidth, kPreviewBusHeight))) {
+        previewA_.destroy();
+        previewB_.destroy();
+        return;
+    }
+    if (clipIndex != previewClip_) {
+        previewClip_ = clipIndex;
+        previewClock_ = 0.0;
+        previewLastTime_ = time_;
+    }
+    const double delta = std::clamp(time_ - previewLastTime_, 0.0, 0.25);
+    previewLastTime_ = time_;
+    previewClock_ += delta * static_cast<double>(effective_[layerIndex].speed);
+
+    previewFeedbackUsed_.fill(false);
+    drawLayerSource(clipIndex, layer, effective_[layerIndex].scale, previewClock_, previewA_);
+    previewResult_ = runChain(layer.fx, previewFeedback_.data(), previewFeedbackUsed_.data(), &previewA_, &previewB_);
+    for (size_t k = 0; k < previewFeedback_.size(); ++k) {
+        if (previewFeedback_[k].fbo && !previewFeedbackUsed_[k]) {
+            previewFeedback_[k].destroy();
+        }
+    }
+}
+
+RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch) {
     RenderTarget* in = source;
     RenderTarget* out = scratch;
     const float width = static_cast<float>(source->width);
@@ -1280,7 +1366,6 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
             continue;
         }
         const EffectProgram& effect = effects_[static_cast<size_t>(slot.effect)];
-        const size_t key = static_cast<size_t>(chain * kEffectSlots + s);
 
         std::array<float, kParamCount> params = slot.params;
         float mixAmount = 1.0f;
@@ -1294,16 +1379,16 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
             }
         }
         if (mixAmount <= 0.002f) {
-            if (effect.usesPrevious && feedback_[key].fbo) {
-                blit(*in, feedback_[key]);
-                feedbackUsed_[key] = true;
+            if (effect.usesPrevious && feedback[s].fbo) {
+                blit(*in, feedback[s]);
+                feedbackUsed[s] = true;
             }
             continue;
         }
 
-        if (effect.usesPrevious && !feedback_[key].fbo) {
-            if (feedback_[key].create(source->width, source->height)) {
-                clearTarget(feedback_[key]);
+        if (effect.usesPrevious && !feedback[s].fbo) {
+            if (feedback[s].create(source->width, source->height)) {
+                clearTarget(feedback[s]);
             }
         }
 
@@ -1313,9 +1398,9 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, in->texture);
         glUniform1i(effect.tex, 0);
-        if (effect.usesPrevious && feedback_[key].texture) {
+        if (effect.usesPrevious && feedback[s].texture) {
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, feedback_[key].texture);
+            glBindTexture(GL_TEXTURE_2D, feedback[s].texture);
             glUniform1i(effect.prev, 1);
             glActiveTexture(GL_TEXTURE0);
         }
@@ -1328,12 +1413,12 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         glUniform2f(effect.res, width, height);
         triangle_.draw();
 
-        if (effect.usesPrevious && feedback_[key].fbo) {
+        if (effect.usesPrevious && feedback[s].fbo) {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, 0);
             glActiveTexture(GL_TEXTURE0);
-            blit(*out, feedback_[key]);
-            feedbackUsed_[key] = true;
+            blit(*out, feedback[s]);
+            feedbackUsed[s] = true;
         }
 
         std::swap(in, out);
@@ -1342,8 +1427,6 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
 }
 
 RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews) {
-    const float w = static_cast<float>(out_.width);
-    const float h = static_cast<float>(out_.height);
     const int chainBase = feedbackSet * kChainsPerSet;
 
     RenderTarget* accum = &compA_;
@@ -1378,31 +1461,9 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
             live_[li] = true;
         }
 
-        const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
-        const bool spoutClip = clipDef.kind == ClipKind::SpoutSource;
-        if (spoutClip) {
-            prepareSpout(clipDef.sceneIndex);
-        }
-        layerA_.bind();
-        glDisable(GL_BLEND);
-        if (scenes_[static_cast<size_t>(clipIndex)]) {
-            SceneFrame frame;
-            frame.time = static_cast<float>(clocks[li]);
-            frame.scale = effective[li].scale;
-            frame.bass = audio_.bass;
-            frame.mid = audio_.mid;
-            frame.high = audio_.high;
-            frame.level = audio_.level;
-            frame.kick = audio_.kick;
-            frame.colorA = layer.colorA;
-            frame.colorB = layer.colorB;
-            frame.rainbow = layer.rainbow;
-            sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, layerA_);
-        } else if (!spoutClip || !drawSpout(clipDef.sceneIndex, effective[li].scale)) {
-            drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clocks[li]), static_cast<float>(beat_), comp.bpm, w, h, layer.colorA, layer.colorB, layer.rainbow, effective[li].scale);
-        }
+        drawLayerSource(clipIndex, layer, effective[li].scale, clocks[li], layerA_);
 
-        RenderTarget* result = runChain(layer.fx, chainBase + l, &layerA_, &layerB_);
+        RenderTarget* result = runChain(layer.fx, chainFeedback(chainBase + l), chainUsed(chainBase + l), &layerA_, &layerB_);
         if (updatePreviews) {
             downsample(*result, previews_[li]);
         }
@@ -1442,7 +1503,7 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
     }
 
     glDisable(GL_BLEND);
-    return runChain(master.fx, chainBase + kLayerCount, accum, spare);
+    return runChain(master.fx, chainFeedback(chainBase + kLayerCount), chainUsed(chainBase + kLayerCount), accum, spare);
 }
 
 void Engine::finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination) {
@@ -1508,6 +1569,8 @@ void Engine::render() {
             feedback_[k].destroy();
         }
     }
+
+    renderPreview();
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);

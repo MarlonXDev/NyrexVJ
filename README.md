@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.11.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
+> Status: v0.12.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
 
 ## Download
 
@@ -26,7 +26,7 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 ## Highlights
 
 - **16 decks, smooth transitions.** Set up to 16 looks and glide between them with Fade, Dissolve, Zoom, Wipe, Radial, Spin or Slide, timed in seconds or beats, with an optional auto cycle.
-- **Audio reactive.** Pick system audio (your DJ program), a microphone, a line-in or a demo signal. Layers, the master and every effect parameter can follow Bass, Mid, High, Level or Kick, and an effect can be set to Gate so it only shows while the music is loud.
+- **Audio reactive.** Pick system audio (your DJ program), a microphone, a line-in or a demo signal. Layers, the master and every effect parameter can follow Bass, Mid, High, Level or Kick, and an effect can be set to Gate so it only shows while the music is loud. Eight macro knobs and four tempo synced LFOs work as sources in the same places.
 - **Live control.** Play it from a MIDI controller (learn a knob with one click, Windows) or remote control it over OSC from TouchDesigner, Max, Python and more. NyrexVJ can also send tempo, beats and audio levels back out over OSC.
 - **Unreal Engine and other programs.** Four Spout input clips show the picture of Unreal, TouchDesigner or a game (Windows), and the OSC output hands the tempo, beats, spectrum and your own named values to them. See [docs/UNREAL.md](docs/UNREAL.md). There is no Unreal plugin yet.
 - **OBS in two clicks.** Spout output with a sender name of your choice. In OBS add the source "Spout2 Capture" and select the sender.
@@ -89,6 +89,16 @@ Reactivity is set in three places:
 - **Every effect slot**: a band and a mode. In Parameter mode the band moves one effect value by an amount. In Gate mode the effect only shows while the band is loud and fades out in silence, the amount sets how sensitive it is.
 
 Bars, Equalizer, Spectrum Circle, Oscilloscope, Spectrum Warp and the Oscilloscope effect draw the real spectrum or waveform. Without an audio source they run on a virtual beat that follows the BPM.
+
+## Macros, LFOs and the beat grid
+
+Every place that can follow Bass, Mid, High, Level or Kick (the two slots of a layer, the master and every effect slot) can follow three more kinds of source:
+
+- **Macro 1 to 8**: knobs in the Master panel under Macros and LFOs. One macro can drive many parameters at once, and each knob can be mapped to a MIDI controller (Settings, Control) or set over OSC (`/nyrex/macro/1` to `/nyrex/macro/8`).
+- **LFO 1 to 4**: tempo synced oscillators with the shapes Sine, Triangle, Saw, Square, Random and Smooth random. The cycle runs from a quarter beat to 32 beats and the phase sets where in its cycle the LFO starts. Because they count beats, Tap, Resync, Pause and the BPM move them along and a sweep never drifts off the beat.
+- **Beat and Bar**: a ramp from 0 to 1 over one beat or one bar.
+
+Click the beat display next to the tempo controls to open the beat grid: set the beats per bar (2 to 8), move the grid by a sixteenth of a beat with `<<` and `>>`, snap it to the nearest beat, or make the nearest beat the first beat of the bar. The details and the order of the sources are in [docs/MODULATION.md](docs/MODULATION.md).
 
 ## Spout and OBS
 

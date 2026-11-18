@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.12.0 - 2026-11-19
+
+- Makros: acht Regler, Makro 1 bis 8, im Master-Bereich unter Makros und LFOs. Wähle ein Makro als Quelle eines beliebigen Audio-Reaktivitäts-Slots, einer Ebene, des Masters oder eines Effekts, dann bewegt ein Regler alles, was es nutzt. Die Regler lassen sich auf einen MIDI-Controller legen oder wie jede andere Steuerung per OSC bedienen (macro/1 bis macro/8).
+- LFOs: vier tempo-synchrone Oszillatoren, LFO 1 bis 4, mit den Formen Sinus, Dreieck, Sägezahn, Rechteck, Zufall und Weicher Zufall, einer Zykluslänge von einem Viertel-Schlag bis 32 Schlägen und einer Startphase. Sie folgen dem Tempo sowie Tap, Neu sync und Pause, ein Verlauf bleibt also immer im Takt, und sie stehen überall als Quelle bereit, wo man ein Band wählen kann. Sie werden im Preset gespeichert und vom Rückgängig erfasst.
+- Beat-Raster: die neuen Quellen Beat und Takt steigen innerhalb eines Schlags bzw. eines Takts von 0 auf 1. Ein Klick auf die Beat-Anzeige im Transport stellt die Schläge pro Takt ein (2 bis 8), verschiebt das Raster um einen Sechzehntel-Schlag, rastet es auf den nächsten Schlag ein oder macht den nächsten Schlag zum Taktanfang. Presets und Sitzungen älterer Versionen laden unverändert.
+
 ## 0.11.0 - 2026-11-18
 
 - 10 neue Mischmodi, insgesamt 14: Subtrahieren, Differenz, Ausschluss, Überlagern, Weiches Licht, Hartes Licht, Heller, Dunkler, Abwedeln und Linear nachbelichten kommen zu Normal, Addieren, Aufhellen und Multiplizieren dazu. Alte Presets und Sitzungen laden unverändert.

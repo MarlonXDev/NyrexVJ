@@ -8,6 +8,8 @@ namespace nvj {
 EditHistory::State EditHistory::capture(const Composition& comp) {
     State state;
     state.deckSettings = comp.deckSettings;
+    state.lfos = comp.modulators.lfos;
+    state.beatsPerBar = comp.beatsPerBar;
     state.deckUsed = comp.deckUsed;
     state.deckNames = comp.deckNames;
     state.decks = comp.decks;
@@ -24,6 +26,8 @@ EditHistory::State EditHistory::capture(const Composition& comp) {
 void EditHistory::apply(Composition& comp, const State& state, int clipCount) {
     const size_t active = static_cast<size_t>(std::clamp(comp.activeDeck, 0, kDeckCount - 1));
     comp.deckSettings = state.deckSettings;
+    comp.modulators.lfos = state.lfos;
+    comp.beatsPerBar = state.beatsPerBar;
     comp.deckUsed = state.deckUsed;
     comp.deckNames = state.deckNames;
     for (size_t d = 0; d < static_cast<size_t>(kDeckCount); ++d) {

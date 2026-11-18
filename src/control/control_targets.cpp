@@ -48,6 +48,9 @@ std::vector<ControlTarget> buildTargets() {
     list.push_back(make("master/tap", ControlKind::Trigger, ControlItem::Tap));
     list.push_back(make("master/resync", ControlKind::Trigger, ControlItem::Resync));
     addGrade(list, "master/", -1);
+    for (int macro = 0; macro < kMacroCount; ++macro) {
+        list.push_back(make("macro/" + number(macro + 1), ControlKind::Continuous, ControlItem::Macro, -1, macro));
+    }
     for (int deck = 0; deck < kDeckCount; ++deck) {
         list.push_back(make("deck/" + number(deck + 1), ControlKind::Trigger, ControlItem::DeckSelect, -1, deck));
     }
@@ -210,6 +213,8 @@ float ControlRouter::value(int index) const {
         return unlog(0.25f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].scale);
     case ControlItem::EffectParam:
         return std::clamp(slotFor(target).params[static_cast<size_t>(target.param)], 0.0f, 1.0f);
+    case ControlItem::Macro:
+        return std::clamp(comp_.modulators.macros[static_cast<size_t>(std::clamp(target.index, 0, kMacroCount - 1))], 0.0f, 1.0f);
     default:
         return 0.0f;
     }
@@ -273,6 +278,9 @@ void ControlRouter::setContinuous(const ControlTarget& target, float value) {
         break;
     case ControlItem::EffectParam:
         slotFor(target).params[static_cast<size_t>(target.param)] = value;
+        break;
+    case ControlItem::Macro:
+        comp_.modulators.macros[static_cast<size_t>(std::clamp(target.index, 0, kMacroCount - 1))] = std::clamp(value, 0.0f, 1.0f);
         break;
     default:
         break;

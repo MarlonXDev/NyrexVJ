@@ -36,7 +36,38 @@ enum AudioBand {
     BandHigh,
     BandLevel,
     BandKick,
+    BandLfo1,
+    BandLfo2,
+    BandLfo3,
+    BandLfo4,
+    BandMacro1,
+    BandMacro2,
+    BandMacro3,
+    BandMacro4,
+    BandMacro5,
+    BandMacro6,
+    BandMacro7,
+    BandMacro8,
+    BandBeat,
+    BandBar,
     AudioBandCount
+};
+
+constexpr int kLfoCount = 4;
+constexpr int kMacroCount = 8;
+constexpr int kLfoRateCount = 8;
+constexpr float kLfoRateBeats[kLfoRateCount] = {0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f};
+constexpr int kMinBeatsPerBar = 2;
+constexpr int kMaxBeatsPerBar = 8;
+
+enum LfoShape {
+    LfoSine = 0,
+    LfoTriangle,
+    LfoSaw,
+    LfoSquare,
+    LfoRandom,
+    LfoSmooth,
+    LfoShapeCount
 };
 
 enum ModTarget {
@@ -88,6 +119,9 @@ constexpr int kDefaultResolution = 2;
 const char* blendName(int mode);
 int blendFromName(const std::string& name);
 const char* audioBandName(int band);
+const char* lfoShapeName(int shape);
+int lfoShapeFromName(const std::string& name);
+const char* lfoRateName(int rate);
 int audioBandFromName(const std::string& name);
 const char* modTargetName(int target);
 int modTargetFromName(const std::string& name);
@@ -101,6 +135,19 @@ struct AudioMod {
     int target = TargetOpacity;
     float amount = 0.5f;
     bool operator==(const AudioMod&) const = default;
+};
+
+struct Lfo {
+    int shape = LfoSine;
+    int rate = 4;
+    float phase = 0.0f;
+    bool operator==(const Lfo&) const = default;
+};
+
+struct Modulators {
+    std::array<Lfo, kLfoCount> lfos;
+    std::array<float, kMacroCount> macros{};
+    bool operator==(const Modulators&) const = default;
 };
 
 struct ColorGrade {
@@ -171,6 +218,8 @@ struct DeckSettings {
 struct Composition {
     std::string name = "Untitled";
     float bpm = 128.0f;
+    int beatsPerBar = 4;
+    Modulators modulators;
     int resolution = kDefaultResolution;
     Master master;
     std::array<Layer, kLayerCount> layers;

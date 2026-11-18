@@ -1,6 +1,7 @@
 #include "app/app.hpp"
 
 #include "app/ui_common.hpp"
+#include "core/modulation.hpp"
 #include "core/novelty.hpp"
 #include "core/preset.hpp"
 #include "render/clip_library.hpp"
@@ -198,7 +199,40 @@ void App::drawTransport(bool wide) {
     ImGui::SetItemTooltip("%s", tr("Freezes the tempo clock and all clip motion"));
     ImGui::SameLine(0.0f, 10.0f);
     ImGui::AlignTextToFramePadding();
-    ImGui::TextDisabled("%s %d", tr("Beat"), static_cast<int>(std::floor(engine_.beat())) % 4 + 1);
+    const int bar = clampBeatsPerBar(comp.beatsPerBar);
+    ImGui::TextDisabled("%s %d/%d", tr("Beat"), static_cast<int>(std::floor(engine_.beat())) % bar + 1, bar);
+    if (ImGui::IsItemClicked()) {
+        ImGui::OpenPopup("##beatGrid");
+    }
+    ImGui::SetItemTooltip("%s", tr("Click to adjust the beat grid"));
+    if (ImGui::BeginPopup("##beatGrid")) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Beat grid"));
+        ImGui::SetNextItemWidth(120.0f);
+        int beatsPerBar = comp.beatsPerBar;
+        if (ImGui::SliderInt(tr("Beats per bar"), &beatsPerBar, kMinBeatsPerBar, kMaxBeatsPerBar)) {
+            comp.beatsPerBar = clampBeatsPerBar(beatsPerBar);
+        }
+        if (ImGui::Button("<<")) {
+            engine_.shiftBeat(-0.0625);
+        }
+        ImGui::SetItemTooltip("%s", tr("Move the beat grid earlier by a sixteenth of a beat"));
+        ImGui::SameLine();
+        if (ImGui::Button(">>")) {
+            engine_.shiftBeat(0.0625);
+        }
+        ImGui::SetItemTooltip("%s", tr("Move the beat grid later by a sixteenth of a beat"));
+        ImGui::SameLine();
+        if (ImGui::Button(trId("Snap to beat", "snapBeat"))) {
+            engine_.nudgeBeat(1.0f);
+        }
+        ImGui::SetItemTooltip("%s", tr("Align the grid to the nearest beat without changing the count"));
+        ImGui::SameLine();
+        if (ImGui::Button(trId("Bar start here", "barStart"))) {
+            engine_.shiftBeat(std::round(engine_.beat() / bar) * bar - engine_.beat());
+        }
+        ImGui::SetItemTooltip("%s", tr("Make the nearest beat the first beat of the bar"));
+        ImGui::EndPopup();
+    }
     if (audio_.active()) {
         ImGui::SameLine(0.0f, 10.0f);
         ImGui::Checkbox(trId("Sync BPM to audio", "syncBpm"), &settings_.audioSyncBpm);

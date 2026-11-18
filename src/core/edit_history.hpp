@@ -25,6 +25,8 @@ public:
 private:
     struct State {
         DeckSettings deckSettings;
+        std::array<Lfo, kLfoCount> lfos;
+        int beatsPerBar = 4;
         std::array<bool, kDeckCount> deckUsed{};
         std::array<std::string, kDeckCount> deckNames;
         std::array<DeckData, kDeckCount> decks;

@@ -139,6 +139,7 @@ private:
     bool recoveryPending() const { return recoveryRequested_ || recoveryOpen_; }
     void drawGrade(ColorGrade& grade);
     void drawMods(std::array<AudioMod, kModSlots>& mods, bool master);
+    void drawModulators(Modulators& modulators);
     void drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots);
     void drawOutputControls();
     void drawSpoutControls();

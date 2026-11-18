@@ -69,7 +69,7 @@ void testRouterValues() {
     Composition comp;
     FakeHost host;
     ControlRouter router(comp, host);
-    const char* ids[] = {"master/level", "master/bpm", "master/hue", "master/saturation", "master/brightness", "master/contrast", "layer/1/opacity", "layer/2/speed", "layer/3/scale", "layer/1/fx/2/param/3", "layer/4/hue"};
+    const char* ids[] = {"master/level", "master/bpm", "master/hue", "master/saturation", "master/brightness", "master/contrast", "layer/1/opacity", "layer/2/speed", "layer/3/scale", "layer/1/fx/2/param/3", "layer/4/hue", "macro/1", "macro/5", "macro/8"};
     for (const char* id : ids) {
         for (const float value : {0.0f, 0.25f, 0.5f, 1.0f}) {
             CHECK(router.set(index(id), value, false));
@@ -318,6 +318,8 @@ void testTargets() {
     }
     CHECK(ids.size() == targets.size());
     CHECK(index("master/level") >= 0);
+    CHECK(index("macro/1") >= 0 && index("macro/8") >= 0);
+    CHECK(index("macro/0") < 0 && index("macro/9") < 0);
     CHECK(index("layer/4/fx/4/param/4") >= 0);
     CHECK(index("master/fx/1/enable") >= 0);
     CHECK(index("deck/16") >= 0);

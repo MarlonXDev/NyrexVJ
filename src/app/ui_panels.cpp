@@ -21,6 +21,9 @@ bool bandCombo(const char* id, int& band, float width) {
     ImGui::SetNextItemWidth(width);
     if (ImGui::BeginCombo(id, tr(audioBandName(band)))) {
         for (int b = 0; b < AudioBandCount; ++b) {
+            if (b == BandLfo1 || b == BandMacro1 || b == BandBeat) {
+                ImGui::Separator();
+            }
             if (ImGui::Selectable(tr(audioBandName(b)), band == b)) {
                 band = b;
                 changed = true;
@@ -47,7 +50,7 @@ void App::drawMods(std::array<AudioMod, kModSlots>& mods, bool master) {
     for (int i = 0; i < kModSlots; ++i) {
         AudioMod& mod = mods[static_cast<size_t>(i)];
         ImGui::PushID(i);
-        bandCombo("##band", mod.band, 78.0f);
+        bandCombo("##band", mod.band, 84.0f);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(104.0f);
         const bool level = master && mod.target == TargetOpacity;
@@ -71,6 +74,61 @@ void App::drawMods(std::array<AudioMod, kModSlots>& mods, bool master) {
         ImGui::EndDisabled();
         ImGui::PopID();
     }
+}
+
+void App::drawModulators(Modulators& modulators) {
+    ImGui::TextDisabled("%s", tr("Macros"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Pick a macro as the source of any audio reactivity slot, then one knob moves everything that uses it. Map the knobs to a MIDI controller in Settings, Control."));
+    ImGui::PopTextWrapPos();
+    for (int i = 0; i < kMacroCount; ++i) {
+        char label[32];
+        std::snprintf(label, sizeof(label), "%s %d###macro%d", tr("Macro"), i + 1, i);
+        ImGui::SliderFloat(label, &modulators.macros[static_cast<size_t>(i)], 0.0f, 1.0f, "%.2f");
+    }
+    if (ImGui::SmallButton(trId("Reset macros", "macroReset"))) {
+        modulators.macros.fill(0.0f);
+    }
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", tr("LFOs"));
+    for (int i = 0; i < kLfoCount; ++i) {
+        Lfo& lfo = modulators.lfos[static_cast<size_t>(i)];
+        ImGui::PushID(i);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("LFO %d", i + 1);
+        ImGui::SameLine(52.0f);
+        ImGui::SetNextItemWidth(84.0f);
+        if (ImGui::BeginCombo("##shape", tr(lfoShapeName(lfo.shape)))) {
+            for (int s = 0; s < LfoShapeCount; ++s) {
+                if (ImGui::Selectable(tr(lfoShapeName(s)), lfo.shape == s)) {
+                    lfo.shape = s;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(92.0f);
+        if (ImGui::BeginCombo("##rate", tr(lfoRateName(lfo.rate)))) {
+            for (int r = 0; r < kLfoRateCount; ++r) {
+                if (ImGui::Selectable(tr(lfoRateName(r)), lfo.rate == r)) {
+                    lfo.rate = r;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50.0f);
+        ImGui::SliderFloat("##phase", &lfo.phase, 0.0f, 1.0f, "%.2f");
+        ImGui::SetItemTooltip("%s", tr("Phase: where in its cycle the LFO starts"));
+        ImGui::SameLine();
+        const float now = engine_.sourceValue(BandLfo1 + i);
+        ImGui::ProgressBar(now, ImVec2(-FLT_MIN, 0.0f), "");
+        ImGui::PopID();
+    }
+    ImGui::Spacing();
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("The sources Beat and Bar rise from 0 to 1 over one beat and over one bar."));
+    ImGui::PopTextWrapPos();
 }
 
 void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
@@ -454,6 +512,9 @@ void App::drawMaster() {
     }
     if (ImGui::CollapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawMods(comp.master.mods, true);
+    }
+    if (ImGui::CollapsingHeader(trId("Macros and LFOs", "hdrModulators"))) {
+        drawModulators(comp.modulators);
     }
     if (ImGui::CollapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawEffectRack(comp.master.fx);

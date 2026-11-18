@@ -3,6 +3,7 @@
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
 #include "core/log.hpp"
+#include "core/modulation.hpp"
 #include "scene3d/procedural.hpp"
 #include "scene3d/scene_pack.hpp"
 
@@ -263,10 +264,6 @@ void applyBlend(int mode) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         break;
     }
-}
-
-float modValue(const AudioFeatures& audio, const AudioMod& mod) {
-    return audio.band(mod.band) * mod.amount;
 }
 
 void clearTarget(const RenderTarget& target) {
@@ -807,6 +804,16 @@ void Engine::setAudio(const AudioFeatures& features) {
     audioInput_ = features;
 }
 
+float Engine::sourceValue(int source) const {
+    return modulationSource(source, audio_, comp.modulators, beat_, comp.beatsPerBar);
+}
+
+void Engine::shiftBeat(double beats) {
+    if (std::isfinite(beats)) {
+        beat_ += beats;
+    }
+}
+
 void Engine::computeEffective() {
     audio_ = audioInput_.active ? audioInput_ : virtualAudio(beat_, time_);
     computeEffectiveFor(comp.layers, comp.master, effective_, effectiveLevel_, effectiveMasterGrade_);
@@ -825,7 +832,7 @@ void Engine::computeEffectiveFor(const std::array<Layer, kLayerCount>& layers, c
         eff.speed = layer.speed;
         eff.grade = layer.grade;
         for (const AudioMod& mod : layer.mods) {
-            const float v = modValue(audio_, mod);
+            const float v = sourceValue(mod.band) * mod.amount;
             if (v <= 0.0f) {
                 continue;
             }
@@ -862,7 +869,7 @@ void Engine::computeEffectiveFor(const std::array<Layer, kLayerCount>& layers, c
     level = master.level;
     grade = master.grade;
     for (const AudioMod& mod : master.mods) {
-        const float v = modValue(audio_, mod);
+        const float v = sourceValue(mod.band) * mod.amount;
         if (v <= 0.0f) {
             continue;
         }
@@ -1377,7 +1384,7 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         std::array<float, kParamCount> params = slot.params;
         float mixAmount = 1.0f;
         if (slot.reactBand != BandOff) {
-            const float level = audio_.band(slot.reactBand);
+            const float level = sourceValue(slot.reactBand);
             if (slot.reactMode == ReactGate) {
                 mixAmount = std::clamp(std::pow(std::max(level, 0.0f), 0.8f) * (0.4f + slot.reactAmount * 2.6f), 0.0f, 1.0f);
             } else {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/creator.hpp"
 #include "app/engine_host.hpp"
 #include "audio/audio_system.hpp"
 #include "control/control_system.hpp"
@@ -12,6 +13,7 @@
 
 #include <imgui.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -39,14 +41,18 @@ struct StartOptions {
     std::string decks;
     std::string transition;
     std::string demoUpdate;
+    std::string creator;
     float transitionSeconds = -1.0f;
     int column = -1;
     int resolution = -1;
     int selectLayer = -1;
     int tab = -1;
     int settingsPage = -1;
+    int libraryMode = -1;
+    int libraryKind = -1;
     int oscPort = 0;
     bool openOutput = false;
+    bool openCreator = false;
     bool fresh = false;
     bool skipUpdateCheck = false;
     bool audioDemo = false;
@@ -83,6 +89,12 @@ private:
     void drawClipTile(int index, const ImVec2& size);
     void drawLibraryClips();
     void drawLibraryEffects();
+    void drawLibraryAssets();
+    void openCreator();
+    void openCreatorWith(const std::string& clipName);
+    bool creatorSave(bool copy, bool useAsClip);
+    void drawCreator();
+    void shutdownCreator();
     void assignClipToSelectedCell(int clip);
     void assignClipToFreeCell(int clip, int layer);
     void addEffectToLayer(int effect, int layer);
@@ -132,6 +144,13 @@ private:
     std::string iniPath_;
     bool needsLayout_ = false;
     bool rescanModels_ = false;
+    bool assetsDirty_ = true;
+    std::vector<AssetFile> assetModels_;
+    std::vector<AssetFile> assetTextures_;
+    std::vector<AssetFile> assetPacks_;
+    std::unique_ptr<CreatorState> creator_;
+    bool creatorOpen_ = false;
+    bool creatorFocus_ = false;
     bool restart_ = false;
     int selectedLayer_ = 0;
     int selectedColumn_ = 0;

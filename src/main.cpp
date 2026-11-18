@@ -113,6 +113,15 @@ Options parseOptions(int argc, char** argv) {
             options.start.language = argv[++i];
         } else if (arg == "--audio-demo") {
             options.start.audioDemo = true;
+        } else if (arg == "--library-mode" && hasValue) {
+            options.start.libraryMode = std::atoi(argv[++i]);
+        } else if (arg == "--library-kind" && hasValue) {
+            options.start.libraryKind = std::atoi(argv[++i]);
+        } else if (arg == "--creator") {
+            options.start.openCreator = true;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.start.creator = argv[++i];
+            }
         } else if (arg == "--welcome") {
             options.start.forceWelcome = true;
         } else if (arg == "--no-welcome") {

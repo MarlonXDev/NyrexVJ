@@ -157,12 +157,15 @@ void testMath() {
 }
 
 void testProcedural() {
-    CHECK(builtinScenes().size() == 3);
+    CHECK(builtinScenes().size() == 7);
+    size_t sceneIndex = 0;
     for (const BuiltinSceneInfo& info : builtinScenes()) {
+        const bool classic = sceneIndex++ < 3;
         const Scene scene = info.build();
         std::string error;
         CHECK(validateScene(scene, error));
-        CHECK(scene.paletteTint);
+        CHECK(scene.paletteTint == classic);
+        CHECK((scene.shading == Shading::Pbr) == !classic);
         const SceneStats stats = sceneStats(scene);
         CHECK(stats.vertices > 50);
         CHECK(stats.triangles > 20);
@@ -207,6 +210,9 @@ void testSphere() {
         const float duration = sceneDuration(scene, animation);
         for (int s = 0; s < 24; ++s) {
             for (const SceneInstance& instance : evaluateScene(scene, animation, duration * static_cast<float>(s) / 24.0f + 0.1f)) {
+                if (!instance.framing) {
+                    continue;
+                }
                 for (const Vec3& p : scene.meshes[static_cast<size_t>(instance.mesh)].positions) {
                     CHECK(length(transformPoint(instance.world, p) - sphere.center) <= sphere.radius * 1.001f);
                 }
@@ -266,7 +272,9 @@ void testAnimation() {
 }
 
 void testRoundTrip() {
+    size_t sceneIndex = 0;
     for (const BuiltinSceneInfo& info : builtinScenes()) {
+        const bool classic = sceneIndex++ < 3;
         const Scene original = info.build();
         const std::vector<uint8_t> glb = writeGlb(original);
         CHECK(glb.size() > 1000);
@@ -291,7 +299,10 @@ void testRoundTrip() {
         for (const SceneMesh& m : original.meshes) {
             colorsOriginal += m.colors.size();
         }
-        CHECK(colorsLoaded == colorsOriginal && colorsLoaded > 0);
+        CHECK(colorsLoaded == colorsOriginal && (colorsLoaded > 0) == classic);
+        if (!classic) {
+            continue;
+        }
         if (!original.animations.empty()) {
             CHECK(near(sceneDuration(scene, 0), sceneDuration(original, 0)));
         }

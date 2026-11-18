@@ -7,6 +7,8 @@
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
+#include "scene3d/builtin_docs.hpp"
+#include "scene3d/scene_pack.hpp"
 
 #include <GLFW/glfw3.h>
 
@@ -124,6 +126,32 @@ bool matchesFilter(const std::string& name, const char* filter) {
     return lowerText(name).find(lowerText(filter)) != std::string::npos;
 }
 
+bool canEditInCreator(const ClipDef& clip) {
+    if (clip.kind == ClipKind::ScenePack) {
+        return true;
+    }
+    if (clip.kind == ClipKind::BuiltinScene) {
+        for (const BuiltinDocInfo& info : builtinDocs()) {
+            if (clip.name == info.name) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+std::string formatBytes(unsigned long long bytes) {
+    char buffer[48];
+    if (bytes >= 1024ull * 1024ull) {
+        std::snprintf(buffer, sizeof(buffer), "%.1f MiB", static_cast<double>(bytes) / (1024.0 * 1024.0));
+    } else if (bytes >= 1024ull) {
+        std::snprintf(buffer, sizeof(buffer), "%.0f KiB", static_cast<double>(bytes) / 1024.0);
+    } else {
+        std::snprintf(buffer, sizeof(buffer), "%llu B", bytes);
+    }
+    return buffer;
+}
+
 bool matchesKind(const ClipDef& clip, int kind) {
     switch (kind) {
     case 1:
@@ -132,6 +160,8 @@ bool matchesKind(const ClipDef& clip, int kind) {
         return clip.is3d;
     case 3:
         return clip.kind == ClipKind::ModelFile;
+    case 4:
+        return clip.kind == ClipKind::ScenePack;
     default:
         return true;
     }
@@ -309,6 +339,12 @@ void App::drawClipTile(int index, const ImVec2& size) {
             }
             ImGui::EndMenu();
         }
+        if (canEditInCreator(clip)) {
+            ImGui::Separator();
+            if (ImGui::MenuItem(tr("Edit in the Clip Creator"))) {
+                openCreatorWith(clip.name);
+            }
+        }
         ImGui::EndPopup();
     }
     ImGui::PopID();
@@ -316,8 +352,8 @@ void App::drawClipTile(int index, const ImVec2& size) {
 
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models")};
-    for (int k = 0; k < 4; ++k) {
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes")};
+    for (int k = 0; k < 5; ++k) {
         if (k > 0) {
             ImGui::SameLine(0.0f, 4.0f);
         }
@@ -372,6 +408,82 @@ void App::drawLibraryClips() {
         rescanModels_ = true;
     }
     ImGui::SetItemTooltip("%s", tr("Looks for new model files without restarting. Removed files stay in the list until the next start."));
+    ImGui::SameLine();
+    if (ui::accentButton(tr("Open Clip Creator"), false)) {
+        openCreator();
+    }
+    ImGui::SetItemTooltip("%s", tr("Build your own 3D scenes from shapes, models, lights and audio reactions"));
+    ImGui::EndChild();
+}
+
+void App::drawLibraryAssets() {
+    if (assetsDirty_) {
+        assetModels_ = listModelAssets();
+        assetTextures_ = listTextureAssets();
+        assetPacks_ = listPackAssets();
+        assetsDirty_ = false;
+    }
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Everything your scenes can use. Put files into these folders and press Scan again."));
+    ImGui::PopTextWrapPos();
+    if (ImGui::SmallButton(tr("Models folder"))) {
+        platform::openFolder(modelDirectory());
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Textures folder"))) {
+        platform::openFolder(texturesDirectory());
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Scenes folder"))) {
+        platform::openFolder(clipsDirectory());
+    }
+    if (ImGui::SmallButton(trId("Scan again", "scanModels"))) {
+        rescanModels_ = true;
+        assetsDirty_ = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Open Clip Creator"))) {
+        openCreator();
+    }
+    ImGui::BeginChild("assetRows", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None);
+    const auto section = [&](const char* title, const std::vector<AssetFile>& files, bool models) {
+        ImGui::SeparatorText(title);
+        if (files.empty()) {
+            ImGui::TextDisabled("%s", tr("Nothing found"));
+        }
+        for (const AssetFile& file : files) {
+            const bool usable = models ? isModelAssetName(file.name) : true;
+            ImGui::PushID(file.name.c_str());
+            ImGui::BeginDisabled(!usable);
+            ImGui::Selectable(file.name.c_str(), false);
+            ImGui::EndDisabled();
+            const std::string size = formatBytes(file.bytes);
+            ImGui::SameLine(std::max(ImGui::GetContentRegionMax().x - ImGui::CalcTextSize(size.c_str()).x - 6.0f, 0.0f));
+            ImGui::TextDisabled("%s", size.c_str());
+            if (!usable) {
+                ImGui::SetItemTooltip("%s", tr("Only .glb files can be used in your own scenes"));
+            }
+            ImGui::PopID();
+        }
+    };
+    section(tr("Models"), assetModels_, true);
+    section(tr("Textures"), assetTextures_, false);
+    ImGui::SeparatorText(tr("Your scenes"));
+    if (assetPacks_.empty()) {
+        ImGui::TextDisabled("%s", tr("No saved scenes yet"));
+    }
+    for (const AssetFile& file : assetPacks_) {
+        ImGui::PushID(file.path.c_str());
+        const std::string stem = pathToUtf8(pathFromUtf8(file.name).stem());
+        if (ImGui::Selectable(stem.c_str(), false)) {
+            openCreatorWith(packClipName(stem));
+        }
+        const std::string size = formatBytes(file.bytes);
+        ImGui::SameLine(std::max(ImGui::GetContentRegionMax().x - ImGui::CalcTextSize(size.c_str()).x - 6.0f, 0.0f));
+        ImGui::TextDisabled("%s", size.c_str());
+        ImGui::SetItemTooltip("%s", tr("Click to edit this scene in the Clip Creator"));
+        ImGui::PopID();
+    }
     ImGui::EndChild();
 }
 
@@ -432,14 +544,15 @@ void App::drawLibraryEffects() {
 }
 
 void App::drawLibraryTab() {
-    const char* modes[] = {tr("Clips"), tr("Effects")};
-    for (int m = 0; m < 2; ++m) {
+    const char* modes[] = {tr("Clips"), tr("Effects"), tr("Assets")};
+    for (int m = 0; m < 3; ++m) {
         if (m > 0) {
             ImGui::SameLine(0.0f, 4.0f);
         }
         ImGui::PushID(m);
-        if (ui::accentButton(modes[m], libraryMode_ == m, ImVec2(86.0f, 0.0f))) {
+        if (ui::accentButton(modes[m], libraryMode_ == m, ImVec2(72.0f, 0.0f))) {
             libraryMode_ = m;
+            assetsDirty_ = true;
         }
         ImGui::PopID();
     }
@@ -449,8 +562,10 @@ void App::drawLibraryTab() {
     ImGui::Spacing();
     if (libraryMode_ == 0) {
         drawLibraryClips();
-    } else {
+    } else if (libraryMode_ == 1) {
         drawLibraryEffects();
+    } else {
+        drawLibraryAssets();
     }
 }
 

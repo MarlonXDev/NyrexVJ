@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.8.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.9.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -172,6 +172,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_browser.cpp
     src/app/ui_deck.cpp
     src/app/ui_control.cpp
+    src/app/ui_creator.cpp
     src/app/ui_settings.cpp
     src/app/ui_panels.cpp
     src/app/ui_welcome.cpp

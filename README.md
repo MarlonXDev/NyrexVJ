@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.9.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output, the output window, a settings window, OSC and MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
+> Status: v0.10.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
 
 ## Download
 
@@ -27,9 +27,10 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 
 - **16 decks, smooth transitions.** Set up to 16 looks and glide between them with Fade, Dissolve, Zoom, Wipe, Radial, Spin or Slide, timed in seconds or beats, with an optional auto cycle.
 - **Audio reactive.** Pick system audio (your DJ program), a microphone, a line-in or a demo signal. Layers, the master and every effect parameter can follow Bass, Mid, High, Level or Kick, and an effect can be set to Gate so it only shows while the music is loud.
-- **Live control.** Play it from a MIDI controller (learn a knob with one click, Windows) or remote control it over OSC from TouchDesigner, Max, Python and more.
+- **Live control.** Play it from a MIDI controller (learn a knob with one click, Windows) or remote control it over OSC from TouchDesigner, Max, Python and more. NyrexVJ can also send tempo, beats and audio levels back out over OSC.
+- **Unreal Engine and other programs.** Four Spout input clips show the picture of Unreal, TouchDesigner or a game (Windows), and the OSC output hands the tempo, beats, spectrum and your own named values to them. See [docs/UNREAL.md](docs/UNREAL.md). There is no Unreal plugin yet.
 - **OBS in two clicks.** Spout output with a sender name of your choice. In OBS add the source "Spout2 Capture" and select the sender.
-- **50 clips, 76 effects, 26 presets.** Fractals, raymarched 3D scenes, neon sacred geometry, laser webs, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals, real 3D models and scenes and 3D effects such as Image Terrain, Hyperspace, Chrome Liquid, Shatter and Mirror Corridor. Everything that is new in a version carries a small "new" behind its name until the next minor version.
+- **54 clips, 76 effects, 26 presets.** Fractals, raymarched 3D scenes, neon sacred geometry, laser webs, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals, real 3D models and scenes and 3D effects such as Image Terrain, Hyperspace, Chrome Liquid, Shatter and Mirror Corridor. Everything that is new in a version carries a small "new" behind its name until the next minor version.
 - **Resolume-style layout.** Clip grid on top, deck and tempo rows below it, preview and output at the bottom left, Master, Layer and Clip windows next to them and the Browser on the right. A Pause button freezes the picture.
 - **Nine colour themes.** Settings, Appearance switches the whole interface between Orange (default), Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono.
 - **Your own 3D models.** Drop .glb or .gltf files into the models folder and play them like any clip, with textures, animation and audio reaction.
@@ -96,6 +97,10 @@ Bars, Equalizer, Spectrum Circle, Oscilloscope, Spectrum Warp and the Oscillosco
 3. Add a source "Spout2 Capture" and pick the sender from the list.
 
 Spout is Windows only. The output window (F11) with OBS window capture keeps working as an alternative.
+
+### Spout input
+
+Four clips, Spout Input 1 to 4 (Library filter Spout), show the picture that another program sends through Spout. Put one into a cell, select it and pick the sender in the Clip window, or leave it on Automatic, which takes the first sender that is not NyrexVJ's own output. The picture is fitted into the layer without stretching, goes through the layer effects like any clip, reconnects when the sender comes back and shows a placeholder while there is none. If the image arrives upside down, tick Flip the image vertically. The chosen senders are saved in the program settings. Windows only, on other systems `--spout-test-pattern` adds a test sender for trying it out. Details and the Unreal Engine setup are in [docs/UNREAL.md](docs/UNREAL.md).
 
 ## Clips and effects
 
@@ -183,6 +188,10 @@ Tick Receive OSC messages. OSC is off by default and listens on port 9010 (VRCha
 
 Layers go from 1 to 4, effect slots from 1 to 4 and parameters from 1 to 4. A quick test from Python with the `python-osc` package: `SimpleUDPClient("127.0.0.1", 9010).send_message("/nyrex/master/level", 0.5)`.
 
+### OSC output
+
+Settings, Control, OSC output, tick Send OSC data. NyrexVJ then sends to `127.0.0.1` port 9011, 60 times per second (address, port and rate can be changed, only IPv4 addresses and `localhost` are accepted). Everything starts with `/nyrex/out/`: `hello` (every 2 s, with the schema number 1), `audio` (bass, mid, high, level, kick), `spectrum` (32 bands), `clock` (BPM, beat number, position in the beat), `beat` and `onset` (events), and `param/<name>` for up to 16 values of your own, each following one control such as `layer/1/opacity`. The full table, the versioning rules and the Unreal Engine setup are in [docs/UNREAL.md](docs/UNREAL.md) and [ADR 0008](docs/adr/0008-osc-output-protocol.md).
+
 ## Languages
 
 English is the default. German is built in. Change it under Settings, General, under Help, Language or on the welcome screen, the choice is saved. Clip and effect names stay in English so they match what other VJ programs call them. A new language needs a translation table next to `src/core/i18n_de.cpp` and an entry in `src/core/i18n.cpp`.
@@ -205,9 +214,9 @@ NyrexVJ/
 ├── src/
 │   ├── app/        Dear ImGui interface: deck, panels, browser, settings window, status bar, update card, welcome screen, theme
 │   ├── audio/      WASAPI capture and loopback, FFT analysis, beat and tempo detection
-│   ├── control/    OSC parser and UDP input, MIDI input, learn mapping, control targets
+│   ├── control/    OSC parser, UDP input and output, OSC sender, MIDI input, learn mapping, control targets
 │   ├── core/       Composition model, presets, settings, i18n, log, SHA-256
-│   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output window, Spout
+│   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output window, Spout output and input
 │   ├── scene3d/    glTF/GLB loader with safety limits, scene model, scene documents and .nyxclip packs, built-in 3D scenes, GLB writer
 │   ├── update/     Update check, installer, changelog parser
 │   ├── platform/   Windows and fallback platform code
@@ -273,6 +282,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--tab IDX` | Browser tab to show (0 Presets, 1 Library, 2 Audio) |
 | `--settings IDX` | Open the settings window on page IDX (0 to 7, 4 is Control) |
 | `--osc-port N` | Listen for OSC on port N even if it is switched off in the settings |
+| `--spout-test-pattern` | Offer a fake Spout sender called Test Pattern (for trying the Spout input without Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | With `--frames`, feed a MIDI message to the mappings at that frame |
 | `--decks A,B,C` | Fill decks 1, 2, 3 with these factory looks |
 | `--transition NAME` | Transition type for deck changes |

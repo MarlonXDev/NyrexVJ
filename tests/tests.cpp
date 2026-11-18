@@ -145,6 +145,19 @@ void testLibraries() {
         clipNames.insert(clip.name);
     }
     CHECK(clipNames.size() == clips.size());
+    for (int slot = 0; slot < nvj::kSpoutInputSlots; ++slot) {
+        const int index = nvj::clipIndexByName("Spout Input " + std::to_string(slot + 1));
+        CHECK(index >= 0);
+        if (index >= 0) {
+            const nvj::ClipDef& clip = clips[static_cast<size_t>(index)];
+            CHECK(clip.kind == nvj::ClipKind::SpoutSource);
+            CHECK(clip.sceneIndex == slot);
+            CHECK(!clip.isScene());
+            CHECK(!clip.is3d);
+            CHECK(!clip.body.empty());
+        }
+    }
+    CHECK(nvj::clipIndexByName("Spout Input 5") == -1);
     std::set<std::string> effectNames;
     for (const auto& effect : effects) {
         CHECK(effect.paramCount() >= 1);

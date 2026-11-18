@@ -5,6 +5,7 @@
 #include "scene3d/scene_model.hpp"
 
 #include <array>
+#include <atomic>
 #include <functional>
 #include <future>
 #include <string>
@@ -27,7 +28,7 @@ struct SceneFrame {
 
 class ScenePlayer {
 public:
-    using Loader = std::function<GltfResult()>;
+    using Loader = std::function<GltfResult(const GltfLimits&)>;
 
     ScenePlayer(std::string label, Loader loader);
     ~ScenePlayer();
@@ -38,6 +39,8 @@ public:
     SceneState poll();
     bool wait();
     void release();
+    void cancel();
+    void retry();
 
     SceneState state() const { return state_; }
     const std::string& label() const { return label_; }
@@ -66,6 +69,7 @@ private:
     Loader loader_;
     std::future<GltfResult> pending_;
     SceneState state_ = SceneState::Idle;
+    std::atomic<bool> cancel_{false};
     std::string error_;
     std::vector<std::string> warnings_;
     Scene scene_;

@@ -869,6 +869,294 @@ vec4 effect(vec2 uv, vec4 p) {
     return vec4(col + glow, 1.0);
 }
 )glsl", true, false});
+
+    fx.push_back({"Kaleido Neon", {"Segments", "Edge Glow", "Hue", "Zoom"}, {0.35f, 0.7f, 0.0f, 0.5f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 c = (uv - 0.5) * vec2(uAspect, 1.0);
+    float n = floor(mix(3.0, 12.0, p.x) + 0.5);
+    float seg = PI / n;
+    float a = atan(c.y, c.x) + uTime * 0.06;
+    float r = length(c) * pow(2.0, mix(1.0, -1.0, p.w));
+    a = abs(mod(a, seg * 2.0) - seg);
+    vec2 st = vec2(cos(a), sin(a)) * r / vec2(uAspect, 1.0) + 0.5;
+    vec2 px = 4.0 / uRes;
+    float tl = luma(texture(uTex, mrep(st + vec2(-px.x, -px.y))).rgb);
+    float tr = luma(texture(uTex, mrep(st + vec2(px.x, -px.y))).rgb);
+    float bl = luma(texture(uTex, mrep(st + vec2(-px.x, px.y))).rgb);
+    float br = luma(texture(uTex, mrep(st + vec2(px.x, px.y))).rgb);
+    float gx = (tr + br) - (tl + bl);
+    float gy = (bl + br) - (tl + tr);
+    float e = sqrt(gx * gx + gy * gy);
+    vec3 base = texture(uTex, mrep(st)).rgb;
+    float l = luma(base);
+    float f = fract(l * 7.0 + uTime * 0.12);
+    float iso = ss(0.09, 0.0, min(f, 1.0 - f));
+    float edge = ss(0.0, 0.25, e * (2.0 + 14.0 * p.y));
+    float line = max(iso * 0.9, edge);
+    vec3 neon = hc(p.z + l * 1.1 + r * 0.5 + a * 0.2 + uTime * 0.04);
+    float core = exp(-r * 4.0) * (0.4 + uKick);
+    vec3 outc = base * base * 0.35 + neon * line * (1.3 + uKick * 1.2) + neon * core * 0.5;
+    return vec4(outc, 1.0);
+}
+)glsl", false, false});
+
+    fx.push_back({"Mandala Fold", {"Folds", "Offset", "Rotate", "Glow"}, {0.55f, 0.4f, 0.3f, 0.6f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 asp = vec2(uAspect, 1.0);
+    vec2 c = (uv - 0.5) * asp * 2.2;
+    float it = floor(mix(3.0, 9.0, p.x) + 0.5);
+    vec3 acc = vec3(0.0);
+    float tot = 0.0;
+    float depth = 0.0;
+    for (int i = 0; i < 9; ++i) {
+        if (float(i) >= it) {
+            break;
+        }
+        c = abs(c) - vec2(mix(0.12, 0.7, p.y), 0.1 + 0.08 * sin(uTime * 0.2 + float(i)));
+        c = rot(mix(0.0, 1.3, p.z) + uTime * 0.05 + float(i) * 0.31) * c;
+        c *= 1.22;
+        vec2 st = c / (asp * 2.2) + 0.5;
+        float w = exp(-float(i) * 0.14);
+        acc += texture(uTex, mrep(st)).rgb * w;
+        tot += w;
+        depth += length(c) * w;
+    }
+    acc /= tot;
+    depth /= tot;
+    float l = luma(acc);
+    float f = fract(l * 6.0 + depth * 0.8 - uTime * 0.1);
+    float iso = ss(0.12, 0.0, min(f, 1.0 - f));
+    vec3 neon = hc(l * 1.4 + depth * 0.35 + uTime * 0.03);
+    vec3 outc = acc * acc * 0.8 + neon * l * l * p.w * 1.6 + neon * iso * (0.5 + p.w);
+    outc *= 1.0 + uKick * 0.4;
+    return vec4(outc, 1.0);
+}
+)glsl", false, false});
+
+    fx.push_back({"Hue Feedback", {"Feedback", "Zoom", "Twist", "Hue Drift"}, {0.75f, 0.55f, 0.55f, 0.4f}, R"glsl(
+vec3 hueRot(vec3 c, float a) {
+    float cs = cos(a);
+    float sn = sin(a);
+    vec3 k = vec3(0.57735);
+    return c * cs + cross(k, c) * sn + k * dot(k, c) * (1.0 - cs);
+}
+
+vec4 effect(vec2 uv, vec4 p) {
+    vec4 cur = texture(uTex, uv);
+    vec2 c = (uv - 0.5) * vec2(uAspect, 1.0);
+    float z = 1.0 - (p.y - 0.5) * 0.12;
+    vec2 warp = vec2(sin(c.y * 9.0 + uTime * 0.7), cos(c.x * 9.0 + uTime * 0.6)) * 0.0025 * p.z;
+    c = rot((p.z - 0.5) * 0.16) * (c * z) + warp;
+    vec3 prev = texture(uPrev, c / vec2(uAspect, 1.0) + 0.5).rgb;
+    prev = hueRot(prev, (p.w - 0.5) * 0.35 + uKick * 0.05);
+    prev *= mix(0.0, 0.982, p.x);
+    return vec4(max(cur.rgb, prev) + cur.rgb * 0.15, 1.0);
+}
+)glsl", false, true});
+
+    fx.push_back({"Star Burst", {"Rays", "Length", "Threshold", "Tint"}, {0.5f, 0.7f, 0.45f, 0.55f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec4 base = texture(uTex, uv);
+    float n = floor(mix(3.0, 8.0, p.x) + 0.5);
+    float len = mix(0.05, 0.4, p.y) * (1.0 + uKick * 0.6);
+    float thr = mix(0.15, 0.95, p.z);
+    vec3 acc = vec3(0.0);
+    for (int k = 0; k < 8; ++k) {
+        if (float(k) >= n) {
+            break;
+        }
+        float a = float(k) * PI / n + uTime * 0.03;
+        vec2 dir = vec2(cos(a) / uAspect, sin(a));
+        for (int i = 1; i <= 7; ++i) {
+            float t = float(i) / 7.0;
+            float w = exp(-t * 3.2);
+            vec3 s1 = texture(uTex, uv + dir * len * t).rgb;
+            vec3 s2 = texture(uTex, uv - dir * len * t).rgb;
+            acc += (max(s1 - thr, 0.0) + max(s2 - thr, 0.0)) * w;
+        }
+    }
+    acc /= n * 1.4;
+    vec3 tint = mix(vec3(1.0), hc(luma(acc) * 0.5 + uTime * 0.05), p.w);
+    return vec4(base.rgb * 0.7 + acc * tint * 3.4, 1.0);
+}
+)glsl", false, false});
+
+    fx.push_back({"Chrome Liquid", {"Height", "Env", "Shine", "Flow"}, {0.3f, 0.45f, 0.65f, 0.4f}, R"glsl(
+float liquidField(vec2 q, float t) {
+    return vn(q * 4.0 + vec2(t, -t * 0.7)) * 0.6 + vn(q * 9.0 - vec2(t * 1.3, t)) * 0.25;
+}
+
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 e = vec2(5.0) / uRes;
+    float t = uTime * 0.25 * (0.2 + p.w);
+    vec2 q = uv + vec2(vn(uv * 3.0 + t), vn(uv * 3.0 - t + 9.0)) * 0.03 * p.w;
+    float k = mix(1.0, 9.0, p.x);
+    float hx = (luma(texture(uTex, q + vec2(e.x, 0.0)).rgb) - luma(texture(uTex, q - vec2(e.x, 0.0)).rgb)) * k;
+    float hy = (luma(texture(uTex, q + vec2(0.0, e.y)).rgb) - luma(texture(uTex, q - vec2(0.0, e.y)).rgb)) * k;
+    vec2 d = vec2(0.012, 0.012);
+    float nx = (liquidField(uv + vec2(d.x, 0.0), t) - liquidField(uv - vec2(d.x, 0.0), t)) * 2.4 * (0.4 + p.w);
+    float ny = (liquidField(uv + vec2(0.0, d.y), t) - liquidField(uv - vec2(0.0, d.y), t)) * 2.4 * (0.4 + p.w);
+    vec3 n = normalize(vec3(-(hx + nx), -(hy + ny), 1.0));
+    vec3 r = reflect(vec3(0.0, 0.0, -1.0), n);
+    float sky = ss(-0.6, 0.9, r.y);
+    float band = exp(-pow((r.y - 0.15) * 5.0, 2.0));
+    float box = ss(0.45, 0.8, r.x) * ss(0.1, 0.7, r.y) + ss(-0.45, -0.8, r.x) * ss(-0.1, 0.5, r.y) * 0.7;
+    vec3 env = mix(vec3(0.02, 0.025, 0.05), vec3(0.7, 0.82, 1.0), sky) + vec3(1.0, 0.75, 0.5) * band * 0.9 + vec3(1.0) * box * 0.8;
+    vec3 tint = hc(r.x * 0.4 + r.y * 0.3 + p.y + uTime * 0.03);
+    vec3 chrome = mix(env, env * tint * 1.7, p.y * 0.85);
+    vec3 src = texture(uTex, q).rgb;
+    float spec = pow(max(dot(r, normalize(vec3(0.4, 0.6, 0.7))), 0.0), mix(8.0, 70.0, p.z));
+    vec3 outc = chrome * (0.5 + 0.9 * p.z) + spec * 0.9 + src * 0.1;
+    return vec4(outc, 1.0);
+}
+)glsl", true, false});
+
+    fx.push_back({"Image Terrain", {"Height", "Tilt", "Fly", "Fog"}, {0.55f, 0.5f, 0.7f, 0.4f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 c = (uv - 0.5) * vec2(uAspect, 1.0);
+    float pitch = mix(0.05, 0.45, p.y);
+    vec3 rd = normalize(vec3(c.x, c.y, 1.3));
+    rd.yz = rot(-pitch) * rd.yz;
+    vec3 ro = vec3(0.0, 0.8, 0.0);
+    float fly = (p.z - 0.5) * 2.0 * uTime * 0.35 + uKick * 0.05;
+    float height = mix(0.2, 0.9, p.x);
+    float t = 0.1;
+    float hit = -1.0;
+    float prevT = t;
+    float prevD = 1.0;
+    for (int i = 0; i < 64; ++i) {
+        vec3 pos = ro + rd * t;
+        vec2 g = pos.xz * 0.45 + vec2(0.5, 0.5 + fly);
+        float h = luma(texture(uTex, mrep(g)).rgb) * height;
+        float d = pos.y - h;
+        if (d < 0.0) {
+            float k = prevD / max(prevD - d, 0.00001);
+            hit = mix(prevT, t, k);
+            break;
+        }
+        prevT = t;
+        prevD = d;
+        t += max(0.02, d * 0.5) + t * 0.01;
+        if (t > 16.0) {
+            break;
+        }
+    }
+    float fogk = mix(0.28, 0.04, p.w);
+    vec3 horizonCol = hc(0.85 + uTime * 0.02);
+    vec3 col;
+    if (hit > 0.0) {
+        vec3 pos = ro + rd * hit;
+        vec2 g = pos.xz * 0.45 + vec2(0.5, 0.5 + fly);
+        vec3 src = texture(uTex, mrep(g)).rgb;
+        vec2 e = vec2(0.012, 0.0);
+        float h0 = luma(src);
+        float hx = luma(texture(uTex, mrep(g + e.xy)).rgb) - luma(texture(uTex, mrep(g - e.xy)).rgb);
+        float hz = luma(texture(uTex, mrep(g + e.yx)).rgb) - luma(texture(uTex, mrep(g - e.yx)).rgb);
+        vec3 nrm = normalize(vec3(-hx * height * 12.0, 1.0, -hz * height * 12.0));
+        float dif = max(dot(nrm, normalize(vec3(0.5, 0.8, 0.3))), 0.0);
+        col = src * (0.35 + 1.1 * dif) + hc(h0 * 0.8 + 0.1) * pow(h0, 3.0) * 0.5;
+        float fog = exp(-hit * fogk);
+        col = mix(horizonCol * 0.25, col, fog);
+    } else {
+        float hz = exp(-pow((rd.y + 0.02) * 12.0, 2.0));
+        float up = ss(0.0, 0.5, rd.y);
+        col = mix(horizonCol * 0.25, vec3(0.02, 0.02, 0.06), up) + horizonCol * hz * 0.6;
+    }
+    return vec4(col, 1.0);
+}
+)glsl", true, false});
+
+    fx.push_back({"Hyperspace", {"Speed", "Streaks", "Chroma", "Flash"}, {0.6f, 0.55f, 0.4f, 0.4f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 c = uv - 0.5;
+    vec2 cc = c * vec2(uAspect, 1.0);
+    float r = length(cc);
+    float amt = mix(0.03, 0.4, p.x) * (1.0 + uKick * 0.9);
+    vec3 acc = vec3(0.0);
+    float tot = 0.0;
+    for (int i = 0; i < 14; ++i) {
+        float t = float(i) / 13.0;
+        float w = 1.0 - t * 0.7;
+        float zr = 1.0 - amt * t;
+        acc.r += texture(uTex, 0.5 + c * (zr - p.z * 0.03 * t)).r * w;
+        acc.g += texture(uTex, 0.5 + c * zr).g * w;
+        acc.b += texture(uTex, 0.5 + c * (zr + p.z * 0.03 * t)).b * w;
+        tot += w;
+    }
+    acc /= tot;
+    float a = atan(cc.y, cc.x);
+    vec3 stars = vec3(0.0);
+    for (int layer = 0; layer < 3; ++layer) {
+        float fl = float(layer);
+        float lanes = 46.0 + fl * 31.0;
+        float ang = a / (2.0 * PI) * lanes;
+        float cell = floor(ang);
+        float lane = abs(fract(ang) - 0.5);
+        float h = hash21(vec2(cell, fl + 3.0));
+        float head = pow(fract(h * 7.0 - uTime * mix(0.1, 1.1, p.x) * (0.5 + h)), 2.0) * 1.2;
+        float behind = head - r;
+        float tail = (0.12 + 0.5 * p.y) * r + 0.02;
+        float streak = behind > 0.0 && behind < tail ? 1.0 - behind / tail : 0.0;
+        float thin = ss(0.18, 0.0, lane);
+        stars += hc(h + fl * 0.2) * streak * thin * ss(0.04, 0.3, r) * (0.5 + h);
+    }
+    float flash = exp(-r * 3.5) * uKick * p.w * 1.6 + exp(-r * 10.0) * 0.25 * p.w;
+    return vec4(acc * (0.85 - 0.25 * p.y) + stars * (0.6 + 1.2 * p.y) + vec3(flash), 1.0);
+}
+)glsl", true, false});
+
+    fx.push_back({"Shatter", {"Shards", "Explode", "Edge", "Spin"}, {0.5f, 0.4f, 0.6f, 0.3f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 asp = vec2(uAspect, 1.0);
+    vec2 c = (uv - 0.5) * asp;
+    float scale = mix(3.0, 11.0, p.x);
+    vec2 g = c * scale;
+    vec2 n = floor(g);
+    vec2 f = fract(g);
+    vec2 mr = vec2(0.0);
+    vec2 mg = vec2(0.0);
+    float d1 = 8.0;
+    for (int j = -1; j <= 1; ++j) {
+        for (int i = -1; i <= 1; ++i) {
+            vec2 o = vec2(float(i), float(j));
+            vec2 jit = 0.5 + 0.4 * sin(uTime * 0.3 + 6.28318 * vec2(hash21(n + o), hash21(n + o + 7.7)));
+            vec2 r = o + jit - f;
+            float d = dot(r, r);
+            if (d < d1) {
+                d1 = d;
+                mr = r;
+                mg = o;
+            }
+        }
+    }
+    float d2 = 8.0;
+    for (int j = -2; j <= 2; ++j) {
+        for (int i = -2; i <= 2; ++i) {
+            vec2 o = mg + vec2(float(i), float(j));
+            vec2 jit = 0.5 + 0.4 * sin(uTime * 0.3 + 6.28318 * vec2(hash21(n + o), hash21(n + o + 7.7)));
+            vec2 r = o + jit - f;
+            vec2 dv = r - mr;
+            if (dot(dv, dv) > 0.00001) {
+                d2 = min(d2, dot(0.5 * (mr + r), normalize(dv)));
+            }
+        }
+    }
+    vec2 id = n + mg;
+    float hsh = hash21(id);
+    vec2 center = (id + 0.5 + 0.4 * sin(uTime * 0.3 + 6.28318 * vec2(hash21(id), hash21(id + 7.7)))) / scale;
+    float burst = p.y * (0.25 + 0.75 * exp(-fract(uBeat) * 2.5) + uKick * 0.5);
+    vec2 dir = normalize(center + vec2(0.0001));
+    vec2 off = dir * burst * (0.25 + 0.75 * hsh) * 0.35;
+    float ang = (hsh - 0.5) * p.w * 5.0 * burst;
+    vec2 q = center + rot(ang) * (c - center) - off;
+    vec3 col = texture(uTex, mrep(q / asp + 0.5)).rgb * (0.7 + 0.35 * hsh);
+    float edge = ss(0.07, 0.0, d2);
+    vec3 neon = hc(hsh + uTime * 0.05);
+    col += neon * edge * p.z * (0.9 + burst * 2.0);
+    col += neon * 0.12 * burst * hsh;
+    return vec4(col, 1.0);
+}
+)glsl", false, false});
 }
 
 }

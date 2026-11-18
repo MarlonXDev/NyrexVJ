@@ -89,6 +89,7 @@ constexpr float kFov = 0.8f;
 ScenePlayer::ScenePlayer(std::string label, Loader loader) : label_(std::move(label)), loader_(std::move(loader)) {}
 
 ScenePlayer::~ScenePlayer() {
+    cancel_.store(true);
     if (pending_.valid()) {
         pending_.wait();
     }
@@ -100,9 +101,12 @@ void ScenePlayer::start() {
         return;
     }
     state_ = SceneState::Loading;
-    pending_ = std::async(std::launch::async, [loader = loader_]() {
+    cancel_.store(false);
+    pending_ = std::async(std::launch::async, [loader = loader_, &flag = cancel_]() {
         const double begin = nowMs();
-        GltfResult result = loader();
+        GltfLimits limits;
+        limits.cancel = &flag;
+        GltfResult result = loader(limits);
         result.milliseconds = nowMs() - begin;
         return result;
     });
@@ -159,7 +163,20 @@ bool ScenePlayer::wait() {
     return poll() == SceneState::Ready;
 }
 
+void ScenePlayer::cancel() {
+    if (state_ == SceneState::Loading) {
+        cancel_.store(true);
+    }
+}
+
+void ScenePlayer::retry() {
+    if (state_ == SceneState::Failed) {
+        release();
+    }
+}
+
 void ScenePlayer::release() {
+    cancel_.store(true);
     if (pending_.valid()) {
         pending_.wait();
         pending_ = std::future<GltfResult>();

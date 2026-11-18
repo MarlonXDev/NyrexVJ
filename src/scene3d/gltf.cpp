@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <fstream>
@@ -27,6 +28,29 @@ constexpr uint64_t kMaxAccessorCount = 1u << 26;
 
 struct Failure {
     std::string message;
+};
+
+struct Interrupted {
+    std::string message;
+};
+
+using Clock = std::chrono::steady_clock;
+
+struct Budget {
+    const GltfLimits* limits = nullptr;
+    Clock::time_point begin = Clock::now();
+
+    void check() const {
+        if (!limits) {
+            return;
+        }
+        if (limits->cancel && limits->cancel->load(std::memory_order_relaxed)) {
+            throw Interrupted{"loading was cancelled"};
+        }
+        if (limits->maxSeconds > 0.0 && std::chrono::duration<double>(Clock::now() - begin).count() > limits->maxSeconds) {
+            throw Interrupted{"loading took longer than the time limit"};
+        }
+    }
 };
 
 [[noreturn]] void fail(const std::string& message) {
@@ -125,7 +149,7 @@ std::string percentDecode(const std::string& text) {
     return out;
 }
 
-std::vector<uint8_t> readFileLimited(const std::filesystem::path& path, size_t limit) {
+std::vector<uint8_t> readFileLimited(const std::filesystem::path& path, size_t limit, const Budget& budget) {
     std::error_code ec;
     if (!std::filesystem::is_regular_file(path, ec) || ec) {
         fail("file not found: " + path.filename().string());
@@ -142,11 +166,16 @@ std::vector<uint8_t> readFileLimited(const std::filesystem::path& path, size_t l
         fail("file could not be opened: " + path.filename().string());
     }
     std::vector<uint8_t> data(static_cast<size_t>(size));
-    if (!data.empty()) {
-        in.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size()));
-        if (static_cast<size_t>(in.gcount()) != data.size()) {
+    constexpr size_t kChunk = 4u * 1024u * 1024u;
+    size_t done = 0;
+    while (done < data.size()) {
+        budget.check();
+        const size_t step = std::min(kChunk, data.size() - done);
+        in.read(reinterpret_cast<char*>(data.data() + done), static_cast<std::streamsize>(step));
+        if (static_cast<size_t>(in.gcount()) != step) {
             fail("file could not be read completely: " + path.filename().string());
         }
+        done += step;
     }
     return data;
 }
@@ -296,7 +325,10 @@ struct AccessorView {
 class Loader {
 public:
     Loader(const GltfLimits& limits, const std::filesystem::path& baseDirectory, GltfResult& result)
-        : limits_(limits), baseDirectory_(baseDirectory), result_(result) {}
+        : limits_(limits), baseDirectory_(baseDirectory), result_(result) {
+        budget_.limits = &limits;
+    }
+
 
     void run(const uint8_t* data, size_t size) {
         if (size > limits_.maxFileBytes) {
@@ -321,12 +353,17 @@ public:
         if (!doc_.is_object()) {
             fail("document is not a glTF object");
         }
+        budget_.check();
         checkAsset();
         loadBuffers(std::move(glbBinary));
+        budget_.check();
         loadMaterials();
+        budget_.check();
         loadMeshes();
+        budget_.check();
         loadNodes();
         loadAnimations();
+        budget_.check();
         std::string error;
         if (!validateScene(scene(), error)) {
             fail(error);
@@ -395,6 +432,7 @@ private:
         const json& buffers = arrayOf(doc_, "buffers");
         size_t total = 0;
         for (size_t i = 0; i < buffers.size(); ++i) {
+            budget_.check();
             const json& b = buffers[i];
             if (!b.is_object()) {
                 fail("buffer entry is invalid");
@@ -434,7 +472,7 @@ private:
             }
             return base64Decode(std::string_view(uri).substr(comma + 1), limit);
         }
-        return readFileLimited(resolveExternal(baseDirectory_, uri), limit);
+        return readFileLimited(resolveExternal(baseDirectory_, uri), limit, budget_);
     }
 
     AccessorView accessor(int index) {
@@ -547,6 +585,7 @@ private:
             return cached->second;
         }
         int result = -1;
+        budget_.check();
         try {
             const json& image = images[static_cast<size_t>(source)];
             std::vector<uint8_t> bytes;
@@ -642,6 +681,7 @@ private:
                 if (!primitive.is_object()) {
                     fail("primitive entry is invalid");
                 }
+                budget_.check();
                 const int built = buildPrimitive(primitive);
                 if (built >= 0) {
                     produced.push_back(built);
@@ -914,6 +954,7 @@ private:
     void loadAnimations() {
         size_t keyTotal = 0;
         for (const json& a : arrayOf(doc_, "animations")) {
+            budget_.check();
             if (!a.is_object()) {
                 fail("animation entry is invalid");
             }
@@ -986,6 +1027,7 @@ private:
     }
 
     const GltfLimits& limits_;
+    Budget budget_;
     std::filesystem::path baseDirectory_;
     GltfResult& result_;
     json doc_;
@@ -1010,6 +1052,9 @@ GltfResult loadGltfMemory(const uint8_t* data, size_t size, const std::filesyste
         result.ok = true;
     } catch (const Failure& failure) {
         result.error = failure.message;
+    } catch (const Interrupted& interrupted) {
+        result.error = interrupted.message;
+        result.interrupted = true;
     } catch (const nlohmann::json::exception& e) {
         result.error = std::string("invalid glTF JSON: ") + e.what();
     } catch (const std::bad_alloc&) {
@@ -1026,13 +1071,23 @@ GltfResult loadGltfMemory(const uint8_t* data, size_t size, const std::filesyste
 GltfResult loadGltfFile(const std::filesystem::path& path, const GltfLimits& limits) {
     GltfResult result;
     try {
-        const std::vector<uint8_t> data = readFileLimited(path, limits.maxFileBytes);
-        result = loadGltfMemory(data.data(), data.size(), path.parent_path(), limits);
+        Budget budget;
+        budget.limits = &limits;
+        const std::vector<uint8_t> data = readFileLimited(path, limits.maxFileBytes, budget);
+        GltfLimits remaining = limits;
+        if (limits.maxSeconds > 0.0) {
+            const double spent = std::chrono::duration<double>(Clock::now() - budget.begin).count();
+            remaining.maxSeconds = std::max(0.001, limits.maxSeconds - spent);
+        }
+        result = loadGltfMemory(data.data(), data.size(), path.parent_path(), remaining);
         if (result.ok) {
             result.scene.name = path.stem().string();
         }
     } catch (const Failure& failure) {
         result.error = failure.message;
+    } catch (const Interrupted& interrupted) {
+        result.error = interrupted.message;
+        result.interrupted = true;
     } catch (const std::bad_alloc&) {
         result.error = "out of memory while loading";
     }

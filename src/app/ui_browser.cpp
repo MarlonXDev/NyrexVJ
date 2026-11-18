@@ -2,6 +2,7 @@
 
 #include "app/ui_common.hpp"
 #include "core/log.hpp"
+#include "core/novelty.hpp"
 #include "core/preset.hpp"
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
@@ -25,9 +26,13 @@ void App::drawPresetsTab() {
     for (int i = 0; i < static_cast<int>(factory.size()); ++i) {
         const Composition& preset = factory[static_cast<size_t>(i)];
         ImGui::PushID(i);
+        const ImVec2 rowStart = ImGui::GetCursorScreenPos();
         if (ImGui::Selectable(preset.name.c_str(), engine_.comp.deckNames[static_cast<size_t>(engine_.comp.activeDeck)] == preset.name)) {
             fillDeckFromLook(engine_.comp.activeDeck, preset);
             toast(std::string(tr("Loaded ")) + preset.name);
+        }
+        if (isNewPreset(preset.name)) {
+            ui::newTag(rowStart, preset.name.c_str(), ImGui::GetTextLineHeight());
         }
         if (ImGui::BeginPopupContextItem("factorymenu")) {
             if (ImGui::MenuItem(tr("Load into current deck"))) {
@@ -132,10 +137,6 @@ bool matchesKind(const ClipDef& clip, int kind) {
     }
 }
 
-std::string cellLabel(int layer, int column) {
-    return std::string(tr("Layer ")) + std::to_string(layer + 1) + ", " + tr("Column ") + std::to_string(column + 1);
-}
-
 }
 
 void App::drawSceneDetails(const ScenePlayer& player) {
@@ -167,7 +168,7 @@ void App::assignClipToSelectedCell(int clip) {
     selectedColumn_ = std::clamp(selectedColumn_, 0, kColumnCount - 1);
     engine_.comp.layers[static_cast<size_t>(selectedLayer_)].cells[static_cast<size_t>(selectedColumn_)] = clip;
     engine_.trigger(selectedLayer_, selectedColumn_);
-    toast(library[static_cast<size_t>(clip)].name + "  >  " + cellLabel(selectedLayer_, selectedColumn_));
+    toast(library[static_cast<size_t>(clip)].name + "  >  " + ui::cellLabel(selectedLayer_, selectedColumn_));
 }
 
 void App::assignClipToFreeCell(int clip, int layer) {
@@ -182,7 +183,7 @@ void App::assignClipToFreeCell(int clip, int layer) {
             selectedLayer_ = layer;
             selectedColumn_ = c;
             engine_.trigger(layer, c);
-            toast(library[static_cast<size_t>(clip)].name + "  >  " + cellLabel(layer, c));
+            toast(library[static_cast<size_t>(clip)].name + "  >  " + ui::cellLabel(layer, c));
             return;
         }
     }
@@ -239,6 +240,20 @@ void App::drawClipTile(int index, const ImVec2& size) {
     draw->PushClipRect(ImVec2(pos.x, imageMax.y), max, true);
     draw->AddText(ImVec2(pos.x + 6.0f, imageMax.y + 3.0f), IM_COL32(230, 230, 235, 255), clip.name.c_str());
     draw->PopClipRect();
+    if (isNewClip(clip.name)) {
+        const float tagSize = ImGui::GetFontSize() * 0.66f;
+        const char* tagText = tr("new");
+        const float tagWidth = ImGui::CalcTextSize(tagText).x * 0.66f;
+        const float nameEnd = pos.x + 6.0f + ImGui::CalcTextSize(clip.name.c_str()).x + 7.0f;
+        if (nameEnd + tagWidth <= max.x - 3.0f) {
+            draw->AddText(ImGui::GetFont(), tagSize, ImVec2(nameEnd, imageMax.y + 3.0f + (ImGui::GetTextLineHeight() - tagSize) * 0.5f), ImGui::GetColorU32(ui::kAccent), tagText);
+        } else {
+            const ImVec2 pillMin(pos.x + 4.0f, pos.y + 4.0f);
+            const ImVec2 pillMax(pillMin.x + tagWidth + 8.0f, pillMin.y + tagSize + 4.0f);
+            draw->AddRectFilled(pillMin, pillMax, ImGui::GetColorU32(ui::kAccent), 3.0f);
+            draw->AddText(ImGui::GetFont(), tagSize, ImVec2(pillMin.x + 4.0f, pillMin.y + 2.0f), ImGui::GetColorU32(ui::kBlack), tagText);
+        }
+    }
     if (clip.is3d) {
         const ImVec2 badgeSize = ImGui::CalcTextSize("3D");
         const ImVec2 badgeMin(imageMax.x - badgeSize.x - 10.0f, pos.y + 4.0f);
@@ -279,7 +294,7 @@ void App::drawClipTile(int index, const ImVec2& size) {
     if (ImGui::BeginPopupContextItem("clipmenu")) {
         ImGui::TextDisabled("%s", clip.name.c_str());
         ImGui::Separator();
-        const std::string selectedLabel = std::string(tr("Put into the selected cell")) + "  (" + cellLabel(selectedLayer_, selectedColumn_) + ")";
+        const std::string selectedLabel = std::string(tr("Put into the selected cell")) + "  (" + ui::cellLabel(selectedLayer_, selectedColumn_) + ")";
         if (ImGui::MenuItem(selectedLabel.c_str())) {
             selectedLibraryClip_ = index;
             assignClipToSelectedCell(index);
@@ -346,12 +361,17 @@ void App::drawLibraryClips() {
     ImGui::TextDisabled("%d / %d %s", shown, total, tr("clips"));
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextDisabled("%s", tr("3D models: put .glb or .gltf files into this folder, then restart NyrexVJ"));
+    ImGui::TextDisabled("%s", tr("3D models: put .glb or .gltf files into this folder, then press Scan again"));
     ImGui::TextDisabled("%s", modelDirectory().c_str());
     ImGui::PopTextWrapPos();
     if (ImGui::SmallButton(tr("Open models folder"))) {
         platform::openFolder(modelDirectory());
     }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(trId("Scan again", "scanModels"))) {
+        rescanModels_ = true;
+    }
+    ImGui::SetItemTooltip("%s", tr("Looks for new model files without restarting. Removed files stay in the list until the next start."));
     ImGui::EndChild();
 }
 
@@ -368,9 +388,13 @@ void App::drawLibraryEffects() {
             continue;
         }
         ImGui::PushID(i);
+        const ImVec2 rowStart = ImGui::GetCursorScreenPos();
         if (ImGui::Selectable(effect.name.c_str(), selectedLibraryEffect_ == i)) {
             selectedLibraryEffect_ = i;
             addEffectToLayer(i, selectedLayer_);
+        }
+        if (isNewEffect(effect.name)) {
+            ui::newTag(rowStart, effect.name.c_str(), ImGui::GetTextLineHeight());
         }
         if (effect.is3d) {
             const ImVec2 badgeSize = ImGui::CalcTextSize("3D");

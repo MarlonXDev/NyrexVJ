@@ -70,6 +70,10 @@ private:
     void drawMenuBar();
     void drawDeck();
     void drawOutput();
+    void drawPreview();
+    void drawClipPanel();
+    void drawTransport(bool wide);
+    void drawSceneControls(ScenePlayer& player);
     void drawLayer();
     void drawMaster();
     void drawBrowser();
@@ -127,6 +131,7 @@ private:
     GLFWwindow* window_ = nullptr;
     std::string iniPath_;
     bool needsLayout_ = false;
+    bool rescanModels_ = false;
     bool restart_ = false;
     int selectedLayer_ = 0;
     int selectedColumn_ = 0;

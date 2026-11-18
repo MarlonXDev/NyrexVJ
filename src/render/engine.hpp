@@ -2,6 +2,7 @@
 
 #include "audio/audio_features.hpp"
 #include "core/composition.hpp"
+#include "render/clip_library.hpp"
 #include "render/gl_util.hpp"
 #include "render/scene_player.hpp"
 
@@ -26,6 +27,7 @@ class Engine {
 public:
     bool init();
     void shutdown();
+    void syncLibrary();
     bool setResolutionIndex(int index);
     void applyComposition(const Composition& source);
     void update(double dt);
@@ -65,6 +67,7 @@ public:
 
     Composition comp;
     bool blackout = false;
+    bool paused = false;
 
 private:
     struct ClipProgram {
@@ -155,6 +158,7 @@ private:
     void renderClipThumbnails(int maxCount);
     bool ensureClip(size_t index);
     bool ensureScene(size_t index);
+    std::unique_ptr<ScenePlayer> makeScene(const ClipDef& def) const;
     void renderSceneThumbnail(size_t index);
     void serviceScenes();
     bool ensureEffect(size_t index);

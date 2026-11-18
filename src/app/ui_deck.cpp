@@ -1,11 +1,13 @@
 #include "app/app.hpp"
 
 #include "app/ui_common.hpp"
+#include "core/novelty.hpp"
 #include "core/preset.hpp"
 #include "render/clip_library.hpp"
 
 #include <algorithm>
 #include <cfloat>
+#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -56,7 +58,6 @@ void App::loadFactoryBank() {
 
 void App::drawDeckBar() {
     Composition& comp = engine_.comp;
-    DeckSettings& settings = comp.deckSettings;
     const float buttonWidth = 34.0f;
 
     ImGui::AlignTextToFramePadding();
@@ -103,7 +104,7 @@ void App::drawDeckBar() {
             }
             if (ImGui::BeginMenu(tr("Fill with factory look"))) {
                 for (const Composition& look : factoryPresets()) {
-                    if (ImGui::MenuItem(look.name.c_str())) {
+                    if (ImGui::MenuItem(look.name.c_str(), isNewPreset(look.name) ? tr("new") : nullptr)) {
                         fillDeckFromLook(d, look);
                     }
                 }
@@ -150,7 +151,67 @@ void App::drawDeckBar() {
         switchDeckTo(nextUsedDeck(comp, comp.activeDeck, 1));
     }
     ImGui::SetItemTooltip("%s", tr("Next deck"));
+}
 
+void App::drawTransport(bool wide) {
+    Composition& comp = engine_.comp;
+    DeckSettings& settings = comp.deckSettings;
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("BPM");
+    ImGui::SameLine();
+    float bpm = comp.bpm;
+    ImGui::SetNextItemWidth(78.0f);
+    if (ImGui::DragFloat("##bpm", &bpm, 0.1f, 40.0f, 240.0f, "%.1f")) {
+        comp.bpm = std::clamp(bpm, 40.0f, 240.0f);
+    }
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ImGui::Button("-")) {
+        comp.bpm = std::clamp(comp.bpm - 1.0f, 40.0f, 240.0f);
+    }
+    ImGui::SameLine(0.0f, 2.0f);
+    if (ImGui::Button("+")) {
+        comp.bpm = std::clamp(comp.bpm + 1.0f, 40.0f, 240.0f);
+    }
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ImGui::Button("/2")) {
+        comp.bpm = std::clamp(comp.bpm * 0.5f, 40.0f, 240.0f);
+    }
+    ImGui::SameLine(0.0f, 2.0f);
+    if (ImGui::Button("x2")) {
+        comp.bpm = std::clamp(comp.bpm * 2.0f, 40.0f, 240.0f);
+    }
+    ImGui::SameLine(0.0f, 8.0f);
+    if (ImGui::Button(trId("Tap", "tap"))) {
+        engine_.tap();
+    }
+    ImGui::SetItemTooltip("%s", tr("Tap the tempo (Space)"));
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ImGui::Button(trId("Resync", "resync"))) {
+        engine_.resync();
+    }
+    ImGui::SetItemTooltip("%s", tr("Restart the beat count at 1"));
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ui::accentButton(trId("Pause", "pause"), engine_.paused)) {
+        engine_.paused = !engine_.paused;
+    }
+    ImGui::SetItemTooltip("%s", tr("Freezes the tempo clock and all clip motion"));
+    ImGui::SameLine(0.0f, 10.0f);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s %d", tr("Beat"), static_cast<int>(std::floor(engine_.beat())) % 4 + 1);
+    if (audio_.active()) {
+        ImGui::SameLine(0.0f, 10.0f);
+        ImGui::Checkbox(trId("Sync BPM to audio", "syncBpm"), &settings_.audioSyncBpm);
+        const AudioFeatures& features = audio_.features();
+        if (features.bpm > 0.0f) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%.1f", features.bpm);
+        }
+    }
+
+    if (wide) {
+        ImGui::SameLine(0.0f, 28.0f);
+    }
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("%s", tr("Transition"));
     ImGui::SameLine();
@@ -190,14 +251,18 @@ void App::drawDeckBar() {
 
 void App::drawDeck() {
     ImGui::Begin(trId("Deck", "deck"));
-    drawDeckBar();
     const std::vector<ClipDef>& library = clipLibrary();
     Composition& comp = engine_.comp;
     const float cellW = 108.0f;
     const float cellH = 61.0f;
     const ImGuiTableFlags flags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_NoSavedSettings;
 
-    if (ImGui::BeginTable("deck", kColumnCount + 1, flags)) {
+    const float rowHeight = ImGui::GetFrameHeightWithSpacing();
+    const bool wide = ImGui::GetContentRegionAvail().x >= 1240.0f;
+    const float footer = rowHeight * (wide ? 2.0f : 3.0f) + 8.0f;
+    const ImVec2 tableSize(0.0f, std::max(80.0f, ImGui::GetContentRegionAvail().y - footer));
+
+    if (ImGui::BeginTable("deck", kColumnCount + 1, flags, tableSize)) {
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableSetupColumn("##layers", ImGuiTableColumnFlags_WidthFixed, 300.0f);
         for (int c = 0; c < kColumnCount; ++c) {
@@ -359,6 +424,8 @@ void App::drawDeck() {
         }
         ImGui::EndTable();
     }
+    drawDeckBar();
+    drawTransport(wide);
     ImGui::End();
 }
 
@@ -384,6 +451,44 @@ void App::drawOutput() {
         ImGui::SameLine();
         ImGui::TextColored(ui::kAccent, "Spout");
     }
+    ImGui::End();
+}
+
+void App::drawPreview() {
+    ImGui::Begin(trId("Preview", "preview"));
+    selectedLayer_ = std::clamp(selectedLayer_, 0, kLayerCount - 1);
+    selectedColumn_ = std::clamp(selectedColumn_, 0, kColumnCount - 1);
+    const Layer& layer = engine_.comp.layers[static_cast<size_t>(selectedLayer_)];
+    const int clip = layer.cells[static_cast<size_t>(selectedColumn_)];
+    const bool live = layer.activeColumn == selectedColumn_ && engine_.layerLive(selectedLayer_);
+    GLuint texture = 0;
+    if (live) {
+        texture = engine_.layerPreview(selectedLayer_);
+    } else if (clip >= 0) {
+        texture = engine_.clipThumbnail(clip);
+    }
+
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+    avail.y -= ImGui::GetTextLineHeightWithSpacing();
+    if (texture && avail.x > 8.0f && avail.y > 8.0f) {
+        const float aspect = static_cast<float>(engine_.width()) / static_cast<float>(std::max(1, engine_.height()));
+        ImVec2 size = avail;
+        if (size.x / size.y > aspect) {
+            size.x = size.y * aspect;
+        } else {
+            size.y = size.x / aspect;
+        }
+        ImVec2 cursor = ImGui::GetCursorPos();
+        ImGui::SetCursorPos(ImVec2(cursor.x + (avail.x - size.x) * 0.5f, cursor.y + (avail.y - size.y) * 0.5f));
+        ImGui::Image(ui::texId(texture), size, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+    }
+    ImGui::SetCursorPosY(ImGui::GetWindowHeight() - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().WindowPadding.y * 0.5f);
+    const std::vector<ClipDef>& library = clipLibrary();
+    std::string label = ui::cellLabel(selectedLayer_, selectedColumn_);
+    if (clip >= 0) {
+        label += "   " + library[static_cast<size_t>(clip)].name;
+    }
+    ImGui::TextDisabled("%s", label.c_str());
     ImGui::End();
 }
 

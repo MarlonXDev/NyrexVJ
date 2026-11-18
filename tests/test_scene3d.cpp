@@ -11,6 +11,7 @@
 #include "stb_image_write.h"
 
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -593,6 +594,50 @@ void testTextures() {
     CHECK(rejected.ok && rejected.scene.images.empty() && !rejected.warnings.empty());
 }
 
+void testInterruption() {
+    const Blob good = triangleBlob();
+    CHECK(loadBlob(good).ok);
+
+    std::atomic<bool> stop{true};
+    GltfLimits cancelled;
+    cancelled.cancel = &stop;
+    const GltfResult byFlag = loadBlob(good, cancelled);
+    CHECK(!byFlag.ok);
+    CHECK(byFlag.interrupted);
+    CHECK(byFlag.scene.nodes.empty());
+
+    std::atomic<bool> go{false};
+    GltfLimits waiting;
+    waiting.cancel = &go;
+    CHECK(loadBlob(good, waiting).ok);
+
+    GltfLimits tooSlow;
+    tooSlow.maxSeconds = 1e-9;
+    const GltfResult byTime = loadBlob(good, tooSlow);
+    CHECK(!byTime.ok);
+    CHECK(byTime.interrupted);
+    CHECK(byTime.error.find("time limit") != std::string::npos);
+
+    GltfLimits unlimited;
+    unlimited.maxSeconds = 0.0;
+    CHECK(loadBlob(good, unlimited).ok);
+
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "nvj_interrupt_test";
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+    std::filesystem::create_directories(dir, ec);
+    const std::vector<uint8_t> glb = writeGlb(makeTorusKnotScene());
+    {
+        std::ofstream out(dir / "knot.glb", std::ios::binary);
+        out.write(reinterpret_cast<const char*>(glb.data()), static_cast<std::streamsize>(glb.size()));
+    }
+    CHECK(loadGltfFile(dir / "knot.glb").ok);
+    const GltfResult fileCancelled = loadGltfFile(dir / "knot.glb", cancelled);
+    CHECK(!fileCancelled.ok);
+    CHECK(fileCancelled.interrupted);
+    std::filesystem::remove_all(dir, ec);
+}
+
 void testDeterministicAndSmall() {
     const std::vector<uint8_t> a = writeGlb(makeTorusKnotScene());
     const std::vector<uint8_t> b = writeGlb(makeTorusKnotScene());
@@ -614,6 +659,7 @@ int main() {
     testRejections();
     testDataUriAndFiles();
     testTextures();
+    testInterruption();
     testDeterministicAndSmall();
     return testing::finish();
 }

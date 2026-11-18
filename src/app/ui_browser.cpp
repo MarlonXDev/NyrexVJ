@@ -244,7 +244,7 @@ void App::drawMediaControls(MediaPlayer& player) {
                 ImGui::Spacing();
                 ImGui::PushTextWrapPos(0.0f);
                 ImGui::TextColored(ui::kAccent, "%s", tr("Video clips need the FFmpeg libraries"));
-                ImGui::TextDisabled("%s", tr("Get a shared FFmpeg build (LGPL, version 7.1) and copy these files into the folder below:"));
+                ImGui::TextDisabled("%s", tr("Get a shared FFmpeg 8.1 build (LGPL) and copy these files into the folder below:"));
                 for (const std::string& file : support.files) {
                     ImGui::BulletText("%s", file.c_str());
                 }

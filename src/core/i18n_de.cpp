@@ -804,7 +804,7 @@ const Translation kGerman[] = {
     {"Has transparency", "Hat Transparenz"},
     {"This build of NyrexVJ was made without video support.", "Dieser NyrexVJ-Build wurde ohne Video-Unterstützung erstellt."},
     {"Video clips need the FFmpeg libraries", "Video-Clips brauchen die FFmpeg-Bibliotheken"},
-    {"Get a shared FFmpeg build (LGPL, version 7.1) and copy these files into the folder below:", "Lade einen Shared-Build von FFmpeg (LGPL, Version 7.1) und kopiere diese Dateien in den Ordner darunter:"},
+    {"Get a shared FFmpeg 8.1 build (LGPL) and copy these files into the folder below:", "Lade einen Shared-Build von FFmpeg 8.1 (LGPL) und kopiere diese Dateien in den Ordner darunter:"},
     {"Open FFmpeg folder", "FFmpeg-Ordner öffnen"},
     {"Check again", "Erneut prüfen"},
     {"Video file", "Videodatei"},

@@ -427,6 +427,8 @@ std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double seconds) {
 
 namespace nvj {
 
+struct VideoDecoder::Impl {};
+
 VideoSupport videoSupport() {
     VideoSupport support;
     support.folder = ffmpegDirectory();

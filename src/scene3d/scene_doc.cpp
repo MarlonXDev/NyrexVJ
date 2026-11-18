@@ -299,6 +299,32 @@ bool depthOk(const std::string& text, int maxDepth) {
     return true;
 }
 
+void sanitizeCamera(DocCamera& cam, const std::string& fallback) {
+    cam.name = cleanName(cam.name, fallback);
+    cam.distance = clampFinite(cam.distance, 0.2f, 6.0f, 1.0f);
+    cam.pitchDegrees = clampFinite(cam.pitchDegrees, -85.0f, 85.0f, 18.0f);
+    cam.yawDegrees = clampFinite(cam.yawDegrees, -720.0f, 720.0f, 0.0f);
+    cam.fovDegrees = clampFinite(cam.fovDegrees, 15.0f, 110.0f, 46.0f);
+    cam.orbitSpeed = clampFinite(cam.orbitSpeed, -4.0f, 4.0f, 0.4f);
+    cam.pitchSway = clampFinite(cam.pitchSway, 0.0f, 40.0f, 0.0f);
+    sanitizeBindings(cam.bindings, false, true);
+}
+
+json cameraToJson(const DocCamera& cam) {
+    return {{"name", cam.name}, {"distance", cam.distance}, {"pitch", cam.pitchDegrees}, {"yaw", cam.yawDegrees}, {"fov", cam.fovDegrees}, {"orbitSpeed", cam.orbitSpeed}, {"pitchSway", cam.pitchSway}, {"bindings", bindingsToJson(cam.bindings)}};
+}
+
+void readCamera(const json& node, DocCamera& out) {
+    readString(node, "name", out.name);
+    readFloat(node, "distance", out.distance);
+    readFloat(node, "pitch", out.pitchDegrees);
+    readFloat(node, "yaw", out.yawDegrees);
+    readFloat(node, "fov", out.fovDegrees);
+    readFloat(node, "orbitSpeed", out.orbitSpeed);
+    readFloat(node, "pitchSway", out.pitchSway);
+    readBindings(node, out.bindings);
+}
+
 }
 
 const char* motionKey(MotionKind kind) {
@@ -385,6 +411,49 @@ SceneDoc makeDefaultDoc() {
     return doc;
 }
 
+int docCameraCount(const SceneDoc& doc) {
+    return 1 + static_cast<int>(doc.extraCameras.size());
+}
+
+DocCamera& docCameraAt(SceneDoc& doc, int index) {
+    index = std::clamp(index, 0, docCameraCount(doc) - 1);
+    return index == 0 ? doc.camera : doc.extraCameras[static_cast<size_t>(index - 1)];
+}
+
+const DocCamera& docCameraAt(const SceneDoc& doc, int index) {
+    index = std::clamp(index, 0, docCameraCount(doc) - 1);
+    return index == 0 ? doc.camera : doc.extraCameras[static_cast<size_t>(index - 1)];
+}
+
+int docAddCamera(SceneDoc& doc, const DocCamera& source) {
+    if (static_cast<size_t>(docCameraCount(doc)) >= kDocMaxCameras) {
+        return -1;
+    }
+    DocCamera added = source;
+    added.name = "Camera " + std::to_string(docCameraCount(doc) + 1);
+    doc.extraCameras.push_back(added);
+    return docCameraCount(doc) - 1;
+}
+
+bool docRemoveCamera(SceneDoc& doc, int index) {
+    if (docCameraCount(doc) <= 1 || index < 0 || index >= docCameraCount(doc)) {
+        return false;
+    }
+    if (index == 0) {
+        doc.camera = doc.extraCameras.front();
+        doc.extraCameras.erase(doc.extraCameras.begin());
+    } else {
+        doc.extraCameras.erase(doc.extraCameras.begin() + (index - 1));
+    }
+    if (doc.activeCamera > index) {
+        --doc.activeCamera;
+    } else if (doc.activeCamera == index) {
+        doc.activeCamera = std::min(index, docCameraCount(doc) - 1);
+    }
+    doc.activeCamera = std::clamp(doc.activeCamera, 0, docCameraCount(doc) - 1);
+    return true;
+}
+
 void sanitizeDoc(SceneDoc& doc) {
     doc.name = cleanName(doc.name, "Untitled");
     if (doc.objects.size() > kDocMaxObjects) {
@@ -398,14 +467,15 @@ void sanitizeDoc(SceneDoc& doc) {
     sanitizeColor(doc.sky.horizon);
     sanitizeColor(doc.sky.ground);
     doc.sky.intensity = clampFinite(doc.sky.intensity, 0.0f, 4.0f, 1.0f);
-    DocCamera& cam = doc.camera;
-    cam.distance = clampFinite(cam.distance, 0.2f, 6.0f, 1.0f);
-    cam.pitchDegrees = clampFinite(cam.pitchDegrees, -85.0f, 85.0f, 18.0f);
-    cam.yawDegrees = clampFinite(cam.yawDegrees, -720.0f, 720.0f, 0.0f);
-    cam.fovDegrees = clampFinite(cam.fovDegrees, 15.0f, 110.0f, 46.0f);
-    cam.orbitSpeed = clampFinite(cam.orbitSpeed, -4.0f, 4.0f, 0.4f);
-    cam.pitchSway = clampFinite(cam.pitchSway, 0.0f, 40.0f, 0.0f);
-    sanitizeBindings(cam.bindings, false, true);
+    sanitizeCamera(doc.camera, "Camera 1");
+    if (doc.extraCameras.size() + 1 > kDocMaxCameras) {
+        doc.extraCameras.resize(kDocMaxCameras - 1);
+    }
+    for (size_t i = 0; i < doc.extraCameras.size(); ++i) {
+        sanitizeCamera(doc.extraCameras[i], "Camera " + std::to_string(i + 2));
+    }
+    doc.activeCamera = std::clamp(doc.activeCamera, 0, docCameraCount(doc) - 1);
+    doc.cutBeats = clampFinite(doc.cutBeats, 0.0f, kDocMaxCutBeats, 0.0f);
     for (DocObject& o : doc.objects) {
         o.name = cleanName(o.name, "Object");
         sanitizeVec(o.position, 1000.0f);
@@ -468,7 +538,18 @@ std::string docToJson(const SceneDoc& source) {
     root["name"] = doc.name;
     root["exposure"] = doc.exposure;
     root["sky"] = {{"top", arrayOf3(doc.sky.top)}, {"horizon", arrayOf3(doc.sky.horizon)}, {"ground", arrayOf3(doc.sky.ground)}, {"intensity", doc.sky.intensity}};
-    root["camera"] = {{"distance", doc.camera.distance}, {"pitch", doc.camera.pitchDegrees}, {"yaw", doc.camera.yawDegrees}, {"fov", doc.camera.fovDegrees}, {"orbitSpeed", doc.camera.orbitSpeed}, {"pitchSway", doc.camera.pitchSway}, {"bindings", bindingsToJson(doc.camera.bindings)}};
+    root["camera"] = cameraToJson(doc.camera);
+    if (!doc.extraCameras.empty()) {
+        json cameras = json::array();
+        for (const DocCamera& extra : doc.extraCameras) {
+            cameras.push_back(cameraToJson(extra));
+        }
+        root["cameras"] = std::move(cameras);
+        root["activeCamera"] = doc.activeCamera;
+    }
+    if (doc.cutBeats > 0.0f) {
+        root["cutBeats"] = doc.cutBeats;
+    }
     json objects = json::array();
     for (const DocObject& o : doc.objects) {
         json entry;
@@ -556,14 +637,25 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
     }
     const auto camera = root.find("camera");
     if (camera != root.end() && camera->is_object()) {
-        readFloat(*camera, "distance", out.camera.distance);
-        readFloat(*camera, "pitch", out.camera.pitchDegrees);
-        readFloat(*camera, "yaw", out.camera.yawDegrees);
-        readFloat(*camera, "fov", out.camera.fovDegrees);
-        readFloat(*camera, "orbitSpeed", out.camera.orbitSpeed);
-        readFloat(*camera, "pitchSway", out.camera.pitchSway);
-        readBindings(*camera, out.camera.bindings);
+        readCamera(*camera, out.camera);
     }
+    const auto cameras = root.find("cameras");
+    if (cameras != root.end() && cameras->is_array()) {
+        for (const json& entry : *cameras) {
+            if (!entry.is_object() || out.extraCameras.size() + 1 >= kDocMaxCameras) {
+                continue;
+            }
+            DocCamera extra;
+            extra.name = "Camera " + std::to_string(out.extraCameras.size() + 2);
+            readCamera(entry, extra);
+            out.extraCameras.push_back(std::move(extra));
+        }
+        float active = 0.0f;
+        if (readFloat(root, "activeCamera", active)) {
+            out.activeCamera = static_cast<int>(active);
+        }
+    }
+    readFloat(root, "cutBeats", out.cutBeats);
     const auto objects = root.find("objects");
     if (objects != root.end() && objects->is_array()) {
         for (const json& entry : *objects) {

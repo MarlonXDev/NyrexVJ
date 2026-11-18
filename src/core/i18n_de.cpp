@@ -724,6 +724,11 @@ const Translation kGerman[] = {
     {"Layers on air", "Ebenen im Bild"},
     {"Effect passes", "Effekt-Durchläufe"},
     {"Render passes per frame", "Render-Durchläufe pro Bild"},
+    {"Cameras", "Kameras"},
+    {"playing", "läuft"},
+    {"Camera name", "Kameraname"},
+    {"Cut (beats)", "Schnitt (Beats)"},
+    {"Switches between all cameras of the scene after this many beats. 0 keeps the selected camera.", "Wechselt nach so vielen Beats zwischen allen Kameras der Szene. 0 behält die gewählte Kamera."},
 };
 
 }

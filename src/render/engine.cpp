@@ -1289,6 +1289,7 @@ void Engine::drawLayerSource(int clipIndex, const Layer& layer, float scale, dou
     if (scenes_[static_cast<size_t>(clipIndex)]) {
         SceneFrame frame;
         frame.time = static_cast<float>(clock);
+        frame.beat = beat_;
         frame.scale = scale;
         frame.bass = audio_.bass;
         frame.mid = audio_.mid;

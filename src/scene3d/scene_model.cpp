@@ -373,7 +373,14 @@ bool validateScene(const Scene& scene, std::string& error) {
             return false;
         }
     }
-    if (!std::isfinite(scene.camera.fovDegrees) || !std::isfinite(scene.camera.distance) || !std::isfinite(scene.camera.pitchDegrees) || scene.camera.fovDegrees < 10.0f || scene.camera.fovDegrees > 120.0f || scene.camera.distance <= 0.0f) {
+    const auto cameraValid = [](const SceneCamera& camera) {
+        return std::isfinite(camera.fovDegrees) && std::isfinite(camera.distance) && std::isfinite(camera.pitchDegrees) && camera.fovDegrees >= 10.0f && camera.fovDegrees <= 120.0f && camera.distance > 0.0f;
+    };
+    bool camerasValid = cameraValid(scene.camera) && std::isfinite(scene.cameraCutBeats);
+    for (const SceneCamera& camera : scene.cameras) {
+        camerasValid = camerasValid && cameraValid(camera);
+    }
+    if (!camerasValid) {
         error = "the camera has invalid values";
         return false;
     }
@@ -482,6 +489,15 @@ bool validateScene(const Scene& scene, std::string& error) {
         }
     }
     return true;
+}
+
+const SceneCamera& activeSceneCamera(const Scene& scene, double beat) {
+    if (scene.cameraCutBeats > 0.0f && scene.cameras.size() > 1 && std::isfinite(beat)) {
+        const double step = std::floor(std::max(beat, 0.0) / static_cast<double>(scene.cameraCutBeats));
+        const size_t index = static_cast<size_t>(std::fmod(step, static_cast<double>(scene.cameras.size())));
+        return scene.cameras[std::min(index, scene.cameras.size() - 1)];
+    }
+    return scene.camera;
 }
 
 }

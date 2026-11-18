@@ -17,6 +17,9 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0001](adr/0001-native-3d-runtime.md) | Native 3D rendering and Clip Creator separation | Accepted (2026-11-18), prototype implemented in v0.6.0 |
 | [0002](adr/0002-unreal-integration.md) | Unreal Engine interoperability through Spout and OSC | Proposed |
 | [0003](adr/0003-shared-ai-collaboration.md) | Shared Claude/Codex instructions and review workflow | Proposed |
+| [0004](adr/0004-scene-document-and-clip-pack.md) | Scene document, `.nyxclip` pack format and asset library | Accepted (2026-11-18) |
+| [0005](adr/0005-pbr-shading.md) | Physically based shading for scene clips | Accepted (2026-11-18) |
+| [0006](adr/0006-clip-creator.md) | Clip Creator | Accepted (2026-11-18) |
 
 ## New ADR template
 

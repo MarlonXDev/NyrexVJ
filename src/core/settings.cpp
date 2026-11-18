@@ -139,6 +139,7 @@ bool loadSettings(Settings& settings) {
             }
         }
     }
+    result.spoutInputFlip = boolean("spoutInputFlip", false);
     settings = result;
     return true;
 }
@@ -179,6 +180,7 @@ bool saveSettings(const Settings& settings) {
     }
     doc["oscOutParams"] = params;
     doc["spoutInputs"] = nlohmann::json(settings.spoutInputs);
+    doc["spoutInputFlip"] = settings.spoutInputFlip;
     std::ofstream file(settingsPath(), std::ios::binary | std::ios::trunc);
     if (!file) {
         return false;

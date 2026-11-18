@@ -185,12 +185,12 @@ set(NYREXVJ_APP_SOURCES
 )
 
 if(WIN32)
-    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_win.cpp)
+    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_win.cpp src/render/spout_input_win.cpp)
     set(NYREXVJ_ICON_PATH "${CMAKE_SOURCE_DIR}/resources/nyrexvj.ico")
     configure_file(resources/nyrexvj.rc.in ${CMAKE_BINARY_DIR}/nyrexvj.rc @ONLY)
     list(APPEND NYREXVJ_APP_SOURCES ${CMAKE_BINARY_DIR}/nyrexvj.rc)
 else()
-    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_other.cpp)
+    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_other.cpp src/render/spout_input_other.cpp)
 endif()
 
 add_executable(NyrexVJ ${NYREXVJ_APP_SOURCES})

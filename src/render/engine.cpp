@@ -169,6 +169,18 @@ void main() {
 }
 )glsl";
 
+const char* kSpoutBody = R"glsl(
+uniform sampler2D uTex;
+uniform vec2 uFit;
+uniform float uFlip;
+void main() {
+    vec2 p = (vUv - 0.5) * uFit + 0.5;
+    vec2 inside = step(vec2(0.0), p) * step(p, vec2(1.0));
+    vec2 s = vec2(p.x, mix(p.y, 1.0 - p.y, uFlip));
+    fragColor = vec4(texture(uTex, s).rgb * inside.x * inside.y, 1.0);
+}
+)glsl";
+
 const char* kThumbBody = R"glsl(
 uniform sampler2D uTex;
 uniform vec2 uTexel;
@@ -258,6 +270,17 @@ bool Engine::buildPrograms() {
     }
     thumb_.tex = glGetUniformLocation(thumb_.id, "uTex");
     thumb_.texel = glGetUniformLocation(thumb_.id, "uTexel");
+
+    error.clear();
+    spoutProgram_.id = buildProgram(clipVertexSource(), std::string(kPassHeader) + kSpoutBody, &error);
+    if (!spoutProgram_.id) {
+        logLine("Spout shader failed: " + error);
+        return false;
+    }
+    spoutProgram_.tex = glGetUniformLocation(spoutProgram_.id, "uTex");
+    spoutProgram_.fit = glGetUniformLocation(spoutProgram_.id, "uFit");
+    spoutProgram_.flip = glGetUniformLocation(spoutProgram_.id, "uFlip");
+    spoutLastUse_.fill(-1.0e9);
 
     clips_.assign(clipLibrary().size(), ClipProgram{});
     effects_.assign(effectLibrary().size(), EffectProgram{});
@@ -567,6 +590,13 @@ int Engine::prepareAll(std::string& report) {
 }
 
 void Engine::shutdown() {
+    for (SpoutInput& slot : spoutSlots_) {
+        slot.release();
+    }
+    if (spoutProgram_.id) {
+        glDeleteProgram(spoutProgram_.id);
+        spoutProgram_ = SpoutProgram{};
+    }
     for (ClipProgram& clip : clips_) {
         if (clip.id) {
             glDeleteProgram(clip.id);
@@ -783,7 +813,69 @@ void Engine::computeEffectiveFor(const std::array<Layer, kLayerCount>& layers, c
     grade.saturation = std::clamp(grade.saturation, 0.0f, 2.0f);
 }
 
+void Engine::configureSpout(const std::array<std::string, kSpoutInputSlots>& names, const std::string& excluded, bool flip) {
+    spoutNames_ = names;
+    spoutExcluded_ = excluded;
+    spoutFlip_ = flip;
+}
+
+const SpoutReceiveStatus& Engine::spoutStatus(int slot) const {
+    static const SpoutReceiveStatus none;
+    return slot >= 0 && slot < kSpoutInputSlots ? spoutSlots_[static_cast<size_t>(slot)].status() : none;
+}
+
+const std::vector<std::string>& Engine::spoutSenders() {
+    if (clock_ - spoutListedAt_ >= 1.0) {
+        spoutListedAt_ = clock_;
+        spoutSenderList_ = spoutSlots_[0].senders();
+    }
+    return spoutSenderList_;
+}
+
+void Engine::prepareSpout(int slot) {
+    const size_t index = static_cast<size_t>(slot);
+    spoutLastUse_[index] = clock_;
+    if (spoutFrame_[index] == frameId_) {
+        return;
+    }
+    spoutFrame_[index] = frameId_;
+    spoutSlots_[index].receive(spoutNames_[index], spoutExcluded_);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+bool Engine::drawSpout(int slot, float scale) {
+    const SpoutInput& input = spoutSlots_[static_cast<size_t>(slot)];
+    if (!input.status().hasFrame || input.texture() == 0 || input.width() <= 0 || input.height() <= 0) {
+        return false;
+    }
+    const float source = static_cast<float>(input.width()) / static_cast<float>(input.height());
+    const float target = static_cast<float>(out_.width) / static_cast<float>(out_.height);
+    const float zoom = std::max(scale, 0.05f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(spoutProgram_.id);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, input.texture());
+    glUniform1i(spoutProgram_.tex, 0);
+    glUniform2f(spoutProgram_.fit, std::max(target / source, 1.0f) / zoom, std::max(source / target, 1.0f) / zoom);
+    glUniform1f(spoutProgram_.flip, spoutFlip_ ? 1.0f : 0.0f);
+    triangle_.draw();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return true;
+}
+
+void Engine::serviceSpout() {
+    constexpr double kReleaseAfterSeconds = 3.0;
+    for (size_t i = 0; i < spoutSlots_.size(); ++i) {
+        if (spoutSlots_[i].active() && clock_ - spoutLastUse_[i] > kReleaseAfterSeconds) {
+            spoutSlots_[i].release();
+        }
+    }
+}
+
 void Engine::update(double dt) {
+    clock_ += std::max(dt, 0.0);
     const double step = paused ? 0.0 : dt;
     time_ += step;
     beat_ += step * static_cast<double>(comp.bpm) / 60.0;
@@ -1221,6 +1313,11 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
             live_[li] = true;
         }
 
+        const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
+        const bool spoutClip = clipDef.kind == ClipKind::SpoutSource;
+        if (spoutClip) {
+            prepareSpout(clipDef.sceneIndex);
+        }
         layerA_.bind();
         glDisable(GL_BLEND);
         if (scenes_[static_cast<size_t>(clipIndex)]) {
@@ -1236,7 +1333,7 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
             frame.colorB = layer.colorB;
             frame.rainbow = layer.rainbow;
             sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, layerA_);
-        } else {
+        } else if (!spoutClip || !drawSpout(clipDef.sceneIndex, effective[li].scale)) {
             drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clocks[li]), static_cast<float>(beat_), comp.bpm, w, h, layer.colorA, layer.colorB, layer.rainbow, effective[li].scale);
         }
 
@@ -1300,8 +1397,10 @@ void Engine::render() {
         return;
     }
 
+    ++frameId_;
     renderClipThumbnails(2);
     serviceScenes();
+    serviceSpout();
 
     feedbackUsed_.fill(false);
     uploadAudio();

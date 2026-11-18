@@ -260,12 +260,19 @@ void App::drawClipPanel() {
     ImGui::BeginGroup();
     ImGui::TextUnformatted(def.name.c_str());
     ImGui::TextDisabled("%s", ui::cellLabel(selectedLayer_, selectedColumn_).c_str());
-    if (engine_.isSceneClip(clip)) {
+    if (def.kind == ClipKind::SpoutSource) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Spout input"));
+    } else if (engine_.isSceneClip(clip)) {
         ImGui::TextColored(ui::kAccent, "%s", def.kind == ClipKind::ModelFile ? tr("3D model file") : tr("3D scene"));
     } else if (def.is3d) {
         ImGui::TextColored(ui::kAccent, "3D");
     }
     ImGui::EndGroup();
+
+    if (def.kind == ClipKind::SpoutSource) {
+        ImGui::Spacing();
+        drawSpoutInputControls(def.sceneIndex);
+    }
 
     if (engine_.isSceneClip(clip)) {
         ImGui::Spacing();
@@ -337,6 +344,60 @@ void App::drawOutputControls() {
         }
     }
     ImGui::TextDisabled("%s", tr("F11 fullscreen, Esc leaves it"));
+}
+
+void App::drawSpoutInputControls(int slot) {
+    if (slot < 0 || slot >= kSpoutInputSlots) {
+        return;
+    }
+    ImGui::SeparatorText(tr("Spout input"));
+    if (!SpoutInput::supported() && !SpoutInput::testPattern()) {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextDisabled("%s", tr("Spout input only works on Windows."));
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    auto persist = [this]() { saveSettings(settings_); };
+    std::string& wanted = settings_.spoutInputs[static_cast<size_t>(slot)];
+    const std::vector<std::string>& senders = engine_.spoutSenders();
+    const std::string preview = wanted.empty() ? std::string(tr("Automatic")) : wanted;
+    ImGui::SetNextItemWidth(-90.0f);
+    if (ImGui::BeginCombo(trId("Spout sender", "spoutPick"), preview.c_str())) {
+        if (ImGui::Selectable(tr("Automatic"), wanted.empty())) {
+            wanted.clear();
+            persist();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s", tr("Uses the first sender found that is not the NyrexVJ output."));
+        }
+        for (const std::string& name : senders) {
+            if (ImGui::Selectable(name.c_str(), wanted == name)) {
+                wanted = name;
+                persist();
+            }
+        }
+        if (senders.empty()) {
+            ImGui::TextDisabled("%s", tr("No Spout senders found"));
+        }
+        ImGui::EndCombo();
+    }
+    const SpoutReceiveStatus& status = engine_.spoutStatus(slot);
+    if (status.hasFrame) {
+        ImGui::TextColored(ui::kAccent, "%s%s", tr("Connected to "), status.sender.c_str());
+        ImGui::TextDisabled("%d x %d, %.0f fps", status.width, status.height, status.fps);
+    } else if (status.connected) {
+        ImGui::TextDisabled("%s", tr("Connecting..."));
+    } else {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextDisabled("%s", tr("Waiting for a sender. The clip shows a placeholder until one arrives."));
+        ImGui::PopTextWrapPos();
+    }
+    if (ImGui::Checkbox(trId("Flip the image vertically", "spoutFlip"), &settings_.spoutInputFlip)) {
+        persist();
+    }
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Use this if the image arrives upside down."));
+    ImGui::PopTextWrapPos();
 }
 
 void App::drawSpoutControls() {

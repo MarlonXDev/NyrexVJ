@@ -2,9 +2,11 @@
 
 #include "audio/audio_features.hpp"
 #include "core/composition.hpp"
+#include "core/settings.hpp"
 #include "render/clip_library.hpp"
 #include "render/gl_util.hpp"
 #include "render/scene_player.hpp"
+#include "render/spout_input.hpp"
 
 #include <array>
 #include <deque>
@@ -67,6 +69,9 @@ public:
     GLuint layerPreview(int layer) const;
     bool layerLive(int layer) const;
     const AudioFeatures& audio() const { return audio_; }
+    void configureSpout(const std::array<std::string, kSpoutInputSlots>& names, const std::string& excluded, bool flip);
+    const SpoutReceiveStatus& spoutStatus(int slot) const;
+    const std::vector<std::string>& spoutSenders();
 
     Composition comp;
     bool blackout = false;
@@ -138,6 +143,13 @@ private:
         GLint time = -1;
     };
 
+    struct SpoutProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint fit = -1;
+        GLint flip = -1;
+    };
+
     struct Transition {
         bool active = false;
         bool frozen = false;
@@ -178,6 +190,9 @@ private:
     void drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale);
     RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, int chain, RenderTarget* source, RenderTarget* scratch);
     void downsample(const RenderTarget& source, const RenderTarget& target);
+    void prepareSpout(int slot);
+    bool drawSpout(int slot, float scale);
+    void serviceSpout();
     void blit(const RenderTarget& source, const RenderTarget& target);
 
     std::vector<ClipProgram> clips_;
@@ -186,6 +201,17 @@ private:
     FinalProgram final_;
     TransitionProgram transition_program_;
     ThumbProgram thumb_;
+    SpoutProgram spoutProgram_;
+    std::array<SpoutInput, kSpoutInputSlots> spoutSlots_;
+    std::array<std::string, kSpoutInputSlots> spoutNames_;
+    std::string spoutExcluded_;
+    bool spoutFlip_ = false;
+    std::array<double, kSpoutInputSlots> spoutLastUse_{};
+    std::array<unsigned long long, kSpoutInputSlots> spoutFrame_{};
+    unsigned long long frameId_ = 0;
+    double clock_ = 0.0;
+    std::vector<std::string> spoutSenderList_;
+    double spoutListedAt_ = -1.0e9;
     RenderTarget layerA_;
     RenderTarget layerB_;
     RenderTarget compA_;

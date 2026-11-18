@@ -46,6 +46,7 @@ struct Settings {
     bool oscOutSpectrum = true;
     std::vector<OscOutParam> oscOutParams;
     std::array<std::string, kSpoutInputSlots> spoutInputs;
+    bool spoutInputFlip = false;
 };
 
 bool loadSettings(Settings& settings);

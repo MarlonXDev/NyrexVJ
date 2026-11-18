@@ -30,6 +30,10 @@ constexpr Entry kClips[] = {
     {"Neon Cubes Mesh", 0, 9},
     {"Gold Knot Mesh", 0, 9},
     {"Pulse Columns Mesh", 0, 9},
+    {"Spout Input 1", 0, 10},
+    {"Spout Input 2", 0, 10},
+    {"Spout Input 3", 0, 10},
+    {"Spout Input 4", 0, 10},
 };
 
 constexpr Entry kEffects[] = {

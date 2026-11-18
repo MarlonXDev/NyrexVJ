@@ -162,6 +162,8 @@ bool matchesKind(const ClipDef& clip, int kind) {
         return clip.kind == ClipKind::ModelFile;
     case 4:
         return clip.kind == ClipKind::ScenePack;
+    case 5:
+        return clip.kind == ClipKind::SpoutSource;
     default:
         return true;
     }
@@ -284,7 +286,14 @@ void App::drawClipTile(int index, const ImVec2& size) {
             draw->AddText(ImGui::GetFont(), tagSize, ImVec2(pillMin.x + 4.0f, pillMin.y + 2.0f), ImGui::GetColorU32(ui::kBlack), tagText);
         }
     }
-    if (clip.is3d) {
+    if (clip.kind == ClipKind::SpoutSource) {
+        const char* label = tr("Spout");
+        const ImVec2 badgeSize = ImGui::CalcTextSize(label);
+        const ImVec2 badgeMin(imageMax.x - badgeSize.x - 10.0f, pos.y + 4.0f);
+        const ImVec2 badgeMax(imageMax.x - 4.0f, pos.y + 8.0f + badgeSize.y);
+        draw->AddRectFilled(badgeMin, badgeMax, IM_COL32(0, 0, 0, 170), 3.0f);
+        draw->AddText(ImVec2(badgeMin.x + 3.0f, badgeMin.y + 2.0f), ImGui::GetColorU32(ui::kAccent), label);
+    } else if (clip.is3d) {
         const ImVec2 badgeSize = ImGui::CalcTextSize("3D");
         const ImVec2 badgeMin(imageMax.x - badgeSize.x - 10.0f, pos.y + 4.0f);
         const ImVec2 badgeMax(imageMax.x - 4.0f, pos.y + 8.0f + badgeSize.y);
@@ -352,8 +361,8 @@ void App::drawClipTile(int index, const ImVec2& size) {
 
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes")};
-    for (int k = 0; k < 5; ++k) {
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout")};
+    for (int k = 0; k < 6; ++k) {
         if (k > 0) {
             ImGui::SameLine(0.0f, 4.0f);
         }

@@ -668,6 +668,18 @@ const Translation kGerman[] = {
     {"The OSC output port must be between 1 and 65535", "Der OSC-Ausgabeport muss zwischen 1 und 65535 liegen"},
     {"The OSC output address must be an IPv4 address or localhost", "Die OSC-Ausgabeadresse muss eine IPv4-Adresse oder localhost sein"},
     {"Could not create the OSC output socket", "Der OSC-Ausgabe-Socket konnte nicht erstellt werden"},
+    {"Spout input", "Spout-Eingang"},
+    {"Spout", "Spout"},
+    {"Spout sender", "Spout-Sender"},
+    {"Spout input only works on Windows.", "Der Spout-Eingang funktioniert nur unter Windows."},
+    {"Automatic", "Automatisch"},
+    {"Uses the first sender found that is not the NyrexVJ output.", "Nutzt den ersten gefundenen Sender, der nicht die NyrexVJ-Ausgabe ist."},
+    {"No Spout senders found", "Keine Spout-Sender gefunden"},
+    {"Connected to ", "Verbunden mit "},
+    {"Connecting...", "Verbinde..."},
+    {"Waiting for a sender. The clip shows a placeholder until one arrives.", "Warte auf einen Sender. Bis einer ankommt, zeigt der Clip einen Platzhalter."},
+    {"Flip the image vertically", "Bild vertikal spiegeln"},
+    {"Use this if the image arrives upside down.", "Nutze das, wenn das Bild kopfüber ankommt."},
 };
 
 }

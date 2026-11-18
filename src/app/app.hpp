@@ -125,6 +125,7 @@ private:
     void drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots);
     void drawOutputControls();
     void drawSpoutControls();
+    void drawSpoutInputControls(int slot);
     void loadComposition(const Composition& comp, const std::string& message);
     void saveCurrentPreset();
     void refreshUserPresets();

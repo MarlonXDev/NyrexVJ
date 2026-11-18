@@ -10,7 +10,8 @@ enum class ClipKind {
     Shader,
     BuiltinScene,
     ModelFile,
-    ScenePack
+    ScenePack,
+    SpoutSource
 };
 
 struct ClipDef {
@@ -21,7 +22,7 @@ struct ClipDef {
     int sceneIndex = -1;
     std::string path = {};
 
-    bool isScene() const { return kind != ClipKind::Shader; }
+    bool isScene() const { return kind != ClipKind::Shader && kind != ClipKind::SpoutSource; }
 };
 
 constexpr size_t kMaxModelClips = 64;

@@ -313,6 +313,7 @@ void App::frame(double dt) {
     control_.update(dt);
     updateAudio(dt);
     engine_.update(dt);
+    engine_.configureSpout(settings_.spoutInputs, spout_.active() ? std::string(spoutName_) : std::string(), settings_.spoutInputFlip);
     OscOutConfig oscOut;
     oscOut.enabled = settings_.oscOutEnabled;
     oscOut.host = settings_.oscOutHost;

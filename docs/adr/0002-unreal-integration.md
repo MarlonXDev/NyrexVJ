@@ -35,3 +35,6 @@ This ADR does **not** assert that a working Unreal sender, receiver, or SDK alre
 - Define a small proof-of-concept OSC schema and measure control latency.
 - Confirm plugin licensing and supported Unreal versions.
 - Get maintainer approval before promising a public SDK.
+
+## Implementation note (2026-11-18)
+MarlonXDev asked to continue with this ADR after ADR 0001. The prototype part is implemented in v0.10.0: the Spout receiver ([ADR 0007](0007-spout-receiver.md)) and OSC output with a versioned protocol ([ADR 0008](0008-osc-output-protocol.md)), documented in [UNREAL.md](../UNREAL.md). Not done: an Unreal plugin or SDK, because nothing in it could be built or checked without Unreal Engine, and no public SDK is promised without maintainer approval. Open for the maintainer: a test with a real Unreal sender on Windows, latency and frame pacing measurements, and the choice of supported Unreal versions.

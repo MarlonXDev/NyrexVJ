@@ -1,5 +1,16 @@
 # Änderungsprotokoll
 
+## 0.4.0 - 2026-11-18
+
+- Decks: Richte bis zu 16 Decks mit eigenen Ebenen, Clips, Farben und Effekten ein und wechsle mit einem weichen Übergang statt eines harten Schnitts. Sieben Übergänge: Ausblenden, Auflösen, Zoom, Wischen, Kreis, Rotation und Schieben, mit Länge in Sekunden oder in Beats und optionalem Auto-Wechsel. Klicke die Deck-Knöpfe über dem Clip-Raster, drücke Bild auf und Bild ab oder nutze Strg und 1 bis 8 (mit Umschalt für Deck 9 bis 16). Per Rechtsklick auf ein Deck kannst du es umbenennen, kopieren, füllen oder leeren. Alle Decks werden in Presets gespeichert.
+- 3 neue Clips nach Vorbild von Resolume-Looks: Milky Wave (fließende Konturlinien), Crystal Cavern (dunkler gespiegelter Kristall-Tunnel) und Crystal Lines (derselbe Tunnel als weiße Linienzeichnung). Alle bewegen sich zur Musik.
+- 2 neue Effekte, insgesamt 58: Linienbild macht aus jedem Bild leuchtende Umrisse, Spiegelfaltung spiegelt es zu Kristallformen.
+- Effekte können jetzt nur auf Audio reagieren: Stelle einen Effekt von Parameter auf Gate, dann erscheint er nur, solange Bass, Mitten, Höhen, Pegel oder Kick laut sind, und blendet sich bei Stille aus.
+- 3 neue fertige Presets, insgesamt 18: Milky Red, Crystal Cavern und Crystal Lines. Ein Werks-Look wird jetzt in das aktuelle Deck geladen, und ein Knopf füllt alle 16 Decks mit Werks-Looks.
+- Neues Einstellungen-Fenster über Einstellungen im oberen Menü (oder Strg und Komma) mit Allgemein, Audio, Ausgabe, Updates, Oberfläche, Tastenkürzel und Info. Ausgabefenster, Spout, Auflösung, VSync, Audio-Analyse, Sprache und Oberflächengröße findest du jetzt dort.
+- Updates: NyrexVJ sucht bei jedem Start nach einer neuen Version und bereitet sie im Hintergrund vor. Oben rechts erscheint eine kleine Karte mit Jetzt neu starten oder Später und bleibt als schmale Anzeige sichtbar, bis du neu startest. Der automatische Download lässt sich ausschalten.
+- Übersichtlichere Oberfläche: eine Statusleiste mit FPS, Tempo, Deck, Audio und Spout, einklappbare Bereiche in den Ebenen- und Master-Fenstern, Tooltips und eine einstellbare Oberflächengröße. Der Audio-Tab warnt, wenn das gewählte Gerät keinen Ton liefert.
+
 ## 0.3.0 - 2026-11-18
 
 - Audio-Reaktivität: Wähle im neuen Audio-Tab Systemaudio (zum Beispiel dein DJ-Programm), ein Mikrofon oder Line-In oder ein Demo-Signal. Live-Spektrum, Pegelanzeigen für Bass, Mitten, Höhen und Gesamtpegel, Beat- und Tempoerkennung und eine optionale BPM-Synchronisation.

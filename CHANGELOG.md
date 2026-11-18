@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 - 2026-11-18
+
+- Decks: set up to 16 decks, each with its own layers, clips, colours and effects, and switch between them with a smooth transition instead of a hard cut. Seven transitions: Fade, Dissolve, Zoom, Wipe, Radial, Spin and Slide, with a length in seconds or in beats and an optional auto cycle. Click the deck buttons above the clip grid, press Page Up and Page Down, or use Ctrl and 1 to 8 (with Shift for decks 9 to 16). Right click a deck to rename, copy, fill or clear it. All decks are saved in presets.
+- 3 new clips inspired by Resolume looks: Milky Wave (flowing contour lines), Crystal Cavern (dark mirrored crystal tunnel) and Crystal Lines (the same tunnel as white line art). All of them move with the music.
+- 2 new effects, 58 in total: Line Art turns any picture into glowing outlines and Mirror Fold mirrors it into crystal shapes.
+- Effects can now react only to audio: switch an effect from Parameter to Gate and it shows up only while Bass, Mid, High, Level or Kick is loud, and fades out in silence.
+- 3 new factory presets, 18 in total: Milky Red, Crystal Cavern and Crystal Lines. A factory look now loads into the current deck, and one button fills all 16 decks with factory looks.
+- New Settings window under Settings in the top menu (or Ctrl and comma) with General, Audio, Output, Updates, Interface, Shortcuts and About. Output window, Spout, resolution, VSync, audio analysis, language and interface size all live there now.
+- Updates: NyrexVJ checks for a new version on every start and prepares it in the background. A small card appears at the top right with Restart now or Later, and stays visible as a slim badge until you restart. Automatic download can be turned off.
+- Clearer layout: a status bar with FPS, tempo, deck, audio and Spout state, collapsible sections in the layer and master panels, tooltips and an adjustable interface size. The audio tab warns when the chosen device delivers no sound.
+
 ## 0.3.0 - 2026-11-18
 
 - Audio reactivity: pick system audio (for example your DJ program), a microphone or line-in, or a demo signal in the new Audio tab. Live spectrum, bass, mid, high and level meters, beat and tempo detection and an optional BPM sync.

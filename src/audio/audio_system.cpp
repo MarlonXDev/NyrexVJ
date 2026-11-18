@@ -1,6 +1,7 @@
 #include "audio/audio_system.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace nvj {
 
@@ -25,6 +26,7 @@ bool AudioSystem::select(const std::string& id) {
     error_.clear();
     analyzer_.reset();
     demoCarry_ = 0.0;
+    silentFor_ = 0.0;
     if (id.empty()) {
         mode_ = Mode::Off;
         selected_.clear();
@@ -70,6 +72,11 @@ void AudioSystem::update(double dt, float demoBpm) {
         analyzer_.push(scratch_.data(), frames);
     } else if (mode_ == Mode::Device) {
         input_->drain(scratch_);
+        float peak = 0.0f;
+        for (float sample : scratch_) {
+            peak = std::max(peak, std::fabs(sample));
+        }
+        silentFor_ = peak > 0.0005f ? 0.0 : silentFor_ + dt;
         if (!scratch_.empty()) {
             analyzer_.push(scratch_.data(), scratch_.size());
         }

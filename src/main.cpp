@@ -24,6 +24,8 @@ struct Options {
     bool checkShaders = false;
     std::string screenshot;
     std::string dumpOutput;
+    std::vector<std::pair<int, int>> switches;
+    std::vector<std::pair<int, std::string>> dumps;
     nvj::StartOptions start;
 };
 
@@ -40,6 +42,28 @@ Options parseOptions(int argc, char** argv) {
             options.screenshot = argv[++i];
         } else if (arg == "--dump-output" && hasValue) {
             options.dumpOutput = argv[++i];
+        } else if (arg == "--decks" && hasValue) {
+            options.start.decks = argv[++i];
+        } else if (arg == "--transition" && hasValue) {
+            options.start.transition = argv[++i];
+        } else if (arg == "--transition-seconds" && hasValue) {
+            options.start.transitionSeconds = static_cast<float>(std::atof(argv[++i]));
+        } else if (arg == "--switch-deck" && hasValue) {
+            const std::string value = argv[++i];
+            const size_t colon = value.find(':');
+            if (colon != std::string::npos) {
+                options.switches.emplace_back(std::atoi(value.substr(0, colon).c_str()), std::atoi(value.substr(colon + 1).c_str()) - 1);
+            }
+        } else if (arg == "--dump-at" && hasValue) {
+            const std::string value = argv[++i];
+            const size_t colon = value.find(':');
+            if (colon != std::string::npos) {
+                options.dumps.emplace_back(std::atoi(value.substr(0, colon).c_str()), value.substr(colon + 1));
+            }
+        } else if (arg == "--demo-update" && hasValue) {
+            options.start.demoUpdate = argv[++i];
+        } else if (arg == "--settings" && hasValue) {
+            options.start.settingsPage = std::atoi(argv[++i]);
         } else if (arg == "--preset" && hasValue) {
             options.start.preset = argv[++i];
         } else if (arg == "--clip" && hasValue) {
@@ -165,6 +189,9 @@ int main(int argc, char** argv) {
         glfwTerminate();
         return 1;
     }
+    if (options.frames <= 0) {
+        glfwSwapInterval(app.wantsVsync() ? 1 : 0);
+    }
 
     double last = glfwGetTime();
     int frameCount = 0;
@@ -218,6 +245,16 @@ int main(int argc, char** argv) {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         ++frameCount;
+        for (const auto& entry : options.dumps) {
+            if (entry.first == frameCount) {
+                saveOutput(entry.second, app.engine());
+            }
+        }
+        for (const auto& entry : options.switches) {
+            if (entry.first == frameCount) {
+                app.engine().switchDeck(entry.second);
+            }
+        }
         if (options.frames > 0 && frameCount >= options.frames) {
             if (!options.screenshot.empty()) {
                 if (saveScreenshot(options.screenshot, framebufferWidth, framebufferHeight)) {

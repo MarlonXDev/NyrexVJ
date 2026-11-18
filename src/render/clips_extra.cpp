@@ -2,6 +2,58 @@
 
 namespace nvj {
 
+namespace {
+
+const char* kCrystalCommon = R"glsl(
+vec2 cj(vec2 c, float t) {
+    vec2 o = h22(c);
+    return 0.5 + 0.42 * sin(t + 6.28318 * o);
+}
+
+vec4 shards(vec2 x, float t) {
+    vec2 n = floor(x);
+    vec2 f = fract(x);
+    vec2 mg = vec2(0.0);
+    vec2 mr = vec2(0.0);
+    float md = 8.0;
+    for (int j = -1; j <= 1; ++j) {
+        for (int i = -1; i <= 1; ++i) {
+            vec2 g = vec2(float(i), float(j));
+            vec2 r = g + cj(n + g, t) - f;
+            float d = dot(r, r);
+            if (d < md) {
+                md = d;
+                mr = r;
+                mg = g;
+            }
+        }
+    }
+    md = 8.0;
+    for (int j = -2; j <= 2; ++j) {
+        for (int i = -2; i <= 2; ++i) {
+            vec2 g = mg + vec2(float(i), float(j));
+            vec2 r = g + cj(n + g, t) - f;
+            vec2 dv = r - mr;
+            if (dot(dv, dv) > 0.00001) {
+                md = min(md, dot(0.5 * (mr + r), normalize(dv)));
+            }
+        }
+    }
+    return vec4(md, n + mg, mr.x);
+}
+
+vec2 tunnelUv(vec2 p, float segments, float depthScale, float travel, out float radius) {
+    radius = max(length(p), 0.0001);
+    float a = atan(p.y, p.x);
+    float seg = PI / segments;
+    a = abs(mod(a + 0.35 * sin(uTime * 0.11), seg * 2.0) - seg);
+    float z = depthScale / (radius + 0.12) + travel;
+    return vec2(a / seg * 1.6, z);
+}
+)glsl";
+
+}
+
 void appendExtraClips(std::vector<ClipDef>& clips) {
     clips.push_back({"Mandelbrot", R"glsl(
 void main() {
@@ -419,6 +471,85 @@ void main() {
     float mask = ss(0.0, 0.12, f.x) * ss(1.0, 0.88, f.x) * ss(0.0, 0.1, f.y) * ss(1.0, 0.9, f.y);
     vec3 col = pal(h * 0.4 + 0.1) * trail * glyph * mask * (1.2 + 0.8 * uKick);
     col += vec3(1.0) * head * glyph * mask;
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Milky Wave", R"glsl(
+float sf(vec2 p) {
+    return vnoise(p) * 0.62 + vnoise(p * 2.0 + 7.1) * 0.28 + vnoise(p * 4.0 + 3.3) * 0.1;
+}
+
+void main() {
+    vec2 p = centered() * 0.5;
+    float bass = uAudio.x;
+    float t = uTime * (0.07 + bass * 0.05) + uBeat * 0.02;
+    vec2 q = vec2(sf(p + vec2(0.0, t)), sf(p + vec2(5.2, 1.3) - t));
+    vec2 r = vec2(sf(p + 1.9 * q + vec2(1.7, 9.2) + t * 0.6), sf(p + 1.9 * q + vec2(8.3, 2.8) - t * 0.5));
+    float f = sf(p + 2.2 * r + uAudio.y * 0.15);
+    float h = f * (16.0 + uAudio.y * 4.0) + uKick * 0.25 - t * 2.5;
+    float w = max(fwidth(h), 0.0001);
+    float d = abs(fract(h + 0.5) - 0.5) / w;
+    float thick = 1.1 + uKick * 1.2 + bass * 0.9;
+    float line = 1.0 - clamp(d - thick, 0.0, 1.0);
+    vec3 lc = mix(duo(0.2 + f * 0.7), vec3(1.0), 0.1 + 0.4 * uKick);
+    vec3 col = duo(0.0) * (0.05 + 0.3 * f * f);
+    col += duo(0.4) * ss(0.4, 0.9, f) * 0.14;
+    col += lc * line * (0.85 + 0.6 * uAudio.w);
+    col += lc * exp(-d * 0.1) * 0.16 * (0.5 + bass);
+    float vig = 1.0 - ss(0.8, 2.0, length(centered()));
+    col *= 0.5 + 0.5 * vig;
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Crystal Cavern", std::string(kCrystalCommon) + R"glsl(
+void main() {
+    vec2 p = centered();
+    float bass = uAudio.x;
+    float travel = uTime * (0.22 + bass * 0.15) + uBeat * 0.05;
+    float r;
+    vec2 uv = tunnelUv(p, 6.0, 0.9, travel, r);
+    vec4 s = shards(uv * vec2(1.2, 2.5), uTime * 0.25);
+    float edge = s.x;
+    float aaw = fwidth(edge);
+    float w = 0.03 * (1.0 + uKick * 0.9 + bass * 0.5);
+    float line = 1.0 - ss(w - aaw, w + aaw, edge);
+    float hsh = hash21(s.yz);
+    float inner = ss(0.0, 0.4, edge);
+    vec3 facet = pal(0.55 + hsh * 0.25 + uv.y * 0.02) * (0.04 + 0.24 * hsh * hsh) * (0.6 + 0.4 * inner);
+    vec3 edgeC = mix(pal(0.1 + hsh * 0.15), vec3(1.0), 0.35);
+    vec3 col = facet + edgeC * line * (1.1 + 1.3 * uKick) + edgeC * exp(-edge * 14.0) * 0.18;
+    float flash = step(0.9, hash21(s.yz + floor(uBeat))) * exp(-fract(uBeat) * 3.0);
+    col += facet * 7.0 * flash;
+    col *= ss(0.02, 0.55, r);
+    col += duo(0.5) * exp(-r * 5.0) * (0.15 + 0.5 * uKick);
+    fragColor = vec4(col, 1.0);
+}
+)glsl", false});
+
+    clips.push_back({"Crystal Lines", std::string(kCrystalCommon) + R"glsl(
+void main() {
+    vec2 p = centered();
+    float bass = uAudio.x;
+    float travel = uTime * (0.2 + bass * 0.12) + uBeat * 0.04;
+    float r;
+    vec2 uv = tunnelUv(p, 6.0, 1.0, travel, r);
+    vec3 col = vec3(0.0);
+    for (int k = 0; k < 2; ++k) {
+        float fk = float(k);
+        vec4 s = shards(uv * vec2(1.0, 2.2) * (1.5 - 0.7 * fk) + fk * 7.3, uTime * 0.2 + fk);
+        float edge = s.x;
+        float aaw = fwidth(edge);
+        float w = mix(0.022, 0.04, fk) * (1.0 + uKick * 0.8 + bass * 0.5);
+        float line = 1.0 - ss(w - aaw, w + aaw, edge);
+        float front = exp(-abs(fract(uv.y * 0.12 - uBeat * 0.25 + fk * 0.37) - 0.5) * 9.0);
+        vec3 c = mix(vec3(1.0), duo(0.5 + 0.5 * sin(uv.y * 0.3 + uTime * 0.2)), 0.25);
+        col += c * line * mix(1.0, 0.55, fk) * (0.45 + 1.4 * front + uKick * 0.6);
+        col += c * exp(-edge * mix(22.0, 14.0, fk)) * 0.1;
+    }
+    col *= ss(0.0, 0.5, r);
+    col += vec3(0.9, 0.95, 1.0) * exp(-r * 6.0) * 0.25 * (0.5 + uKick);
     fragColor = vec4(col, 1.0);
 }
 )glsl", false});

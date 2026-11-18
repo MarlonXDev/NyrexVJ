@@ -203,4 +203,9 @@ void Updater::runInstall(ReleaseInfo release, UpdaterBackend backend) {
     busy_.store(false);
 }
 
+void Updater::debugSetStatus(const UpdateStatus& status) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    status_ = status;
+}
+
 }

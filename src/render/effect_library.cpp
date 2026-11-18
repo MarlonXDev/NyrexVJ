@@ -46,6 +46,7 @@ uniform vec2 uRes;
 uniform vec4 uAudio;
 uniform float uKick;
 uniform sampler2D uAudioTex;
+uniform float uMix;
 const float PI = 3.14159265;
 
 float spec(float x) {
@@ -102,7 +103,8 @@ vec2 mrep(vec2 q) {
 const char* kEffectFooter = R"glsl(
 vec4 effect(vec2 uv, vec4 p);
 void main() {
-    fragColor = effect(vUv, uParams);
+    vec4 e = effect(vUv, uParams);
+    fragColor = uMix >= 0.999 ? e : mix(texture(uTex, vUv), e, clamp(uMix, 0.0, 1.0));
 }
 )glsl";
 

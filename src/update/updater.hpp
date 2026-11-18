@@ -51,6 +51,7 @@ public:
     void installAsync();
     UpdateStatus status() const;
     bool busy() const { return busy_.load(); }
+    void debugSetStatus(const UpdateStatus& status);
 
 private:
     void joinWorker();

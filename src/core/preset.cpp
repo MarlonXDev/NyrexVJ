@@ -98,7 +98,7 @@ json effectsToJson(const std::array<EffectSlot, kEffectSlots>& slots) {
         }
         entry["enabled"] = slot.enabled;
         entry["params"] = json::array({slot.params[0], slot.params[1], slot.params[2], slot.params[3]});
-        entry["react"] = json{{"band", audioBandName(slot.reactBand)}, {"param", slot.reactParam}, {"amount", slot.reactAmount}};
+        entry["react"] = json{{"band", audioBandName(slot.reactBand)}, {"param", slot.reactParam}, {"amount", slot.reactAmount}, {"mode", reactModeName(slot.reactMode)}};
         list.push_back(entry);
     }
     return list;
@@ -138,6 +138,7 @@ void effectsFromJson(const json& node, std::array<EffectSlot, kEffectSlots>& slo
             slot.reactBand = audioBandFromName(readString(*react, "band"));
             slot.reactParam = static_cast<int>(readNumber(*react, "param", 0.0f, 0.0f, static_cast<float>(kParamCount - 1)));
             slot.reactAmount = readNumber(*react, "amount", 0.5f, 0.0f, 1.0f);
+            slot.reactMode = reactModeFromName(readString(*react, "mode"));
         }
     }
 }
@@ -184,27 +185,19 @@ fs::path presetPath(const std::string& name) {
     return fs::path(presetsDirectory()) / (sanitizePresetName(name) + ".json");
 }
 
+json masterToJson(const Master& master) {
+    json node;
+    node["level"] = master.level;
+    node["grade"] = gradeToJson(master.grade);
+    node["mods"] = modsToJson(master.mods);
+    node["fx"] = effectsToJson(master.fx);
+    return node;
 }
 
-std::string compositionToJson(const Composition& comp) {
-    json doc;
-    doc["format"] = 1;
-    doc["app"] = "NyrexVJ";
-    doc["name"] = comp.name;
-    doc["bpm"] = comp.bpm;
-    int resolution = std::clamp(comp.resolution, 0, kResolutionCount - 1);
-    doc["resolution"] = json::array({kResolutions[resolution].width, kResolutions[resolution].height});
-
-    json master;
-    master["level"] = comp.master.level;
-    master["grade"] = gradeToJson(comp.master.grade);
-    master["mods"] = modsToJson(comp.master.mods);
-    master["fx"] = effectsToJson(comp.master.fx);
-    doc["master"] = master;
-
+json layersToJson(const std::array<Layer, kLayerCount>& source) {
     const std::vector<ClipDef>& clips = clipLibrary();
     json layers = json::array();
-    for (const Layer& layer : comp.layers) {
+    for (const Layer& layer : source) {
         json entry;
         json cells = json::array();
         for (int cell : layer.cells) {
@@ -230,50 +223,34 @@ std::string compositionToJson(const Composition& comp) {
         entry["fx"] = effectsToJson(layer.fx);
         layers.push_back(entry);
     }
-    doc["layers"] = layers;
-    return doc.dump(2);
+    return layers;
 }
 
-bool compositionFromJson(const std::string& text, Composition& comp, std::string& error, std::vector<std::string>* warnings) {
-    json doc = json::parse(text, nullptr, false);
-    if (doc.is_discarded() || !doc.is_object()) {
-        error = "This file is not a valid preset";
-        return false;
+void masterFromJson(const json& node, Master& master, std::vector<std::string>* warnings) {
+    master = Master{};
+    if (!node.is_object()) {
+        return;
     }
-    if (!doc.contains("layers") || !doc["layers"].is_array()) {
-        error = "This file has no layers";
-        return false;
+    master.level = readNumber(node, "level", 1.0f, 0.0f, 1.0f);
+    if (node.contains("grade")) {
+        master.grade = gradeFromJson(node["grade"]);
     }
+    if (node.contains("mods")) {
+        modsFromJson(node["mods"], master.mods);
+    }
+    if (node.contains("fx")) {
+        effectsFromJson(node["fx"], master.fx, warnings);
+    }
+}
 
-    Composition result;
-    std::string name = readString(doc, "name");
-    if (!name.empty()) {
-        result.name = name;
+void layersFromJson(const json& layers, std::array<Layer, kLayerCount>& result, std::vector<std::string>* warnings) {
+    result = std::array<Layer, kLayerCount>{};
+    if (!layers.is_array()) {
+        return;
     }
-    result.bpm = readNumber(doc, "bpm", 128.0f, 40.0f, 240.0f);
-    auto resolution = doc.find("resolution");
-    if (resolution != doc.end() && resolution->is_array() && resolution->size() >= 2 && (*resolution)[0].is_number() && (*resolution)[1].is_number()) {
-        result.resolution = resolutionIndexFor((*resolution)[0].get<int>(), (*resolution)[1].get<int>());
-    }
-
-    auto master = doc.find("master");
-    if (master != doc.end() && master->is_object()) {
-        result.master.level = readNumber(*master, "level", 1.0f, 0.0f, 1.0f);
-        if (master->contains("grade")) {
-            result.master.grade = gradeFromJson((*master)["grade"]);
-        }
-        if (master->contains("mods")) {
-            modsFromJson((*master)["mods"], result.master.mods);
-        }
-        if (master->contains("fx")) {
-            effectsFromJson((*master)["fx"], result.master.fx, warnings);
-        }
-    }
-
-    const json& layers = doc["layers"];
     for (size_t l = 0; l < layers.size() && l < static_cast<size_t>(kLayerCount); ++l) {
         const json& entry = layers[l];
-        Layer& layer = result.layers[l];
+        Layer& layer = result[l];
         if (!entry.is_object()) {
             continue;
         }
@@ -316,6 +293,119 @@ bool compositionFromJson(const std::string& text, Composition& comp, std::string
             effectsFromJson(entry["fx"], layer.fx, warnings);
         }
     }
+}
+
+json deckSettingsToJson(const DeckSettings& settings) {
+    return json{{"transition", transitionName(settings.transition)}, {"seconds", settings.seconds}, {"beats", settings.beats}, {"syncBeats", settings.syncBeats}, {"autoCycle", settings.autoCycle}, {"cycleBeats", settings.cycleBeats}};
+}
+
+DeckSettings deckSettingsFromJson(const json& node) {
+    DeckSettings settings;
+    settings.transition = transitionFromName(readString(node, "transition"));
+    settings.seconds = readNumber(node, "seconds", 1.5f, 0.0f, 10.0f);
+    settings.beats = static_cast<int>(readNumber(node, "beats", 4.0f, 1.0f, 32.0f));
+    settings.syncBeats = readBool(node, "syncBeats", false);
+    settings.autoCycle = readBool(node, "autoCycle", false);
+    settings.cycleBeats = static_cast<int>(readNumber(node, "cycleBeats", 16.0f, 4.0f, 128.0f));
+    return settings;
+}
+
+}
+
+std::string compositionToJson(const Composition& comp) {
+    json doc;
+    doc["format"] = 2;
+    doc["app"] = "NyrexVJ";
+    doc["name"] = comp.name;
+    doc["bpm"] = comp.bpm;
+    int resolution = std::clamp(comp.resolution, 0, kResolutionCount - 1);
+    doc["resolution"] = json::array({kResolutions[resolution].width, kResolutions[resolution].height});
+    doc["master"] = masterToJson(comp.master);
+    doc["layers"] = layersToJson(comp.layers);
+
+    json decks;
+    decks["active"] = comp.activeDeck;
+    decks["settings"] = deckSettingsToJson(comp.deckSettings);
+    json slots = json::array();
+    for (int i = 0; i < kDeckCount; ++i) {
+        const size_t index = static_cast<size_t>(i);
+        if (!comp.deckUsed[index] && i != comp.activeDeck) {
+            continue;
+        }
+        json slot;
+        slot["slot"] = i;
+        slot["name"] = comp.deckNames[index];
+        if (i != comp.activeDeck) {
+            slot["master"] = masterToJson(comp.decks[index].master);
+            slot["layers"] = layersToJson(comp.decks[index].layers);
+        }
+        slots.push_back(slot);
+    }
+    decks["slots"] = slots;
+    doc["decks"] = decks;
+    return doc.dump(2);
+}
+
+bool compositionFromJson(const std::string& text, Composition& comp, std::string& error, std::vector<std::string>* warnings) {
+    json doc = json::parse(text, nullptr, false);
+    if (doc.is_discarded() || !doc.is_object()) {
+        error = "This file is not a valid preset";
+        return false;
+    }
+    if (!doc.contains("layers") || !doc["layers"].is_array()) {
+        error = "This file has no layers";
+        return false;
+    }
+
+    Composition result;
+    std::string name = readString(doc, "name");
+    if (!name.empty()) {
+        result.name = name;
+    }
+    result.bpm = readNumber(doc, "bpm", 128.0f, 40.0f, 240.0f);
+    auto resolution = doc.find("resolution");
+    if (resolution != doc.end() && resolution->is_array() && resolution->size() >= 2 && (*resolution)[0].is_number() && (*resolution)[1].is_number()) {
+        result.resolution = resolutionIndexFor((*resolution)[0].get<int>(), (*resolution)[1].get<int>());
+    }
+
+    auto master = doc.find("master");
+    if (master != doc.end()) {
+        masterFromJson(*master, result.master, warnings);
+    }
+    layersFromJson(doc["layers"], result.layers, warnings);
+
+    auto decks = doc.find("decks");
+    if (decks != doc.end() && decks->is_object()) {
+        result.activeDeck = static_cast<int>(readNumber(*decks, "active", 0.0f, 0.0f, static_cast<float>(kDeckCount - 1)));
+        if (decks->contains("settings")) {
+            result.deckSettings = deckSettingsFromJson((*decks)["settings"]);
+        }
+        auto slots = decks->find("slots");
+        if (slots != decks->end() && slots->is_array()) {
+            for (const json& slot : *slots) {
+                if (!slot.is_object()) {
+                    continue;
+                }
+                const int index = static_cast<int>(readNumber(slot, "slot", -1.0f, -1.0f, static_cast<float>(kDeckCount - 1)));
+                if (index < 0) {
+                    continue;
+                }
+                const size_t i = static_cast<size_t>(index);
+                result.deckUsed[i] = true;
+                result.deckNames[i] = readString(slot, "name").substr(0, 40);
+                if (index != result.activeDeck && slot.contains("layers")) {
+                    DeckData data;
+                    if (slot.contains("master")) {
+                        masterFromJson(slot["master"], data.master, warnings);
+                    }
+                    layersFromJson(slot["layers"], data.layers, warnings);
+                    result.decks[i] = data;
+                }
+            }
+        }
+    }
+    result.deckUsed[0] = result.deckUsed[0] || result.activeDeck == 0;
+    normalizeDecks(result);
 
     comp = result;
     return true;

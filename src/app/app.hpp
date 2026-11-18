@@ -22,10 +22,15 @@ struct StartOptions {
     std::string clip;
     std::string effect;
     std::string language;
+    std::string decks;
+    std::string transition;
+    std::string demoUpdate;
+    float transitionSeconds = -1.0f;
     int column = -1;
     int resolution = -1;
     int selectLayer = -1;
     int tab = -1;
+    int settingsPage = -1;
     bool openOutput = false;
     bool fresh = false;
     bool skipUpdateCheck = false;
@@ -41,6 +46,7 @@ public:
     void shutdown();
     Engine& engine() { return engine_; }
     bool wantsRestart() const { return restart_; }
+    bool wantsVsync() const { return settings_.vsync; }
 
 private:
     void buildLayout(ImGuiID dock);
@@ -54,7 +60,18 @@ private:
     void drawPresetsTab();
     void drawLibraryTab();
     void drawAudioTab();
-    void drawSettingsTab();
+    void drawDeckBar();
+    void drawSettingsWindow();
+    void drawSettingsPage(int page);
+    void drawUpdateSection();
+    void drawAudioSource();
+    void drawUpdateCard();
+    void drawStatusBar();
+    void openSettings(int page);
+    std::string audioSourceLabel() const;
+    void loadFactoryBank();
+    void switchDeckTo(int index);
+    void fillDeckFromLook(int index, const Composition& look);
     void drawWelcome();
     void drawGrade(ColorGrade& grade);
     void drawMods(std::array<AudioMod, kModSlots>& mods, bool master);
@@ -95,6 +112,16 @@ private:
     bool welcomeRequested_ = false;
     bool welcomeFirstRun_ = false;
     std::string welcomeSince_;
+    bool settingsOpen_ = false;
+    bool settingsFocus_ = false;
+    int settingsPage_ = 0;
+    float uiScaleEdit_ = 1.0f;
+    bool updateCardCollapsed_ = false;
+    std::string autoInstallKey_;
+    int renameDeck_ = -1;
+    bool renameRequested_ = false;
+    char deckNameBuffer_[48] = {};
+    int appliedVsync_ = -1;
 };
 
 }

@@ -9,6 +9,11 @@ namespace nvj {
 struct Settings {
     bool checkUpdates = true;
     bool restoreSession = true;
+    bool autoInstall = true;
+    bool vsync = true;
+    bool openOutputOnStart = false;
+    bool showStatusBar = true;
+    float uiScale = 1.0f;
     UpdateChannel channel = UpdateChannel::Nightly;
     int outputMonitor = 0;
     std::string language = "en";

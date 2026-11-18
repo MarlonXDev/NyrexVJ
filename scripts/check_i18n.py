@@ -36,7 +36,7 @@ def literal_keys():
 def table_keys():
     text = read("src/core/composition.cpp")
     keys = set()
-    for name in ("kBlendNames", "kBandNames", "kTargetNames"):
+    for name in ("kBlendNames", "kBandNames", "kTargetNames", "kTransitionNames", "kReactModeNames"):
         match = re.search(name + r"\[[A-Za-z]+\]\s*=\s*\{([^}]*)\}", text)
         if match:
             keys.update(re.findall(r'"([^"]+)"', match.group(1)))

@@ -4,6 +4,8 @@
 #include "render/effect_library.hpp"
 
 #include <initializer_list>
+#include <string>
+#include <vector>
 
 namespace nvj {
 
@@ -41,6 +43,12 @@ void setMod(AudioMod& mod, int band, int target, float amount) {
 void setReact(EffectSlot& slot, int band, int param, float amount) {
     slot.reactBand = band;
     slot.reactParam = param;
+    slot.reactAmount = amount;
+}
+
+void setGate(EffectSlot& slot, int band, float amount) {
+    slot.reactBand = band;
+    slot.reactMode = ReactGate;
     slot.reactAmount = amount;
 }
 
@@ -327,10 +335,71 @@ Composition popArt() {
     return comp;
 }
 
-std::vector<Composition> buildFactory() {
-    return {neonClub(), acidRainbow(), deepSpace(), synthwaveNight(), laserShow(), minimalMono(), showcase3d(), warpTunnel(), audioReactor(), fractalDream(), cyberRain(), inferno(), worlds3d(), crystalCube(), popArt()};
+Composition milkyRed() {
+    Composition comp = customDeck("Milky Red", 118.0f,
+        {"Milky Wave", "Liquid Marble", "Noise Flow", "Plasma", "Milky Wave", "Fire", "Voronoi", "Julia"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"});
+    setColors(comp.layers[0], {0.35f, 0.0f, 0.02f}, {1.0f, 0.12f, 0.1f});
+    setActive(comp.layers[0], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.12f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.08f);
+    setFx(comp.master.fx[0], "Glow", {0.55f, 0.5f, 0.3f});
+    setFx(comp.master.fx[1], "Vignette", {0.5f, 0.6f, 0.2f});
+    setFx(comp.master.fx[2], "Chromatic Aberration", {0.25f, 0.6f, 0.4f});
+    setGate(comp.master.fx[2], BandKick, 0.5f);
+    return comp;
 }
 
+Composition crystalCavern() {
+    Composition comp = customDeck("Crystal Cavern", 124.0f,
+        {"Crystal Cavern", "Crystal Lines", "Voronoi", "Hex Grid", "Kaleido", "Warp Speed", "Tunnel", "Julia"},
+        {"Crystal Lines", "Rings Burst", "Sunburst", "Pulse", "Grid Pulse", "Starfield", "Hex Grid", "Voronoi"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"});
+    setColors(comp.layers[0], {0.05f, 0.45f, 0.65f}, {0.55f, 0.35f, 1.0f});
+    setColors(comp.layers[1], {0.6f, 0.9f, 1.0f}, {1.0f, 1.0f, 1.0f});
+    comp.layers[1].opacity = 0.3f;
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.1f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.1f);
+    setFx(comp.master.fx[0], "Glow", {0.3f, 0.3f, 0.6f});
+    setFx(comp.master.fx[1], "Vignette", {0.45f, 0.6f, 0.2f});
+    setFx(comp.master.fx[2], "Mirror Fold", {0.3f, 0.25f, 0.45f, 0.6f});
+    setGate(comp.master.fx[2], BandKick, 0.06f);
+    return comp;
+}
+
+Composition crystalLines() {
+    Composition comp = customDeck("Crystal Lines", 126.0f,
+        {"Crystal Lines", "Crystal Cavern", "Tunnel", "Hex Grid", "Voronoi", "Warp Speed", "Kaleido", "Julia"},
+        {"Crystal Cavern", "Laser Fan", "Rings Burst", "Pulse", "Grid Pulse", "Starfield", "Hex Grid", "Voronoi"},
+        {"Starfield", "Pulse", "Rings Burst", "Grid Pulse", "Sunburst", "Noise Flow", "Hex Grid", "Voronoi"},
+        {"Pulse", "Rings Burst", "Starfield", "Sunburst", "Grid Pulse", "Hex Grid", "Noise Flow", "Voronoi"});
+    setColors(comp.layers[0], {0.75f, 0.9f, 1.0f}, {1.0f, 1.0f, 1.0f});
+    setColors(comp.layers[1], {0.1f, 0.3f, 0.5f}, {0.4f, 0.6f, 1.0f});
+    comp.layers[1].opacity = 0.22f;
+    setActive(comp.layers[0], 0);
+    setActive(comp.layers[1], 0);
+    setMod(comp.layers[0].mods[0], BandBass, TargetScale, 0.1f);
+    setMod(comp.layers[0].mods[1], BandKick, TargetBrightness, 0.12f);
+    setFx(comp.master.fx[0], "Glow", {0.3f, 0.3f, 0.65f});
+    setFx(comp.master.fx[1], "Vignette", {0.5f, 0.6f, 0.2f});
+    setFx(comp.master.fx[2], "Chromatic Aberration", {0.2f, 0.6f, 0.4f});
+    setGate(comp.master.fx[2], BandKick, 0.6f);
+    return comp;
+}
+
+std::vector<Composition> buildFactory() {
+    return {neonClub(), milkyRed(), crystalCavern(), crystalLines(), acidRainbow(), deepSpace(), synthwaveNight(), laserShow(), minimalMono(), showcase3d(), warpTunnel(), audioReactor(), fractalDream(), cyberRain(), inferno(), worlds3d(), crystalCube(), popArt()};
+}
+
+const std::vector<std::string>& bankNames() {
+    static const std::vector<std::string> names = {"Neon Club", "Milky Red", "Crystal Cavern", "Crystal Lines", "Warp Tunnel", "Inferno", "Acid Rainbow", "Synthwave Night", "Laser Show", "Fractal Dream", "Deep Space", "Audio Reactor", "Cyber Rain", "Crystal Cube", "3D Worlds", "Pop Art"};
+    return names;
+}
 }
 
 const std::vector<Composition>& factoryPresets() {
@@ -350,6 +419,20 @@ int factoryPresetIndex(const std::string& name) {
 
 Composition defaultComposition() {
     return factoryPresets().front();
+}
+
+const std::vector<int>& factoryBank() {
+    static const std::vector<int> bank = [] {
+        std::vector<int> indices;
+        for (const std::string& name : bankNames()) {
+            const int index = factoryPresetIndex(name);
+            if (index >= 0) {
+                indices.push_back(index);
+            }
+        }
+        return indices;
+    }();
+    return bank;
 }
 
 }

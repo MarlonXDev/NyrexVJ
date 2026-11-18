@@ -18,6 +18,15 @@ public:
     void applyComposition(const Composition& source);
     void update(double dt);
     void render();
+    bool switchDeck(int index);
+    void duplicateActiveDeckTo(int index);
+    void clearDeck(int index);
+    void removeDeck(int index);
+    void loadLook(const Composition& look);
+    bool transitioning() const { return transition_.active; }
+    float transitionProgress() const;
+    int transitionTarget() const { return transition_.target; }
+    int transitionSource() const { return transition_.from; }
     void trigger(int layer, int column);
     void triggerColumn(int column);
     void clearLayer(int layer);
@@ -72,6 +81,7 @@ private:
         GLint audio = -1;
         GLint kick = -1;
         GLint audioTex = -1;
+        GLint mix = -1;
         bool usesPrevious = false;
     };
 
@@ -97,6 +107,26 @@ private:
         GLint grade = -1;
     };
 
+    struct TransitionProgram {
+        GLuint id = 0;
+        GLint a = -1;
+        GLint b = -1;
+        GLint progress = -1;
+        GLint type = -1;
+        GLint aspect = -1;
+        GLint time = -1;
+    };
+
+    struct Transition {
+        bool active = false;
+        bool frozen = false;
+        float elapsed = 0.0f;
+        float duration = 1.0f;
+        int type = 0;
+        int target = 0;
+        int from = 0;
+    };
+
     struct ThumbProgram {
         GLuint id = 0;
         GLint tex = -1;
@@ -112,6 +142,13 @@ private:
     bool ensureEffect(size_t index);
     void uploadAudio();
     void computeEffective();
+    void computeEffectiveFor(const std::array<Layer, kLayerCount>& layers, const Master& master, std::array<Effective, kLayerCount>& effective, float& level, ColorGrade& grade) const;
+    bool ensureTransitionTargets();
+    void destroyTransitionTargets();
+    void endTransition();
+    RenderTarget* renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews);
+    void finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination);
+    void transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination);
     void setAudioUniforms(GLint audio, GLint kick, GLint audioTex);
     void drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale);
     RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, int chain, RenderTarget* source, RenderTarget* scratch);
@@ -122,18 +159,33 @@ private:
     std::vector<EffectProgram> effects_;
     CompositeProgram composite_;
     FinalProgram final_;
+    TransitionProgram transition_program_;
     ThumbProgram thumb_;
     RenderTarget layerA_;
     RenderTarget layerB_;
     RenderTarget compA_;
     RenderTarget compB_;
     RenderTarget out_;
+    std::array<RenderTarget, 2> deckTex_;
+    RenderTarget transTex_;
+    bool transitionTargetsReady_ = false;
+    Transition transition_;
+    std::array<Layer, kLayerCount> outLayers_;
+    Master outMaster_;
+    std::array<double, kLayerCount> outClocks_{};
+    std::array<Effective, kLayerCount> outEffective_{};
+    float outLevel_ = 1.0f;
+    ColorGrade outGrade_;
+    long long cycleSlot_ = -1;
+    int feedbackSet_ = 0;
     std::vector<RenderTarget> clipThumbs_;
     size_t nextThumb_ = 0;
     std::array<RenderTarget, kLayerCount> previews_;
     std::array<bool, kLayerCount> live_{};
-    std::array<RenderTarget, (kLayerCount + 1) * kEffectSlots> feedback_;
-    std::array<bool, (kLayerCount + 1) * kEffectSlots> feedbackUsed_{};
+    static constexpr int kChainsPerSet = kLayerCount + 1;
+    static constexpr int kFeedbackSets = 2;
+    std::array<RenderTarget, kFeedbackSets * kChainsPerSet * kEffectSlots> feedback_;
+    std::array<bool, kFeedbackSets * kChainsPerSet * kEffectSlots> feedbackUsed_{};
     std::array<double, kLayerCount> layerClock_{};
     FullscreenTriangle triangle_;
     int currentResolution_ = -1;

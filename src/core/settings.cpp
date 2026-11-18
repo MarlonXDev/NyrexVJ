@@ -39,6 +39,14 @@ bool loadSettings(Settings& settings) {
     if (restore != doc.end() && restore->is_boolean()) {
         result.restoreSession = restore->get<bool>();
     }
+    auto boolean = [&doc](const char* key, bool fallback) {
+        auto it = doc.find(key);
+        return (it != doc.end() && it->is_boolean()) ? it->get<bool>() : fallback;
+    };
+    result.autoInstall = boolean("autoInstall", true);
+    result.vsync = boolean("vsync", true);
+    result.openOutputOnStart = boolean("openOutputOnStart", false);
+    result.showStatusBar = boolean("showStatusBar", true);
     auto channel = doc.find("channel");
     if (channel != doc.end() && channel->is_string()) {
         result.channel = channelFromName(channel->get<std::string>());
@@ -66,6 +74,7 @@ bool loadSettings(Settings& settings) {
         }
         return std::clamp(it->get<float>(), low, high);
     };
+    result.uiScale = number("uiScale", 1.0f, 0.7f, 1.8f);
     result.audioGain = number("audioGain", 1.0f, 0.1f, 8.0f);
     result.audioSmoothing = number("audioSmoothing", 0.5f, 0.0f, 1.0f);
     result.audioBeatSensitivity = number("audioBeatSensitivity", 0.5f, 0.0f, 1.0f);
@@ -89,6 +98,11 @@ bool saveSettings(const Settings& settings) {
     nlohmann::json doc;
     doc["checkUpdates"] = settings.checkUpdates;
     doc["restoreSession"] = settings.restoreSession;
+    doc["autoInstall"] = settings.autoInstall;
+    doc["vsync"] = settings.vsync;
+    doc["openOutputOnStart"] = settings.openOutputOnStart;
+    doc["showStatusBar"] = settings.showStatusBar;
+    doc["uiScale"] = settings.uiScale;
     doc["channel"] = channelName(settings.channel);
     doc["outputMonitor"] = settings.outputMonitor;
     doc["language"] = settings.language;

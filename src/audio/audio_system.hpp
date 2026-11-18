@@ -24,6 +24,7 @@ public:
     const std::string& error() const { return error_; }
     bool active() const { return mode_ != Mode::Off; }
     bool lost() const;
+    bool noSignal() const { return mode_ == Mode::Device && silentFor_ > 3.0; }
     void update(double dt, float demoBpm);
     void setGain(float gain);
     void setSmoothing(float smoothing);
@@ -42,6 +43,7 @@ private:
     std::string error_;
     Mode mode_ = Mode::Off;
     double demoCarry_ = 0.0;
+    double silentFor_ = 0.0;
 };
 
 }

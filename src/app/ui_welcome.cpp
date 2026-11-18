@@ -54,7 +54,7 @@ void App::drawWelcome() {
         ImGui::SeparatorText(tr("Quick start"));
         ImGui::BulletText("%s", tr("Pick a preset in the Browser or press 1 - 8 to trigger a column."));
         ImGui::BulletText("%s", tr("Choose an audio source in the Audio tab so the visuals follow your music."));
-        ImGui::BulletText("%s", tr("Send the picture to OBS with Spout in the Master panel, or use the output window (F11)."));
+        ImGui::BulletText("%s", tr("Send the picture to OBS with Spout in Settings, Output, or use the output window (F11)."));
     } else {
         ImGui::TextWrapped("%s %s", tr("You are now using version"), baseVersionString(NYREXVJ_VERSION).c_str());
     }

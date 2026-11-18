@@ -18,16 +18,39 @@
 namespace nvj {
 
 void App::drawPresetsTab() {
-    ImGui::TextDisabled("%s", tr("Factory"));
+    ImGui::TextDisabled("%s", tr("Factory looks"));
+    ImGui::SetItemTooltip("%s", tr("A click loads the look into the current deck. Right click for more."));
     const std::vector<Composition>& factory = factoryPresets();
     for (int i = 0; i < static_cast<int>(factory.size()); ++i) {
         const Composition& preset = factory[static_cast<size_t>(i)];
         ImGui::PushID(i);
-        if (ImGui::Selectable(preset.name.c_str(), engine_.comp.name == preset.name)) {
-            loadComposition(preset, std::string(tr("Loaded ")) + preset.name);
+        if (ImGui::Selectable(preset.name.c_str(), engine_.comp.deckNames[static_cast<size_t>(engine_.comp.activeDeck)] == preset.name)) {
+            fillDeckFromLook(engine_.comp.activeDeck, preset);
+            toast(std::string(tr("Loaded ")) + preset.name);
+        }
+        if (ImGui::BeginPopupContextItem("factorymenu")) {
+            if (ImGui::MenuItem(tr("Load into current deck"))) {
+                fillDeckFromLook(engine_.comp.activeDeck, preset);
+                toast(std::string(tr("Loaded ")) + preset.name);
+            }
+            if (ImGui::BeginMenu(tr("Load into deck"))) {
+                for (int d = 0; d < kDeckCount; ++d) {
+                    const std::string label = std::string(tr("Deck")) + " " + std::to_string(d + 1);
+                    if (ImGui::MenuItem(label.c_str(), nullptr, d == engine_.comp.activeDeck)) {
+                        fillDeckFromLook(d, preset);
+                        toast(std::string(tr("Loaded ")) + preset.name);
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndPopup();
         }
         ImGui::PopID();
     }
+    if (ImGui::Button(trId("Fill the decks with factory looks", "presetBank"))) {
+        loadFactoryBank();
+    }
+    ImGui::SetItemTooltip("%s", tr("Puts 16 factory looks into the 16 decks."));
 
     ImGui::Spacing();
     ImGui::TextDisabled("%s", tr("My presets"));
@@ -114,7 +137,7 @@ void App::drawLibraryTab() {
     }
 }
 
-void App::drawAudioTab() {
+void App::drawAudioSource() {
     std::string preview = tr("Off");
     if (audio_.selected() == AudioSystem::demoId()) {
         preview = tr("Demo signal");
@@ -171,6 +194,13 @@ void App::drawAudioTab() {
     if (audio_.lost()) {
         ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.3f, 1.0f), "%s", tr("The audio device is no longer available."));
     }
+    if (audio_.noSignal()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.65f, 0.2f, 1.0f), "%s", tr("No sound is arriving on this device. Play something on this output or pick another source."));
+    }
+}
+
+void App::drawAudioTab() {
+    drawAudioSource();
 
     const AudioFeatures& features = engine_.audio();
     ImGui::Spacing();
@@ -235,119 +265,19 @@ void App::drawAudioTab() {
 #endif
 }
 
-void App::drawSettingsTab() {
-    ImGui::Text("NyrexVJ %s", NYREXVJ_VERSION);
-    if (NYREXVJ_BUILD_NUMBER > 0) {
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s %d", tr("build"), NYREXVJ_BUILD_NUMBER);
-    }
-    ImGui::TextDisabled("%s", tr("Made by MarlonXDev"));
-
-    ImGui::SeparatorText(tr("Language"));
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##language", languageLabel(currentLanguage()))) {
-        for (int i = 0; i < kLanguageCount; ++i) {
-            Language language = static_cast<Language>(i);
-            if (ImGui::Selectable(languageLabel(language), currentLanguage() == language)) {
-                setLanguageAndSave(language);
-            }
-        }
-        ImGui::EndCombo();
-    }
-
-    ImGui::SeparatorText(tr("Updates"));
-    int channel = settings_.channel == UpdateChannel::Nightly ? 0 : 1;
-    const char* channelNames[2] = {tr("Latest build (every commit)"), tr("Stable releases")};
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##channel", channelNames[channel])) {
-        for (int i = 0; i < 2; ++i) {
-            if (ImGui::Selectable(channelNames[i], channel == i)) {
-                settings_.channel = i == 0 ? UpdateChannel::Nightly : UpdateChannel::Stable;
-                updater_.setChannel(settings_.channel);
-                saveSettings(settings_);
-            }
-        }
-        ImGui::EndCombo();
-    }
-    if (ImGui::Checkbox(trId("Check for updates on start", "optCheck"), &settings_.checkUpdates)) {
-        saveSettings(settings_);
-    }
-    if (ImGui::Checkbox(trId("Restore last session on start", "optRestore"), &settings_.restoreSession)) {
-        saveSettings(settings_);
-    }
-
-    UpdateStatus update = updater_.status();
-    ImGui::BeginDisabled(updater_.busy());
-    if (ImGui::Button(trId("Check now", "updCheck"))) {
-        updater_.checkAsync();
-    }
-    ImGui::EndDisabled();
-    if (update.state == UpdateState::Available) {
-        ImGui::SameLine();
-        if (ImGui::Button(trId("Download and install", "updInstall"))) {
-            updater_.installAsync();
-        }
-    }
-    if (update.state == UpdateState::ReadyToRestart) {
-        ImGui::SameLine();
-        if (ImGui::Button(trId("Restart now", "updRestart"))) {
-            restart_ = true;
-            glfwSetWindowShouldClose(window_, GLFW_TRUE);
-        }
-    }
-    if (update.state == UpdateState::Downloading) {
-        ImGui::ProgressBar(update.progress, ImVec2(-FLT_MIN, 0.0f));
-    }
-    if (!update.message.empty()) {
-        ImGui::TextWrapped("%s", trMessage(update.message).c_str());
-    }
-    if (update.state == UpdateState::Available && !update.release.notes.empty()) {
-        ImGui::BeginChild("notes", ImVec2(0.0f, 110.0f), ImGuiChildFlags_Borders);
-        ImGui::TextWrapped("%s", update.release.notes.c_str());
-        ImGui::EndChild();
-    }
-
-    ImGui::SeparatorText(tr("Links and files"));
-    if (ImGui::Button(trId("What's new", "linkNews"))) {
-        openWelcome(false);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("GitHub")) {
-        platform::openUrl(ui::kRepoUrl);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(trId("Releases", "linkReleases"))) {
-        platform::openUrl(ui::kReleasesUrl);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(trId("Data folder", "linkData"))) {
-        platform::openFolder(userDataDir());
-    }
-    ImGui::TextDisabled("%s", userDataDir().c_str());
-
-    ImGui::SeparatorText(tr("Shortcuts"));
-    ImGui::BulletText("%s", tr("1 - 8  trigger a column"));
-    ImGui::BulletText("%s", tr("Space  tap tempo"));
-    ImGui::BulletText("%s", tr("B  blackout"));
-    ImGui::BulletText("%s", tr("F11  output window fullscreen"));
-    ImGui::BulletText("%s", tr("Right click a slider  reset effect value"));
-}
-
 void App::drawBrowser() {
     ImGui::Begin(trId("Browser", "browser"));
     if (ImGui::BeginTabBar("browser_tabs")) {
-        const char* names[] = {trId("Presets", "tabPresets"), trId("Library", "tabLibrary"), trId("Audio", "tabAudio"), trId("Settings", "tabSettings")};
-        for (int i = 0; i < 4; ++i) {
+        const char* names[] = {trId("Presets", "tabPresets"), trId("Library", "tabLibrary"), trId("Audio", "tabAudio")};
+        for (int i = 0; i < 3; ++i) {
             ImGuiTabItemFlags flags = focusTab_ == i ? ImGuiTabItemFlags_SetSelected : 0;
             if (ImGui::BeginTabItem(names[i], nullptr, flags)) {
                 if (i == 0) {
                     drawPresetsTab();
                 } else if (i == 1) {
                     drawLibraryTab();
-                } else if (i == 2) {
-                    drawAudioTab();
                 } else {
-                    drawSettingsTab();
+                    drawAudioTab();
                 }
                 ImGui::EndTabItem();
             }

@@ -12,6 +12,7 @@ bool compositionFromJson(const std::string& text, Composition& comp, std::string
 
 const std::vector<Composition>& factoryPresets();
 int factoryPresetIndex(const std::string& name);
+const std::vector<int>& factoryBank();
 Composition defaultComposition();
 
 std::string sanitizePresetName(const std::string& name);

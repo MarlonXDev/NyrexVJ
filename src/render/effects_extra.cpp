@@ -577,6 +577,51 @@ vec4 effect(vec2 uv, vec4 p) {
     return vec4(texture(uTex, clamp(q, 0.0, 1.0)).rgb * inside, 1.0);
 }
 )glsl", true, false});
+
+    fx.push_back({"Line Art", {"Sensitivity", "Thickness", "Glow", "Source Color"}, {0.55f, 0.3f, 0.5f, 0.0f}, R"glsl(
+float edgeAt(vec2 uv, vec2 px) {
+    float a = luma(texture(uTex, uv + px * vec2(-1.0, -1.0)).rgb);
+    float b = luma(texture(uTex, uv + px * vec2(0.0, -1.0)).rgb);
+    float c = luma(texture(uTex, uv + px * vec2(1.0, -1.0)).rgb);
+    float d = luma(texture(uTex, uv + px * vec2(-1.0, 0.0)).rgb);
+    float f = luma(texture(uTex, uv + px * vec2(1.0, 0.0)).rgb);
+    float g = luma(texture(uTex, uv + px * vec2(-1.0, 1.0)).rgb);
+    float h = luma(texture(uTex, uv + px * vec2(0.0, 1.0)).rgb);
+    float i = luma(texture(uTex, uv + px * vec2(1.0, 1.0)).rgb);
+    float gx = (c + 2.0 * f + i) - (a + 2.0 * d + g);
+    float gy = (g + 2.0 * h + i) - (a + 2.0 * b + c);
+    return length(vec2(gx, gy));
+}
+
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 px = (0.8 + p.y * 3.0) / uRes;
+    float e = edgeAt(uv, px);
+    float lo = mix(0.7, 0.03, p.x);
+    float line = ss(lo, lo + 0.25, e);
+    float wide = edgeAt(uv, px * 4.0);
+    float glow = ss(lo * 0.5, lo + 0.9, wide) * p.z * 0.6;
+    vec3 base = texture(uTex, uv).rgb;
+    vec3 tint = mix(vec3(1.0), base / max(max(base.r, max(base.g, base.b)), 0.001), p.w);
+    return vec4(tint * (line + glow), 1.0);
+}
+)glsl", false, false});
+
+    fx.push_back({"Mirror Fold", {"Folds", "Angle", "Zoom", "Drift"}, {0.45f, 0.3f, 0.45f, 0.6f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 q = (uv - 0.5) * vec2(uAspect, 1.0) * mix(0.7, 3.0, p.z);
+    float n = floor(mix(1.0, 6.0, p.x) + 0.5);
+    float ang = p.y * PI + uTime * (p.w - 0.5) * 0.5;
+    for (int i = 0; i < 6; ++i) {
+        if (float(i) >= n) {
+            break;
+        }
+        q = abs(q) - vec2(0.22 + 0.08 * sin(uTime * 0.3 + float(i)));
+        q = rot(ang) * q;
+    }
+    q = q / vec2(uAspect, 1.0) + 0.5;
+    return texture(uTex, mrep(q));
+}
+)glsl", false, false});
 }
 
 }

@@ -1,16 +1,196 @@
 #include "app/app.hpp"
 
 #include "app/ui_common.hpp"
+#include "core/preset.hpp"
 #include "render/clip_library.hpp"
 
 #include <algorithm>
 #include <cfloat>
+#include <cstdio>
 #include <string>
 
 namespace nvj {
 
+void App::switchDeckTo(int index) {
+    engine_.switchDeck(index);
+}
+
+void App::fillDeckFromLook(int index, const Composition& look) {
+    if (index < 0 || index >= kDeckCount) {
+        return;
+    }
+    Composition& comp = engine_.comp;
+    const size_t slot = static_cast<size_t>(index);
+    if (index == comp.activeDeck) {
+        engine_.loadLook(look);
+    } else {
+        comp.decks[slot] = captureDeck(look);
+        comp.deckUsed[slot] = true;
+    }
+    comp.deckNames[slot] = look.name;
+}
+
+void App::loadFactoryBank() {
+    Composition comp = engine_.comp;
+    const std::vector<int>& bank = factoryBank();
+    const std::vector<Composition>& factory = factoryPresets();
+    comp.deckUsed.fill(false);
+    comp.deckNames = {};
+    comp.activeDeck = 0;
+    for (size_t slot = 0; slot < bank.size() && slot < static_cast<size_t>(kDeckCount); ++slot) {
+        const Composition& look = factory[static_cast<size_t>(bank[slot])];
+        comp.deckUsed[slot] = true;
+        comp.deckNames[slot] = look.name;
+        if (slot == 0) {
+            restoreDeck(comp, captureDeck(look));
+            comp.bpm = look.bpm;
+        } else {
+            comp.decks[slot] = captureDeck(look);
+        }
+    }
+    comp.name = "Factory Bank";
+    engine_.applyComposition(comp);
+    std::snprintf(presetName_, sizeof(presetName_), "%s", engine_.comp.name.c_str());
+    toast(tr("Loaded 16 factory looks into the decks"));
+}
+
+void App::drawDeckBar() {
+    Composition& comp = engine_.comp;
+    DeckSettings& settings = comp.deckSettings;
+    const float buttonWidth = 34.0f;
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Decks"));
+    for (int d = 0; d < kDeckCount; ++d) {
+        ImGui::SameLine(0.0f, 4.0f);
+        ImGui::PushID(d);
+        const bool used = comp.deckUsed[static_cast<size_t>(d)];
+        const bool active = d == comp.activeDeck;
+        const bool outgoing = engine_.transitioning() && engine_.transitionSource() == d && !active;
+        int colors = 0;
+        if (active) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ui::kAccent);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::kAccentHover);
+            ImGui::PushStyleColor(ImGuiCol_Text, ui::kBlack);
+            colors = 3;
+        } else if (outgoing) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.25f, 0.02f, 1.0f));
+            colors = 1;
+        } else if (!used) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.085f, 0.085f, 0.095f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.38f, 0.38f, 0.42f, 1.0f));
+            colors = 2;
+        }
+        if (ImGui::Button(std::to_string(d + 1).c_str(), ImVec2(buttonWidth, 0.0f))) {
+            switchDeckTo(d);
+        }
+        ImGui::PopStyleColor(colors);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+            std::string tip = deckDisplayName(comp, d);
+            tip += used ? std::string("\n") + tr("Click to switch with a smooth transition") : std::string("\n") + tr("Empty. Click to start a new deck here");
+            ImGui::SetTooltip("%s", tip.c_str());
+        }
+        if (ImGui::BeginPopupContextItem("deckmenu")) {
+            ImGui::TextDisabled("%s", deckDisplayName(comp, d).c_str());
+            ImGui::Separator();
+            if (ImGui::MenuItem(tr("Rename..."))) {
+                renameDeck_ = d;
+                std::snprintf(deckNameBuffer_, sizeof(deckNameBuffer_), "%s", comp.deckNames[static_cast<size_t>(d)].c_str());
+                renameRequested_ = true;
+            }
+            if (ImGui::MenuItem(tr("Copy the current deck here"), nullptr, false, d != comp.activeDeck)) {
+                engine_.duplicateActiveDeckTo(d);
+            }
+            if (ImGui::BeginMenu(tr("Fill with factory look"))) {
+                for (const Composition& look : factoryPresets()) {
+                    if (ImGui::MenuItem(look.name.c_str())) {
+                        fillDeckFromLook(d, look);
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem(tr("Clear deck"))) {
+                engine_.clearDeck(d);
+            }
+            if (ImGui::MenuItem(tr("Remove deck"), nullptr, false, used && usedDeckCount(comp) > 1)) {
+                engine_.removeDeck(d);
+            }
+            ImGui::EndPopup();
+        }
+        ImGui::PopID();
+    }
+
+    if (renameRequested_) {
+        ImGui::OpenPopup("###renameDeck");
+        renameRequested_ = false;
+    }
+    if (ImGui::BeginPopup("###renameDeck")) {
+        ImGui::TextDisabled("%s %d", tr("Deck"), renameDeck_ + 1);
+        ImGui::SetNextItemWidth(220.0f);
+        if (ImGui::IsWindowAppearing()) {
+            ImGui::SetKeyboardFocusHere();
+        }
+        if (ImGui::InputText("##deckname", deckNameBuffer_, sizeof(deckNameBuffer_), ImGuiInputTextFlags_EnterReturnsTrue)) {
+            if (renameDeck_ >= 0 && renameDeck_ < kDeckCount) {
+                comp.deckNames[static_cast<size_t>(renameDeck_)] = deckNameBuffer_;
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    ImGui::SameLine(0.0f, 12.0f);
+    if (ImGui::Button("<")) {
+        switchDeckTo(nextUsedDeck(comp, comp.activeDeck, -1));
+    }
+    ImGui::SetItemTooltip("%s", tr("Previous deck"));
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ImGui::Button(">")) {
+        switchDeckTo(nextUsedDeck(comp, comp.activeDeck, 1));
+    }
+    ImGui::SetItemTooltip("%s", tr("Next deck"));
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Transition"));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(104.0f);
+    if (ImGui::BeginCombo("##transition", tr(transitionName(settings.transition)))) {
+        for (int t = 0; t < TransitionTypeCount; ++t) {
+            if (ImGui::Selectable(tr(transitionName(t)), settings.transition == t)) {
+                settings.transition = t;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::Checkbox(trId("Beat sync", "transSync"), &settings.syncBeats);
+    ImGui::SetItemTooltip("%s", tr("Transition length follows the tempo"));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120.0f);
+    if (settings.syncBeats) {
+        ImGui::SliderInt("##transbeats", &settings.beats, 1, 32, "%d beats");
+    } else {
+        ImGui::SliderFloat("##transsec", &settings.seconds, 0.0f, 10.0f, "%.1f s");
+    }
+    ImGui::SameLine(0.0f, 16.0f);
+    ImGui::Checkbox(trId("Auto cycle", "transCycle"), &settings.autoCycle);
+    ImGui::SetItemTooltip("%s", tr("Switches to the next used deck by itself"));
+    if (settings.autoCycle) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", tr("every"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(110.0f);
+        ImGui::SliderInt("##cyclebeats", &settings.cycleBeats, 4, 128, "%d beats");
+    }
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);
+    ImGui::ProgressBar(engine_.transitioning() ? engine_.transitionProgress() : 0.0f, ImVec2(-FLT_MIN, 4.0f), "");
+    ImGui::PopStyleColor();
+}
+
 void App::drawDeck() {
     ImGui::Begin(trId("Deck", "deck"));
+    drawDeckBar();
     const std::vector<ClipDef>& library = clipLibrary();
     Composition& comp = engine_.comp;
     const float cellW = 108.0f;
@@ -27,7 +207,8 @@ void App::drawDeck() {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled("%s", comp.name.c_str());
+        const std::string& activeName = comp.deckNames[static_cast<size_t>(comp.activeDeck)];
+        ImGui::TextDisabled("%s", activeName.empty() ? comp.name.c_str() : activeName.c_str());
         for (int c = 0; c < kColumnCount; ++c) {
             ImGui::TableSetColumnIndex(c + 1);
             ImGui::PushID(c);

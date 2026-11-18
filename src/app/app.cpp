@@ -32,12 +32,14 @@ Composition emptyComposition() {
 bool App::init(GLFWwindow* window, const StartOptions& options) {
     window_ = window;
     ImGuiIO& io = ImGui::GetIO();
-    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v3.ini").string();
+    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v4.ini").string();
     io.IniFilename = iniPath_.c_str();
     needsLayout_ = !std::filesystem::exists(iniPath_);
 
     loadSettings(settings_);
     outputMonitor_ = settings_.outputMonitor;
+    uiScaleEdit_ = settings_.uiScale;
+    appliedVsync_ = settings_.vsync ? 1 : 0;
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
 
     if (!engine_.init()) {
@@ -87,6 +89,38 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.resolution >= 0 && options.resolution < kResolutionCount) {
         start.resolution = options.resolution;
     }
+    if (!options.decks.empty()) {
+        std::string list = options.decks;
+        size_t slot = 0;
+        while (!list.empty() && slot < static_cast<size_t>(kDeckCount)) {
+            const size_t comma = list.find(',');
+            const std::string name = list.substr(0, comma);
+            list = comma == std::string::npos ? std::string() : list.substr(comma + 1);
+            const int factory = factoryPresetIndex(name);
+            if (factory < 0) {
+                logLine("Deck preset '" + name + "' not found");
+                continue;
+            }
+            const Composition& look = factoryPresets()[static_cast<size_t>(factory)];
+            if (slot == 0) {
+                start.layers = look.layers;
+                start.master = look.master;
+                start.deckNames[0] = look.name;
+            } else {
+                start.decks[slot] = captureDeck(look);
+                start.deckUsed[slot] = true;
+                start.deckNames[slot] = look.name;
+            }
+            ++slot;
+        }
+    }
+    if (!options.transition.empty()) {
+        start.deckSettings.transition = transitionFromName(options.transition);
+    }
+    if (options.transitionSeconds >= 0.0f) {
+        start.deckSettings.syncBeats = false;
+        start.deckSettings.seconds = options.transitionSeconds;
+    }
     engine_.applyComposition(start);
     std::snprintf(presetName_, sizeof(presetName_), "%s", engine_.comp.name.c_str());
 
@@ -119,8 +153,34 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         updater_.checkAsync();
     }
 
-    if (options.openOutput) {
+    if (!options.demoUpdate.empty()) {
+        UpdateStatus demo;
+        demo.release.tag = "nightly";
+        demo.release.name = "NyrexVJ 0.4.0";
+        demo.release.version = parseVersion("0.4.0");
+        demo.release.buildNumber = 57;
+        autoInstallKey_ = demo.release.tag + "#" + std::to_string(demo.release.buildNumber);
+        if (options.demoUpdate == "ready") {
+            demo.state = UpdateState::ReadyToRestart;
+        } else if (options.demoUpdate == "downloading") {
+            demo.state = UpdateState::Downloading;
+            demo.progress = 0.55f;
+        } else {
+            demo.state = UpdateState::Available;
+        }
+        updater_.debugSetStatus(demo);
+        if (options.demoUpdate == "later") {
+            demo.state = UpdateState::ReadyToRestart;
+            updater_.debugSetStatus(demo);
+            updateCardCollapsed_ = true;
+        }
+    }
+
+    if (options.openOutput || (settings_.openOutputOnStart && options.skipUpdateCheck == false)) {
         openOutputWindow(false);
+    }
+    if (options.settingsPage >= 0) {
+        openSettings(options.settingsPage);
     }
 
     const std::string current = baseVersionString(NYREXVJ_VERSION);
@@ -217,6 +277,12 @@ void App::updateAudio(double dt) {
 }
 
 void App::frame(double dt) {
+    const int vsync = settings_.vsync ? 1 : 0;
+    if (vsync != appliedVsync_) {
+        glfwSwapInterval(vsync);
+        appliedVsync_ = vsync;
+    }
+    ImGui::GetStyle().FontScaleMain = settings_.uiScale;
     updateAudio(dt);
     engine_.update(dt);
     engine_.render();
@@ -226,6 +292,7 @@ void App::frame(double dt) {
     output_.render(engine_.outputTexture(), engine_.width(), engine_.height());
 
     drawMenuBar();
+    drawStatusBar();
     ImGuiID dock = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
     if (needsLayout_) {
         buildLayout(dock);
@@ -237,6 +304,8 @@ void App::frame(double dt) {
     drawLayer();
     drawMaster();
     drawBrowser();
+    drawSettingsWindow();
+    drawUpdateCard();
     drawWelcome();
 
     autosaveTimer_ += dt;
@@ -249,9 +318,9 @@ void App::frame(double dt) {
 void App::buildLayout(ImGuiID dock) {
     ImGui::DockBuilderRemoveNode(dock);
     ImGui::DockBuilderAddNode(dock, ImGuiDockNodeFlags_DockSpace);
-    ImGui::DockBuilderSetNodeSize(dock, ImGui::GetMainViewport()->Size);
+    ImGui::DockBuilderSetNodeSize(dock, ImGui::GetMainViewport()->WorkSize);
     ImGuiID bottom = 0;
-    ImGuiID top = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.45f, nullptr, &bottom);
+    ImGuiID top = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.50f, nullptr, &bottom);
     ImGuiID rest = 0;
     ImGuiID output = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Left, 0.30f, nullptr, &rest);
     ImGuiID rest2 = 0;
@@ -273,8 +342,21 @@ void App::handleShortcuts() {
     }
     for (int i = 0; i < kColumnCount; ++i) {
         if (ImGui::IsKeyPressed(static_cast<ImGuiKey>(ImGuiKey_1 + i), false)) {
-            engine_.triggerColumn(i);
+            if (io.KeyCtrl) {
+                switchDeckTo(i + (io.KeyShift ? 8 : 0));
+            } else {
+                engine_.triggerColumn(i);
+            }
         }
+    }
+    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
+        openSettings(-1);
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_PageDown, false)) {
+        switchDeckTo(nextUsedDeck(engine_.comp, engine_.comp.activeDeck, 1));
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_PageUp, false)) {
+        switchDeckTo(nextUsedDeck(engine_.comp, engine_.comp.activeDeck, -1));
     }
     if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) {
         engine_.tap();
@@ -367,6 +449,9 @@ void App::drawMenuBar() {
         }
         ImGui::EndMenu();
     }
+    if (ImGui::MenuItem(trId("Settings", "menuSettings"))) {
+        openSettings(-1);
+    }
     if (ImGui::BeginMenu(trId("Help", "menuHelp"))) {
         if (ImGui::MenuItem(tr("What's new"))) {
             openWelcome(false);
@@ -390,26 +475,12 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Check for updates"), nullptr, false, !updater_.busy())) {
             updater_.checkAsync();
-            focusTab_ = 3;
+            updateCardCollapsed_ = false;
+            openSettings(3);
         }
         ImGui::EndMenu();
     }
 
-    UpdateStatus update = updater_.status();
-    if (update.state == UpdateState::Available) {
-        ImGui::TextColored(ui::kAccent, "%s", tr("Update available"));
-        if (ImGui::SmallButton(trId("Install", "menuInstall"))) {
-            updater_.installAsync();
-        }
-    } else if (update.state == UpdateState::Downloading) {
-        ImGui::ProgressBar(update.progress, ImVec2(140.0f, 0.0f), tr("Updating"));
-    } else if (update.state == UpdateState::ReadyToRestart) {
-        ImGui::TextColored(ui::kAccent, "%s", tr("Update installed"));
-        if (ImGui::SmallButton(trId("Restart now", "menuRestart"))) {
-            restart_ = true;
-            glfwSetWindowShouldClose(window_, GLFW_TRUE);
-        }
-    }
     if (!toastText_.empty() && ImGui::GetTime() < toastUntil_) {
         ImGui::TextDisabled("%s", toastText_.c_str());
     }

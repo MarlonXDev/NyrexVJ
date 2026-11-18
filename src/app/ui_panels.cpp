@@ -113,22 +113,34 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             bandCombo("##band", slot.reactBand, 78.0f);
             if (slot.reactBand != BandOff) {
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth(104.0f);
-                const char* paramPreview = def.paramNames[static_cast<size_t>(slot.reactParam)] ? tr(def.paramNames[static_cast<size_t>(slot.reactParam)]) : "-";
-                if (ImGui::BeginCombo("##param", paramPreview)) {
-                    for (int p = 0; p < kParamCount; ++p) {
-                        if (!def.paramNames[static_cast<size_t>(p)]) {
-                            continue;
-                        }
-                        if (ImGui::Selectable(tr(def.paramNames[static_cast<size_t>(p)]), slot.reactParam == p)) {
-                            slot.reactParam = p;
+                ImGui::SetNextItemWidth(92.0f);
+                if (ImGui::BeginCombo("##mode", tr(reactModeName(slot.reactMode)))) {
+                    for (int m = 0; m < EffectReactModeCount; ++m) {
+                        if (ImGui::Selectable(tr(reactModeName(m)), slot.reactMode == m)) {
+                            slot.reactMode = m;
                         }
                     }
                     ImGui::EndCombo();
                 }
-                ImGui::SameLine();
+                ImGui::SetItemTooltip("%s", tr("Parameter: the band moves one value. Gate: the effect only shows while the band is loud."));
+                if (slot.reactMode == ReactParameter) {
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    const char* paramPreview = def.paramNames[static_cast<size_t>(slot.reactParam)] ? tr(def.paramNames[static_cast<size_t>(slot.reactParam)]) : "-";
+                    if (ImGui::BeginCombo("##param", paramPreview)) {
+                        for (int p = 0; p < kParamCount; ++p) {
+                            if (!def.paramNames[static_cast<size_t>(p)]) {
+                                continue;
+                            }
+                            if (ImGui::Selectable(tr(def.paramNames[static_cast<size_t>(p)]), slot.reactParam == p)) {
+                                slot.reactParam = p;
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+                }
                 ImGui::SetNextItemWidth(-FLT_MIN);
-                ImGui::SliderFloat("##amount", &slot.reactAmount, 0.0f, 1.0f, "%.2f");
+                ImGui::SliderFloat("##amount", &slot.reactAmount, 0.0f, 1.0f, slot.reactMode == ReactGate ? tr("Sensitivity %.2f") : tr("Amount %.2f"));
             } else {
                 ImGui::SameLine();
                 ImGui::TextDisabled("%s", tr("Audio reaction"));
@@ -189,14 +201,15 @@ void App::drawLayer() {
         ImGui::EndCombo();
     }
 
-    ImGui::SeparatorText(tr("Grade"));
-    drawGrade(layer.grade);
-
-    ImGui::SeparatorText(tr("Audio reactivity"));
-    drawMods(layer.mods, false);
-
-    ImGui::SeparatorText(tr("Effects"));
-    drawEffectRack(layer.fx);
+    if (ImGui::CollapsingHeader(trId("Grade", "hdrGrade"))) {
+        drawGrade(layer.grade);
+    }
+    if (ImGui::CollapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        drawMods(layer.mods, false);
+    }
+    if (ImGui::CollapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        drawEffectRack(layer.fx);
+    }
     ImGui::End();
 }
 
@@ -317,14 +330,15 @@ void App::drawMaster() {
         ImGui::EndCombo();
     }
 
-    ImGui::SeparatorText(tr("Grade"));
-    drawGrade(comp.master.grade);
-    ImGui::SeparatorText(tr("Audio reactivity"));
-    drawMods(comp.master.mods, true);
-    ImGui::SeparatorText(tr("Effects"));
-    drawEffectRack(comp.master.fx);
-    drawOutputControls();
-    drawSpoutControls();
+    if (ImGui::CollapsingHeader(trId("Grade", "hdrGrade"))) {
+        drawGrade(comp.master.grade);
+    }
+    if (ImGui::CollapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        drawMods(comp.master.mods, true);
+    }
+    if (ImGui::CollapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        drawEffectRack(comp.master.fx);
+    }
     ImGui::End();
 }
 

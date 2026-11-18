@@ -8,6 +8,7 @@
 #include "update/updater.hpp"
 
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -212,6 +213,98 @@ void testPresets() {
     CHECK(!nvj::compositionFromJson("{}", broken, error));
 }
 
+void testDecks() {
+    nvj::Composition comp = nvj::factoryPresets()[0];
+    CHECK(comp.activeDeck == 0);
+    CHECK(nvj::usedDeckCount(comp) == 1);
+    CHECK(!nvj::selectDeck(comp, 0));
+    CHECK(!nvj::selectDeck(comp, nvj::kDeckCount));
+    CHECK(!nvj::selectDeck(comp, -1));
+    comp.layers[0].opacity = 0.37f;
+    comp.master.level = 0.5f;
+    CHECK(nvj::selectDeck(comp, 3));
+    CHECK(comp.activeDeck == 3 && nvj::usedDeckCount(comp) == 2);
+    CHECK(comp.layers[0].activeColumn == -1);
+    CHECK(comp.master.level == 0.5f);
+    comp.layers[1].opacity = 0.2f;
+    comp.deckNames[3] = "Second";
+    CHECK(nvj::deckDisplayName(comp, 3) == "Second");
+    CHECK(nvj::deckDisplayName(comp, 5) == "Deck 6");
+    CHECK(nvj::selectDeck(comp, 0));
+    CHECK(comp.layers[0].opacity == 0.37f);
+    CHECK(nvj::nextUsedDeck(comp, 0, 1) == 3);
+    CHECK(nvj::nextUsedDeck(comp, 3, 1) == 0);
+    CHECK(nvj::nextUsedDeck(comp, 0, -1) == 3);
+
+    nvj::Composition loaded;
+    std::string error;
+    std::vector<std::string> warnings;
+    CHECK(nvj::compositionFromJson(nvj::compositionToJson(comp), loaded, error, &warnings));
+    CHECK(warnings.empty());
+    CHECK(sameComposition(comp, loaded));
+    CHECK(loaded.activeDeck == 0 && loaded.deckUsed[3] && !loaded.deckUsed[4]);
+    CHECK(loaded.decks[3].layers[1].opacity == 0.2f);
+    CHECK(loaded.deckNames[3] == "Second");
+
+    nvj::DeckSettings settings;
+    settings.seconds = 2.0f;
+    CHECK(nvj::transitionSeconds(settings, 120.0f) == 2.0f);
+    settings.syncBeats = true;
+    settings.beats = 4;
+    CHECK(std::fabs(nvj::transitionSeconds(settings, 120.0f) - 2.0f) < 1e-4f);
+    CHECK(std::fabs(nvj::transitionSeconds(settings, 60.0f) - 4.0f) < 1e-4f);
+
+    comp.deckSettings.transition = nvj::TransitionRadial;
+    comp.deckSettings.seconds = 3.5f;
+    comp.deckSettings.syncBeats = true;
+    comp.deckSettings.beats = 8;
+    comp.deckSettings.autoCycle = true;
+    comp.deckSettings.cycleBeats = 32;
+    CHECK(nvj::compositionFromJson(nvj::compositionToJson(comp), loaded, error));
+    CHECK(loaded.deckSettings.transition == nvj::TransitionRadial);
+    CHECK(loaded.deckSettings.seconds == 3.5f && loaded.deckSettings.syncBeats && loaded.deckSettings.beats == 8);
+    CHECK(loaded.deckSettings.autoCycle && loaded.deckSettings.cycleBeats == 32);
+
+    comp.activeDeck = 99;
+    comp.deckSettings.transition = 99;
+    comp.deckSettings.seconds = 99.0f;
+    comp.deckSettings.beats = 0;
+    comp.deckSettings.cycleBeats = 1;
+    nvj::normalizeDecks(comp);
+    CHECK(comp.activeDeck == nvj::kDeckCount - 1 && comp.deckUsed[static_cast<size_t>(nvj::kDeckCount - 1)]);
+    CHECK(comp.deckSettings.transition == nvj::TransitionTypeCount - 1);
+    CHECK(comp.deckSettings.seconds == 10.0f && comp.deckSettings.beats == 1 && comp.deckSettings.cycleBeats == 4);
+
+    for (int t = 0; t < nvj::TransitionTypeCount; ++t) {
+        CHECK(nvj::transitionFromName(nvj::transitionName(t)) == t);
+    }
+    CHECK(nvj::transitionFromName("Unknown") == nvj::TransitionFade);
+    CHECK(nvj::reactModeFromName("Gate") == nvj::ReactGate);
+    CHECK(nvj::reactModeFromName("Unknown") == nvj::ReactParameter);
+
+    nvj::Composition gate = nvj::factoryPresets()[0];
+    gate.master.fx[2].reactBand = nvj::BandKick;
+    gate.master.fx[2].reactMode = nvj::ReactGate;
+    gate.master.fx[2].reactAmount = 0.7f;
+    CHECK(nvj::compositionFromJson(nvj::compositionToJson(gate), loaded, error));
+    CHECK(loaded.master.fx[2].reactMode == nvj::ReactGate && loaded.master.fx[2].reactBand == nvj::BandKick);
+    CHECK(sameComposition(gate, loaded));
+
+    const std::vector<int>& bank = nvj::factoryBank();
+    CHECK(bank.size() == static_cast<size_t>(nvj::kDeckCount));
+    std::set<int> unique(bank.begin(), bank.end());
+    CHECK(unique.size() == bank.size());
+    for (int index : bank) {
+        CHECK(index >= 0 && index < static_cast<int>(nvj::factoryPresets().size()));
+    }
+    CHECK(nvj::factoryPresetIndex("Milky Red") >= 0);
+    CHECK(nvj::factoryPresetIndex("Crystal Cavern") >= 0);
+    CHECK(nvj::factoryPresetIndex("Crystal Lines") >= 0);
+    CHECK(nvj::clipIndexByName("Milky Wave") >= 0);
+    CHECK(nvj::effectIndexByName("Line Art") >= 0);
+    CHECK(nvj::effectIndexByName("Mirror Fold") >= 0);
+}
+
 void testPresetFiles() {
     std::filesystem::path dir = std::filesystem::temp_directory_path() / "nyrexvj_test_data";
     std::filesystem::remove_all(dir);
@@ -251,10 +344,16 @@ void testPresetFiles() {
     settings.checkUpdates = false;
     settings.channel = nvj::UpdateChannel::Stable;
     settings.outputMonitor = 2;
+    settings.autoInstall = false;
+    settings.vsync = false;
+    settings.openOutputOnStart = true;
+    settings.showStatusBar = false;
+    settings.uiScale = 1.25f;
     CHECK(nvj::saveSettings(settings));
     nvj::Settings back;
     CHECK(nvj::loadSettings(back));
     CHECK(!back.checkUpdates && back.channel == nvj::UpdateChannel::Stable && back.outputMonitor == 2);
+    CHECK(!back.autoInstall && !back.vsync && back.openOutputOnStart && !back.showStatusBar && back.uiScale == 1.25f);
 
     std::filesystem::remove_all(dir);
 }
@@ -449,6 +548,7 @@ int main() {
     testHashFile();
     testLibraries();
     testPresets();
+    testDecks();
     testPresetFiles();
     testUpdater();
     std::printf("%d checks, %d failed\n", gChecks, gFailures);

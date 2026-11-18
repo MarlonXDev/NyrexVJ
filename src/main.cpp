@@ -113,6 +113,8 @@ Options parseOptions(int argc, char** argv) {
             options.start.tab = std::atoi(argv[++i]);
         } else if (arg == "--output") {
             options.start.openOutput = true;
+        } else if (arg == "--crash-test") {
+            options.start.crashTest = true;
         } else if (arg == "--fresh") {
             options.start.fresh = true;
         } else if (arg == "--no-update-check") {

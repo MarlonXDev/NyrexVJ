@@ -6,6 +6,7 @@
 #include "core/novelty.hpp"
 #include "render/effect_library.hpp"
 #include "core/preset.hpp"
+#include "core/recovery.hpp"
 #include "core/settings.hpp"
 #include "core/sha256.hpp"
 #include "update/update_logic.hpp"
@@ -559,6 +560,92 @@ void testUpdater() {
 
 }
 
+void testRecovery() {
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / "nyrexvj_recovery_test";
+    std::error_code ec;
+    fs::remove_all(dir, ec);
+    fs::create_directories(dir, ec);
+
+    const nvj::ProcessAliveFn nobody = [](unsigned long) { return false; };
+    const nvj::ProcessAliveFn everybody = [](unsigned long) { return true; };
+
+    CHECK(!nvj::inspectPreviousSession(dir, 100, nobody).crashed);
+    CHECK(nvj::beginSession(dir, 4242, "1.2.3", 1700000000));
+    nvj::PreviousSession crashed = nvj::inspectPreviousSession(dir, 100, nobody);
+    CHECK(crashed.crashed && !crashed.otherInstance);
+    CHECK(crashed.version == "1.2.3" && crashed.startedAt == 1700000000);
+    CHECK(crashed.crashReport.empty());
+    nvj::PreviousSession running = nvj::inspectPreviousSession(dir, 100, everybody);
+    CHECK(running.otherInstance && !running.crashed);
+    CHECK(nvj::inspectPreviousSession(dir, 4242, everybody).crashed);
+
+    CHECK(nvj::writeFileAtomic(nvj::crashReportPath(dir), "NyrexVJ 1.2.3\nreason: test\n"));
+    CHECK(nvj::writeFileAtomic(nvj::previousLogPath(dir), "a\nb\nc\nd\ne\n"));
+    crashed = nvj::inspectPreviousSession(dir, 100, nobody);
+    CHECK(crashed.crashReport.find("reason: test") != std::string::npos);
+    CHECK(crashed.logTail == "a\nb\nc\nd\ne");
+    CHECK(!fs::exists(nvj::crashReportPath(dir)));
+    CHECK(nvj::inspectPreviousSession(dir, 100, nobody).crashReport.empty());
+
+    nvj::endSession(dir, 1);
+    CHECK(nvj::inspectPreviousSession(dir, 100, nobody).crashed);
+    nvj::endSession(dir, 4242);
+    CHECK(!nvj::inspectPreviousSession(dir, 100, nobody).crashed);
+    nvj::endSession(dir, 4242);
+
+    CHECK(nvj::writeFileAtomic(dir / "unit.txt", "first"));
+    CHECK(nvj::writeFileAtomic(dir / "unit.txt", "second"));
+    std::string text;
+    CHECK(nvj::readWholeFile(dir / "unit.txt", text) && text == "second");
+    CHECK(!fs::exists(dir / "unit.txt.tmp"));
+    CHECK(!nvj::readWholeFile(dir / "missing.txt", text));
+
+    CHECK(nvj::listAutosaves(dir).empty());
+    for (int i = 0; i < 15; ++i) {
+        CHECK(nvj::writeRotatingAutosave(dir, "save " + std::to_string(i), 1700000000 + i * 100, 10));
+    }
+    std::vector<nvj::AutosaveEntry> entries = nvj::listAutosaves(dir);
+    CHECK(entries.size() == 10);
+    CHECK(entries.front().timestamp == 1700000000 + 14 * 100);
+    CHECK(entries.back().timestamp == 1700000000 + 5 * 100);
+    for (size_t i = 1; i < entries.size(); ++i) {
+        CHECK(entries[i - 1].timestamp > entries[i].timestamp);
+        CHECK(!entries[i].latest);
+    }
+    CHECK(nvj::readWholeFile(entries.front().path, text) && text == "save 14");
+
+    CHECK(nvj::writeFileAtomic(dir / "autosave.json", "{}"));
+    entries = nvj::listAutosaves(dir);
+    CHECK(entries.size() == 11);
+    CHECK(entries.front().latest && entries.front().bytes == 2);
+    CHECK(nvj::writeRotatingAutosave(dir, "x", 1700099999, 3));
+    CHECK(nvj::listAutosaves(dir).size() == 4);
+
+    CHECK(!nvj::hasCreatorRecovery(dir));
+    CHECK(nvj::writeCreatorRecovery(dir, "{\"scene\":1}"));
+    CHECK(nvj::hasCreatorRecovery(dir));
+    CHECK(nvj::readCreatorRecovery(dir, text) && text == "{\"scene\":1}");
+    nvj::clearCreatorRecovery(dir);
+    CHECK(!nvj::hasCreatorRecovery(dir));
+    nvj::clearCreatorRecovery(dir);
+
+    CHECK(nvj::tailLines("1\n2\n3\n4\n", 2) == "3\n4");
+    CHECK(nvj::tailLines("1\n2", 5) == "1\n2");
+    CHECK(nvj::tailLines("", 3).empty());
+    CHECK(nvj::tailLines("x\n", 0).empty());
+    CHECK(nvj::formatTimestamp(1700000000).size() == 19);
+
+    nvj::Composition comp = nvj::defaultComposition();
+    comp.name = "Recovered";
+    CHECK(nvj::saveSession(comp));
+    nvj::Composition loaded;
+    CHECK(nvj::loadSession(loaded));
+    CHECK(loaded.name == "Recovered");
+
+    fs::remove_all(dir, ec);
+}
+
 void testNovelty() {
     const char* clips[] = {"Neon Sigil", "Neon Lattice", "Neon Corridor", "Chaos Smoke", "Tesseract", "Laser Web", "Mandelbox Fly", "Prism Bloom"};
     const char* effects[] = {"Kaleido Neon", "Mandala Fold", "Hue Feedback", "Star Burst", "Chrome Liquid", "Image Terrain", "Hyperspace", "Shatter"};
@@ -834,6 +921,7 @@ int main() {
     testDecks();
     testPresetFiles();
     testNovelty();
+    testRecovery();
     testUpdater();
     std::printf("%d checks, %d failed\n", gChecks, gFailures);
     return gFailures == 0 ? 0 : 1;

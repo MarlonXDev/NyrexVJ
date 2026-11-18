@@ -2,6 +2,7 @@
 
 #include "app/theme.hpp"
 #include "app/ui_common.hpp"
+#include "core/crash_handler.hpp"
 #include "core/log.hpp"
 #include "core/preset.hpp"
 #include "platform/platform.hpp"
@@ -17,7 +18,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <csignal>
 #include <cstdio>
+#include <ctime>
 #include <filesystem>
 
 namespace nvj {
@@ -49,6 +52,19 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     control_.refreshMidiDevices();
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
 
+    {
+        const std::filesystem::path dataDir = userDataDir();
+        processId_ = platform::currentProcessId();
+        previous_ = inspectPreviousSession(dataDir, processId_, platform::processAlive);
+        if (!previous_.otherInstance) {
+            ownsSession_ = beginSession(dataDir, processId_, NYREXVJ_VERSION, static_cast<long long>(std::time(nullptr)));
+            installCrashHandler(crashReportPath(dataDir).string(), NYREXVJ_VERSION);
+        }
+        if (options.crashTest) {
+            crashTestAt_ = 1.0;
+        }
+    }
+
     if (!engine_.init()) {
         logLine("Engine initialisation failed");
         return false;
@@ -68,7 +84,8 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
             logLine("Preset '" + options.preset + "' not found");
         }
     }
-    if (!chosen && settings_.restoreSession && !options.fresh && options.clip.empty()) {
+    const bool recoverInstead = previous_.crashed && !options.fresh;
+    if (!chosen && settings_.restoreSession && !options.fresh && options.clip.empty() && !recoverInstead) {
         Composition session;
         if (loadSession(session)) {
             start = session;
@@ -130,6 +147,13 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     }
     engine_.applyComposition(start);
     std::snprintf(presetName_, sizeof(presetName_), "%s", engine_.comp.name.c_str());
+
+    if (recoverInstead) {
+        const std::filesystem::path dataDir = userDataDir();
+        recoveryEntries_ = listAutosaves(dataDir);
+        recoveryCreator_ = hasCreatorRecovery(dataDir);
+        recoveryRequested_ = true;
+    }
 
     if (options.column >= 0) {
         engine_.triggerColumn(options.column);
@@ -226,7 +250,9 @@ void App::shutdown() {
         return;
     }
     shutDown_ = true;
-    saveSession(engine_.comp);
+    if (!recoveryPending()) {
+        saveSession(engine_.comp);
+    }
     settings_.outputMonitor = outputMonitor_;
     settings_.audioDevice = audio_.selected() == AudioSystem::demoId() ? std::string() : audio_.selected();
     settings_.spoutEnabled = spout_.active();
@@ -238,6 +264,39 @@ void App::shutdown() {
     output_.close();
     shutdownCreator();
     engine_.shutdown();
+    if (ownsSession_) {
+        if (!recoveryPending()) {
+            clearCreatorRecovery(userDataDir());
+        }
+        endSession(userDataDir(), processId_);
+    }
+}
+
+void App::autosaveTick(double dt) {
+    if (recoveryPending() || !ownsSession_) {
+        return;
+    }
+    autosaveTimer_ += dt;
+    rotatingTimer_ += dt;
+    if (autosaveTimer_ > 30.0) {
+        autosaveTimer_ = 0.0;
+        const std::string text = compositionToJson(engine_.comp);
+        if (text != lastSessionText_ && saveSession(engine_.comp)) {
+            lastSessionText_ = text;
+        }
+        const std::filesystem::path dataDir = userDataDir();
+        if (creatorUnsaved()) {
+            writeCreatorRecovery(dataDir, creatorDocJson());
+        } else {
+            clearCreatorRecovery(dataDir);
+        }
+        if (rotatingTimer_ > 120.0 && text != lastRotatingText_) {
+            rotatingTimer_ = 0.0;
+            if (writeRotatingAutosave(dataDir, text, static_cast<long long>(std::time(nullptr)))) {
+                lastRotatingText_ = text;
+            }
+        }
+    }
 }
 
 void App::toast(const std::string& message) {
@@ -365,13 +424,16 @@ void App::frame(double dt) {
     drawSettingsWindow();
     drawUpdateCard();
     drawWelcome();
+    drawRecovery();
 
     history_.observe(engine_.comp, dt, ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsAnyItemActive());
 
-    autosaveTimer_ += dt;
-    if (autosaveTimer_ > 30.0) {
-        autosaveTimer_ = 0.0;
-        saveSession(engine_.comp);
+    autosaveTick(dt);
+    if (crashTestAt_ > 0.0) {
+        crashTestAt_ -= dt;
+        if (crashTestAt_ <= 0.0) {
+            std::raise(SIGSEGV);
+        }
     }
 
     perfCpu_.add(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - frameStart).count());

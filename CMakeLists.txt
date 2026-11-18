@@ -128,6 +128,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/composition.cpp
     src/core/edit_history.cpp
     src/core/frame_stats.cpp
+    src/core/recovery.cpp
+    src/core/crash_handler.cpp
     src/render/effect_library.cpp
     src/render/effects_extra.cpp
     src/core/factory_presets.cpp
@@ -179,6 +181,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_settings.cpp
     src/app/ui_panels.cpp
     src/app/ui_welcome.cpp
+    src/app/ui_recovery.cpp
     src/render/engine.cpp
     src/render/gl_util.cpp
     src/render/output_window.cpp

@@ -989,6 +989,20 @@ void App::drawCreator() {
     ImGui::End();
 }
 
+bool App::creatorUnsaved() const {
+    return creator_ != nullptr && creator_->dirty;
+}
+
+std::string App::creatorDocJson() const {
+    return creator_ ? docToJson(creator_->doc) : std::string();
+}
+
+void App::restoreCreatorDoc(const SceneDoc& doc) {
+    openCreator();
+    loadInto(*creator_, doc, nullptr, std::filesystem::path());
+    creator_->dirty = true;
+}
+
 void App::shutdownCreator() {
     if (creator_) {
         creator_->pending.reset();

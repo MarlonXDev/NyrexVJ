@@ -29,5 +29,7 @@ void cleanupOldBinary();
 bool openUrl(const std::string& url);
 bool openFolder(const std::string& path);
 size_t processMemoryBytes();
+unsigned long currentProcessId();
+bool processAlive(unsigned long pid);
 
 }

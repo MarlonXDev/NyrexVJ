@@ -295,6 +295,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--audio-demo` | Use the demo audio signal |
 | `--welcome` / `--no-welcome` | Force or skip the welcome screen |
 | `--fresh` | Ignore the saved session |
+| `--crash-test` | Crash on purpose a second after the start to try the crash recovery |
 | `--no-update-check` | Skip the update check |
 | `--check-shaders` | Compile every shader and exit |
 | `--bench-scene LAYERS:FRAMES[:CLIP]` | Measure frame times and memory with LAYERS (1 to 4) layers playing CLIP, then exit |
@@ -306,7 +307,9 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--screenshot FILE.png` | With `--frames`, save the window as PNG |
 | `--dump-output FILE.png` | With `--frames`, save the engine output as PNG |
 
-User data lives in `%APPDATA%\NyrexVJ` on Windows and `~/.config/NyrexVJ` on Linux: log, window layout, settings, autosave and `presets/`. Set `NYREXVJ_DATA_DIR` to use another folder.
+User data lives in `%APPDATA%\NyrexVJ` on Windows and `~/.config/NyrexVJ` on Linux: log, window layout, settings, autosave, `recovery/` and `presets/`. Set `NYREXVJ_DATA_DIR` to use another folder.
+
+Crash protection: the session is saved every 30 seconds when it changed, and a rotating set of the last ten autosaves lives in `recovery/`. An unsaved Clip Creator scene is saved there as well. When NyrexVJ did not close properly, the next start does not load the old session by itself (a bad clip could crash it again) but asks which autosave to continue from, offers the unsaved Creator scene and shows the crash report with the end of the log for bug reports.
 
 ## Roadmap
 

@@ -23,7 +23,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 - Video playback via FFmpeg; evaluate H.264 and HAP support, decoding, seeking, synchronization, and packaging.
 - Image clips and alpha handling.
 - Spout **receiver** support.
-- Prototype glTF/GLB model import and a lightweight native 3D scene renderer.
+- Prototype glTF/GLB model import and a lightweight native 3D scene renderer. A first prototype landed in v0.6.0 (see [SCENE3D.md](SCENE3D.md)); it still needs frame time measurements on real GPUs and maintainer decisions on scope. Video, image clips and the Spout receiver are untouched.
 
 ### Live control (candidate v0.7)
 - OSC output and a documented, versioned OSC protocol (MIDI mapping and OSC input already exist since v0.5.0).

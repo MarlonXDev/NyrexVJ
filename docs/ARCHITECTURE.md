@@ -8,7 +8,8 @@
 - `src/app`: user interface and application orchestration.
 - `src/audio`: WASAPI capture, spectrum/beat analysis.
 - `src/core`: shared application logic and state.
-- `src/render`: rendering, clips, and effects.
+- `src/render`: rendering, clips, and effects, including the 3D scene player (`scene_player.*`).
+- `src/scene3d`: glTF/GLB loader with safety limits, scene model, built-in 3D scenes (no OpenGL, unit tested).
 - `src/platform`: platform-specific integration.
 - `src/update`: updater.
 - Spout sender and fullscreen output are documented; a Spout receiver is not.
@@ -28,6 +29,9 @@ Sources (generative / video / images / native 3D / Spout / future NDI)
 The diagram is a target abstraction, not a description of existing code.
 
 ## Native 3D runtime and Clip Creator
+
+**Implemented as a prototype (v0.6.0, Issue #6):** glTF/GLB loading on a worker thread, node animation, base colour textures, fixed lighting, rendering into the layer texture with a shared depth buffer, built-in 3D clips and user models from a folder. Details, limits and measurements: [SCENE3D.md](SCENE3D.md). Everything below that is not listed there is still a proposal.
+
 - Prefer a focused native renderer integrated with the existing graphics backend, not an embedded game engine.
 - Investigate glTF/GLB loading, scene graph, cameras, materials, simple lights, reusable GPU resources, and shader caching.
 - Render 3D clips into offscreen framebuffers/textures for the existing compositor.

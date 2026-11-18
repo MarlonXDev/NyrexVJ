@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 - 2026-11-18
+
+- 3D clips: three new clips that are real 3D models instead of shaders, Torus Knot Mesh, Crystal Cluster Mesh and Orbit Rings Mesh. They have depth, lighting and animation, follow the layer colours, speed and scale, pulse with bass and kick and take effects like every other clip.
+- Your own 3D models: put .glb or .gltf files, with textures and animation, into the new models folder (the Library tab opens it, restart NyrexVJ once) and they appear in the Library as Model: name. Models load in the background without stalling the picture, and damaged or oversized files are refused with a message instead of crashing.
+- Library tooltips: point at a 3D clip to see its vertices, triangles, graphics memory and load time. Layers that play the same model share it in memory.
+- Measuring mode for developers: NyrexVJ --bench-scene 4:300:"Torus Knot Mesh" reports frame times and memory with several 3D layers at once.
+
 ## 0.5.0 - 2026-11-18
 
 - Live control over OSC: switch it on under Settings, Control (off by default, port 9010, only this computer unless you allow others). NyrexVJ then answers to 207 addresses under /nyrex/ for the master, the 16 decks, the 8 columns, every clip, layer opacity, speed, scale and colour, bypass, solo, clear and all effect switches and parameters. Send a value from 0 to 1, or nothing at all to fire a trigger. It works with TouchDesigner, Max, Pure Data, Python scripts and anything else that speaks OSC.

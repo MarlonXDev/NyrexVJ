@@ -103,9 +103,39 @@ void App::drawPresetsTab() {
     }
 }
 
+void App::drawSceneTooltip(const ScenePlayer& player) {
+    ImGui::BeginTooltip();
+    ImGui::TextUnformatted(tr("3D scene"));
+    switch (player.state()) {
+    case SceneState::Idle:
+        ImGui::TextDisabled("%s", tr("Not loaded yet"));
+        break;
+    case SceneState::Loading:
+        ImGui::TextDisabled("%s", tr("Loading..."));
+        break;
+    case SceneState::Failed:
+        ImGui::Text("%s: %s", tr("Load failed"), player.error().c_str());
+        break;
+    case SceneState::Ready:
+        ImGui::Text("%s: %zu", tr("Vertices"), player.stats().vertices);
+        ImGui::Text("%s: %zu", tr("Triangles"), player.stats().triangles);
+        ImGui::Text("%s: %.2f MB", tr("GPU memory"), static_cast<double>(player.stats().gpuBytes) / (1024.0 * 1024.0));
+        ImGui::Text("%s: %.0f ms", tr("Load time"), player.loadMilliseconds());
+        break;
+    }
+    ImGui::EndTooltip();
+}
+
 void App::drawLibraryTab() {
     const std::vector<ClipDef>& library = clipLibrary();
     ImGui::TextDisabled("%s", tr("Drag a clip onto a deck cell"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("3D models: put .glb or .gltf files into this folder, then restart NyrexVJ"));
+    ImGui::TextDisabled("%s", modelDirectory().c_str());
+    ImGui::PopTextWrapPos();
+    if (ImGui::SmallButton(tr("Open models folder"))) {
+        platform::openFolder(modelDirectory());
+    }
     const float thumbW = 96.0f;
     const float thumbH = 54.0f;
     const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
@@ -118,6 +148,9 @@ void App::drawLibraryTab() {
         ImGui::TextUnformatted(clip.name.c_str());
         ImGui::PopClipRect();
         ImGui::EndGroup();
+        if (ImGui::IsItemHovered() && engine_.isSceneClip(i)) {
+            drawSceneTooltip(*engine_.scenePlayer(i));
+        }
         if (ImGui::BeginDragDropSource()) {
             ImGui::SetDragDropPayload("NVJ_CLIP", &i, sizeof(int));
             ImGui::TextUnformatted(clip.name.c_str());

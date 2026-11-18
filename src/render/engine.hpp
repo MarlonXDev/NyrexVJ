@@ -3,12 +3,24 @@
 #include "audio/audio_features.hpp"
 #include "core/composition.hpp"
 #include "render/gl_util.hpp"
+#include "render/scene_player.hpp"
 
 #include <array>
 #include <deque>
+#include <memory>
+#include <string>
 #include <vector>
 
 namespace nvj {
+
+struct GpuMemory {
+    size_t targets = 0;
+    size_t thumbnails = 0;
+    size_t sceneDepth = 0;
+    size_t sceneGeometry = 0;
+
+    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry; }
+};
 
 class Engine {
 public:
@@ -36,7 +48,7 @@ public:
     void setAudio(const AudioFeatures& features);
     bool readOutput(std::vector<unsigned char>& rgba, int& width, int& height);
     int prepareAll(std::string& report);
-    bool thumbnailsReady() const { return nextThumb_ >= clips_.size(); }
+    bool thumbnailsReady() const { return nextThumb_ >= clips_.size() && deferredThumbs_.empty(); }
 
     GLuint outputTexture() const { return out_.texture; }
     int width() const { return out_.width; }
@@ -44,6 +56,9 @@ public:
     double beat() const { return beat_; }
     double time() const { return time_; }
     GLuint clipThumbnail(int clip) const;
+    bool isSceneClip(int clip) const;
+    ScenePlayer* scenePlayer(int clip);
+    GpuMemory gpuMemory() const;
     GLuint layerPreview(int layer) const;
     bool layerLive(int layer) const;
     const AudioFeatures& audio() const { return audio_; }
@@ -139,6 +154,9 @@ private:
     void destroyFeedback();
     void renderClipThumbnails(int maxCount);
     bool ensureClip(size_t index);
+    bool ensureScene(size_t index);
+    void renderSceneThumbnail(size_t index);
+    void serviceScenes();
     bool ensureEffect(size_t index);
     void uploadAudio();
     void computeEffective();
@@ -179,6 +197,9 @@ private:
     long long cycleSlot_ = -1;
     int feedbackSet_ = 0;
     std::vector<RenderTarget> clipThumbs_;
+    std::vector<std::unique_ptr<ScenePlayer>> scenes_;
+    SceneRenderer sceneRenderer_;
+    std::vector<size_t> deferredThumbs_;
     size_t nextThumb_ = 0;
     std::array<RenderTarget, kLayerCount> previews_;
     std::array<bool, kLayerCount> live_{};

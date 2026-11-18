@@ -75,6 +75,7 @@ private:
     void drawBrowser();
     void drawPresetsTab();
     void drawLibraryTab();
+    void drawSceneTooltip(const ScenePlayer& player);
     void drawAudioTab();
     void drawDeckBar();
     void drawSettingsWindow();

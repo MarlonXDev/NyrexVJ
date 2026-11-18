@@ -1,6 +1,8 @@
 #include "platform/platform.hpp"
 
+#include <fstream>
 #include <filesystem>
+#include <unistd.h>
 
 namespace nvj::platform {
 
@@ -56,6 +58,16 @@ bool openUrl(const std::string&) {
 
 bool openFolder(const std::string&) {
     return false;
+}
+
+size_t processMemoryBytes() {
+    std::ifstream in("/proc/self/statm");
+    unsigned long long total = 0;
+    unsigned long long resident = 0;
+    if (!(in >> total >> resident)) {
+        return 0;
+    }
+    return static_cast<size_t>(resident) * static_cast<size_t>(sysconf(_SC_PAGESIZE));
 }
 
 }

@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.5.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe, Ausgabefenster, Einstellungsfenster, OSC- und MIDI-Steuerung, Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
+> Stand: v0.6.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe, Ausgabefenster, Einstellungsfenster, OSC- und MIDI-Steuerung, ein erster 3D-Modell-Player (glTF/GLB), Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
 
 ## Download
 
@@ -29,7 +29,8 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 - **Audio-reaktiv.** Wähle Systemaudio (dein DJ-Programm), ein Mikrofon, einen Line-In oder ein Demo-Signal. Ebenen, Master und jeder Effektparameter können Bass, Mitten, Höhen, Pegel oder Kick folgen, und ein Effekt lässt sich auf Gate stellen, damit er nur bei lauter Musik sichtbar ist.
 - **Live-Steuerung.** Spiele es mit einem MIDI-Controller (Regler mit einem Klick anlernen, Windows) oder steuere es per OSC aus TouchDesigner, Max, Python und mehr fern.
 - **OBS mit zwei Klicks.** Spout-Ausgabe mit frei wählbarem Sendernamen. In OBS die Quelle "Spout2 Capture" hinzufügen und den Sender auswählen.
-- **35 Clips, 58 Effekte, 18 Presets.** Fraktale, 3D-Szenen mit Raymarching, Konturlinien-Flüssigkeiten, Kristalltunnel, Blitze, Feuer, Spektrum-Visuals und mehr.
+- **38 Clips, 58 Effekte, 18 Presets.** Fraktale, 3D-Szenen mit Raymarching, Konturlinien-Flüssigkeiten, Kristalltunnel, Blitze, Feuer, Spektrum-Visuals und drei echte 3D-Modelle.
+- **Eigene 3D-Modelle.** Lege .glb- oder .gltf-Dateien in den Modellordner und spiele sie wie jeden Clip, mit Texturen, Animation und Audio-Reaktion.
 - **Einstellungsfenster.** Ein Ort für Audio, Ausgabe, Spout, Updates, Sprache und Oberflächengröße, dazu eine Statusleiste mit FPS, Tempo, Deck und Audio auf einen Blick.
 - **Englisch und Deutsch.** Englisch ist Standard, umschalten jederzeit unter Einstellungen, Allgemein.
 - **Willkommensbildschirm.** Beim ersten Start und nach jedem Update, mit allem, was neu ist.
@@ -102,6 +103,14 @@ Jede Ebene hat vier Effektplätze, der Master ebenfalls.
 </p>
 
 Die Effekt-Galerie zeigt jeden Effekt mit Standardwerten auf dem Clip Plasma (Duotone auf Mandelbrot und Line Art auf Crystal Cavern, weil Plasma kaum Helligkeitskontrast hat). Clip- und Effektnamen bleiben englisch, damit sie zu anderen VJ-Programmen passen.
+
+## 3D-Modelle
+
+Neben den Shader-Clips gibt es Clips, die echte 3D-Gitter zeichnen: Torus Knot Mesh, Crystal Cluster Mesh und Orbit Rings Mesh. Sie stehen im Bibliothek-Tab wie jeder andere Clip, folgen Farben, Tempo und Größe der Ebene, pulsieren mit Bass und Kick und laufen durch dieselben Effekte.
+
+Um ein eigenes Modell zu spielen, lege eine `.glb`- oder `.gltf`-Datei in den Modellordner (`%APPDATA%\NyrexVJ\models`, der Bibliothek-Tab zeigt den Pfad und hat einen Knopf, der ihn öffnet) und starte NyrexVJ neu. Sie erscheint als `Model: Dateiname`. Unterstützt werden Texturen (PNG und JPEG), Knoten-Animation und mehrere Gitter. Ein Modell lädt im Hintergrund, sobald ein Deck es zum ersten Mal enthält, das Bild bleibt also nie stehen, und eine beschädigte, zu große oder nicht unterstützte Datei wird mit einer Meldung im Log und im Clip-Tooltip abgelehnt. Ebenen, die dasselbe Modell spielen, teilen es sich im Speicher.
+
+Noch nicht unterstützt: Charaktere mit Skelett, Morph-Targets, Lichter und Kameras aus der Datei, Draco- oder Meshopt-Kompression, Transparenz und PBR-Materialien (die Grundfarbe wird beleuchtet und deckend gezeichnet). Alle Grenzen und die Messwerte stehen in [docs/SCENE3D.md](docs/SCENE3D.md).
 
 ## Presets
 
@@ -183,7 +192,8 @@ NyrexVJ/
 │   ├── audio/      WASAPI-Aufnahme und Loopback, FFT-Analyse, Beat- und Tempo-Erkennung
 │   ├── control/    OSC-Parser und UDP-Eingang, MIDI-Eingang, Lern-Zuordnung, Steuerziele
 │   ├── core/       Kompositionsmodell, Presets, Einstellungen, i18n, Log, SHA-256
-│   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, Ausgabefenster, Spout
+│   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, 3D-Szenen-Player, Ausgabefenster, Spout
+│   ├── scene3d/    glTF/GLB-Lader mit Sicherheitsgrenzen, Szenenmodell, eingebaute 3D-Szenen, GLB-Schreiber
 │   ├── update/     Update-Prüfung, Installer, Changelog-Parser
 │   ├── platform/   Windows- und Ersatz-Plattformcode
 │   └── main.cpp
@@ -262,6 +272,8 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--fresh` | Gespeicherte Sitzung ignorieren |
 | `--no-update-check` | Update-Prüfung überspringen |
 | `--check-shaders` | Alle Shader kompilieren und beenden |
+| `--bench-scene EBENEN:FRAMES[:CLIP]` | Bildzeiten und Speicher messen, mit EBENEN (1 bis 4) Ebenen, die CLIP spielen, dann beenden |
+| `--bench-out DATEI.json` | Mit `--bench-scene` das Ergebnis zusätzlich als JSON schreiben |
 | `--frames N` | N Frames mit festen 60 FPS rendern, dann beenden |
 | `--screenshot DATEI.png` | Mit `--frames` das Fenster als PNG speichern |
 | `--dump-output DATEI.png` | Mit `--frames` die Engine-Ausgabe als PNG speichern |
@@ -282,6 +294,7 @@ Nutzerdaten liegen unter Windows in `%APPDATA%\NyrexVJ` und unter Linux in `~/.c
 - [Spout2](https://github.com/leadedge/Spout2) (BSD 2-Clause), nur Windows
 - [glad](https://github.com/Dav1dde/glad) generierter OpenGL-Loader (WTFPL oder CC0, dazu Apache-2.0 für die Khronos-Teile)
 - [stb_image_write](https://github.com/nothings/stb) (gemeinfrei oder MIT)
+- [stb_image](https://github.com/nothings/stb) (gemeinfrei oder MIT), liest PNG- und JPEG-Texturen von 3D-Modellen
 - [nlohmann/json](https://github.com/nlohmann/json) (MIT)
 
 ## Lizenz

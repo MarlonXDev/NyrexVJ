@@ -2,6 +2,7 @@
 #include "app/bench.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
+#include "render/spout_input.hpp"
 #include "app/theme.hpp"
 
 #include <glad/gl.h>
@@ -122,6 +123,8 @@ Options parseOptions(int argc, char** argv) {
             if (hasValue && argv[i + 1][0] != '-') {
                 options.start.creator = argv[++i];
             }
+        } else if (arg == "--spout-test-pattern") {
+            nvj::SpoutInput::setTestPattern(true);
         } else if (arg == "--welcome") {
             options.start.forceWelcome = true;
         } else if (arg == "--no-welcome") {

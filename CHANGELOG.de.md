@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.10.0 - 2026-11-18
+
+- Spout-Eingang: Vier neue Clips, Spout Input 1 bis 4, zeigen das Bild eines anderen Programms, das per Spout sendet, zum Beispiel Unreal Engine, TouchDesigner oder ein Spiel (Windows). Wähle den Sender im Clip-Fenster oder lass ihn auf Automatisch. Das Bild wird in die Ebene eingepasst, nimmt Effekte wie jeder andere Clip, verbindet sich von selbst wieder, wenn der Sender zurückkehrt, und zeigt einen Platzhalter, solange keiner da ist.
+- OSC-Ausgabe: Einstellungen, Steuerung, OSC-Ausgabe schickt Tempo, Beats, Bass, Mitten, Höhen, Pegel, Kick und 32 Spektrumbänder an jedes Programm, das auf OSC lauscht, standardmäßig 60 Mal pro Sekunde (standardmäßig aus, nur dieser Computer, solange du keine andere Adresse einträgst). Die Nachrichten sind dokumentiert und versioniert, Schema 1.
+- Eigene Werte per OSC: Füge bis zu 16 benannte Parameter hinzu, die jeweils einem Regler von NyrexVJ folgen, etwa der Deckkraft einer Ebene oder dem Master-Pegel, und empfange sie als /nyrex/out/param/name mit einem Wert von 0 bis 1.
+- Unreal Engine: Die neue Anleitung docs/UNREAL.md erklärt, wie du Unreal-Bilder über ein Spout-Plugin aus der Community hereinholst und die OSC-Daten mit dem eingebauten OSC-Plugin von Unreal liest. Es gibt kein NyrexVJ-Plugin für Unreal, und der Spout-Eingang wurde noch nicht mit einem echten Unreal-Sender ausprobiert, siehe Anleitung.
+
 ## 0.9.0 - 2026-11-18
 
 - Clip Creator: Das neue Menü Creator öffnet ein Fenster, in dem du eigene 3D-Szenen baust. Füge Kugeln, Würfel, Zylinder, Kegel, Flächen, Ringe, Torusknoten und deine eigenen .glb-Modelle hinzu, platziere, drehe und skaliere sie, wiederhole jedes Objekt in einem Ring oder einer Reihe, setze bis zu vier Lichter und sieh das Ergebnis live in einer Vorschau, die du mit der Maus umkreisen kannst. Rückgängig, Wiederherstellen und vier fertige Vorlagen (die neuen Mesh-Szenen) sind dabei.

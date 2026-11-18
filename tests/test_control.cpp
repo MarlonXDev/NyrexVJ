@@ -1,6 +1,7 @@
 #include "check.hpp"
 
 #include "control/control_system.hpp"
+#include "control/osc_out.hpp"
 #include "core/settings.hpp"
 
 #include <chrono>
@@ -53,6 +54,191 @@ OscMessage message(const std::string& address, std::vector<OscArgument> argument
     result.address = address;
     result.arguments = std::move(arguments);
     return result;
+}
+
+const OscMessage* find(const std::vector<OscMessage>& list, const std::string& address) {
+    for (const OscMessage& item : list) {
+        if (item.address == address) {
+            return &item;
+        }
+    }
+    return nullptr;
+}
+
+void testRouterValues() {
+    Composition comp;
+    FakeHost host;
+    ControlRouter router(comp, host);
+    const char* ids[] = {"master/level", "master/bpm", "master/hue", "master/saturation", "master/brightness", "master/contrast", "layer/1/opacity", "layer/2/speed", "layer/3/scale", "layer/1/fx/2/param/3", "layer/4/hue"};
+    for (const char* id : ids) {
+        for (const float value : {0.0f, 0.25f, 0.5f, 1.0f}) {
+            CHECK(router.set(index(id), value, false));
+            CHECK(near(router.value(index(id)), value));
+        }
+    }
+    CHECK(router.set(index("layer/1/bypass"), 1.0f, false));
+    CHECK(near(router.value(index("layer/1/bypass")), 1.0f));
+    CHECK(router.set(index("layer/1/bypass"), 0.0f, false));
+    CHECK(near(router.value(index("layer/1/bypass")), 0.0f));
+    CHECK(near(router.value(index("master/tap")), 0.0f));
+    CHECK(near(router.value(-1), 0.0f));
+    CHECK(near(router.value(100000), 0.0f));
+}
+
+void testOscOutCompose() {
+    CHECK(validOscParamName("glow"));
+    CHECK(validOscParamName("Layer-1_a"));
+    CHECK(!validOscParamName(""));
+    CHECK(!validOscParamName("a b"));
+    CHECK(!validOscParamName("a/b"));
+    CHECK(!validOscParamName(std::string(33, 'a')));
+    CHECK(validOscParamName(std::string(32, 'a')));
+
+    Composition comp;
+    FakeHost host;
+    ControlRouter router(comp, host);
+    router.set(index("layer/1/opacity"), 0.75f, false);
+    router.set(index("master/level"), 0.5f, false);
+
+    OscOutConfig config;
+    config.enabled = true;
+    config.version = "9.9.9";
+    config.inputPort = 9010;
+    config.params = {{"opa", "layer/1/opacity"}, {"lvl", "master/level"}, {"bad name", "master/level"}, {"unknown", "no/such/target"}, {"trig", "master/tap"}, {"opa", "layer/2/opacity"}, {"ok", "layer/2/opacity"}};
+    OscSender sender;
+    sender.configure(config);
+    CHECK(sender.parameterCount() == 3);
+
+    AudioFeatures audio;
+    audio.bass = 0.4f;
+    audio.mid = 2.0f;
+    audio.high = -1.0f;
+    audio.level = 0.9f;
+    audio.kick = 0.1f;
+    audio.beatCount = 5;
+    for (int i = 0; i < kSpectrumBins; ++i) {
+        audio.spectrum[static_cast<size_t>(i)] = i < 4 ? 0.8f : 0.0f;
+    }
+    OscOutFrame frame;
+    frame.audio = audio;
+    frame.bpm = 128.0f;
+    frame.beat = 3.25;
+
+    std::vector<OscMessage> first = sender.compose(frame, router, true);
+    const OscMessage* a = find(first, "/nyrex/out/audio");
+    CHECK(a != nullptr && a->arguments.size() == 5);
+    if (a != nullptr && a->arguments.size() == 5) {
+        CHECK(near(a->arguments[0].number, 0.4f));
+        CHECK(near(a->arguments[1].number, 1.0f));
+        CHECK(near(a->arguments[2].number, 0.0f));
+        CHECK(near(a->arguments[3].number, 0.9f));
+        CHECK(near(a->arguments[4].number, 0.1f));
+    }
+    const OscMessage* spectrum = find(first, "/nyrex/out/spectrum");
+    CHECK(spectrum != nullptr && spectrum->arguments.size() == static_cast<size_t>(kOscSpectrumBands));
+    if (spectrum != nullptr && spectrum->arguments.size() == static_cast<size_t>(kOscSpectrumBands)) {
+        CHECK(near(spectrum->arguments[0].number, 0.8f));
+        CHECK(near(spectrum->arguments[1].number, 0.0f));
+    }
+    const OscMessage* clock = find(first, "/nyrex/out/clock");
+    CHECK(clock != nullptr && clock->arguments.size() == 3);
+    if (clock != nullptr && clock->arguments.size() == 3) {
+        CHECK(near(clock->arguments[0].number, 128.0f));
+        CHECK(clock->arguments[1].type == OscArgument::Type::Int && static_cast<int>(clock->arguments[1].number) == 3);
+        CHECK(near(clock->arguments[2].number, 0.25f));
+    }
+    const OscMessage* opa = find(first, "/nyrex/out/param/opa");
+    CHECK(opa != nullptr && opa->arguments.size() == 1 && near(opa->arguments[0].number, 0.75f));
+    const OscMessage* lvl = find(first, "/nyrex/out/param/lvl");
+    CHECK(lvl != nullptr && near(lvl->arguments[0].number, 0.5f));
+    CHECK(find(first, "/nyrex/out/param/ok") != nullptr);
+    CHECK(find(first, "/nyrex/out/param/trig") == nullptr);
+    CHECK(find(first, "/nyrex/out/beat") == nullptr);
+    CHECK(find(first, "/nyrex/out/onset") == nullptr);
+
+    frame.beat = 3.9;
+    CHECK(find(sender.compose(frame, router, true), "/nyrex/out/beat") == nullptr);
+    frame.beat = 4.05;
+    audio.beatCount = 6;
+    frame.audio = audio;
+    std::vector<OscMessage> events = sender.compose(frame, router, false);
+    CHECK(events.size() == 2);
+    const OscMessage* beat = find(events, "/nyrex/out/beat");
+    CHECK(beat != nullptr && beat->arguments.size() == 2);
+    if (beat != nullptr && beat->arguments.size() == 2) {
+        CHECK(static_cast<int>(beat->arguments[0].number) == 4);
+        CHECK(static_cast<int>(beat->arguments[1].number) == 0);
+    }
+    const OscMessage* onset = find(events, "/nyrex/out/onset");
+    CHECK(onset != nullptr && onset->arguments.size() == 1 && static_cast<int>(onset->arguments[0].number) == 6);
+    CHECK(sender.compose(frame, router, false).empty());
+    frame.beat = 1.0;
+    CHECK(sender.compose(frame, router, false).empty());
+    frame.beat = 2.1;
+    CHECK(find(sender.compose(frame, router, false), "/nyrex/out/beat") != nullptr);
+
+    std::vector<OscMessage> greeting = sender.hello();
+    CHECK(greeting.size() == 1 && greeting[0].address == "/nyrex/out/hello" && greeting[0].arguments.size() == 4);
+    if (greeting[0].arguments.size() == 4) {
+        CHECK(greeting[0].arguments[0].text == "NyrexVJ");
+        CHECK(static_cast<int>(greeting[0].arguments[1].number) == kOscSchema);
+        CHECK(greeting[0].arguments[2].text == "9.9.9");
+        CHECK(static_cast<int>(greeting[0].arguments[3].number) == 9010);
+    }
+    std::vector<OscMessage> goodbye = sender.bye();
+    CHECK(goodbye.size() == 1 && goodbye[0].address == "/nyrex/out/bye");
+
+    std::vector<OscMessage> decoded;
+    std::vector<unsigned char> packet = encodeOscBundle(first);
+    CHECK(parseOscPacket(packet.data(), packet.size(), decoded));
+    CHECK(decoded.size() == first.size());
+
+    OscOutConfig full = config;
+    full.params.clear();
+    for (int i = 0; i < 30; ++i) {
+        full.params.push_back({"p" + std::to_string(i), "master/level"});
+    }
+    sender.configure(full);
+    CHECK(sender.parameterCount() == kOscMaxParams);
+    full.spectrum = false;
+    sender.configure(full);
+    CHECK(find(sender.compose(frame, router, true), "/nyrex/out/spectrum") == nullptr);
+}
+
+void testOscOutSettings() {
+    std::filesystem::path dir = std::filesystem::temp_directory_path() / "nyrexvj_oscout_test_data";
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+    std::filesystem::create_directories(dir, ec);
+#ifdef _WIN32
+    _putenv_s("NYREXVJ_DATA_DIR", dir.string().c_str());
+#else
+    setenv("NYREXVJ_DATA_DIR", dir.string().c_str(), 1);
+#endif
+    Settings settings;
+    CHECK(!settings.oscOutEnabled);
+    CHECK(settings.oscOutHost == "127.0.0.1");
+    CHECK(settings.oscOutPort == 9011);
+    CHECK(settings.oscOutRate == 60);
+    CHECK(settings.oscOutSpectrum);
+    settings.oscOutEnabled = true;
+    settings.oscOutHost = "192.168.1.20";
+    settings.oscOutPort = 7000;
+    settings.oscOutRate = 30;
+    settings.oscOutSpectrum = false;
+    settings.oscOutParams = {{"glow", "layer/1/opacity"}, {"speed", "layer/2/speed"}};
+    settings.spoutInputs[1] = "Unreal Main";
+    CHECK(saveSettings(settings));
+    Settings loaded;
+    CHECK(loadSettings(loaded));
+    CHECK(loaded.oscOutEnabled);
+    CHECK(loaded.oscOutHost == "192.168.1.20");
+    CHECK(loaded.oscOutPort == 7000);
+    CHECK(loaded.oscOutRate == 30);
+    CHECK(!loaded.oscOutSpectrum);
+    CHECK(loaded.oscOutParams.size() == 2 && loaded.oscOutParams[0].name == "glow" && loaded.oscOutParams[1].target == "layer/2/speed");
+    CHECK(loaded.spoutInputs[0].empty() && loaded.spoutInputs[1] == "Unreal Main");
+    std::filesystem::remove_all(dir, ec);
 }
 
 void testOscParser() {
@@ -442,6 +628,90 @@ void testUdp() {
     system.configure(config);
     CHECK(!system.oscListening());
 }
+
+void testOscOutUdp() {
+    Composition comp;
+    FakeHost host;
+    ControlRouter router(comp, host);
+    router.set(index("layer/1/opacity"), 0.6f, false);
+
+    UdpSocket listener;
+    std::string error;
+    int port = 0;
+    for (int candidate = 19700; candidate < 19800 && !listener.isOpen(); ++candidate) {
+        if (listener.open(candidate, false, error)) {
+            port = candidate;
+        }
+    }
+    CHECK(listener.isOpen());
+
+    OscOutConfig config;
+    config.enabled = true;
+    config.host = "localhost";
+    config.port = port;
+    config.rate = 120;
+    config.version = "1.2.3";
+    config.params = {{"opa", "layer/1/opacity"}};
+    OscSender sender;
+    sender.configure(config);
+    CHECK(sender.sending());
+    CHECK(sender.error().empty());
+
+    OscOutFrame frame;
+    frame.bpm = 140.0f;
+    frame.audio.bass = 0.5f;
+    std::vector<OscMessage> all;
+    for (int step = 0; step < 6; ++step) {
+        frame.beat = 1.0 + step * 0.4;
+        sender.update(0.01, frame, router);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        unsigned char buffer[2048];
+        for (int n = listener.receive(buffer, sizeof(buffer)); n > 0; n = listener.receive(buffer, sizeof(buffer))) {
+            std::vector<OscMessage> decoded;
+            CHECK(parseOscPacket(buffer, static_cast<size_t>(n), decoded));
+            all.insert(all.end(), decoded.begin(), decoded.end());
+        }
+    }
+    CHECK(sender.packets() >= 3);
+    CHECK(find(all, "/nyrex/out/hello") != nullptr);
+    const OscMessage* audio = find(all, "/nyrex/out/audio");
+    CHECK(audio != nullptr && audio->arguments.size() == 5 && near(audio->arguments[0].number, 0.5f));
+    const OscMessage* clock = find(all, "/nyrex/out/clock");
+    CHECK(clock != nullptr && clock->arguments.size() == 3 && near(clock->arguments[0].number, 140.0f));
+    const OscMessage* opa = find(all, "/nyrex/out/param/opa");
+    CHECK(opa != nullptr && opa->arguments.size() == 1 && near(opa->arguments[0].number, 0.6f));
+    CHECK(find(all, "/nyrex/out/beat") != nullptr);
+
+    config.enabled = false;
+    sender.configure(config);
+    CHECK(!sender.sending());
+    bool bye = false;
+    for (int attempt = 0; attempt < 20 && !bye; ++attempt) {
+        unsigned char buffer[2048];
+        const int n = listener.receive(buffer, sizeof(buffer));
+        if (n > 0) {
+            std::vector<OscMessage> decoded;
+            parseOscPacket(buffer, static_cast<size_t>(n), decoded);
+            bye = find(decoded, "/nyrex/out/bye") != nullptr;
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+    }
+    CHECK(bye);
+
+    OscOutConfig bad;
+    bad.enabled = true;
+    bad.host = "not-an-address";
+    OscSender broken;
+    broken.configure(bad);
+    CHECK(!broken.sending());
+    CHECK(!broken.error().empty());
+    bad.host = "127.0.0.1";
+    bad.port = 0;
+    broken.configure(bad);
+    CHECK(!broken.sending());
+    CHECK(!broken.error().empty());
+}
 #endif
 
 }
@@ -450,10 +720,14 @@ int main() {
     testOscParser();
     testTargets();
     testRouter();
+    testRouterValues();
+    testOscOutCompose();
+    testOscOutSettings();
     testMidi();
     testLearnAndFiles();
 #ifndef _WIN32
     testUdp();
+    testOscOutUdp();
 #endif
     return testing::finish();
 }

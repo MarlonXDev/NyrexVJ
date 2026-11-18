@@ -104,6 +104,42 @@ bool loadSettings(Settings& settings) {
     if (midiDevice != doc.end() && midiDevice->is_string()) {
         result.midiDevice = midiDevice->get<std::string>();
     }
+    result.oscOutEnabled = boolean("oscOutEnabled", false);
+    result.oscOutSpectrum = boolean("oscOutSpectrum", true);
+    auto oscOutHost = doc.find("oscOutHost");
+    if (oscOutHost != doc.end() && oscOutHost->is_string() && !oscOutHost->get<std::string>().empty()) {
+        result.oscOutHost = oscOutHost->get<std::string>().substr(0, 64);
+    }
+    auto oscOutPort = doc.find("oscOutPort");
+    if (oscOutPort != doc.end() && oscOutPort->is_number_integer()) {
+        result.oscOutPort = std::clamp(oscOutPort->get<int>(), 1, 65535);
+    }
+    auto oscOutRate = doc.find("oscOutRate");
+    if (oscOutRate != doc.end() && oscOutRate->is_number_integer()) {
+        result.oscOutRate = std::clamp(oscOutRate->get<int>(), 10, 120);
+    }
+    auto oscOutParams = doc.find("oscOutParams");
+    if (oscOutParams != doc.end() && oscOutParams->is_array()) {
+        for (const nlohmann::json& entry : *oscOutParams) {
+            if (result.oscOutParams.size() >= 16 || !entry.is_object()) {
+                continue;
+            }
+            auto name = entry.find("name");
+            auto target = entry.find("target");
+            if (name != entry.end() && name->is_string() && target != entry.end() && target->is_string()) {
+                result.oscOutParams.push_back({name->get<std::string>().substr(0, 32), target->get<std::string>().substr(0, 80)});
+            }
+        }
+    }
+    auto spoutInputs = doc.find("spoutInputs");
+    if (spoutInputs != doc.end() && spoutInputs->is_array()) {
+        for (size_t i = 0; i < spoutInputs->size() && i < result.spoutInputs.size(); ++i) {
+            if ((*spoutInputs)[i].is_string()) {
+                result.spoutInputs[i] = (*spoutInputs)[i].get<std::string>().substr(0, 256);
+            }
+        }
+    }
+    result.spoutInputFlip = boolean("spoutInputFlip", false);
     settings = result;
     return true;
 }
@@ -133,6 +169,18 @@ bool saveSettings(const Settings& settings) {
     doc["oscPort"] = settings.oscPort;
     doc["oscAllowRemote"] = settings.oscAllowRemote;
     doc["midiDevice"] = settings.midiDevice;
+    doc["oscOutEnabled"] = settings.oscOutEnabled;
+    doc["oscOutHost"] = settings.oscOutHost;
+    doc["oscOutPort"] = settings.oscOutPort;
+    doc["oscOutRate"] = settings.oscOutRate;
+    doc["oscOutSpectrum"] = settings.oscOutSpectrum;
+    nlohmann::json params = nlohmann::json::array();
+    for (const OscOutParam& param : settings.oscOutParams) {
+        params.push_back({{"name", param.name}, {"target", param.target}});
+    }
+    doc["oscOutParams"] = params;
+    doc["spoutInputs"] = nlohmann::json(settings.spoutInputs);
+    doc["spoutInputFlip"] = settings.spoutInputFlip;
     std::ofstream file(settingsPath(), std::ios::binary | std::ios::trunc);
     if (!file) {
         return false;

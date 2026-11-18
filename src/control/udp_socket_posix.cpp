@@ -10,6 +10,8 @@ namespace nvj {
 
 struct UdpSocket::Impl {
     int handle = -1;
+    sockaddr_in target{};
+    bool hasTarget = false;
 };
 
 UdpSocket::UdpSocket() : impl_(std::make_unique<Impl>()) {}
@@ -51,6 +53,42 @@ void UdpSocket::close() {
         ::close(impl_->handle);
         impl_->handle = -1;
     }
+    impl_->hasTarget = false;
+}
+
+bool UdpSocket::connectTo(const std::string& host, int port, std::string& error) {
+    close();
+    if (port < 1 || port > 65535) {
+        error = "The OSC output port must be between 1 and 65535";
+        return false;
+    }
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(static_cast<unsigned short>(port));
+    const std::string literal = host == "localhost" ? std::string("127.0.0.1") : host;
+    if (::inet_pton(AF_INET, literal.c_str(), &address.sin_addr) != 1) {
+        error = "The OSC output address must be an IPv4 address or localhost";
+        return false;
+    }
+    const int handle = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (handle < 0) {
+        error = "Could not create the OSC output socket";
+        return false;
+    }
+    const int flags = ::fcntl(handle, F_GETFL, 0);
+    ::fcntl(handle, F_SETFL, flags | O_NONBLOCK);
+    impl_->handle = handle;
+    impl_->target = address;
+    impl_->hasTarget = true;
+    return true;
+}
+
+bool UdpSocket::send(const unsigned char* data, int size) {
+    if (impl_->handle < 0 || !impl_->hasTarget || size <= 0) {
+        return false;
+    }
+    const ssize_t sent = ::sendto(impl_->handle, data, static_cast<size_t>(size), 0, reinterpret_cast<const sockaddr*>(&impl_->target), sizeof(impl_->target));
+    return sent == size;
 }
 
 bool UdpSocket::isOpen() const {

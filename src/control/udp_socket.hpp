@@ -16,6 +16,8 @@ public:
     void close();
     bool isOpen() const;
     int receive(unsigned char* buffer, int capacity);
+    bool connectTo(const std::string& host, int port, std::string& error);
+    bool send(const unsigned char* data, int size);
     static bool sendLoopback(int port, const unsigned char* data, int size);
 
 private:

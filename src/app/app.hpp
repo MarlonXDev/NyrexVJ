@@ -4,6 +4,7 @@
 #include "app/engine_host.hpp"
 #include "audio/audio_system.hpp"
 #include "control/control_system.hpp"
+#include "control/osc_out.hpp"
 #include "core/i18n.hpp"
 #include "core/settings.hpp"
 #include "render/engine.hpp"
@@ -107,6 +108,7 @@ private:
     void drawUpdateSection();
     void drawControlPage();
     void drawOscSection();
+    void drawOscOutSection();
     void drawMidiSection();
     void drawBindingsSection();
     void drawAudioSource();
@@ -123,6 +125,7 @@ private:
     void drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots);
     void drawOutputControls();
     void drawSpoutControls();
+    void drawSpoutInputControls(int slot);
     void loadComposition(const Composition& comp, const std::string& message);
     void saveCurrentPreset();
     void refreshUserPresets();
@@ -135,6 +138,7 @@ private:
     Engine engine_;
     EngineControlHost controlHost_{engine_};
     ControlSystem control_{engine_.comp, controlHost_};
+    OscSender oscOut_;
     Settings settings_;
     Updater updater_;
     OutputWindow output_;
@@ -164,6 +168,8 @@ private:
     int outputMonitor_ = 0;
     char presetName_[64] = {};
     char spoutName_[64] = {};
+    char oscOutFilter_[64] = {};
+    int oscOutPick_ = -1;
     std::string selectedUserPreset_;
     std::vector<std::string> userPresets_;
     std::string toastText_;

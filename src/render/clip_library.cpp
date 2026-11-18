@@ -6,6 +6,7 @@
 #include <set>
 
 #include "core/log.hpp"
+#include "core/settings.hpp"
 #include "render/clip_library_extra.hpp"
 #include "scene3d/procedural.hpp"
 
@@ -142,6 +143,33 @@ std::vector<AssetFile> listFiles(const std::string& directory, std::initializer_
     }
     std::sort(out.begin(), out.end(), [](const AssetFile& a, const AssetFile& b) { return lowerCase(a.name) < lowerCase(b.name); });
     return out;
+}
+
+const char* kSpoutPlaceholder = R"glsl(
+void main() {
+    vec2 p = centered();
+    float ring = abs(length(p) - 0.55 - 0.03 * sin(uTime * 2.0));
+    float r = ss(0.03, 0.0, ring);
+    float stripes = ss(0.45, 0.5, abs(fract((p.x + p.y) * 3.0 - uTime * 0.2) - 0.5)) * 0.08;
+    float dots = 0.0;
+    for (int i = 0; i < kSlot; ++i) {
+        vec2 q = p - vec2((float(i) - 0.5 * float(kSlot - 1)) * 0.18, -0.78);
+        dots += ss(0.05, 0.03, length(q));
+    }
+    vec3 col = duo(0.3) * (r * 0.8 + stripes) + duo(0.9) * dots;
+    fragColor = vec4(col, 1.0);
+}
+)glsl";
+
+void appendSpoutClips(std::vector<ClipDef>& clips) {
+    for (int slot = 0; slot < kSpoutInputSlots; ++slot) {
+        ClipDef def;
+        def.name = "Spout Input " + std::to_string(slot + 1);
+        def.body = "const int kSlot = " + std::to_string(slot + 1) + ";\n" + kSpoutPlaceholder;
+        def.kind = ClipKind::SpoutSource;
+        def.sceneIndex = slot;
+        clips.push_back(std::move(def));
+    }
 }
 
 void appendSceneClips(std::vector<ClipDef>& clips) {
@@ -633,6 +661,7 @@ void main() {
 )glsl", false});
 
     appendExtraClips(clips);
+    appendSpoutClips(clips);
     appendSceneClips(clips);
     return clips;
 }

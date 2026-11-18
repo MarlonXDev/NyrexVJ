@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.9.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.10.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -138,6 +138,7 @@ set(NYREXVJ_CORE_SOURCES
     src/control/control_targets.cpp
     src/control/midi_map.cpp
     src/control/osc.cpp
+    src/control/osc_out.cpp
     src/update/update_logic.cpp
     src/update/updater.cpp
 )
@@ -184,12 +185,12 @@ set(NYREXVJ_APP_SOURCES
 )
 
 if(WIN32)
-    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_win.cpp)
+    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_win.cpp src/render/spout_input_win.cpp)
     set(NYREXVJ_ICON_PATH "${CMAKE_SOURCE_DIR}/resources/nyrexvj.ico")
     configure_file(resources/nyrexvj.rc.in ${CMAKE_BINARY_DIR}/nyrexvj.rc @ONLY)
     list(APPEND NYREXVJ_APP_SOURCES ${CMAKE_BINARY_DIR}/nyrexvj.rc)
 else()
-    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_other.cpp)
+    list(APPEND NYREXVJ_APP_SOURCES src/render/spout_output_other.cpp src/render/spout_input_other.cpp)
 endif()
 
 add_executable(NyrexVJ ${NYREXVJ_APP_SOURCES})

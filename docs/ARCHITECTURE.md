@@ -12,7 +12,7 @@
 - `src/scene3d`: glTF/GLB loader with safety limits, scene model, built-in 3D scenes (no OpenGL, unit tested).
 - `src/platform`: platform-specific integration.
 - `src/update`: updater.
-- Spout sender and fullscreen output are documented; a Spout receiver is not.
+- Spout sender, a Spout receiver with four input slots (v0.10.0, see [ADR 0007](adr/0007-spout-receiver.md)) and the fullscreen output are documented.
 
 Inspect source and tests before claiming exact internal ownership, threading, or data flow.
 
@@ -44,6 +44,7 @@ The diagram is a target abstraction, not a description of existing code.
 - First validate a Windows proof of concept for Unreal-rendered video -> Spout -> NyrexVJ Spout receiver.
 - Investigate interoperability between Unreal's graphics backend and NyrexVJ's OpenGL rendering, including GPU sharing, synchronization, and fallback behavior.
 - Use OSC for parameter control, tempo/beat and audio analysis values; define a versioned protocol before building a public SDK.
+- Since v0.10.0 the Spout receiver and a versioned OSC output (schema 1, [ADR 0008](adr/0008-osc-output-protocol.md)) exist and are described in [UNREAL.md](UNREAL.md). They were tested without Unreal Engine and without Windows hardware, so the proof of concept is not finished.
 - A future Unreal plugin could expose Blueprint nodes and controllable parameters, but these are proposals, not existing APIs.
 - Consider a reusable NyrexVJ control protocol for other creative tools.
 

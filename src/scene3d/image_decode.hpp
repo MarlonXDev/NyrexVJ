@@ -9,5 +9,6 @@
 namespace nvj {
 
 bool decodeSceneImage(const uint8_t* data, size_t size, int maxDimension, size_t maxBytes, SceneImage& out, std::string& error);
+bool decodeMediaImage(const uint8_t* data, size_t size, int maxDimension, size_t maxBytes, SceneImage& out, std::string& error);
 
 }

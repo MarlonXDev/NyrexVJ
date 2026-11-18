@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0 - 2026-11-19
+
+- Image clips: put .png, .jpg, .bmp, .tga or .gif files into the new media folder, or drag them onto the NyrexVJ window, and they appear in the Library as clips (filter Media). PNG and TGA keep their transparency, so a logo with soft edges lies over the layers below it. Every layer is now composited with transparency; all older looks render exactly as before.
+- Video clips: .mp4, .mov, .m4v, .mkv, .avi and .webm files play as clips, including H.264 and HAP (also with transparency). Videos loop with the tempo, follow Speed and Pause, never stall the picture while they load and are released when unused. Video needs the FFmpeg libraries, which are not part of NyrexVJ: the Clip window of a video clip shows the files you need and the folder to put them in, see docs/MEDIA.md.
+- Dragging files onto the window copies images, videos and 3D models into the right folder and adds them to the Library at once.
+
 ## 0.12.0 - 2026-11-19
 
 - Macros: eight knobs, Macro 1 to 8, in the Master panel under Macros and LFOs. Pick a macro as the source of any audio reactivity slot, of a layer, of the master or of an effect, and one knob moves everything that uses it. The knobs can be mapped to a MIDI controller or driven over OSC like every other control (macro/1 to macro/8).

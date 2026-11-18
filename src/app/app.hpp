@@ -10,13 +10,16 @@
 #include "core/i18n.hpp"
 #include "core/recovery.hpp"
 #include "core/settings.hpp"
+#include "render/asset_import.hpp"
 #include "render/engine.hpp"
+#include "render/media_player.hpp"
 #include "render/output_window.hpp"
 #include "render/spout_output.hpp"
 #include "update/updater.hpp"
 
 #include <imgui.h>
 
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -92,6 +95,10 @@ private:
     void drawPresetsTab();
     void drawLibraryTab();
     void drawSceneDetails(const ScenePlayer& player);
+    void drawMediaDetails(const MediaPlayer& player, bool tooltip);
+    void drawMediaControls(MediaPlayer& player);
+    void queueDroppedFiles(const std::vector<std::string>& paths);
+    void serviceImports();
     void drawClipTile(int index, const ImVec2& size);
     void drawLibraryClips();
     void drawLibraryEffects();
@@ -170,6 +177,9 @@ private:
     std::vector<AssetFile> assetModels_;
     std::vector<AssetFile> assetTextures_;
     std::vector<AssetFile> assetPacks_;
+    std::vector<AssetFile> assetMedia_;
+    std::vector<std::string> pendingImports_;
+    std::future<std::vector<ImportResult>> importJob_;
     std::unique_ptr<CreatorState> creator_;
     bool creatorOpen_ = false;
     bool creatorFocus_ = false;

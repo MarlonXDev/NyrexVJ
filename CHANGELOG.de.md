@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.13.0 - 2026-11-19
+
+- Bild-Clips: Lege .png-, .jpg-, .bmp-, .tga- oder .gif-Dateien in den neuen Medien-Ordner oder ziehe sie auf das NyrexVJ-Fenster, dann erscheinen sie als Clips in der Bibliothek (Filter Medien). PNG und TGA behalten ihre Transparenz, ein Logo mit weichen Kanten liegt also sauber über den Ebenen darunter. Jede Ebene wird jetzt mit Transparenz zusammengesetzt; alle älteren Looks sehen genau so aus wie vorher.
+- Video-Clips: .mp4-, .mov-, .m4v-, .mkv-, .avi- und .webm-Dateien laufen als Clips, auch H.264 und HAP (auch mit Transparenz). Videos laufen in Schleife im Tempo, folgen Geschwindigkeit und Pause, lassen das Bild beim Laden nie stocken und werden freigegeben, wenn sie nicht gebraucht werden. Video braucht die FFmpeg-Bibliotheken, die nicht zu NyrexVJ gehören: Das Clip-Fenster eines Video-Clips zeigt die nötigen Dateien und den Ordner dafür, siehe docs/MEDIA.md.
+- Dateien auf das Fenster ziehen kopiert Bilder, Videos und 3D-Modelle in den richtigen Ordner und fügt sie sofort der Bibliothek hinzu.
+
 ## 0.12.0 - 2026-11-19
 
 - Makros: acht Regler, Makro 1 bis 8, im Master-Bereich unter Makros und LFOs. Wähle ein Makro als Quelle eines beliebigen Audio-Reaktivitäts-Slots, einer Ebene, des Masters oder eines Effekts, dann bewegt ein Regler alles, was es nutzt. Die Regler lassen sich auf einen MIDI-Controller legen oder wie jede andere Steuerung per OSC bedienen (macro/1 bis macro/8).

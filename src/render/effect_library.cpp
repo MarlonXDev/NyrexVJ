@@ -104,7 +104,10 @@ const char* kEffectFooter = R"glsl(
 vec4 effect(vec2 uv, vec4 p);
 void main() {
     vec4 e = effect(vUv, uParams);
-    fragColor = uMix >= 0.999 ? e : mix(texture(uTex, vUv), e, clamp(uMix, 0.0, 1.0));
+    vec4 s = texture(uTex, vUv);
+    float alpha = s.a >= 0.999 ? 1.0 : clamp(max(s.a, max(e.r, max(e.g, e.b))), 0.0, 1.0);
+    vec4 o = vec4(e.rgb, alpha);
+    fragColor = uMix >= 0.999 ? o : mix(s, o, clamp(uMix, 0.0, 1.0));
 }
 )glsl";
 

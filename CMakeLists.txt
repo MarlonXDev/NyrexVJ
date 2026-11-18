@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.12.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.13.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -112,6 +112,7 @@ set(NYREXVJ_CORE_SOURCES
     src/audio/audio_analyzer.cpp
     src/audio/audio_system.cpp
     src/audio/synthetic_source.cpp
+    src/render/asset_import.cpp
     src/render/clip_library.cpp
     src/render/clips_extra.cpp
     src/core/clip_pack.cpp
@@ -129,6 +130,9 @@ set(NYREXVJ_CORE_SOURCES
     src/core/modulation.cpp
     src/core/edit_history.cpp
     src/core/frame_stats.cpp
+    src/media/ffmpeg_dyn.cpp
+    src/media/media_image.cpp
+    src/media/video_decoder.cpp
     src/core/recovery.cpp
     src/core/crash_handler.cpp
     src/render/effect_library.cpp
@@ -155,6 +159,26 @@ else()
 endif()
 
 add_library(nvj_core STATIC ${NYREXVJ_CORE_SOURCES})
+
+option(NYREXVJ_VIDEO "Build video clip support (needs the FFmpeg headers; the FFmpeg libraries are loaded at run time)" ON)
+set(NYREXVJ_FFMPEG_ROOT "" CACHE PATH "Folder with the FFmpeg include directory (headers only are needed)")
+set(NYREXVJ_HAVE_FFMPEG OFF)
+if(NYREXVJ_VIDEO)
+    find_path(NYREXVJ_FFMPEG_INCLUDE libavcodec/avcodec.h
+        HINTS "${NYREXVJ_FFMPEG_ROOT}/include" "$ENV{FFMPEG_ROOT}/include"
+        PATH_SUFFIXES ffmpeg)
+    if(NYREXVJ_FFMPEG_INCLUDE)
+        set(NYREXVJ_HAVE_FFMPEG ON)
+        message(STATUS "Video clips: FFmpeg headers found in ${NYREXVJ_FFMPEG_INCLUDE}")
+        target_compile_definitions(nvj_core PRIVATE NYREXVJ_HAVE_FFMPEG=1)
+        target_include_directories(nvj_core SYSTEM PRIVATE "${NYREXVJ_FFMPEG_INCLUDE}")
+        if(NOT WIN32)
+            target_link_libraries(nvj_core PUBLIC ${CMAKE_DL_LIBS})
+        endif()
+    else()
+        message(STATUS "Video clips: FFmpeg headers not found, video support is left out of this build")
+    endif()
+endif()
 target_include_directories(nvj_core PUBLIC src)
 target_include_directories(nvj_core SYSTEM PUBLIC third_party/json)
 target_include_directories(nvj_core SYSTEM PRIVATE third_party/stb)
@@ -187,6 +211,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/gl_util.cpp
     src/render/output_window.cpp
     src/render/scene_player.cpp
+    src/render/media_player.cpp
     src/render/stb_impl.cpp
 )
 
@@ -243,6 +268,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_i18n_tests PRIVATE nvj_core)
     target_include_directories(nvj_i18n_tests PRIVATE tests)
     add_test(NAME nvj_i18n_tests COMMAND nvj_i18n_tests)
+    add_executable(nvj_media_tests tests/test_media.cpp)
+    target_link_libraries(nvj_media_tests PRIVATE nvj_core)
+    target_include_directories(nvj_media_tests PRIVATE tests)
+    target_compile_definitions(nvj_media_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
+    add_test(NAME nvj_media_tests COMMAND nvj_media_tests)
     if(WIN32)
         add_executable(nvj_update_tests tests/test_update_replace.cpp)
         target_link_libraries(nvj_update_tests PRIVATE nvj_core)

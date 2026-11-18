@@ -23,7 +23,7 @@ std::string lower(std::string text) {
 }
 
 bool isGlobalItem(ControlItem item) {
-    return item == ControlItem::DeckSelect || item == ControlItem::DeckNext || item == ControlItem::DeckPrevious || item == ControlItem::ColumnTrigger;
+    return item == ControlItem::DeckSelect || item == ControlItem::DeckNext || item == ControlItem::DeckPrevious || item == ControlItem::ColumnTrigger || item == ControlItem::Macro;
 }
 
 std::string itemName(const ControlTarget& target) {
@@ -72,6 +72,8 @@ std::string itemName(const ControlTarget& target) {
         return std::string(tr("Effect")) + " " + std::to_string(target.slot + 1) + " / " + tr("Enable");
     case ControlItem::EffectParam:
         return std::string(tr("Effect")) + " " + std::to_string(target.slot + 1) + " / " + tr("Parameter") + " " + std::to_string(target.param + 1);
+    case ControlItem::Macro:
+        return std::string(tr("Macro")) + " " + std::to_string(target.index + 1);
     }
     return "";
 }

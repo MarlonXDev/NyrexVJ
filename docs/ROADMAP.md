@@ -14,8 +14,8 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 ## Proposed milestones
 
 ### Foundation (candidate v0.5)
-- Review unified parameter and modulation model.
-- Blend modes (14), undo/redo in the main window and a separate preview channel landed in v0.11.0. Macros are still open.
+- Unified parameter and modulation model: every audio band, LFO, macro and beat ramp is one numbered source with one lookup (`modulationSource`), see [MODULATION.md](MODULATION.md). It landed in v0.12.0; parameters themselves are still addressed by the string ids of the control targets.
+- Blend modes (14), undo/redo in the main window and a separate preview channel landed in v0.11.0. Eight macros landed in v0.12.0.
 - Render performance budgets and profiling: frame time budget, CPU/GPU timings, `--bench-comp` and tests landed in v0.11.0; a run on a real GPU is still open.
 - Define stable clip/source/effect/output interfaces.
 
@@ -27,7 +27,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 
 ### Live control (candidate v0.7)
 - OSC output and a documented, versioned OSC protocol (MIDI mapping and OSC input already exist since v0.5.0). OSC output, schema 1, landed in v0.10.0 ([ADR 0008](adr/0008-osc-output-protocol.md), [UNREAL.md](UNREAL.md)).
-- Beatgrid/tempo synchronization improvements and reusable modulation sources.
+- Beatgrid/tempo synchronization improvements and reusable modulation sources. Tap tempo, resync, nudge, /2, x2 and Sync BPM to audio already existed; v0.12.0 adds the beats per bar, grid shifting, the Beat and Bar sources, four LFOs and eight macros.
 - Unreal integration proof of concept: Spout video into NyrexVJ, control/audio data to Unreal via OSC. Both channels exist since v0.10.0 (see [ADR 0002](adr/0002-unreal-integration.md) and [UNREAL.md](UNREAL.md)); a test with a real Unreal Engine and latency measurements are still open.
 
 ### Integrated 3D Clip Creator (candidate v0.8)

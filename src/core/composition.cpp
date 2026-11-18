@@ -10,7 +10,9 @@ namespace nvj {
 namespace {
 
 const char* const kBlendNames[BlendModeCount] = {"Normal", "Add", "Screen", "Multiply", "Subtract", "Difference", "Exclusion", "Overlay", "Soft Light", "Hard Light", "Lighten", "Darken", "Color Dodge", "Linear Burn"};
-const char* const kBandNames[AudioBandCount] = {"Off", "Bass", "Mid", "High", "Level", "Kick"};
+const char* const kBandNames[AudioBandCount] = {"Off", "Bass", "Mid", "High", "Level", "Kick", "LFO 1", "LFO 2", "LFO 3", "LFO 4", "Macro 1", "Macro 2", "Macro 3", "Macro 4", "Macro 5", "Macro 6", "Macro 7", "Macro 8", "Beat", "Bar"};
+const char* const kLfoShapeNames[LfoShapeCount] = {"Sine", "Triangle", "Saw", "Square", "Random", "Smooth random"};
+const char* const kLfoRateNames[kLfoRateCount] = {"1/4 beat", "1/2 beat", "1 beat", "2 beats", "4 beats", "8 beats", "16 beats", "32 beats"};
 const char* const kTargetNames[ModTargetCount] = {"Opacity", "Scale", "Speed", "Hue", "Brightness", "Saturation"};
 const char* const kTransitionNames[TransitionTypeCount] = {"Fade", "Dissolve", "Zoom", "Wipe", "Radial", "Spin", "Slide"};
 const char* const kReactModeNames[EffectReactModeCount] = {"Parameter", "Gate"};
@@ -62,6 +64,24 @@ const char* audioBandName(int band) {
 
 int audioBandFromName(const std::string& name) {
     return indexByName(kBandNames, AudioBandCount, name, BandOff);
+}
+
+const char* lfoShapeName(int shape) {
+    if (shape < 0 || shape >= LfoShapeCount) {
+        return kLfoShapeNames[0];
+    }
+    return kLfoShapeNames[shape];
+}
+
+int lfoShapeFromName(const std::string& name) {
+    return indexByName(kLfoShapeNames, LfoShapeCount, name, LfoSine);
+}
+
+const char* lfoRateName(int rate) {
+    if (rate < 0 || rate >= kLfoRateCount) {
+        return kLfoRateNames[4];
+    }
+    return kLfoRateNames[rate];
 }
 
 const char* modTargetName(int target) {

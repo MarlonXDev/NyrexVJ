@@ -296,6 +296,45 @@ void layersFromJson(const json& layers, std::array<Layer, kLayerCount>& result, 
     }
 }
 
+json modulatorsToJson(const Modulators& modulators) {
+    json lfos = json::array();
+    for (const Lfo& lfo : modulators.lfos) {
+        lfos.push_back({{"shape", lfoShapeName(lfo.shape)}, {"rate", lfo.rate}, {"phase", lfo.phase}});
+    }
+    json macros = json::array();
+    for (const float value : modulators.macros) {
+        macros.push_back(value);
+    }
+    return json{{"lfos", lfos}, {"macros", macros}};
+}
+
+void modulatorsFromJson(const json& node, Modulators& modulators) {
+    if (!node.is_object()) {
+        return;
+    }
+    const auto lfos = node.find("lfos");
+    if (lfos != node.end() && lfos->is_array()) {
+        for (size_t i = 0; i < lfos->size() && i < static_cast<size_t>(kLfoCount); ++i) {
+            const json& entry = (*lfos)[i];
+            if (!entry.is_object()) {
+                continue;
+            }
+            Lfo& lfo = modulators.lfos[i];
+            lfo.shape = lfoShapeFromName(readString(entry, "shape"));
+            lfo.rate = static_cast<int>(readNumber(entry, "rate", 4.0f, 0.0f, static_cast<float>(kLfoRateCount - 1)));
+            lfo.phase = readNumber(entry, "phase", 0.0f, 0.0f, 1.0f);
+        }
+    }
+    const auto macros = node.find("macros");
+    if (macros != node.end() && macros->is_array()) {
+        for (size_t i = 0; i < macros->size() && i < static_cast<size_t>(kMacroCount); ++i) {
+            if ((*macros)[i].is_number()) {
+                modulators.macros[i] = std::clamp((*macros)[i].get<float>(), 0.0f, 1.0f);
+            }
+        }
+    }
+}
+
 json deckSettingsToJson(const DeckSettings& settings) {
     return json{{"transition", transitionName(settings.transition)}, {"seconds", settings.seconds}, {"beats", settings.beats}, {"syncBeats", settings.syncBeats}, {"autoCycle", settings.autoCycle}, {"cycleBeats", settings.cycleBeats}};
 }
@@ -319,6 +358,8 @@ std::string compositionToJson(const Composition& comp) {
     doc["app"] = "NyrexVJ";
     doc["name"] = comp.name;
     doc["bpm"] = comp.bpm;
+    doc["beatsPerBar"] = comp.beatsPerBar;
+    doc["modulators"] = modulatorsToJson(comp.modulators);
     int resolution = std::clamp(comp.resolution, 0, kResolutionCount - 1);
     doc["resolution"] = json::array({kResolutions[resolution].width, kResolutions[resolution].height});
     doc["master"] = masterToJson(comp.master);
@@ -364,6 +405,10 @@ bool compositionFromJson(const std::string& text, Composition& comp, std::string
         result.name = name;
     }
     result.bpm = readNumber(doc, "bpm", 128.0f, 40.0f, 240.0f);
+    result.beatsPerBar = static_cast<int>(readNumber(doc, "beatsPerBar", 4.0f, static_cast<float>(kMinBeatsPerBar), static_cast<float>(kMaxBeatsPerBar)));
+    if (doc.contains("modulators")) {
+        modulatorsFromJson(doc["modulators"], result.modulators);
+    }
     auto resolution = doc.find("resolution");
     if (resolution != doc.end() && resolution->is_array() && resolution->size() >= 2 && (*resolution)[0].is_number() && (*resolution)[1].is_number()) {
         result.resolution = resolutionIndexFor((*resolution)[0].get<int>(), (*resolution)[1].get<int>());

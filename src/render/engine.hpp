@@ -49,6 +49,8 @@ public:
     void tap();
     void resync();
     void nudgeBeat(float amount);
+    void shiftBeat(double beats);
+    float sourceValue(int source) const;
     void setAudio(const AudioFeatures& features);
     bool readOutput(std::vector<unsigned char>& rgba, int& width, int& height);
     int prepareAll(std::string& report);

@@ -3,6 +3,7 @@
 #include "core/composition.hpp"
 #include "core/edit_history.hpp"
 #include "core/frame_stats.hpp"
+#include "core/modulation.hpp"
 #include "core/novelty.hpp"
 #include "render/effect_library.hpp"
 #include "core/preset.hpp"
@@ -907,6 +908,146 @@ void testEditHistory() {
     CHECK(steps == static_cast<int>(nvj::EditHistory::kLimit));
 }
 
+void testModulation() {
+    for (int shape = 0; shape < nvj::LfoShapeCount; ++shape) {
+        CHECK(nvj::lfoShapeFromName(nvj::lfoShapeName(shape)) == shape);
+        for (int rate = 0; rate < nvj::kLfoRateCount; ++rate) {
+            nvj::Lfo lfo;
+            lfo.shape = shape;
+            lfo.rate = rate;
+            float lowest = 1.0f;
+            float highest = 0.0f;
+            for (int i = 0; i < 400; ++i) {
+                const float value = nvj::lfoValue(lfo, 1, 0.173 * i);
+                CHECK(value >= 0.0f && value <= 1.0f);
+                lowest = std::min(lowest, value);
+                highest = std::max(highest, value);
+            }
+            CHECK(highest - lowest > 0.3f);
+        }
+    }
+
+    nvj::Lfo sine;
+    sine.shape = nvj::LfoSine;
+    sine.rate = 4;
+    CHECK(std::fabs(nvj::lfoValue(sine, 0, 0.0) - 0.0f) < 1e-5f);
+    CHECK(std::fabs(nvj::lfoValue(sine, 0, 2.0) - 1.0f) < 1e-5f);
+    CHECK(std::fabs(nvj::lfoValue(sine, 0, 1.0) - 0.5f) < 1e-5f);
+    CHECK(std::fabs(nvj::lfoValue(sine, 0, 0.7) - nvj::lfoValue(sine, 0, 0.7 + 4.0)) < 1e-4f);
+    sine.phase = 0.5f;
+    CHECK(std::fabs(nvj::lfoValue(sine, 0, 0.0) - 1.0f) < 1e-5f);
+
+    nvj::Lfo saw;
+    saw.shape = nvj::LfoSaw;
+    saw.rate = 3;
+    CHECK(std::fabs(nvj::lfoValue(saw, 0, 0.5) - 0.25f) < 1e-5f);
+    CHECK(std::fabs(nvj::lfoValue(saw, 0, 2.5) - 0.25f) < 1e-5f);
+    CHECK(nvj::lfoValue(saw, 0, -0.5) >= 0.0f);
+
+    nvj::Lfo square;
+    square.shape = nvj::LfoSquare;
+    square.rate = 3;
+    CHECK(nvj::lfoValue(square, 0, 0.5) == 1.0f);
+    CHECK(nvj::lfoValue(square, 0, 1.5) == 0.0f);
+
+    nvj::Lfo stepped;
+    stepped.shape = nvj::LfoRandom;
+    stepped.rate = 2;
+    CHECK(nvj::lfoValue(stepped, 0, 0.2) == nvj::lfoValue(stepped, 0, 0.9));
+    CHECK(nvj::lfoValue(stepped, 0, 0.2) != nvj::lfoValue(stepped, 1, 0.2));
+    CHECK(nvj::lfoValue(stepped, 0, 0.2) == nvj::lfoValue(stepped, 0, 0.2));
+
+    nvj::Lfo smooth;
+    smooth.shape = nvj::LfoSmooth;
+    smooth.rate = 2;
+    CHECK(std::fabs(nvj::lfoValue(smooth, 3, 0.9999) - nvj::lfoValue(smooth, 3, 1.0001)) < 0.01f);
+    CHECK(nvj::lfoValue(sine, 0, std::nan("")) == 0.0f);
+
+    nvj::AudioFeatures audio;
+    audio.bass = 0.7f;
+    audio.kick = 0.2f;
+    nvj::Modulators modulators;
+    modulators.macros[2] = 0.6f;
+    modulators.macros[7] = 4.0f;
+    modulators.lfos[1].shape = nvj::LfoSaw;
+    modulators.lfos[1].rate = 3;
+    CHECK(nvj::modulationSource(nvj::BandOff, audio, modulators, 1.0, 4) == 0.0f);
+    CHECK(nvj::modulationSource(nvj::BandBass, audio, modulators, 1.0, 4) == 0.7f);
+    CHECK(nvj::modulationSource(nvj::BandKick, audio, modulators, 1.0, 4) == 0.2f);
+    CHECK(nvj::modulationSource(nvj::BandMacro1 + 2, audio, modulators, 1.0, 4) == 0.6f);
+    CHECK(nvj::modulationSource(nvj::BandMacro8, audio, modulators, 1.0, 4) == 1.0f);
+    CHECK(std::fabs(nvj::modulationSource(nvj::BandLfo2, audio, modulators, 0.5, 4) - 0.25f) < 1e-5f);
+    CHECK(std::fabs(nvj::modulationSource(nvj::BandBeat, audio, modulators, 7.25, 4) - 0.25f) < 1e-5f);
+    CHECK(std::fabs(nvj::modulationSource(nvj::BandBar, audio, modulators, 6.0, 4) - 0.5f) < 1e-5f);
+    CHECK(std::fabs(nvj::modulationSource(nvj::BandBar, audio, modulators, 6.0, 3) - 0.0f) < 1e-5f);
+    CHECK(std::fabs(nvj::modulationSource(nvj::BandBar, audio, modulators, 7.0, 3) - 1.0f / 3.0f) < 1e-5f);
+    CHECK(nvj::modulationSource(nvj::BandBar, audio, modulators, 7.0, 100) == 7.0f / 8.0f);
+    CHECK(nvj::modulationSource(-4, audio, modulators, 1.0, 4) == 0.0f);
+    CHECK(nvj::modulationSource(nvj::AudioBandCount, audio, modulators, 1.0, 4) == 0.0f);
+    CHECK(nvj::modulationSource(nvj::BandBeat, audio, modulators, std::nan(""), 4) == 0.0f);
+    CHECK(nvj::isAudioSource(nvj::BandMid) && !nvj::isAudioSource(nvj::BandLfo1) && !nvj::isAudioSource(nvj::BandOff));
+    CHECK(nvj::clampBeatsPerBar(0) == nvj::kMinBeatsPerBar && nvj::clampBeatsPerBar(99) == nvj::kMaxBeatsPerBar && nvj::clampBeatsPerBar(5) == 5);
+
+    for (int band = 0; band < nvj::AudioBandCount; ++band) {
+        CHECK(nvj::audioBandFromName(nvj::audioBandName(band)) == band);
+    }
+
+    nvj::Composition comp = nvj::defaultComposition();
+    comp.beatsPerBar = 6;
+    comp.modulators.macros[1] = 0.35f;
+    comp.modulators.lfos[2].shape = nvj::LfoSmooth;
+    comp.modulators.lfos[2].rate = 6;
+    comp.modulators.lfos[2].phase = 0.25f;
+    comp.layers[0].mods[0].band = nvj::BandLfo3;
+    comp.layers[0].mods[1].band = nvj::BandMacro2;
+    comp.master.mods[0].band = nvj::BandBar;
+    std::string error;
+    nvj::Composition loaded;
+    CHECK(nvj::compositionFromJson(nvj::compositionToJson(comp), loaded, error));
+    CHECK(loaded.beatsPerBar == 6);
+    CHECK(loaded.modulators.macros[1] == 0.35f);
+    CHECK(loaded.modulators.lfos[2].shape == nvj::LfoSmooth);
+    CHECK(loaded.modulators.lfos[2].rate == 6);
+    CHECK(loaded.modulators.lfos[2].phase == 0.25f);
+    CHECK(loaded.layers[0].mods[0].band == nvj::BandLfo3);
+    CHECK(loaded.layers[0].mods[1].band == nvj::BandMacro2);
+    CHECK(loaded.master.mods[0].band == nvj::BandBar);
+    CHECK(sameComposition(comp, loaded));
+
+    nvj::Composition withoutNew;
+    withoutNew.beatsPerBar = 7;
+    withoutNew.modulators.macros[0] = 0.9f;
+    CHECK(nvj::compositionFromJson("{\"layers\":[]}", withoutNew, error));
+    CHECK(withoutNew.beatsPerBar == 4);
+    CHECK(withoutNew.modulators.macros[0] == 0.0f);
+    CHECK(withoutNew.modulators.lfos[0].rate == 4);
+
+    nvj::Composition tampered;
+    CHECK(nvj::compositionFromJson("{\"layers\":[],\"beatsPerBar\":99,\"modulators\":{\"macros\":[5,-3,\"x\"],\"lfos\":[{\"shape\":\"Nonsense\",\"rate\":99,\"phase\":7}]}}", tampered, error));
+    CHECK(tampered.beatsPerBar == nvj::kMaxBeatsPerBar);
+    CHECK(tampered.modulators.macros[0] == 1.0f && tampered.modulators.macros[1] == 0.0f);
+    CHECK(tampered.modulators.lfos[0].rate >= 0 && tampered.modulators.lfos[0].rate < nvj::kLfoRateCount);
+    CHECK(tampered.modulators.lfos[0].phase >= 0.0f && tampered.modulators.lfos[0].phase <= 1.0f);
+    CHECK(tampered.modulators.lfos[0].shape >= 0 && tampered.modulators.lfos[0].shape < nvj::LfoShapeCount);
+
+    nvj::Composition edited = nvj::defaultComposition();
+    nvj::EditHistory history;
+    history.reset(edited);
+    edited.modulators.lfos[0].shape = nvj::LfoSquare;
+    edited.beatsPerBar = 3;
+    settleHistory(history, edited);
+    CHECK(history.undoCount() == 1);
+    edited.modulators.macros[0] = 0.8f;
+    settleHistory(history, edited);
+    CHECK(history.undoCount() == 1);
+    CHECK(history.undo(edited, 10));
+    CHECK(edited.modulators.lfos[0].shape == nvj::LfoSine);
+    CHECK(edited.beatsPerBar == 4);
+    CHECK(edited.modulators.macros[0] == 0.8f);
+    CHECK(history.redo(edited, 10));
+    CHECK(edited.modulators.lfos[0].shape == nvj::LfoSquare && edited.beatsPerBar == 3);
+}
+
 int main() {
     testSha256();
     testVersions();
@@ -918,6 +1059,7 @@ int main() {
     testFrameStats();
     testRenderCost();
     testEditHistory();
+    testModulation();
     testDecks();
     testPresetFiles();
     testNovelty();

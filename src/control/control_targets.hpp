@@ -32,7 +32,8 @@ enum class ControlItem {
     DeckNext,
     DeckPrevious,
     EffectEnable,
-    EffectParam
+    EffectParam,
+    Macro
 };
 
 struct ControlTarget {

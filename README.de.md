@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.11.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe und -Eingang, Ausgabefenster, Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
+> Stand: v0.12.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe und -Eingang, Ausgabefenster, Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
 
 ## Download
 
@@ -26,7 +26,7 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 ## Highlights
 
 - **16 Decks, weiche Übergänge.** Richte bis zu 16 Looks ein und gleite mit Ausblenden, Auflösen, Zoom, Wischen, Kreis, Rotation oder Schieben dazwischen hin und her, in Sekunden oder Beats, auf Wunsch mit automatischem Wechsel.
-- **Audio-reaktiv.** Wähle Systemaudio (dein DJ-Programm), ein Mikrofon, einen Line-In oder ein Demo-Signal. Ebenen, Master und jeder Effektparameter können Bass, Mitten, Höhen, Pegel oder Kick folgen, und ein Effekt lässt sich auf Gate stellen, damit er nur bei lauter Musik sichtbar ist.
+- **Audio-reaktiv.** Wähle Systemaudio (dein DJ-Programm), ein Mikrofon, einen Line-In oder ein Demo-Signal. Ebenen, Master und jeder Effektparameter können Bass, Mitten, Höhen, Pegel oder Kick folgen, und ein Effekt lässt sich auf Gate stellen, damit er nur bei lauter Musik sichtbar ist. Acht Makro-Regler und vier tempo-synchrone LFOs funktionieren an denselben Stellen als Quellen.
 - **Live-Steuerung.** Spiele es mit einem MIDI-Controller (Regler mit einem Klick anlernen, Windows) oder steuere es per OSC aus TouchDesigner, Max, Python und mehr fern. NyrexVJ kann Tempo, Beats und Audiopegel auch per OSC nach außen schicken.
 - **Unreal Engine und andere Programme.** Vier Spout-Eingangs-Clips zeigen das Bild von Unreal, TouchDesigner oder einem Spiel (Windows), und die OSC-Ausgabe gibt ihnen Tempo, Beats, Spektrum und eigene benannte Werte. Siehe [docs/UNREAL.md](docs/UNREAL.md) (englisch). Ein Unreal-Plugin gibt es noch nicht.
 - **OBS mit zwei Klicks.** Spout-Ausgabe mit frei wählbarem Sendernamen. In OBS die Quelle "Spout2 Capture" hinzufügen und den Sender auswählen.
@@ -89,6 +89,16 @@ Die Reaktivität stellst du an drei Stellen ein:
 - **Jeder Effektplatz**: ein Band und ein Modus. Im Modus Parameter bewegt das Band einen Effektwert um eine Stärke. Im Modus Gate ist der Effekt nur sichtbar, solange das Band laut ist, und blendet in der Stille aus, die Stärke bestimmt die Empfindlichkeit.
 
 Bars, Equalizer, Spectrum Circle, Oscilloscope, Spectrum Warp und der Effekt Oscilloscope zeichnen das echte Spektrum oder die Wellenform. Ohne Audioquelle laufen sie auf einem virtuellen Beat, der dem BPM folgt.
+
+## Makros, LFOs und Beat-Raster
+
+Jede Stelle, die Bass, Mitten, Höhen, Pegel oder Kick folgen kann (die zwei Slots einer Ebene, der Master und jeder Effekt-Slot), kann drei weiteren Quellen folgen:
+
+- **Makro 1 bis 8**: Regler im Master-Bereich unter Makros und LFOs. Ein Makro kann viele Parameter gleichzeitig steuern, und jeder Regler lässt sich auf einen MIDI-Controller legen (Einstellungen, Steuerung) oder per OSC setzen (`/nyrex/macro/1` bis `/nyrex/macro/8`).
+- **LFO 1 bis 4**: tempo-synchrone Oszillatoren mit den Formen Sinus, Dreieck, Sägezahn, Rechteck, Zufall und Weicher Zufall. Der Zyklus reicht von einem Viertel-Schlag bis zu 32 Schlägen, die Phase bestimmt, wo im Zyklus der LFO startet. Weil sie Schläge zählen, nehmen Tap, Neu sync, Pause und die BPM sie mit, und ein Verlauf läuft nie aus dem Takt.
+- **Beat und Takt**: eine Rampe von 0 auf 1 über einen Schlag bzw. einen Takt.
+
+Ein Klick auf die Beat-Anzeige neben den Tempo-Reglern öffnet das Beat-Raster: Schläge pro Takt einstellen (2 bis 8), das Raster mit `<<` und `>>` um einen Sechzehntel-Schlag verschieben, auf den nächsten Schlag einrasten oder den nächsten Schlag zum ersten Schlag des Takts machen. Die Einzelheiten und die Reihenfolge der Quellen stehen in [docs/MODULATION.md](docs/MODULATION.md) (englisch).
 
 ## Spout und OBS
 

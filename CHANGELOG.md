@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0 - 2026-11-19
+
+- Macros: eight knobs, Macro 1 to 8, in the Master panel under Macros and LFOs. Pick a macro as the source of any audio reactivity slot, of a layer, of the master or of an effect, and one knob moves everything that uses it. The knobs can be mapped to a MIDI controller or driven over OSC like every other control (macro/1 to macro/8).
+- LFOs: four tempo synced oscillators, LFO 1 to 4, with the shapes Sine, Triangle, Saw, Square, Random and Smooth random, a cycle length from a quarter beat to 32 beats and a start phase. They follow the tempo and Tap, Resync and Pause, so a sweep always stays on the beat, and they are available as a source everywhere a band can be picked. They are saved with the preset and covered by undo.
+- Beat grid: the new sources Beat and Bar rise from 0 to 1 over one beat and over one bar. Click the beat display in the transport to set the beats per bar (2 to 8), to nudge the grid by a sixteenth of a beat, to snap it to the nearest beat or to make the nearest beat the start of the bar. Presets and sessions of older versions load unchanged.
+
 ## 0.11.0 - 2026-11-18
 
 - 10 new blend modes, 14 in total: Subtract, Difference, Exclusion, Overlay, Soft Light, Hard Light, Lighten, Darken, Color Dodge and Linear Burn join Normal, Add, Screen and Multiply. Old presets and sessions load unchanged.

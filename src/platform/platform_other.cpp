@@ -20,6 +20,24 @@ std::string currentExePath() {
     return ec ? std::string() : path.string();
 }
 
+bool replaceExecutable(const std::string&, const std::vector<unsigned char>&, ReplaceMode& mode, std::string& error) {
+    mode = ReplaceMode::InPlace;
+    error = "Updates are only available on Windows";
+    return false;
+}
+
+bool startDeferredUpdate(const std::string&, unsigned long, std::string& error) {
+    error = "Updates are only available on Windows";
+    return false;
+}
+
+void removeStaleFiles(const std::string&) {
+}
+
+bool handleUpdateHelper(int, char**, int&) {
+    return false;
+}
+
 bool replaceSelf(const std::vector<unsigned char>&, std::string& error) {
     error = "Updates are only available on Windows";
     return false;

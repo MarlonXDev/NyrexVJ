@@ -8,8 +8,13 @@
 #include <shellapi.h>
 #include <winhttp.h>
 
+#include "core/log.hpp"
+
+#include <cwchar>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
+#include <string>
 
 namespace nvj::platform {
 
@@ -47,8 +52,68 @@ struct Handle {
     }
 };
 
+std::string describeError(const char* step, DWORD code) {
+    return std::string(step) + " failed (error " + std::to_string(code) + ")";
+}
+
 std::string lastError(const char* step) {
-    return std::string(step) + " failed (error " + std::to_string(GetLastError()) + ")";
+    const DWORD code = GetLastError();
+    return describeError(step, code);
+}
+
+constexpr int kOldNameCount = 10;
+
+std::mutex gDeferredMutex;
+std::string gDeferredExe;
+
+std::filesystem::path suffixed(const std::filesystem::path& exe, const std::wstring& suffix) {
+    std::filesystem::path result = exe;
+    result += suffix;
+    return result;
+}
+
+std::filesystem::path oldCandidate(const std::filesystem::path& exe, int index) {
+    return suffixed(exe, index == 0 ? std::wstring(L".old") : L".old" + std::to_wstring(index));
+}
+
+void removeStale(const std::filesystem::path& exe) {
+    std::error_code ec;
+    for (int i = 0; i < kOldNameCount; ++i) {
+        const std::filesystem::path path = oldCandidate(exe, i);
+        if (std::filesystem::exists(path, ec)) {
+            std::filesystem::remove(path, ec);
+        }
+    }
+    std::filesystem::remove(suffixed(exe, L".new"), ec);
+}
+
+std::filesystem::path pickOld(const std::filesystem::path& exe) {
+    std::error_code ec;
+    for (int i = 0; i < kOldNameCount; ++i) {
+        const std::filesystem::path path = oldCandidate(exe, i);
+        if (!std::filesystem::exists(path, ec)) {
+            return path;
+        }
+    }
+    return std::filesystem::path();
+}
+
+bool transientError(DWORD code) {
+    return code == ERROR_ACCESS_DENIED || code == ERROR_SHARING_VIOLATION || code == ERROR_LOCK_VIOLATION;
+}
+
+bool moveWithRetry(const std::filesystem::path& from, const std::filesystem::path& to, DWORD& code) {
+    for (int attempt = 0; attempt < 6; ++attempt) {
+        if (MoveFileExW(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+            return true;
+        }
+        code = GetLastError();
+        if (!transientError(code)) {
+            return false;
+        }
+        Sleep(250);
+    }
+    return false;
 }
 
 }
@@ -178,17 +243,16 @@ std::string currentExePath() {
     return narrow(buffer);
 }
 
-bool replaceSelf(const std::vector<unsigned char>& newBinary, std::string& error) {
+bool replaceExecutable(const std::string& exePath, const std::vector<unsigned char>& newBinary, ReplaceMode& mode, std::string& error) {
     namespace fs = std::filesystem;
-    fs::path exe = fs::path(widen(currentExePath()));
-    if (exe.empty()) {
+    mode = ReplaceMode::InPlace;
+    if (exePath.empty()) {
         error = "Could not find the program file";
         return false;
     }
-    fs::path fresh = exe;
-    fresh += L".new";
-    fs::path old = exe;
-    old += L".old";
+    const fs::path exe = fs::path(widen(exePath));
+    const fs::path fresh = suffixed(exe, L".new");
+    removeStale(exe);
 
     {
         std::ofstream file(fresh, std::ios::binary | std::ios::trunc);
@@ -205,23 +269,66 @@ bool replaceSelf(const std::vector<unsigned char>& newBinary, std::string& error
     }
 
     std::error_code ec;
-    fs::remove(old, ec);
-
-    if (!MoveFileExW(exe.c_str(), old.c_str(), MOVEFILE_REPLACE_EXISTING)) {
-        error = lastError("Moving the old program");
-        fs::remove(fresh, ec);
-        return false;
-    }
-    if (!MoveFileExW(fresh.c_str(), exe.c_str(), MOVEFILE_REPLACE_EXISTING)) {
-        error = lastError("Putting the new program in place");
+    DWORD code = 0;
+    const fs::path old = pickOld(exe);
+    if (!old.empty() && moveWithRetry(exe, old, code)) {
+        if (MoveFileExW(fresh.c_str(), exe.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+            return true;
+        }
+        const DWORD placeCode = GetLastError();
         MoveFileExW(old.c_str(), exe.c_str(), MOVEFILE_REPLACE_EXISTING);
         fs::remove(fresh, ec);
+        error = describeError("Putting the new program in place", placeCode);
         return false;
     }
+
+    logLine("Update: the running program could not be renamed (error " + std::to_string(code) + "), the update is finished after the restart instead");
+    mode = ReplaceMode::Deferred;
+    return true;
+}
+
+bool startDeferredUpdate(const std::string& exePath, unsigned long waitPid, std::string& error) {
+    const std::wstring exe = widen(exePath);
+    const std::wstring fresh = exe + L".new";
+    if (!std::filesystem::exists(fresh)) {
+        error = "The downloaded update is missing";
+        return false;
+    }
+    std::wstring command = L"\"" + fresh + L"\" --finish-update " + std::to_wstring(waitPid) + L" \"" + exe + L"\"";
+    const std::wstring directory = std::filesystem::path(exe).parent_path().wstring();
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    PROCESS_INFORMATION info{};
+    if (!CreateProcessW(fresh.c_str(), command.data(), nullptr, nullptr, FALSE, 0, nullptr, directory.c_str(), &startup, &info)) {
+        error = lastError("Starting the update helper");
+        return false;
+    }
+    CloseHandle(info.hThread);
+    CloseHandle(info.hProcess);
+    return true;
+}
+
+bool replaceSelf(const std::vector<unsigned char>& newBinary, std::string& error) {
+    const std::string exe = currentExePath();
+    ReplaceMode mode = ReplaceMode::InPlace;
+    if (!replaceExecutable(exe, newBinary, mode, error)) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(gDeferredMutex);
+    gDeferredExe = mode == ReplaceMode::Deferred ? exe : std::string();
     return true;
 }
 
 bool relaunchSelf() {
+    std::string deferred;
+    {
+        std::lock_guard<std::mutex> lock(gDeferredMutex);
+        deferred = gDeferredExe;
+    }
+    std::string ignored;
+    if (!deferred.empty() && startDeferredUpdate(deferred, GetCurrentProcessId(), ignored)) {
+        return true;
+    }
     std::wstring exe = widen(currentExePath());
     if (exe.empty()) {
         return false;
@@ -239,27 +346,86 @@ bool relaunchSelf() {
     return true;
 }
 
+void removeStaleFiles(const std::string& exePath) {
+    if (!exePath.empty()) {
+        removeStale(std::filesystem::path(widen(exePath)));
+    }
+}
+
 void cleanupOldBinary() {
     namespace fs = std::filesystem;
-    fs::path exe = fs::path(widen(currentExePath()));
-    if (exe.empty()) {
+    const std::string exePath = currentExePath();
+    if (exePath.empty()) {
         return;
     }
+    const fs::path exe = fs::path(widen(exePath));
     std::error_code ec;
-    fs::path old = exe;
-    old += L".old";
-    fs::path fresh = exe;
-    fresh += L".new";
     for (int attempt = 0; attempt < 10; ++attempt) {
-        if (!fs::exists(old, ec)) {
+        bool left = false;
+        for (int i = 0; i < kOldNameCount; ++i) {
+            if (fs::exists(oldCandidate(exe, i), ec)) {
+                left = true;
+            }
+        }
+        if (!left) {
             break;
         }
-        if (fs::remove(old, ec)) {
-            break;
-        }
+        removeStale(exe);
         Sleep(200);
     }
-    fs::remove(fresh, ec);
+    fs::remove(suffixed(exe, L".new"), ec);
+}
+
+bool handleUpdateHelper(int, char**, int& exitCode) {
+    int count = 0;
+    LPWSTR* args = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (args == nullptr) {
+        return false;
+    }
+    DWORD pid = 0;
+    std::wstring target;
+    bool found = false;
+    for (int i = 1; i + 2 < count; ++i) {
+        if (std::wstring(args[i]) == L"--finish-update") {
+            pid = static_cast<DWORD>(std::wcstoul(args[i + 1], nullptr, 10));
+            target = args[i + 2];
+            found = true;
+            break;
+        }
+    }
+    LocalFree(args);
+    if (!found) {
+        return false;
+    }
+
+    if (pid != 0) {
+        HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, pid);
+        if (process != nullptr) {
+            WaitForSingleObject(process, 60000);
+            CloseHandle(process);
+        }
+    }
+
+    const std::wstring self = widen(currentExePath());
+    bool copied = false;
+    for (int attempt = 0; attempt < 150 && !copied; ++attempt) {
+        copied = CopyFileW(self.c_str(), target.c_str(), FALSE) != 0;
+        if (!copied) {
+            Sleep(200);
+        }
+    }
+
+    std::wstring command = L"\"" + target + L"\"";
+    const std::wstring directory = std::filesystem::path(target).parent_path().wstring();
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    PROCESS_INFORMATION info{};
+    if (CreateProcessW(target.c_str(), command.data(), nullptr, nullptr, FALSE, 0, nullptr, directory.c_str(), &startup, &info)) {
+        CloseHandle(info.hThread);
+        CloseHandle(info.hProcess);
+    }
+    exitCode = copied ? 0 : 1;
+    return true;
 }
 
 bool openUrl(const std::string& url) {

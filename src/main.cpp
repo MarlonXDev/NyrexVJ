@@ -148,6 +148,11 @@ bool saveOutput(const std::string& path, nvj::Engine& engine) {
 }
 
 int main(int argc, char** argv) {
+    int helperExit = 0;
+    if (nvj::platform::handleUpdateHelper(argc, argv, helperExit)) {
+        return helperExit;
+    }
+
     Options options = parseOptions(argc, argv);
 
     nvj::platform::cleanupOldBinary();

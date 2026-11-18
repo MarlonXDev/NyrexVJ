@@ -305,6 +305,12 @@ void App::drawUpdateSection() {
     if (!update.message.empty()) {
         ImGui::TextWrapped("%s", trMessage(update.message).c_str());
     }
+    if (update.state == UpdateState::Failed) {
+        if (ImGui::Button(trId("Open download page", "updDownloadPage"))) {
+            const std::string base = ui::kReleasesUrl;
+            platform::openUrl(settings_.channel == UpdateChannel::Nightly ? base + "/tag/nightly" : base + "/latest");
+        }
+    }
     if (update.state == UpdateState::Available && !update.release.notes.empty()) {
         ImGui::BeginChild("notes", ImVec2(0.0f, 130.0f), ImGuiChildFlags_Borders);
         ImGui::TextWrapped("%s", update.release.notes.c_str());

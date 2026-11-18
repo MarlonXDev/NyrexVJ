@@ -5,6 +5,7 @@
 - Live-Steuerung per OSC: Schalte sie unter Einstellungen, Steuerung ein (standardmäßig aus, Port 9010, nur dieser Computer, außer du erlaubst andere). NyrexVJ reagiert dann auf 207 Adressen unter /nyrex/ für den Master, die 16 Decks, die 8 Spalten, jeden Clip, Deckkraft, Tempo, Größe und Farbe jeder Ebene, Bypass, Solo, Leeren sowie alle Effektschalter und Parameter. Sende einen Wert von 0 bis 1 oder gar nichts, um einen Auslöser zu feuern. Das klappt mit TouchDesigner, Max, Pure Data, Python-Skripten und allem anderen, das OSC spricht.
 - MIDI-Controller-Zuordnung unter Windows: Wähle deinen Controller, drücke Zuordnung hinzufügen, wähle was gesteuert wird und bewege einen Regler oder drücke eine Taste, um beides zu verbinden. Fader und Regler setzen Werte, Tasten lösen Clips, Spalten und Decks aus oder schalten Dinge an und aus, und Invertieren dreht einen Fader um. Zuordnungen werden in controls.json gespeichert.
 - Neue Seite Steuerung im Einstellungen-Fenster mit dem Status von OSC und MIDI, der zuletzt eingegangenen Nachricht, der Zuordnungsliste mit Lernen und Entfernen und einer durchsuchbaren Liste aller OSC-Adressen, die sich mit einem Klick kopieren lassen.
+- Updates sind unter Windows robuster: Verweigert Windows den Tausch des laufenden Programms (Fehler 5), versucht NyrexVJ es erneut, wählt einen freien Sicherungsnamen und schließt das Update zur Not direkt nach dem Beenden ab. Ein fehlgeschlagenes Update zeigt einen Knopf, der die Download-Seite öffnet.
 
 ## 0.4.0 - 2026-11-18
 

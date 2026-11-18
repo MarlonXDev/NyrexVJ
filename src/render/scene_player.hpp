@@ -17,6 +17,7 @@ enum class SceneState { Idle, Loading, Ready, Failed };
 
 struct SceneFrame {
     float time = 0.0f;
+    double beat = 0.0;
     float scale = 1.0f;
     float bass = 0.0f;
     float mid = 0.0f;

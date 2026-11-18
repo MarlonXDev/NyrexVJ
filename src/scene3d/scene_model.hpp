@@ -171,6 +171,8 @@ struct Scene {
     std::vector<SceneLight> lights;
     SceneSky sky;
     SceneCamera camera;
+    std::vector<SceneCamera> cameras;
+    float cameraCutBeats = 0.0f;
     float exposure = 1.0f;
     std::vector<SceneImage> images;
     std::vector<SceneMaterial> materials;
@@ -193,6 +195,7 @@ SceneBounds sceneBounds(const Scene& scene, int animation, float time);
 SceneSphere sceneSphere(const Scene& scene, int animation, int samples);
 SceneStats sceneStats(const Scene& scene);
 bool validateScene(const Scene& scene, std::string& error);
+const SceneCamera& activeSceneCamera(const Scene& scene, double beat);
 float sceneDuration(const Scene& scene, int animation);
 
 }

@@ -448,4 +448,21 @@ size_t processMemoryBytes() {
     return static_cast<size_t>(counters.WorkingSetSize);
 }
 
+unsigned long currentProcessId() {
+    return static_cast<unsigned long>(GetCurrentProcessId());
+}
+
+bool processAlive(unsigned long pid) {
+    if (pid == 0) {
+        return false;
+    }
+    HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, static_cast<DWORD>(pid));
+    if (process == nullptr) {
+        return GetLastError() == ERROR_ACCESS_DENIED;
+    }
+    const bool running = WaitForSingleObject(process, 0) == WAIT_TIMEOUT;
+    CloseHandle(process);
+    return running;
+}
+
 }

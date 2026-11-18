@@ -12,6 +12,8 @@ namespace nvj {
 constexpr int kDocVersion = 1;
 constexpr size_t kDocMaxObjects = 64;
 constexpr size_t kDocMaxLights = 4;
+constexpr size_t kDocMaxCameras = 8;
+constexpr float kDocMaxCutBeats = 64.0f;
 constexpr size_t kDocMaxNameBytes = 64;
 constexpr size_t kDocMaxAssetNameBytes = 96;
 
@@ -69,6 +71,7 @@ struct DocLight {
 };
 
 struct DocCamera {
+    std::string name = "Camera 1";
     float distance = 1.0f;
     float pitchDegrees = 18.0f;
     float yawDegrees = 0.0f;
@@ -90,6 +93,9 @@ struct SceneDoc {
     std::vector<DocObject> objects;
     std::vector<DocLight> lights;
     DocCamera camera;
+    std::vector<DocCamera> extraCameras;
+    int activeCamera = 0;
+    float cutBeats = 0.0f;
     DocSky sky;
     float exposure = 1.0f;
 };
@@ -100,6 +106,11 @@ bool isTextureAssetName(const std::string& name);
 DocObject makeDefaultObject(PrimitiveKind kind);
 DocLight makeDefaultLight(bool point);
 SceneDoc makeDefaultDoc();
+int docCameraCount(const SceneDoc& doc);
+DocCamera& docCameraAt(SceneDoc& doc, int index);
+const DocCamera& docCameraAt(const SceneDoc& doc, int index);
+int docAddCamera(SceneDoc& doc, const DocCamera& source);
+bool docRemoveCamera(SceneDoc& doc, int index);
 void sanitizeDoc(SceneDoc& doc);
 std::string docToJson(const SceneDoc& doc);
 bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error);

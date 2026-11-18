@@ -15,8 +15,8 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 
 ### Foundation (candidate v0.5)
 - Review unified parameter and modulation model.
-- Evaluate blend modes, macros, undo/redo, and separate preview/live workflows.
-- Define render performance budgets and profiling strategy.
+- Blend modes (14), undo/redo in the main window and a separate preview channel landed in v0.11.0. Macros are still open.
+- Render performance budgets and profiling: frame time budget, CPU/GPU timings, `--bench-comp` and tests landed in v0.11.0; a run on a real GPU is still open.
 - Define stable clip/source/effect/output interfaces.
 
 ### Media and 3D runtime (candidate v0.6)
@@ -32,7 +32,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 
 ### Integrated 3D Clip Creator (candidate v0.8)
 - **Status:** a first Clip Creator and the `.nyxclip` format landed in v0.9.0 (see [ADR 0006](adr/0006-clip-creator.md) and [SCENE3D.md](SCENE3D.md)). The list below stays as the longer term wish list; what exists is described in the ADRs.
-- Dedicated editor for simple scenes, cameras, primitives, imported models, materials, and looping animation.
+- Dedicated editor for simple scenes, cameras, primitives, imported models, materials, and looping animation. Up to eight cameras per scene with beat cuts landed in v0.11.0.
 - Audio-reactive 3D parameters.
 - Reuse the native 3D runtime and render scenes to offscreen textures usable as ordinary clips.
 - Explore a versioned, portable community clip-pack format (working name `.nyxclip`).
@@ -42,7 +42,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 - Extend Unreal SDK with Blueprint-accessible controls and optional discovery if the prototype succeeds. Not started: no Unreal plugin exists and no public SDK is promised without maintainer approval.
 
 ### Production readiness (candidate v1.0)
-- Reliability, performance regression tests, crash recovery, project compatibility, documentation, and release quality.
+- Reliability, performance regression tests, crash recovery, project compatibility, documentation, and release quality. Crash recovery (session marker, rotating autosaves, crash report, recovery dialog) and the performance benchmark landed in v0.11.0.
 
 ## Already listed in the README roadmap
 - Video clips via FFmpeg (H.264/HAP).

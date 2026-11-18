@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.10.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe und -Eingang, Ausgabefenster, Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
+> Stand: v0.11.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe und -Eingang, Ausgabefenster, Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
 
 ## Download
 
@@ -126,7 +126,7 @@ Modelle mit Metallic-Roughness-Materialien, Normalenkarten, Leuchtkarten und aus
 
 ### Clip Creator
 
-Das Menü Creator öffnet den Clip Creator. Die linke Spalte listet die Objekte und Lichter der Szene, die Mitte zeigt eine Live-Vorschau (Ziehen kreist, Mausrad zoomt, Diese Ansicht als Clip-Kamera nehmen behält die Ansicht), die rechte Spalte ist der Inspektor für Transformation, Wiederholung, Material, Texturen, Animation, Audio-Reaktionen, Kamera, Himmel und Belichtung. Starte mit einer Vorlage (Menü Creator, Mit einer Vorlage starten, oder Öffnen im Fenster) oder mit einer leeren Szene (Neu).
+Das Menü Creator öffnet den Clip Creator. Die linke Spalte listet die Objekte und Lichter der Szene, die Mitte zeigt eine Live-Vorschau (Ziehen kreist, Mausrad zoomt, Diese Ansicht als Clip-Kamera nehmen behält die Ansicht), die rechte Spalte ist der Inspektor für Transformation, Wiederholung, Material, Texturen, Animation, Audio-Reaktionen, Kameras, Himmel und Belichtung. Eine Szene kann bis zu acht Kameras haben: Wähle die, die läuft, oder lass den Clip alle paar Beats zwischen allen schneiden. Starte mit einer Vorlage (Menü Creator, Mit einer Vorlage starten, oder Öffnen im Fenster) oder mit einer leeren Szene (Neu).
 
 Speichern schreibt eine `.nyxclip`-Datei in den Clips-Ordner (`%APPDATA%\NyrexVJ\clips`). Sie enthält die Szenenbeschreibung und als Kopien die .glb-Modelle sowie PNG- oder JPEG-Texturen, die die Szene benutzt (bis 200 MiB), eine Datei genügt also zum Weitergeben. Danach erscheint sie in der Bibliothek unter Szenen als `Scene: Name`. Als Clip nutzen legt sie außerdem in die gewählte Zelle. In einer Szene lassen sich nur `.glb`-Modelle speichern, `.gltf`-Dateien, die weitere Dateien brauchen, stehen in der Dateien-Ansicht, sind aber nicht nutzbar. Das Dateiformat und die Entscheidungen dahinter stehen in [docs/adr/0004-scene-document-and-clip-pack.md](docs/adr/0004-scene-document-and-clip-pack.md), das Beleuchtungsmodell in [docs/adr/0005-pbr-shading.md](docs/adr/0005-pbr-shading.md) und der Editor in [docs/adr/0006-clip-creator.md](docs/adr/0006-clip-creator.md).
 
@@ -280,7 +280,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--select-layer N` | Ebene N (ab 1) auswählen |
 | `--resolution IDX` | Index der Ausgabeauflösung |
 | `--tab IDX` | Anzuzeigender Browser-Tab (0 Presets, 1 Bibliothek, 2 Audio) |
-| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 7, 4 ist Steuerung) |
+| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 8, 4 ist Steuerung) |
 | `--osc-port N` | OSC auf Port N empfangen, auch wenn es in den Einstellungen aus ist |
 | `--spout-test-pattern` | Einen falschen Spout-Sender namens Test Pattern anbieten (zum Ausprobieren des Spout-Eingangs ohne Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | Mit `--frames` in diesem Frame eine MIDI-Nachricht an die Zuordnungen schicken |
@@ -295,15 +295,21 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--audio-demo` | Demo-Audiosignal benutzen |
 | `--welcome` / `--no-welcome` | Willkommensbildschirm erzwingen oder überspringen |
 | `--fresh` | Gespeicherte Sitzung ignorieren |
+| `--crash-test` | Eine Sekunde nach dem Start absichtlich abstürzen, um die Absturzwiederherstellung auszuprobieren |
 | `--no-update-check` | Update-Prüfung überspringen |
 | `--check-shaders` | Alle Shader kompilieren und beenden |
 | `--bench-scene EBENEN:FRAMES[:CLIP]` | Bildzeiten und Speicher messen, mit EBENEN (1 bis 4) Ebenen, die CLIP spielen, dann beenden |
-| `--bench-out DATEI.json` | Mit `--bench-scene` das Ergebnis zusätzlich als JSON schreiben |
+| `--bench-comp FRAMES` | Die geladene Komposition über FRAMES Bilder messen (CPU-Abgabe, GPU und Gesamt-Bildzeit), dann beenden |
+| `--bench-budget MS` | Mit `--bench-comp` mit Code 2 beenden, wenn die mittlere Bildzeit über MS liegt |
+| `--bench-all` | Mit `--bench-comp` alle Werks-Looks nacheinander messen |
+| `--bench-out DATEI.json` | Mit `--bench-scene` oder `--bench-comp` das Ergebnis zusätzlich als JSON schreiben |
 | `--frames N` | N Frames mit festen 60 FPS rendern, dann beenden |
 | `--screenshot DATEI.png` | Mit `--frames` das Fenster als PNG speichern |
 | `--dump-output DATEI.png` | Mit `--frames` die Engine-Ausgabe als PNG speichern |
 
-Nutzerdaten liegen unter Windows in `%APPDATA%\NyrexVJ` und unter Linux in `~/.config/NyrexVJ`: Log, Fensterlayout, Einstellungen, Autosave und `presets/`. Mit `NYREXVJ_DATA_DIR` lässt sich ein anderer Ordner wählen.
+Nutzerdaten liegen unter Windows in `%APPDATA%\NyrexVJ` und unter Linux in `~/.config/NyrexVJ`: Log, Fensterlayout, Einstellungen, Autosave, `recovery/` und `presets/`. Mit `NYREXVJ_DATA_DIR` lässt sich ein anderer Ordner wählen.
+
+Absturzschutz: Die Sitzung wird alle 30 Sekunden gespeichert, wenn sie sich geändert hat, und die letzten zehn Autosaves liegen rotierend in `recovery/`. Eine ungespeicherte Szene im Clip Creator wird dort ebenfalls gesichert. Wurde NyrexVJ nicht sauber beendet, lädt der nächste Start die alte Sitzung nicht von selbst (ein defekter Clip könnte sie wieder abstürzen lassen), sondern fragt, von welchem Autosave du weitermachen willst, bietet die ungespeicherte Creator-Szene an und zeigt den Absturzbericht mit dem Ende des Logs für Fehlerberichte.
 
 ## Fahrplan
 

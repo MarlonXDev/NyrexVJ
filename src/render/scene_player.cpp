@@ -614,7 +614,7 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     audio.level = frame.level;
     audio.kick = frame.kick;
 
-    const SceneCamera& camera = scene.camera;
+    const SceneCamera& camera = activeSceneCamera(scene, frame.beat);
     const float fov = camera.authored ? std::clamp(camera.fovDegrees, 15.0f, 110.0f) * 0.0174532925f : kFov;
     const float zoom = std::clamp(frame.scale, 0.2f, 4.0f);
     float distance = player.radius_ / std::sin(fov * 0.5f) * 1.04f / zoom;

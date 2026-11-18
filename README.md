@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.10.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
+> Status: v0.11.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
 
 ## Download
 
@@ -126,7 +126,7 @@ Models with metallic-roughness materials, normal maps, emissive maps and cut-out
 
 ### Clip Creator
 
-The Creator menu opens the Clip Creator. The left column lists the objects and lights of the scene, the middle shows a live preview (drag to orbit, mouse wheel to zoom, Use this view as the clip camera keeps the view), the right column is the inspector for transform, repeat, material, textures, animation, audio reactions, camera, sky and exposure. Start from a template (Creator menu, Start from a template, or Open in the window) or from an empty scene (New).
+The Creator menu opens the Clip Creator. The left column lists the objects and lights of the scene, the middle shows a live preview (drag to orbit, mouse wheel to zoom, Use this view as the clip camera keeps the view), the right column is the inspector for transform, repeat, material, textures, animation, audio reactions, cameras, sky and exposure. A scene can hold up to eight cameras: pick the one that plays, or let the clip cut between all of them every few beats. Start from a template (Creator menu, Start from a template, or Open in the window) or from an empty scene (New).
 
 Save writes a `.nyxclip` file into the clips folder (`%APPDATA%\NyrexVJ\clips`). It contains the scene description and, as copies, the .glb models and PNG or JPEG textures the scene uses (up to 200 MiB), so one file is all you need to share a scene. It then shows up in the Library under Scenes as `Scene: name`. Use as clip also puts it into the selected cell. Only `.glb` models can be stored in a scene, `.gltf` files that need separate files are listed in the Assets view but cannot be used. The file format and the decisions behind it are in [docs/adr/0004-scene-document-and-clip-pack.md](docs/adr/0004-scene-document-and-clip-pack.md), the lighting model in [docs/adr/0005-pbr-shading.md](docs/adr/0005-pbr-shading.md) and the editor in [docs/adr/0006-clip-creator.md](docs/adr/0006-clip-creator.md).
 
@@ -280,7 +280,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--select-layer N` | Select layer N (1-based) |
 | `--resolution IDX` | Output resolution index |
 | `--tab IDX` | Browser tab to show (0 Presets, 1 Library, 2 Audio) |
-| `--settings IDX` | Open the settings window on page IDX (0 to 7, 4 is Control) |
+| `--settings IDX` | Open the settings window on page IDX (0 to 8, 4 is Control) |
 | `--osc-port N` | Listen for OSC on port N even if it is switched off in the settings |
 | `--spout-test-pattern` | Offer a fake Spout sender called Test Pattern (for trying the Spout input without Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | With `--frames`, feed a MIDI message to the mappings at that frame |
@@ -295,15 +295,21 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--audio-demo` | Use the demo audio signal |
 | `--welcome` / `--no-welcome` | Force or skip the welcome screen |
 | `--fresh` | Ignore the saved session |
+| `--crash-test` | Crash on purpose a second after the start to try the crash recovery |
 | `--no-update-check` | Skip the update check |
 | `--check-shaders` | Compile every shader and exit |
 | `--bench-scene LAYERS:FRAMES[:CLIP]` | Measure frame times and memory with LAYERS (1 to 4) layers playing CLIP, then exit |
-| `--bench-out FILE.json` | With `--bench-scene`, also write the result as JSON |
+| `--bench-comp FRAMES` | Measure the loaded composition (CPU submit, GPU and total frame time) over FRAMES frames, then exit |
+| `--bench-budget MS` | With `--bench-comp`, exit with code 2 when the average frame time is above MS |
+| `--bench-all` | With `--bench-comp`, measure every factory look one after another |
+| `--bench-out FILE.json` | With `--bench-scene` or `--bench-comp`, also write the result as JSON |
 | `--frames N` | Run N frames at a fixed 60 FPS step, then exit |
 | `--screenshot FILE.png` | With `--frames`, save the window as PNG |
 | `--dump-output FILE.png` | With `--frames`, save the engine output as PNG |
 
-User data lives in `%APPDATA%\NyrexVJ` on Windows and `~/.config/NyrexVJ` on Linux: log, window layout, settings, autosave and `presets/`. Set `NYREXVJ_DATA_DIR` to use another folder.
+User data lives in `%APPDATA%\NyrexVJ` on Windows and `~/.config/NyrexVJ` on Linux: log, window layout, settings, autosave, `recovery/` and `presets/`. Set `NYREXVJ_DATA_DIR` to use another folder.
+
+Crash protection: the session is saved every 30 seconds when it changed, and a rotating set of the last ten autosaves lives in `recovery/`. An unsaved Clip Creator scene is saved there as well. When NyrexVJ did not close properly, the next start does not load the old session by itself (a bad clip could crash it again) but asks which autosave to continue from, offers the unsaved Creator scene and shows the crash report with the end of the log for bug reports.
 
 ## Roadmap
 

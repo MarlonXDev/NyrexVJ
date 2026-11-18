@@ -27,6 +27,9 @@ struct Options {
     std::string screenshot;
     std::string dumpOutput;
     std::string benchScene;
+    int benchComp = 0;
+    double benchBudget = 0.0;
+    bool benchAll = false;
     std::string benchOut;
     std::vector<std::pair<int, int>> switches;
     std::vector<std::pair<int, std::string>> dumps;
@@ -49,6 +52,12 @@ Options parseOptions(int argc, char** argv) {
             options.dumpOutput = argv[++i];
         } else if (arg == "--bench-scene" && hasValue) {
             options.benchScene = argv[++i];
+        } else if (arg == "--bench-comp" && hasValue) {
+            options.benchComp = std::atoi(argv[++i]);
+        } else if (arg == "--bench-budget" && hasValue) {
+            options.benchBudget = std::atof(argv[++i]);
+        } else if (arg == "--bench-all") {
+            options.benchAll = true;
         } else if (arg == "--bench-out" && hasValue) {
             options.benchOut = argv[++i];
         } else if (arg == "--decks" && hasValue) {
@@ -104,6 +113,8 @@ Options parseOptions(int argc, char** argv) {
             options.start.tab = std::atoi(argv[++i]);
         } else if (arg == "--output") {
             options.start.openOutput = true;
+        } else if (arg == "--crash-test") {
+            options.start.crashTest = true;
         } else if (arg == "--fresh") {
             options.start.fresh = true;
         } else if (arg == "--no-update-check") {
@@ -236,9 +247,9 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty()) {
+    if (!options.benchScene.empty() || options.benchComp > 0) {
         glfwSwapInterval(0);
-        const int benchExit = nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut);
+        const int benchExit = !options.benchScene.empty() ? nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut) : nvj::runCompositionBenchmark(app.engine(), options.benchComp, options.benchBudget, options.benchAll, options.benchOut);
         app.shutdown();
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();

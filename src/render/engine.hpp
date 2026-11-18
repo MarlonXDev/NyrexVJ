@@ -66,7 +66,12 @@ public:
     void reloadScene(int clip);
     int loadedSceneCount() const;
     GpuMemory gpuMemory() const;
+    void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
+    bool gpuTimingAvailable() const { return gpuQueries_[0] != 0; }
+    double gpuFrameMs() const { return gpuMs_; }
     GLuint layerPreview(int layer) const;
+    void requestPreview(int layer, int column);
+    GLuint previewTexture() const { return previewResult_ ? previewResult_->texture : 0; }
     bool layerLive(int layer) const;
     const AudioFeatures& audio() const { return audio_; }
     void configureSpout(const std::array<std::string, kSpoutInputSlots>& names, const std::string& excluded, bool flip);
@@ -121,6 +126,15 @@ private:
     struct CompositeProgram {
         GLuint id = 0;
         GLint tex = -1;
+        GLint opacity = -1;
+        GLint mode = -1;
+        GLint grade = -1;
+    };
+
+    struct BlendProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint back = -1;
         GLint opacity = -1;
         GLint mode = -1;
         GLint grade = -1;
@@ -188,7 +202,12 @@ private:
     void transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination);
     void setAudioUniforms(GLint audio, GLint kick, GLint audioTex);
     void drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale);
-    RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, int chain, RenderTarget* source, RenderTarget* scratch);
+    RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch);
+    RenderTarget* chainFeedback(int chain) { return &feedback_[static_cast<size_t>(chain * kEffectSlots)]; }
+    bool* chainUsed(int chain) { return &feedbackUsed_[static_cast<size_t>(chain * kEffectSlots)]; }
+    void drawLayerSource(int clipIndex, const Layer& layer, float scale, double clock, const RenderTarget& target);
+    void renderPreview();
+    void pollGpuQueries();
     void downsample(const RenderTarget& source, const RenderTarget& target);
     void prepareSpout(int slot);
     bool drawSpout(int slot, float scale);
@@ -198,6 +217,7 @@ private:
     std::vector<ClipProgram> clips_;
     std::vector<EffectProgram> effects_;
     CompositeProgram composite_;
+    BlendProgram blend_;
     FinalProgram final_;
     TransitionProgram transition_program_;
     ThumbProgram thumb_;
@@ -235,6 +255,24 @@ private:
     std::vector<size_t> deferredThumbs_;
     size_t nextThumb_ = 0;
     std::array<RenderTarget, kLayerCount> previews_;
+    static constexpr int kGpuQueries = 3;
+    std::array<GLuint, kGpuQueries> gpuQueries_{};
+    std::array<bool, kGpuQueries> gpuPending_{};
+    int gpuSlot_ = 0;
+    bool gpuTiming_ = true;
+    bool gpuActive_ = false;
+    double gpuMs_ = 0.0;
+    RenderTarget previewA_;
+    RenderTarget previewB_;
+    std::array<RenderTarget, kEffectSlots> previewFeedback_;
+    std::array<bool, kEffectSlots> previewFeedbackUsed_{};
+    RenderTarget* previewResult_ = nullptr;
+    bool previewRequested_ = false;
+    int previewLayer_ = 0;
+    int previewColumn_ = 0;
+    int previewClip_ = -1;
+    double previewClock_ = 0.0;
+    double previewLastTime_ = 0.0;
     std::array<bool, kLayerCount> live_{};
     static constexpr int kChainsPerSet = kLayerCount + 1;
     static constexpr int kFeedbackSets = 2;

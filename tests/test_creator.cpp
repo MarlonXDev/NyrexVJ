@@ -196,6 +196,119 @@ void testDocRoundTrip() {
     CHECK(near(back.camera.fovDegrees, 52.0f));
 }
 
+void testCameras() {
+    SceneDoc doc = makeDefaultDoc();
+    CHECK(docCameraCount(doc) == 1);
+    CHECK(!docRemoveCamera(doc, 0));
+    CHECK(!docRemoveCamera(doc, 5));
+    doc.camera.name = "Wide";
+    doc.camera.fovDegrees = 70.0f;
+    DocCamera close;
+    close.distance = 0.5f;
+    close.yawDegrees = 90.0f;
+    close.bindings[0] = {true, BindSource::Kick, BindTarget::Zoom, 0.1f};
+    const int second = docAddCamera(doc, close);
+    CHECK(second == 1);
+    CHECK(doc.extraCameras[0].name == "Camera 2");
+    const int third = docAddCamera(doc, doc.camera);
+    CHECK(third == 2);
+    CHECK(docCameraCount(doc) == 3);
+    CHECK(near(docCameraAt(doc, 1).distance, 0.5f));
+    CHECK(near(docCameraAt(doc, 99).fovDegrees, docCameraAt(doc, 2).fovDegrees));
+    CHECK(near(docCameraAt(doc, -4).fovDegrees, 70.0f));
+    doc.activeCamera = 1;
+    doc.cutBeats = 4.0f;
+
+    SceneDoc back;
+    std::string error;
+    CHECK(docFromJson(docToJson(doc), back, error));
+    CHECK(docCameraCount(back) == 3);
+    CHECK(back.activeCamera == 1);
+    CHECK(near(back.cutBeats, 4.0f));
+    CHECK(back.camera.name == "Wide");
+    CHECK(back.extraCameras[0].name == "Camera 2");
+    CHECK(near(back.extraCameras[0].yawDegrees, 90.0f));
+    CHECK(back.extraCameras[0].bindings[0].target == BindTarget::Zoom);
+    CHECK(docToJson(back) == docToJson(doc));
+
+    SceneDoc single = makeDefaultDoc();
+    const std::string singleText = docToJson(single);
+    CHECK(singleText.find("\"cameras\"") == std::string::npos);
+    CHECK(singleText.find("cutBeats") == std::string::npos);
+    SceneDoc legacy;
+    CHECK(docFromJson(R"({"format":"nyxscene","version":1,"name":"Old","camera":{"distance":1.5,"fov":60}})", legacy, error));
+    CHECK(docCameraCount(legacy) == 1);
+    CHECK(near(legacy.camera.distance, 1.5f));
+    CHECK(legacy.camera.name == "Camera 1");
+    CHECK(legacy.activeCamera == 0 && legacy.cutBeats == 0.0f);
+
+    SceneDoc crowded = makeDefaultDoc();
+    for (size_t i = 0; i < kDocMaxCameras + 4; ++i) {
+        docAddCamera(crowded, DocCamera{});
+    }
+    CHECK(static_cast<size_t>(docCameraCount(crowded)) == kDocMaxCameras);
+    CHECK(docAddCamera(crowded, DocCamera{}) == -1);
+    SceneDoc broken = crowded;
+    broken.activeCamera = 99;
+    broken.cutBeats = 9999.0f;
+    broken.extraCameras[2].fovDegrees = 5000.0f;
+    broken.extraCameras[3].name = "";
+    sanitizeDoc(broken);
+    CHECK(broken.activeCamera == docCameraCount(broken) - 1);
+    CHECK(near(broken.cutBeats, kDocMaxCutBeats));
+    CHECK(broken.extraCameras[2].fovDegrees <= 110.0f);
+    CHECK(!broken.extraCameras[3].name.empty());
+
+    SceneDoc removal = makeDefaultDoc();
+    docAddCamera(removal, DocCamera{});
+    docAddCamera(removal, DocCamera{});
+    removal.extraCameras[0].distance = 2.0f;
+    removal.extraCameras[1].distance = 3.0f;
+    removal.activeCamera = 2;
+    CHECK(docRemoveCamera(removal, 1));
+    CHECK(docCameraCount(removal) == 2);
+    CHECK(removal.activeCamera == 1);
+    CHECK(near(docCameraAt(removal, 1).distance, 3.0f));
+    removal.activeCamera = 1;
+    CHECK(docRemoveCamera(removal, 1));
+    CHECK(removal.activeCamera == 0 && docCameraCount(removal) == 1);
+    docAddCamera(removal, DocCamera{});
+    removal.extraCameras[0].distance = 2.5f;
+    removal.activeCamera = 0;
+    CHECK(docRemoveCamera(removal, 0));
+    CHECK(near(removal.camera.distance, 2.5f));
+    CHECK(removal.activeCamera == 0);
+
+    SceneDoc shots = makeDefaultDoc();
+    shots.camera.yawDegrees = 10.0f;
+    DocCamera b;
+    b.yawDegrees = 20.0f;
+    docAddCamera(shots, b);
+    b.yawDegrees = 30.0f;
+    docAddCamera(shots, b);
+    shots.activeCamera = 1;
+    GltfResult plain = buildSceneFromDoc(shots, DocAssets{});
+    CHECK(plain.ok);
+    CHECK(plain.scene.cameras.empty());
+    CHECK(near(plain.scene.camera.yawDegrees, 20.0f));
+    CHECK(near(activeSceneCamera(plain.scene, 100.0).yawDegrees, 20.0f));
+    shots.cutBeats = 4.0f;
+    GltfResult cut = buildSceneFromDoc(shots, DocAssets{});
+    CHECK(cut.ok);
+    CHECK(cut.scene.cameras.size() == 3);
+    CHECK(near(activeSceneCamera(cut.scene, 0.0).yawDegrees, 10.0f));
+    CHECK(near(activeSceneCamera(cut.scene, 3.9).yawDegrees, 10.0f));
+    CHECK(near(activeSceneCamera(cut.scene, 4.0).yawDegrees, 20.0f));
+    CHECK(near(activeSceneCamera(cut.scene, 9.0).yawDegrees, 30.0f));
+    CHECK(near(activeSceneCamera(cut.scene, 12.0).yawDegrees, 10.0f));
+    CHECK(near(activeSceneCamera(cut.scene, -5.0).yawDegrees, 10.0f));
+    CHECK(near(activeSceneCamera(cut.scene, std::nan("")).yawDegrees, 20.0f));
+    std::string invalid;
+    CHECK(validateScene(cut.scene, invalid));
+    cut.scene.cameras[1].fovDegrees = 400.0f;
+    CHECK(!validateScene(cut.scene, invalid));
+}
+
 void testDocRejections() {
     SceneDoc doc;
     std::string error;
@@ -584,6 +697,7 @@ int main() {
     testContainerRejections();
     testContainerNames();
     testDocRoundTrip();
+    testCameras();
     testDocRejections();
     testAssetNames();
     testPrimitives();

@@ -7,5 +7,6 @@
 namespace nvj {
 
 int runSceneBenchmark(Engine& engine, const std::string& spec, const std::string& outputPath);
+int runCompositionBenchmark(Engine& engine, int frames, double budgetMs, bool allLooks, const std::string& outputPath);
 
 }

@@ -3,6 +3,7 @@
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
 #include "core/log.hpp"
+#include "core/recovery.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -491,7 +492,7 @@ bool deleteUserPreset(const std::string& name) {
 }
 
 bool saveSession(const Composition& comp) {
-    return writeTextFile(fs::path(userDataDir()) / "autosave.json", compositionToJson(comp));
+    return writeFileAtomic(fs::path(userDataDir()) / "autosave.json", compositionToJson(comp));
 }
 
 bool loadSession(Composition& comp) {

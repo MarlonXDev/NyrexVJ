@@ -1,7 +1,10 @@
 #include "platform/platform.hpp"
 
+#include <cerrno>
+#include <csignal>
 #include <fstream>
 #include <filesystem>
+#include <sys/types.h>
 #include <unistd.h>
 
 namespace nvj::platform {
@@ -68,6 +71,17 @@ size_t processMemoryBytes() {
         return 0;
     }
     return static_cast<size_t>(resident) * static_cast<size_t>(sysconf(_SC_PAGESIZE));
+}
+
+unsigned long currentProcessId() {
+    return static_cast<unsigned long>(getpid());
+}
+
+bool processAlive(unsigned long pid) {
+    if (pid == 0) {
+        return false;
+    }
+    return kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM;
 }
 
 }

@@ -5,7 +5,10 @@
 #include "audio/audio_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
+#include "core/edit_history.hpp"
+#include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
+#include "core/recovery.hpp"
 #include "core/settings.hpp"
 #include "render/engine.hpp"
 #include "render/output_window.hpp"
@@ -30,6 +33,7 @@ enum SettingsPage {
     SettingsControl,
     SettingsUpdates,
     SettingsShortcuts,
+    SettingsPerformance,
     SettingsAbout,
     SettingsPageCount
 };
@@ -59,6 +63,7 @@ struct StartOptions {
     bool audioDemo = false;
     bool forceWelcome = false;
     bool skipWelcome = false;
+    bool crashTest = false;
 };
 
 class App {
@@ -94,8 +99,14 @@ private:
     void openCreator();
     void openCreatorWith(const std::string& clipName);
     bool creatorSave(bool copy, bool useAsClip);
+    void undoEdit();
+    void drawPerformancePage();
+    void redoEdit();
     void drawCreator();
     void shutdownCreator();
+    void restoreCreatorDoc(const SceneDoc& doc);
+    bool creatorUnsaved() const;
+    std::string creatorDocJson() const;
     void assignClipToSelectedCell(int clip);
     void assignClipToFreeCell(int clip, int layer);
     void addEffectToLayer(int effect, int layer);
@@ -120,6 +131,12 @@ private:
     void switchDeckTo(int index);
     void fillDeckFromLook(int index, const Composition& look);
     void drawWelcome();
+    void drawRecovery();
+    void restoreAutosave(const AutosaveEntry& entry);
+    void restoreCreatorScene();
+    void keepLatestAutosave();
+    void autosaveTick(double dt);
+    bool recoveryPending() const { return recoveryRequested_ || recoveryOpen_; }
     void drawGrade(ColorGrade& grade);
     void drawMods(std::array<AudioMod, kModSlots>& mods, bool master);
     void drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots);
@@ -155,6 +172,15 @@ private:
     std::unique_ptr<CreatorState> creator_;
     bool creatorOpen_ = false;
     bool creatorFocus_ = false;
+    bool creatorHasFocus_ = false;
+    EditHistory history_;
+    FrameStats perfFrame_{240};
+    FrameStats perfCpu_{240};
+    FrameStats perfGpu_{240};
+    FrameSummary perfFrameSummary_;
+    FrameSummary perfCpuSummary_;
+    FrameSummary perfGpuSummary_;
+    double perfRefresh_ = 0.0;
     bool restart_ = false;
     int selectedLayer_ = 0;
     int selectedColumn_ = 0;
@@ -175,6 +201,19 @@ private:
     std::string toastText_;
     double toastUntil_ = 0.0;
     double autosaveTimer_ = 0.0;
+    double rotatingTimer_ = 0.0;
+    std::string lastSessionText_;
+    std::string lastRotatingText_;
+    bool ownsSession_ = false;
+    double crashTestAt_ = -1.0;
+    unsigned long processId_ = 0;
+    PreviousSession previous_;
+    std::vector<AutosaveEntry> recoveryEntries_;
+    bool recoveryRequested_ = false;
+    bool recoveryOpen_ = false;
+    bool recoveryCreator_ = false;
+    int recoverySelected_ = 0;
+    std::string recoveryDetails_;
     bool shutDown_ = false;
     bool welcomeOpen_ = false;
     bool welcomeRequested_ = false;

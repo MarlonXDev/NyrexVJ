@@ -31,6 +31,7 @@ struct CreatorState {
     bool rebuild = true;
     CreatorSelect selectKind = CreatorSelect::Object;
     int selectIndex = 0;
+    int cameraSelect = 0;
     std::unique_ptr<ScenePlayer> shown;
     std::unique_ptr<ScenePlayer> pending;
     RenderTarget target;

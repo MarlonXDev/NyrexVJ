@@ -1,8 +1,12 @@
+#include <algorithm>
 #include "render/clip_library.hpp"
 #include "core/composition.hpp"
+#include "core/edit_history.hpp"
+#include "core/frame_stats.hpp"
 #include "core/novelty.hpp"
 #include "render/effect_library.hpp"
 #include "core/preset.hpp"
+#include "core/recovery.hpp"
 #include "core/settings.hpp"
 #include "core/sha256.hpp"
 #include "update/update_logic.hpp"
@@ -556,6 +560,92 @@ void testUpdater() {
 
 }
 
+void testRecovery() {
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / "nyrexvj_recovery_test";
+    std::error_code ec;
+    fs::remove_all(dir, ec);
+    fs::create_directories(dir, ec);
+
+    const nvj::ProcessAliveFn nobody = [](unsigned long) { return false; };
+    const nvj::ProcessAliveFn everybody = [](unsigned long) { return true; };
+
+    CHECK(!nvj::inspectPreviousSession(dir, 100, nobody).crashed);
+    CHECK(nvj::beginSession(dir, 4242, "1.2.3", 1700000000));
+    nvj::PreviousSession crashed = nvj::inspectPreviousSession(dir, 100, nobody);
+    CHECK(crashed.crashed && !crashed.otherInstance);
+    CHECK(crashed.version == "1.2.3" && crashed.startedAt == 1700000000);
+    CHECK(crashed.crashReport.empty());
+    nvj::PreviousSession running = nvj::inspectPreviousSession(dir, 100, everybody);
+    CHECK(running.otherInstance && !running.crashed);
+    CHECK(nvj::inspectPreviousSession(dir, 4242, everybody).crashed);
+
+    CHECK(nvj::writeFileAtomic(nvj::crashReportPath(dir), "NyrexVJ 1.2.3\nreason: test\n"));
+    CHECK(nvj::writeFileAtomic(nvj::previousLogPath(dir), "a\nb\nc\nd\ne\n"));
+    crashed = nvj::inspectPreviousSession(dir, 100, nobody);
+    CHECK(crashed.crashReport.find("reason: test") != std::string::npos);
+    CHECK(crashed.logTail == "a\nb\nc\nd\ne");
+    CHECK(!fs::exists(nvj::crashReportPath(dir)));
+    CHECK(nvj::inspectPreviousSession(dir, 100, nobody).crashReport.empty());
+
+    nvj::endSession(dir, 1);
+    CHECK(nvj::inspectPreviousSession(dir, 100, nobody).crashed);
+    nvj::endSession(dir, 4242);
+    CHECK(!nvj::inspectPreviousSession(dir, 100, nobody).crashed);
+    nvj::endSession(dir, 4242);
+
+    CHECK(nvj::writeFileAtomic(dir / "unit.txt", "first"));
+    CHECK(nvj::writeFileAtomic(dir / "unit.txt", "second"));
+    std::string text;
+    CHECK(nvj::readWholeFile(dir / "unit.txt", text) && text == "second");
+    CHECK(!fs::exists(dir / "unit.txt.tmp"));
+    CHECK(!nvj::readWholeFile(dir / "missing.txt", text));
+
+    CHECK(nvj::listAutosaves(dir).empty());
+    for (int i = 0; i < 15; ++i) {
+        CHECK(nvj::writeRotatingAutosave(dir, "save " + std::to_string(i), 1700000000 + i * 100, 10));
+    }
+    std::vector<nvj::AutosaveEntry> entries = nvj::listAutosaves(dir);
+    CHECK(entries.size() == 10);
+    CHECK(entries.front().timestamp == 1700000000 + 14 * 100);
+    CHECK(entries.back().timestamp == 1700000000 + 5 * 100);
+    for (size_t i = 1; i < entries.size(); ++i) {
+        CHECK(entries[i - 1].timestamp > entries[i].timestamp);
+        CHECK(!entries[i].latest);
+    }
+    CHECK(nvj::readWholeFile(entries.front().path, text) && text == "save 14");
+
+    CHECK(nvj::writeFileAtomic(dir / "autosave.json", "{}"));
+    entries = nvj::listAutosaves(dir);
+    CHECK(entries.size() == 11);
+    CHECK(entries.front().latest && entries.front().bytes == 2);
+    CHECK(nvj::writeRotatingAutosave(dir, "x", 1700099999, 3));
+    CHECK(nvj::listAutosaves(dir).size() == 4);
+
+    CHECK(!nvj::hasCreatorRecovery(dir));
+    CHECK(nvj::writeCreatorRecovery(dir, "{\"scene\":1}"));
+    CHECK(nvj::hasCreatorRecovery(dir));
+    CHECK(nvj::readCreatorRecovery(dir, text) && text == "{\"scene\":1}");
+    nvj::clearCreatorRecovery(dir);
+    CHECK(!nvj::hasCreatorRecovery(dir));
+    nvj::clearCreatorRecovery(dir);
+
+    CHECK(nvj::tailLines("1\n2\n3\n4\n", 2) == "3\n4");
+    CHECK(nvj::tailLines("1\n2", 5) == "1\n2");
+    CHECK(nvj::tailLines("", 3).empty());
+    CHECK(nvj::tailLines("x\n", 0).empty());
+    CHECK(nvj::formatTimestamp(1700000000).size() == 19);
+
+    nvj::Composition comp = nvj::defaultComposition();
+    comp.name = "Recovered";
+    CHECK(nvj::saveSession(comp));
+    nvj::Composition loaded;
+    CHECK(nvj::loadSession(loaded));
+    CHECK(loaded.name == "Recovered");
+
+    fs::remove_all(dir, ec);
+}
+
 void testNovelty() {
     const char* clips[] = {"Neon Sigil", "Neon Lattice", "Neon Corridor", "Chaos Smoke", "Tesseract", "Laser Web", "Mandelbox Fly", "Prism Bloom"};
     const char* effects[] = {"Kaleido Neon", "Mandala Fold", "Hue Feedback", "Star Burst", "Chrome Liquid", "Image Terrain", "Hyperspace", "Shatter"};
@@ -597,6 +687,226 @@ void testNovelty() {
     CHECK(!nvj::isNewPresetIn("Neon Sigil", "0.8.0"));
 }
 
+void testBlendModes() {
+    CHECK(nvj::BlendModeCount == 14);
+    std::vector<std::string> names;
+    for (int i = 0; i < nvj::BlendModeCount; ++i) {
+        const std::string name = nvj::blendName(i);
+        CHECK(!name.empty());
+        CHECK(std::find(names.begin(), names.end(), name) == names.end());
+        names.push_back(name);
+        CHECK(nvj::blendFromName(name) == i);
+    }
+    CHECK(nvj::blendFromName("soft light") == nvj::BlendSoftLight);
+    CHECK(nvj::blendFromName("unknown") == nvj::BlendNormal);
+    CHECK(std::string(nvj::blendName(-1)) == "Normal");
+    CHECK(std::string(nvj::blendName(nvj::BlendModeCount)) == "Normal");
+
+    nvj::Composition comp;
+    for (int i = 0; i < nvj::kLayerCount; ++i) {
+        comp.layers[static_cast<size_t>(i)].blend = nvj::BlendOverlay + i;
+    }
+    nvj::Composition loaded;
+    std::string error;
+    CHECK(nvj::compositionFromJson(nvj::compositionToJson(comp), loaded, error));
+    for (int i = 0; i < nvj::kLayerCount; ++i) {
+        CHECK(loaded.layers[static_cast<size_t>(i)].blend == nvj::BlendOverlay + i);
+    }
+}
+
+void testFrameStats() {
+    nvj::FrameStats empty(8);
+    CHECK(empty.size() == 0);
+    CHECK(empty.capacity() == 8);
+    CHECK(empty.last() == 0.0);
+    CHECK(empty.summary().count == 0);
+    CHECK(empty.overBudgetFraction(10.0) == 0.0);
+    CHECK(empty.ordered().empty());
+
+    nvj::FrameStats stats(100);
+    for (int i = 1; i <= 100; ++i) {
+        stats.add(static_cast<double>(i));
+    }
+    const nvj::FrameSummary summary = stats.summary();
+    CHECK(summary.count == 100);
+    CHECK(std::fabs(summary.avg - 50.5) < 1e-9);
+    CHECK(summary.min == 1.0);
+    CHECK(summary.max == 100.0);
+    CHECK(summary.p50 >= 49.0 && summary.p50 <= 51.0);
+    CHECK(summary.p95 >= 94.0 && summary.p95 <= 96.0);
+    CHECK(summary.p99 >= 98.0 && summary.p99 <= 100.0);
+    CHECK(summary.min <= summary.p50 && summary.p50 <= summary.p95 && summary.p95 <= summary.p99 && summary.p99 <= summary.max);
+    CHECK(std::fabs(stats.overBudgetFraction(90.0) - 0.10) < 1e-9);
+    CHECK(stats.overBudgetFraction(100.0) == 0.0);
+    CHECK(stats.last() == 100.0);
+
+    nvj::FrameStats wrap(4);
+    for (int i = 1; i <= 10; ++i) {
+        wrap.add(static_cast<double>(i));
+    }
+    CHECK(wrap.size() == 4);
+    const std::vector<float> ordered = wrap.ordered();
+    CHECK(ordered.size() == 4);
+    CHECK(ordered[0] == 7.0f && ordered[1] == 8.0f && ordered[2] == 9.0f && ordered[3] == 10.0f);
+    CHECK(wrap.summary().min == 7.0);
+    CHECK(wrap.summary().max == 10.0);
+    wrap.clear();
+    CHECK(wrap.size() == 0);
+    CHECK(wrap.summary().count == 0);
+    nvj::FrameStats zero(0);
+    zero.add(3.0);
+    CHECK(zero.size() == 1 && zero.last() == 3.0);
+
+    CHECK(nvj::clampBudgetFps(1) == nvj::kMinBudgetFps);
+    CHECK(nvj::clampBudgetFps(100000) == nvj::kMaxBudgetFps);
+    CHECK(nvj::clampBudgetFps(60) == 60);
+    CHECK(std::fabs(nvj::budgetMilliseconds(60) - 1000.0 / 60.0) < 1e-9);
+    CHECK(std::fabs(nvj::budgetMilliseconds(0) - 1000.0 / nvj::kMinBudgetFps) < 1e-9);
+}
+
+void testRenderCost() {
+    nvj::Composition empty;
+    for (nvj::Layer& layer : empty.layers) {
+        layer.activeColumn = -1;
+    }
+    const nvj::RenderCost none = nvj::estimateRenderCost(empty);
+    CHECK(none.layers() == 0);
+    CHECK(none.total() == none.finals + none.masterEffects);
+
+    nvj::Composition comp;
+    for (nvj::Layer& layer : comp.layers) {
+        layer.activeColumn = -1;
+    }
+    comp.layers[0].cells[0] = 0;
+    comp.layers[0].activeColumn = 0;
+    comp.layers[1].cells[0] = 1;
+    comp.layers[1].activeColumn = 0;
+    const nvj::RenderCost two = nvj::estimateRenderCost(comp);
+    CHECK(two.layers() == 2);
+    CHECK(two.composites == 2);
+    CHECK(two.total() > none.total());
+
+    comp.layers[1].bypass = true;
+    CHECK(nvj::estimateRenderCost(comp).layers() == 1);
+    comp.layers[1].bypass = false;
+    comp.layers[0].solo = true;
+    CHECK(nvj::estimateRenderCost(comp).layers() == 1);
+    comp.layers[0].solo = false;
+
+    comp.layers[0].fx[0].effect = 0;
+    comp.layers[0].fx[0].enabled = true;
+    const nvj::RenderCost withEffect = nvj::estimateRenderCost(comp);
+    CHECK(withEffect.layerEffects == 1);
+    CHECK(withEffect.total() == two.total() + 1);
+    comp.layers[0].fx[0].enabled = false;
+    CHECK(nvj::estimateRenderCost(comp).layerEffects == 0);
+
+    for (const nvj::Composition& look : nvj::factoryPresets()) {
+        const nvj::RenderCost cost = nvj::estimateRenderCost(look);
+        CHECK(cost.total() <= 40);
+        CHECK(cost.layers() <= nvj::kLayerCount);
+    }
+}
+
+void settleHistory(nvj::EditHistory& history, const nvj::Composition& comp) {
+    history.observe(comp, 0.1, false);
+    history.observe(comp, 0.5, false);
+}
+
+void testEditHistory() {
+    nvj::Composition comp;
+    nvj::EditHistory history;
+    history.reset(comp);
+    CHECK(!history.canUndo());
+    CHECK(!history.canRedo());
+    CHECK(!history.undo(comp, 10));
+
+    comp.layers[0].opacity = 0.25f;
+    history.observe(comp, 0.1, false);
+    CHECK(history.canUndo());
+    CHECK(history.undoCount() == 0);
+    history.observe(comp, 0.1, true);
+    history.observe(comp, 0.5, true);
+    CHECK(history.undoCount() == 0);
+    history.observe(comp, 0.5, false);
+    CHECK(history.undoCount() == 1);
+
+    comp.layers[0].activeColumn = 3;
+    comp.bpm = 99.0f;
+    settleHistory(history, comp);
+    CHECK(history.undoCount() == 1);
+
+    CHECK(history.undo(comp, 10));
+    CHECK(comp.layers[0].opacity == 1.0f);
+    CHECK(comp.layers[0].activeColumn == 3);
+    CHECK(comp.bpm == 99.0f);
+    CHECK(history.canRedo());
+    CHECK(!history.canUndo());
+    CHECK(history.redo(comp, 10));
+    CHECK(comp.layers[0].opacity == 0.25f);
+    CHECK(!history.redo(comp, 10));
+
+    comp.layers[1].blend = nvj::BlendOverlay;
+    settleHistory(history, comp);
+    CHECK(history.undoCount() == 2);
+    CHECK(history.undo(comp, 10));
+    CHECK(history.canRedo());
+    comp.layers[2].speed = 2.0f;
+    settleHistory(history, comp);
+    CHECK(!history.canRedo());
+    CHECK(history.undoCount() == 2);
+
+    comp.layers[3].opacity = 0.5f;
+    CHECK(history.undo(comp, 10));
+    CHECK(comp.layers[3].opacity == 1.0f);
+    CHECK(comp.layers[2].speed == 2.0f);
+    CHECK(history.redo(comp, 10));
+    CHECK(comp.layers[3].opacity == 0.5f);
+
+    nvj::Composition cells;
+    nvj::EditHistory cellHistory;
+    cellHistory.reset(cells);
+    cells.layers[0].cells[0] = 9;
+    settleHistory(cellHistory, cells);
+    cells.layers[0].cells[0] = 1;
+    settleHistory(cellHistory, cells);
+    CHECK(cellHistory.undo(cells, 5));
+    CHECK(cells.layers[0].cells[0] == -1);
+    CHECK(cellHistory.undo(cells, 5));
+    CHECK(cells.layers[0].cells[0] == -1);
+
+    nvj::Composition decks;
+    nvj::EditHistory deckHistory;
+    decks.deckUsed[1] = true;
+    deckHistory.reset(decks);
+    CHECK(nvj::selectDeck(decks, 1));
+    settleHistory(deckHistory, decks);
+    CHECK(deckHistory.undoCount() == 0);
+    decks.layers[0].opacity = 0.1f;
+    settleHistory(deckHistory, decks);
+    CHECK(deckHistory.undoCount() == 1);
+    CHECK(nvj::selectDeck(decks, 0));
+    settleHistory(deckHistory, decks);
+    CHECK(deckHistory.undoCount() == 1);
+    CHECK(deckHistory.undo(decks, 10));
+    CHECK(nvj::selectDeck(decks, 1));
+    CHECK(decks.layers[0].opacity == 1.0f);
+
+    nvj::Composition many;
+    nvj::EditHistory manyHistory;
+    manyHistory.reset(many);
+    for (int i = 0; i < 80; ++i) {
+        many.master.level = 0.1f + 0.01f * static_cast<float>(i);
+        settleHistory(manyHistory, many);
+    }
+    CHECK(manyHistory.undoCount() == nvj::EditHistory::kLimit);
+    int steps = 0;
+    while (manyHistory.undo(many, 10)) {
+        ++steps;
+    }
+    CHECK(steps == static_cast<int>(nvj::EditHistory::kLimit));
+}
+
 int main() {
     testSha256();
     testVersions();
@@ -604,9 +914,14 @@ int main() {
     testHashFile();
     testLibraries();
     testPresets();
+    testBlendModes();
+    testFrameStats();
+    testRenderCost();
+    testEditHistory();
     testDecks();
     testPresetFiles();
     testNovelty();
+    testRecovery();
     testUpdater();
     std::printf("%d checks, %d failed\n", gChecks, gFailures);
     return gFailures == 0 ? 0 : 1;

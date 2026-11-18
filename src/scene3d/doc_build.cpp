@@ -32,6 +32,19 @@ std::vector<NodeBinding> convertBindings(const std::array<DocBinding, 2>& bindin
     return out;
 }
 
+SceneCamera convertCamera(const DocCamera& source) {
+    SceneCamera camera;
+    camera.authored = true;
+    camera.fovDegrees = source.fovDegrees;
+    camera.distance = source.distance;
+    camera.pitchDegrees = source.pitchDegrees;
+    camera.yawDegrees = source.yawDegrees;
+    camera.orbitSpeed = source.orbitSpeed;
+    camera.pitchSway = source.pitchSway;
+    camera.bindings = convertBindings(source.bindings);
+    return camera;
+}
+
 bool cancelled(const GltfLimits& limits) {
     return limits.cancel != nullptr && limits.cancel->load();
 }
@@ -94,14 +107,13 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
     scene.sky.horizon = {linear(doc.sky.horizon[0]), linear(doc.sky.horizon[1]), linear(doc.sky.horizon[2])};
     scene.sky.ground = {linear(doc.sky.ground[0]), linear(doc.sky.ground[1]), linear(doc.sky.ground[2])};
     scene.sky.intensity = doc.sky.intensity;
-    scene.camera.authored = true;
-    scene.camera.fovDegrees = doc.camera.fovDegrees;
-    scene.camera.distance = doc.camera.distance;
-    scene.camera.pitchDegrees = doc.camera.pitchDegrees;
-    scene.camera.yawDegrees = doc.camera.yawDegrees;
-    scene.camera.orbitSpeed = doc.camera.orbitSpeed;
-    scene.camera.pitchSway = doc.camera.pitchSway;
-    scene.camera.bindings = convertBindings(doc.camera.bindings);
+    scene.camera = convertCamera(docCameraAt(doc, doc.activeCamera));
+    if (doc.cutBeats > 0.0f && docCameraCount(doc) > 1) {
+        scene.cameraCutBeats = doc.cutBeats;
+        for (int i = 0; i < docCameraCount(doc); ++i) {
+            scene.cameras.push_back(convertCamera(docCameraAt(doc, i)));
+        }
+    }
     for (const DocLight& l : doc.lights) {
         SceneLight light;
         light.point = l.point;

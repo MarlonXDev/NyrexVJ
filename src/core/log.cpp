@@ -51,7 +51,10 @@ void logInit() {
     if (gFile.is_open()) {
         return;
     }
-    gFile.open(std::filesystem::path(userDataDir()) / "nyrexvj.log", std::ios::trunc);
+    const std::filesystem::path current = std::filesystem::path(userDataDir()) / "nyrexvj.log";
+    std::error_code ec;
+    std::filesystem::rename(current, std::filesystem::path(userDataDir()) / "nyrexvj.previous.log", ec);
+    gFile.open(current, std::ios::trunc);
 }
 
 void logLine(const std::string& line) {

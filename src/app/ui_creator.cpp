@@ -140,6 +140,7 @@ AssetFolders assetFolders() {
 
 void loadInto(CreatorState& cs, const SceneDoc& doc, std::shared_ptr<ScenePack> pack, const std::filesystem::path& file) {
     cs.doc = doc;
+    cs.cameraSelect = std::clamp(doc.activeCamera, 0, docCameraCount(doc) - 1);
     cs.pack = pack;
     cs.file = file;
     cs.source = pack ? AssetSource(assetFolders(), pack) : AssetSource(assetFolders());
@@ -380,11 +381,58 @@ bool lightInspector(DocLight& l) {
     return changed;
 }
 
-bool sceneInspector(SceneDoc& doc) {
+bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
     bool changed = false;
     changed |= inputString(tr("Scene name"), doc.name, kDocMaxNameBytes);
-    if (ImGui::CollapsingHeader(tr("Camera"), ImGuiTreeNodeFlags_DefaultOpen)) {
-        DocCamera& c = doc.camera;
+    if (ImGui::CollapsingHeader(tr("Cameras"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        const int count = docCameraCount(doc);
+        cameraSelect = std::clamp(cameraSelect, 0, count - 1);
+        for (int i = 0; i < count; ++i) {
+            ImGui::PushID(i);
+            const bool playing = doc.cutBeats <= 0.0f && doc.activeCamera == i;
+            if (ImGui::Selectable(docCameraAt(doc, i).name.c_str(), cameraSelect == i)) {
+                cameraSelect = i;
+                if (doc.activeCamera != i) {
+                    doc.activeCamera = i;
+                    changed = true;
+                }
+            }
+            if (playing) {
+                ImGui::SameLine();
+                ImGui::TextDisabled("%s", tr("playing"));
+            }
+            ImGui::PopID();
+        }
+        if (static_cast<size_t>(count) < kDocMaxCameras) {
+            if (ImGui::Button(tr("New"))) {
+                cameraSelect = docAddCamera(doc, DocCamera{});
+                doc.activeCamera = cameraSelect;
+                changed = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button(tr("Duplicate"))) {
+                cameraSelect = docAddCamera(doc, docCameraAt(doc, cameraSelect));
+                doc.activeCamera = cameraSelect;
+                changed = true;
+            }
+            ImGui::SameLine();
+        }
+        ImGui::BeginDisabled(count <= 1);
+        if (ImGui::Button(tr("Delete"))) {
+            if (docRemoveCamera(doc, cameraSelect)) {
+                cameraSelect = doc.activeCamera;
+                changed = true;
+            }
+        }
+        ImGui::EndDisabled();
+        cameraSelect = std::clamp(cameraSelect, 0, docCameraCount(doc) - 1);
+        ImGui::BeginDisabled(docCameraCount(doc) <= 1);
+        changed |= ImGui::SliderFloat(tr("Cut (beats)"), &doc.cutBeats, 0.0f, 32.0f, "%.1f");
+        ImGui::SetItemTooltip("%s", tr("Switches between all cameras of the scene after this many beats. 0 keeps the selected camera."));
+        ImGui::EndDisabled();
+        ImGui::Separator();
+        DocCamera& c = docCameraAt(doc, cameraSelect);
+        changed |= inputString(tr("Camera name"), c.name, kDocMaxNameBytes);
         changed |= ImGui::SliderFloat(tr("Distance"), &c.distance, 0.2f, 4.0f, "%.2f");
         changed |= ImGui::SliderFloat(tr("Height angle"), &c.pitchDegrees, -80.0f, 80.0f, "%.0f");
         changed |= ImGui::DragFloat(tr("Start angle"), &c.yawDegrees, 0.5f, -720.0f, 720.0f, "%.0f");
@@ -809,6 +857,7 @@ void App::drawCreator() {
             AudioFeatures audio = cs.simulateAudio ? virtualAudio(cs.time * 2.0, cs.time) : engine_.audio();
             SceneFrame frame;
             frame.time = static_cast<float>(cs.time);
+            frame.beat = cs.simulateAudio ? cs.time * 2.0 : engine_.beat();
             frame.bass = audio.bass;
             frame.mid = audio.mid;
             frame.high = audio.high;
@@ -871,9 +920,10 @@ void App::drawCreator() {
         ImGui::SameLine();
         if (ImGui::Button(tr("Use this view as the clip camera"))) {
             snapshot();
-            cs.doc.camera.yawDegrees = cs.yaw * 57.2957795f;
-            cs.doc.camera.pitchDegrees = cs.pitch * 57.2957795f;
-            cs.doc.camera.distance = cs.distance;
+            DocCamera& target = docCameraAt(cs.doc, cs.cameraSelect);
+            target.yawDegrees = cs.yaw * 57.2957795f;
+            target.pitchDegrees = cs.pitch * 57.2957795f;
+            target.distance = cs.distance;
             markChanged(cs);
         }
         ImGui::EndDisabled();
@@ -904,7 +954,7 @@ void App::drawCreator() {
             changed |= lightInspector(cs.doc.lights[static_cast<size_t>(cs.selectIndex)]);
             ImGui::PopID();
         } else {
-            changed |= sceneInspector(cs.doc);
+            changed |= sceneInspector(cs.doc, cs.cameraSelect);
         }
         ImGui::EndChild();
         ImGui::EndTable();
@@ -920,7 +970,8 @@ void App::drawCreator() {
     if (cs.editing && !ImGui::IsAnyItemActive()) {
         cs.editing = false;
     }
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::GetIO().KeyCtrl && !ImGui::IsAnyItemActive()) {
+    creatorHasFocus_ = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+    if (creatorHasFocus_ && ImGui::GetIO().KeyCtrl && !ImGui::IsAnyItemActive()) {
         if (ImGui::IsKeyPressed(ImGuiKey_Z) && !cs.undo.empty()) {
             cs.redo.push_back(cs.doc);
             cs.doc = cs.undo.back();
@@ -936,6 +987,20 @@ void App::drawCreator() {
         }
     }
     ImGui::End();
+}
+
+bool App::creatorUnsaved() const {
+    return creator_ != nullptr && creator_->dirty;
+}
+
+std::string App::creatorDocJson() const {
+    return creator_ ? docToJson(creator_->doc) : std::string();
+}
+
+void App::restoreCreatorDoc(const SceneDoc& doc) {
+    openCreator();
+    loadInto(*creator_, doc, nullptr, std::filesystem::path());
+    creator_->dirty = true;
 }
 
 void App::shutdownCreator() {

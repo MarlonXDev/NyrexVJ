@@ -59,6 +59,10 @@ bool loadSettings(Settings& settings) {
     if (language != doc.end() && language->is_string()) {
         result.language = language->get<std::string>();
     }
+    auto theme = doc.find("theme");
+    if (theme != doc.end() && theme->is_string()) {
+        result.theme = theme->get<std::string>();
+    }
     auto seen = doc.find("lastSeenVersion");
     if (seen != doc.end() && seen->is_string()) {
         result.lastSeenVersion = seen->get<std::string>();
@@ -113,6 +117,7 @@ bool saveSettings(const Settings& settings) {
     doc["openOutputOnStart"] = settings.openOutputOnStart;
     doc["showStatusBar"] = settings.showStatusBar;
     doc["uiScale"] = settings.uiScale;
+    doc["theme"] = settings.theme;
     doc["channel"] = channelName(settings.channel);
     doc["outputMonitor"] = settings.outputMonitor;
     doc["language"] = settings.language;

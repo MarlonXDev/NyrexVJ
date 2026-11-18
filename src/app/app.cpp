@@ -1,5 +1,6 @@
 #include "app/app.hpp"
 
+#include "app/theme.hpp"
 #include "app/ui_common.hpp"
 #include "core/log.hpp"
 #include "core/preset.hpp"
@@ -32,11 +33,12 @@ Composition emptyComposition() {
 bool App::init(GLFWwindow* window, const StartOptions& options) {
     window_ = window;
     ImGuiIO& io = ImGui::GetIO();
-    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v4.ini").string();
+    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v5.ini").string();
     io.IniFilename = iniPath_.c_str();
     needsLayout_ = !std::filesystem::exists(iniPath_);
 
     loadSettings(settings_);
+    applyTheme(themeIndex(settings_.theme));
     outputMonitor_ = settings_.outputMonitor;
     uiScaleEdit_ = settings_.uiScale;
     appliedVsync_ = settings_.vsync ? 1 : 0;
@@ -332,11 +334,11 @@ void App::buildLayout(ImGuiID dock) {
     ImGuiID bottom = 0;
     ImGuiID top = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.50f, nullptr, &bottom);
     ImGuiID rest = 0;
-    ImGuiID output = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Left, 0.30f, nullptr, &rest);
+    ImGuiID output = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Left, 0.28f, nullptr, &rest);
     ImGuiID rest2 = 0;
-    ImGuiID layer = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.34f, nullptr, &rest2);
+    ImGuiID layer = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.30f, nullptr, &rest2);
     ImGuiID browser = 0;
-    ImGuiID master = ImGui::DockBuilderSplitNode(rest2, ImGuiDir_Left, 0.55f, nullptr, &browser);
+    ImGuiID master = ImGui::DockBuilderSplitNode(rest2, ImGuiDir_Left, 0.48f, nullptr, &browser);
     ImGui::DockBuilderDockWindow("###deck", top);
     ImGui::DockBuilderDockWindow("###output", output);
     ImGui::DockBuilderDockWindow("###layer", layer);

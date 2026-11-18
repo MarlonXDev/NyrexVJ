@@ -14,7 +14,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 
 | ID | Topic | Status |
 | --- | --- | --- |
-| [0001](adr/0001-native-3d-runtime.md) | Native 3D rendering and Clip Creator separation | Accepted (2026-11-18) |
+| [0001](adr/0001-native-3d-runtime.md) | Native 3D rendering and Clip Creator separation | Accepted (2026-11-18), prototype implemented in v0.6.0 |
 | [0002](adr/0002-unreal-integration.md) | Unreal Engine interoperability through Spout and OSC | Proposed |
 | [0003](adr/0003-shared-ai-collaboration.md) | Shared Claude/Codex instructions and review workflow | Proposed |
 

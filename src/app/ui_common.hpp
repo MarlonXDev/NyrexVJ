@@ -10,8 +10,10 @@
 
 namespace nvj::ui {
 
-inline const ImVec4 kAccent(1.00f, 0.45f, 0.00f, 1.00f);
-inline const ImVec4 kAccentHover(1.00f, 0.58f, 0.20f, 1.00f);
+inline ImVec4 kAccent(1.00f, 0.55f, 0.12f, 1.00f);
+inline ImVec4 kAccentHover(1.00f, 0.68f, 0.32f, 1.00f);
+inline ImVec4 kAccentDim(0.50f, 0.28f, 0.06f, 1.00f);
+inline ImVec4 kSelectionBg(0.20f, 0.12f, 0.06f, 1.00f);
 inline const ImVec4 kBlack(0.04f, 0.04f, 0.04f, 1.00f);
 inline const char* const kReleasesUrl = "https://github.com/MarlonXDev/NyrexVJ/releases";
 inline const char* const kRepoUrl = "https://github.com/MarlonXDev/NyrexVJ";

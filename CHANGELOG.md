@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 - 2026-11-18
+
+- Library: click a clip to put it into the selected cell and play it, or drag it onto any cell or onto a column header, which fills the selected layer. The Library has a search box, filters (All, 2D, 3D, Models), larger tiles and a right click menu. Dragging from the Library did not start before, this is fixed.
+- Effects in the Library: click an effect to add it to the first free slot of the selected layer, drag it onto an effect slot, or right click it to choose a layer or the master. The effect list in the layer and master panels now has a search box.
+- Themes: Settings, Appearance offers nine colour themes (Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono). Orange is the default and a little brighter than before. The choice applies at once and is remembered.
+- Clearer interface: the clip grid marks the selected cell and the columns that are playing and explains itself with tooltips, and every settings page has a short description under its title. The window layout gives the Library more room and is reset once by this update (Settings, Appearance, Reset window layout does it any time).
+- 10 new 3D effects, 68 in total: Crystal Tunnel, Mirror Corridor, Frame Tunnel, Crystal Facets, Relief Light, Glass Orb, Wormhole, Carousel, Tilt Shift and Parallax Stack. They turn any clip into mirrored crystal tunnels, corridors, glass, lit relief and floating cards.
+
 ## 0.6.0 - 2026-11-18
 
 - 3D clips: three new clips that are real 3D models instead of shaders, Torus Knot Mesh, Crystal Cluster Mesh and Orbit Rings Mesh. They have depth, lighting and animation, follow the layer colours, speed and scale, pulse with bass and kick and take effects like every other clip.

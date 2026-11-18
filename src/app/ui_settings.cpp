@@ -1,5 +1,6 @@
 #include "app/app.hpp"
 
+#include "app/theme.hpp"
 #include "app/ui_common.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
@@ -21,6 +22,8 @@ const char* settingsPageTitle(int page) {
     switch (page) {
     case SettingsGeneral:
         return tr("General");
+    case SettingsAppearance:
+        return tr("Appearance");
     case SettingsAudio:
         return tr("Audio");
     case SettingsOutput:
@@ -29,12 +32,31 @@ const char* settingsPageTitle(int page) {
         return tr("Control");
     case SettingsUpdates:
         return tr("Updates");
-    case SettingsInterface:
-        return tr("Interface");
     case SettingsShortcuts:
         return tr("Shortcuts");
     default:
         return tr("About");
+    }
+}
+
+const char* settingsPageHint(int page) {
+    switch (page) {
+    case SettingsGeneral:
+        return tr("Language, start-up behavior and decks.");
+    case SettingsAppearance:
+        return tr("Theme color and size of the interface.");
+    case SettingsAudio:
+        return tr("Audio source, level and beat detection.");
+    case SettingsOutput:
+        return tr("Output window, resolution and Spout.");
+    case SettingsControl:
+        return tr("Play NyrexVJ with OSC and MIDI.");
+    case SettingsUpdates:
+        return tr("Update channel and automatic updates.");
+    case SettingsShortcuts:
+        return tr("Keyboard shortcuts for live use.");
+    default:
+        return tr("Version and links.");
     }
 }
 
@@ -87,7 +109,7 @@ void App::drawSettingsWindow() {
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowSize(ImVec2(std::min(820.0f, viewport->Size.x - 40.0f), std::min(540.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(std::min(880.0f, viewport->Size.x - 40.0f), std::min(580.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSizeConstraints(ImVec2(560.0f, 340.0f), ImVec2(FLT_MAX, FLT_MAX));
     if (settingsFocus_) {
@@ -102,11 +124,15 @@ void App::drawSettingsWindow() {
         settingsOpen_ = false;
     }
 
-    ImGui::BeginChild("settingsNav", ImVec2(170.0f, 0.0f), ImGuiChildFlags_Borders);
+    ImGui::BeginChild("settingsNav", ImVec2(180.0f, 0.0f), ImGuiChildFlags_Borders);
     for (int i = 0; i < SettingsPageCount; ++i) {
         ImGui::PushID(i);
-        if (ImGui::Selectable(settingsPageTitle(i), settingsPage_ == i, 0, ImVec2(0.0f, 28.0f))) {
+        const ImVec2 itemPos = ImGui::GetCursorScreenPos();
+        if (ImGui::Selectable(settingsPageTitle(i), settingsPage_ == i, 0, ImVec2(0.0f, 30.0f))) {
             settingsPage_ = i;
+        }
+        if (settingsPage_ == i) {
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(itemPos.x - 2.0f, itemPos.y), ImVec2(itemPos.x + 2.0f, itemPos.y + 30.0f), ImGui::GetColorU32(ui::kAccent));
         }
         ImGui::PopID();
     }
@@ -118,6 +144,64 @@ void App::drawSettingsWindow() {
     ImGui::End();
 }
 
+void App::drawThemePicker() {
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float spacing = style.ItemSpacing.x;
+    const float avail = ImGui::GetContentRegionAvail().x;
+    const int columns = std::max(1, static_cast<int>((avail + spacing) / (112.0f + spacing)));
+    const float width = (avail - spacing * static_cast<float>(columns - 1)) / static_cast<float>(columns);
+    const ImVec2 size(width, 58.0f);
+    const int current = themeIndex(settings_.theme);
+    for (int i = 0; i < themeCount(); ++i) {
+        if (i % columns != 0) {
+            ImGui::SameLine();
+        }
+        const ThemeInfo& theme = themeInfo(i);
+        ImGui::PushID(i);
+        const ImVec2 pos = ImGui::GetCursorScreenPos();
+        const bool clicked = ImGui::InvisibleButton("theme", size);
+        const bool hovered = ImGui::IsItemHovered();
+        const ImVec2 max(pos.x + size.x, pos.y + size.y);
+        const ImU32 accent = ImGui::GetColorU32(ImVec4(theme.r, theme.g, theme.b, 1.0f));
+        ImDrawList* draw = ImGui::GetWindowDrawList();
+        draw->AddRectFilled(pos, max, ImGui::GetColorU32(hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), 4.0f);
+        draw->AddRectFilled(ImVec2(pos.x + 8.0f, pos.y + 8.0f), ImVec2(max.x - 8.0f, pos.y + 26.0f), accent, 3.0f);
+        draw->AddText(ImVec2(pos.x + 10.0f, pos.y + 33.0f), IM_COL32(235, 235, 240, 255), tr(theme.name));
+        if (i == current) {
+            draw->AddRect(pos, max, accent, 4.0f, 0, 2.5f);
+            draw->AddCircleFilled(ImVec2(max.x - 14.0f, pos.y + 40.0f), 4.0f, accent);
+        } else if (hovered) {
+            draw->AddRect(pos, max, IM_COL32(200, 200, 210, 255), 4.0f, 0, 1.5f);
+        }
+        if (clicked) {
+            settings_.theme = theme.id;
+            applyTheme(i);
+            saveSettings(settings_);
+        }
+        ImGui::PopID();
+    }
+    ImGui::Spacing();
+    ImGui::TextDisabled("%s", tr("Preview"));
+    static bool toggleA = true;
+    static bool toggleB = false;
+    static bool checked = true;
+    static float value = 0.6f;
+    ui::toggleButton(trId("On", "previewOn"), toggleA);
+    ImGui::SameLine();
+    ui::toggleButton(trId("Off", "previewOff"), toggleB);
+    ImGui::SameLine();
+    ui::accentButton(trId("Button", "previewButton"), true);
+    ImGui::SameLine();
+    ImGui::Button(trId("Button", "previewPlain"));
+    ImGui::SameLine();
+    ImGui::Checkbox(trId("Checkbox", "previewCheck"), &checked);
+    ImGui::SetNextItemWidth(260.0f);
+    ImGui::SliderFloat(trId("Slider", "previewSlider"), &value, 0.0f, 1.0f, "%.2f");
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);
+    ImGui::ProgressBar(0.65f, ImVec2(260.0f, 8.0f), "");
+    ImGui::PopStyleColor();
+}
+
 void App::drawSettingsPage(int page) {
     auto persist = [this]() { saveSettings(settings_); };
     if (page != SettingsControl && control_.learning()) {
@@ -126,6 +210,7 @@ void App::drawSettingsPage(int page) {
     ImGui::PushFont(nullptr, 20.0f);
     ImGui::TextColored(ui::kAccent, "%s", settingsPageTitle(page));
     ImGui::PopFont();
+    ImGui::TextDisabled("%s", settingsPageHint(page));
     ImGui::Spacing();
 
     if (page == SettingsGeneral) {
@@ -187,7 +272,9 @@ void App::drawSettingsPage(int page) {
         drawControlPage();
     } else if (page == SettingsUpdates) {
         drawUpdateSection();
-    } else if (page == SettingsInterface) {
+    } else if (page == SettingsAppearance) {
+        ImGui::SeparatorText(tr("Theme"));
+        drawThemePicker();
         ImGui::SeparatorText(tr("Scale"));
         ImGui::SetNextItemWidth(260.0f);
         ImGui::SliderFloat(trId("Interface size", "optScale"), &uiScaleEdit_, 0.7f, 1.8f, "%.2f");

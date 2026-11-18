@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.6.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe, Ausgabefenster, Einstellungsfenster, OSC- und MIDI-Steuerung, ein erster 3D-Modell-Player (glTF/GLB), Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
+> Stand: v0.7.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe, Ausgabefenster, Einstellungsfenster, OSC- und MIDI-Steuerung, ein erster 3D-Modell-Player (glTF/GLB), Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
 
 ## Download
 
@@ -29,7 +29,8 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 - **Audio-reaktiv.** Wähle Systemaudio (dein DJ-Programm), ein Mikrofon, einen Line-In oder ein Demo-Signal. Ebenen, Master und jeder Effektparameter können Bass, Mitten, Höhen, Pegel oder Kick folgen, und ein Effekt lässt sich auf Gate stellen, damit er nur bei lauter Musik sichtbar ist.
 - **Live-Steuerung.** Spiele es mit einem MIDI-Controller (Regler mit einem Klick anlernen, Windows) oder steuere es per OSC aus TouchDesigner, Max, Python und mehr fern.
 - **OBS mit zwei Klicks.** Spout-Ausgabe mit frei wählbarem Sendernamen. In OBS die Quelle "Spout2 Capture" hinzufügen und den Sender auswählen.
-- **38 Clips, 58 Effekte, 18 Presets.** Fraktale, 3D-Szenen mit Raymarching, Konturlinien-Flüssigkeiten, Kristalltunnel, Blitze, Feuer, Spektrum-Visuals und drei echte 3D-Modelle.
+- **38 Clips, 68 Effekte, 18 Presets.** Fraktale, 3D-Szenen mit Raymarching, Konturlinien-Flüssigkeiten, Kristalltunnel, Blitze, Feuer, Spektrum-Visuals, drei echte 3D-Modelle und zehn 3D-Effekte wie Crystal Tunnel, Mirror Corridor, Glass Orb und Carousel.
+- **Neun Farbthemen.** Einstellungen, Aussehen schaltet die ganze Oberfläche zwischen Orange (Standard), Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono um.
 - **Eigene 3D-Modelle.** Lege .glb- oder .gltf-Dateien in den Modellordner und spiele sie wie jeden Clip, mit Texturen, Animation und Audio-Reaktion.
 - **Einstellungsfenster.** Ein Ort für Audio, Ausgabe, Spout, Updates, Sprache und Oberflächengröße, dazu eine Statusleiste mit FPS, Tempo, Deck und Audio auf einen Blick.
 - **Englisch und Deutsch.** Englisch ist Standard, umschalten jederzeit unter Einstellungen, Allgemein.
@@ -99,7 +100,7 @@ Spout gibt es nur unter Windows. Das Ausgabefenster (F11) mit OBS-Fensteraufnahm
 Jede Ebene hat vier Effektplätze, der Master ebenfalls.
 
 <p align="center">
-  <img src="docs/gallery-effects.jpg" alt="Alle 58 Effekte" width="100%">
+  <img src="docs/gallery-effects.jpg" alt="Effekt-Galerie" width="100%">
 </p>
 
 Die Effekt-Galerie zeigt jeden Effekt mit Standardwerten auf dem Clip Plasma (Duotone auf Mandelbrot und Line Art auf Crystal Cavern, weil Plasma kaum Helligkeitskontrast hat). Clip- und Effektnamen bleiben englisch, damit sie zu anderen VJ-Programmen passen.
@@ -132,7 +133,9 @@ Noch nicht unterstützt: Charaktere mit Skelett, Morph-Targets, Lichter und Kame
 | Rechtsklick auf eine Zelle | Clip zuweisen oder entfernen |
 | Rechtsklick auf einen Deck-Knopf | Deck umbenennen, kopieren, füllen, leeren oder entfernen |
 | Rechtsklick auf einen Regler | Auf Standardwert zurücksetzen |
-| Aus der Bibliothek auf eine Zelle ziehen | Clip zuweisen |
+| Clip in der Bibliothek anklicken | In die gewählte Zelle legen und abspielen |
+| Aus der Bibliothek auf eine Zelle oder einen Spaltenkopf ziehen | Clip zuweisen |
+| Effekt in der Bibliothek anklicken oder ziehen | Zum gewählten Layer hinzufügen |
 | B / S / X an einer Ebene | Bypass / Solo / Ebene stoppen |
 
 ## Live-Steuerung
@@ -256,7 +259,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--select-layer N` | Ebene N (ab 1) auswählen |
 | `--resolution IDX` | Index der Ausgabeauflösung |
 | `--tab IDX` | Anzuzeigender Browser-Tab (0 Presets, 1 Bibliothek, 2 Audio) |
-| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 7, 3 ist Steuerung) |
+| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 7, 4 ist Steuerung) |
 | `--osc-port N` | OSC auf Port N empfangen, auch wenn es in den Einstellungen aus ist |
 | `--midi-inject FRAME:STATUS:D1:D2` | Mit `--frames` in diesem Frame eine MIDI-Nachricht an die Zuordnungen schicken |
 | `--decks A,B,C` | Deck 1, 2, 3 mit diesen Werks-Looks füllen |

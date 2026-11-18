@@ -21,11 +21,11 @@ namespace nvj {
 
 enum SettingsPage {
     SettingsGeneral = 0,
+    SettingsAppearance,
     SettingsAudio,
     SettingsOutput,
     SettingsControl,
     SettingsUpdates,
-    SettingsInterface,
     SettingsShortcuts,
     SettingsAbout,
     SettingsPageCount
@@ -75,7 +75,15 @@ private:
     void drawBrowser();
     void drawPresetsTab();
     void drawLibraryTab();
-    void drawSceneTooltip(const ScenePlayer& player);
+    void drawSceneDetails(const ScenePlayer& player);
+    void drawClipTile(int index, const ImVec2& size);
+    void drawLibraryClips();
+    void drawLibraryEffects();
+    void assignClipToSelectedCell(int clip);
+    void assignClipToFreeCell(int clip, int layer);
+    void addEffectToLayer(int effect, int layer);
+    void addEffectToMaster(int effect);
+    void drawThemePicker();
     void drawAudioTab();
     void drawDeckBar();
     void drawSettingsWindow();
@@ -121,6 +129,13 @@ private:
     bool needsLayout_ = false;
     bool restart_ = false;
     int selectedLayer_ = 0;
+    int selectedColumn_ = 0;
+    int libraryMode_ = 0;
+    int libraryKind_ = 0;
+    int selectedLibraryClip_ = -1;
+    int selectedLibraryEffect_ = -1;
+    char libraryFilter_[64] = {};
+    char effectPickFilter_[64] = {};
     int focusTab_ = -1;
     int outputMonitor_ = 0;
     char presetName_[64] = {};

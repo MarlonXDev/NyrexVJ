@@ -1,5 +1,13 @@
 # Änderungsprotokoll
 
+## 0.7.0 - 2026-11-18
+
+- Bibliothek: Klicke einen Clip an, um ihn in die gewählte Zelle zu legen und abzuspielen, oder ziehe ihn auf eine beliebige Zelle oder auf einen Spaltenkopf, dann füllt er den gewählten Layer. Die Bibliothek hat ein Suchfeld, Filter (Alle, 2D, 3D, Modelle), größere Kacheln und ein Rechtsklick-Menü. Das Ziehen aus der Bibliothek startete vorher nicht, das ist behoben.
+- Effekte in der Bibliothek: Klicke einen Effekt an, um ihn in den ersten freien Platz des gewählten Layers zu legen, ziehe ihn auf einen Effektplatz oder wähle per Rechtsklick einen Layer oder den Master. Die Effektliste in den Layer- und Master-Bereichen hat jetzt ein Suchfeld.
+- Farbthemen: Einstellungen, Aussehen bietet neun Farbthemen (Orange, Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono). Orange ist der Standard und etwas heller als vorher. Die Wahl gilt sofort und wird gespeichert.
+- Übersichtlichere Oberfläche: Das Clip-Raster markiert die gewählte Zelle und die laufenden Spalten und erklärt sich mit Tooltips, und jede Einstellungsseite hat unter dem Titel eine kurze Beschreibung. Das Fensterlayout gibt der Bibliothek mehr Platz und wird mit diesem Update einmal zurückgesetzt (Einstellungen, Aussehen, Fensterlayout zurücksetzen geht jederzeit).
+- 10 neue 3D-Effekte, insgesamt 68: Crystal Tunnel, Mirror Corridor, Frame Tunnel, Crystal Facets, Relief Light, Glass Orb, Wormhole, Carousel, Tilt Shift und Parallax Stack. Sie machen aus jedem Clip gespiegelte Kristalltunnel, Gänge, Glas, beleuchtetes Relief und schwebende Karten.
+
 ## 0.6.0 - 2026-11-18
 
 - 3D-Clips: drei neue Clips, die echte 3D-Modelle statt Shader sind, Torus Knot Mesh, Crystal Cluster Mesh und Orbit Rings Mesh. Sie haben Tiefe, Beleuchtung und Animation, folgen Farben, Tempo und Größe der Ebene, pulsieren mit Bass und Kick und nehmen Effekte wie jeder andere Clip.

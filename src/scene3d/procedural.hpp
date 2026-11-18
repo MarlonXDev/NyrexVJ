@@ -14,6 +14,9 @@ struct BuiltinSceneInfo {
 Scene makeTorusKnotScene();
 Scene makeCrystalClusterScene();
 Scene makeOrbitRingsScene();
+SceneMesh plainSphereMesh();
+SceneMesh plainTorusMesh();
+SceneMesh plainTorusKnotMesh();
 const std::vector<BuiltinSceneInfo>& builtinScenes();
 
 }

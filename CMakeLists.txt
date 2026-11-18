@@ -114,11 +114,16 @@ set(NYREXVJ_CORE_SOURCES
     src/audio/synthetic_source.cpp
     src/render/clip_library.cpp
     src/render/clips_extra.cpp
+    src/core/clip_pack.cpp
+    src/scene3d/doc_build.cpp
     src/scene3d/glb_writer.cpp
     src/scene3d/gltf.cpp
     src/scene3d/image_decode.cpp
+    src/scene3d/primitives.cpp
     src/scene3d/procedural.cpp
+    src/scene3d/scene_doc.cpp
     src/scene3d/scene_model.cpp
+    src/scene3d/scene_pack.cpp
     src/core/composition.cpp
     src/render/effect_library.cpp
     src/render/effects_extra.cpp
@@ -221,6 +226,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_scene3d_tests PRIVATE tests)
     target_include_directories(nvj_scene3d_tests SYSTEM PRIVATE third_party/stb)
     add_test(NAME nvj_scene3d_tests COMMAND nvj_scene3d_tests)
+    add_executable(nvj_creator_tests tests/test_creator.cpp)
+    target_link_libraries(nvj_creator_tests PRIVATE nvj_core)
+    target_include_directories(nvj_creator_tests PRIVATE tests)
+    add_test(NAME nvj_creator_tests COMMAND nvj_creator_tests)
     add_executable(nvj_i18n_tests tests/test_i18n.cpp)
     target_link_libraries(nvj_i18n_tests PRIVATE nvj_core)
     target_include_directories(nvj_i18n_tests PRIVATE tests)

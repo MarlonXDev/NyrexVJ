@@ -622,13 +622,38 @@ private:
         return result;
     }
 
+    static float finiteOr(const json& value, float fallback) {
+        if (!value.is_number()) {
+            return fallback;
+        }
+        const float v = value.get<float>();
+        return std::isfinite(v) ? v : fallback;
+    }
+
+    int materialTexture(const json& holder, const char* key, float* scale = nullptr) {
+        const auto texture = holder.find(key);
+        if (texture == holder.end() || !texture->is_object() || !texture->contains("index")) {
+            return -1;
+        }
+        if (scale != nullptr) {
+            *scale = std::clamp(finiteOr((*texture).value("scale", json(1.0)), 1.0f), 0.0f, 4.0f);
+        }
+        return loadImage(static_cast<int>(integerOf(*texture, "index", -1)));
+    }
+
     void loadMaterials() {
+        scene().shading = Shading::Pbr;
         for (const json& m : arrayOf(doc_, "materials")) {
             SceneMaterial material;
+            material.metallic = 1.0f;
+            material.roughness = 1.0f;
             if (m.is_object()) {
                 material.doubleSided = m.value("doubleSided", false);
                 const std::string alphaMode = m.value("alphaMode", std::string("OPAQUE"));
-                if (alphaMode != "OPAQUE") {
+                if (alphaMode == "MASK") {
+                    material.alphaMode = AlphaMode::Mask;
+                    material.alphaCutoff = std::clamp(finiteOr(m.value("alphaCutoff", json(0.5)), 0.5f), 0.0f, 1.0f);
+                } else if (alphaMode != "OPAQUE") {
                     warn("alpha mode " + alphaMode + " is drawn opaque");
                 }
                 const auto pbr = m.find("pbrMetallicRoughness");
@@ -640,9 +665,24 @@ private:
                             material.baseColor[i] = std::isfinite(v) ? std::clamp(v, 0.0f, 1.0f) : 1.0f;
                         }
                     }
-                    const auto texture = pbr->find("baseColorTexture");
-                    if (texture != pbr->end() && texture->is_object() && texture->contains("index")) {
-                        material.baseTexture = loadImage(static_cast<int>(integerOf(*texture, "index", -1)));
+                    material.baseTexture = materialTexture(*pbr, "baseColorTexture");
+                    material.metallic = std::clamp(finiteOr(pbr->value("metallicFactor", json(1.0)), 1.0f), 0.0f, 1.0f);
+                    material.roughness = std::clamp(finiteOr(pbr->value("roughnessFactor", json(1.0)), 1.0f), 0.0f, 1.0f);
+                    material.metallicRoughnessTexture = materialTexture(*pbr, "metallicRoughnessTexture");
+                }
+                material.normalTexture = materialTexture(m, "normalTexture", &material.normalScale);
+                material.emissiveTexture = materialTexture(m, "emissiveTexture");
+                const auto emissive = m.find("emissiveFactor");
+                if (emissive != m.end() && emissive->is_array() && emissive->size() == 3) {
+                    for (size_t i = 0; i < 3; ++i) {
+                        material.emissive[i] = std::clamp(finiteOr((*emissive)[i], 0.0f), 0.0f, 1.0f);
+                    }
+                }
+                const auto extensions = m.find("extensions");
+                if (extensions != m.end() && extensions->is_object()) {
+                    const auto strength = extensions->find("KHR_materials_emissive_strength");
+                    if (strength != extensions->end() && strength->is_object()) {
+                        material.emissiveStrength = std::clamp(finiteOr(strength->value("emissiveStrength", json(1.0)), 1.0f), 0.0f, 100.0f);
                     }
                 }
             }

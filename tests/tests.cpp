@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "render/clip_library.hpp"
 #include "core/composition.hpp"
+#include "core/edit_history.hpp"
 #include "core/novelty.hpp"
 #include "render/effect_library.hpp"
 #include "core/preset.hpp"
@@ -625,6 +626,105 @@ void testBlendModes() {
     }
 }
 
+void settleHistory(nvj::EditHistory& history, const nvj::Composition& comp) {
+    history.observe(comp, 0.1, false);
+    history.observe(comp, 0.5, false);
+}
+
+void testEditHistory() {
+    nvj::Composition comp;
+    nvj::EditHistory history;
+    history.reset(comp);
+    CHECK(!history.canUndo());
+    CHECK(!history.canRedo());
+    CHECK(!history.undo(comp, 10));
+
+    comp.layers[0].opacity = 0.25f;
+    history.observe(comp, 0.1, false);
+    CHECK(history.canUndo());
+    CHECK(history.undoCount() == 0);
+    history.observe(comp, 0.1, true);
+    history.observe(comp, 0.5, true);
+    CHECK(history.undoCount() == 0);
+    history.observe(comp, 0.5, false);
+    CHECK(history.undoCount() == 1);
+
+    comp.layers[0].activeColumn = 3;
+    comp.bpm = 99.0f;
+    settleHistory(history, comp);
+    CHECK(history.undoCount() == 1);
+
+    CHECK(history.undo(comp, 10));
+    CHECK(comp.layers[0].opacity == 1.0f);
+    CHECK(comp.layers[0].activeColumn == 3);
+    CHECK(comp.bpm == 99.0f);
+    CHECK(history.canRedo());
+    CHECK(!history.canUndo());
+    CHECK(history.redo(comp, 10));
+    CHECK(comp.layers[0].opacity == 0.25f);
+    CHECK(!history.redo(comp, 10));
+
+    comp.layers[1].blend = nvj::BlendOverlay;
+    settleHistory(history, comp);
+    CHECK(history.undoCount() == 2);
+    CHECK(history.undo(comp, 10));
+    CHECK(history.canRedo());
+    comp.layers[2].speed = 2.0f;
+    settleHistory(history, comp);
+    CHECK(!history.canRedo());
+    CHECK(history.undoCount() == 2);
+
+    comp.layers[3].opacity = 0.5f;
+    CHECK(history.undo(comp, 10));
+    CHECK(comp.layers[3].opacity == 1.0f);
+    CHECK(comp.layers[2].speed == 2.0f);
+    CHECK(history.redo(comp, 10));
+    CHECK(comp.layers[3].opacity == 0.5f);
+
+    nvj::Composition cells;
+    nvj::EditHistory cellHistory;
+    cellHistory.reset(cells);
+    cells.layers[0].cells[0] = 9;
+    settleHistory(cellHistory, cells);
+    cells.layers[0].cells[0] = 1;
+    settleHistory(cellHistory, cells);
+    CHECK(cellHistory.undo(cells, 5));
+    CHECK(cells.layers[0].cells[0] == -1);
+    CHECK(cellHistory.undo(cells, 5));
+    CHECK(cells.layers[0].cells[0] == -1);
+
+    nvj::Composition decks;
+    nvj::EditHistory deckHistory;
+    decks.deckUsed[1] = true;
+    deckHistory.reset(decks);
+    CHECK(nvj::selectDeck(decks, 1));
+    settleHistory(deckHistory, decks);
+    CHECK(deckHistory.undoCount() == 0);
+    decks.layers[0].opacity = 0.1f;
+    settleHistory(deckHistory, decks);
+    CHECK(deckHistory.undoCount() == 1);
+    CHECK(nvj::selectDeck(decks, 0));
+    settleHistory(deckHistory, decks);
+    CHECK(deckHistory.undoCount() == 1);
+    CHECK(deckHistory.undo(decks, 10));
+    CHECK(nvj::selectDeck(decks, 1));
+    CHECK(decks.layers[0].opacity == 1.0f);
+
+    nvj::Composition many;
+    nvj::EditHistory manyHistory;
+    manyHistory.reset(many);
+    for (int i = 0; i < 80; ++i) {
+        many.master.level = 0.1f + 0.01f * static_cast<float>(i);
+        settleHistory(manyHistory, many);
+    }
+    CHECK(manyHistory.undoCount() == nvj::EditHistory::kLimit);
+    int steps = 0;
+    while (manyHistory.undo(many, 10)) {
+        ++steps;
+    }
+    CHECK(steps == static_cast<int>(nvj::EditHistory::kLimit));
+}
+
 int main() {
     testSha256();
     testVersions();
@@ -633,6 +733,7 @@ int main() {
     testLibraries();
     testPresets();
     testBlendModes();
+    testEditHistory();
     testDecks();
     testPresetFiles();
     testNovelty();

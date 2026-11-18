@@ -5,6 +5,7 @@
 #include "audio/audio_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
+#include "core/edit_history.hpp"
 #include "core/i18n.hpp"
 #include "core/settings.hpp"
 #include "render/engine.hpp"
@@ -94,6 +95,8 @@ private:
     void openCreator();
     void openCreatorWith(const std::string& clipName);
     bool creatorSave(bool copy, bool useAsClip);
+    void undoEdit();
+    void redoEdit();
     void drawCreator();
     void shutdownCreator();
     void assignClipToSelectedCell(int clip);
@@ -155,6 +158,8 @@ private:
     std::unique_ptr<CreatorState> creator_;
     bool creatorOpen_ = false;
     bool creatorFocus_ = false;
+    bool creatorHasFocus_ = false;
+    EditHistory history_;
     bool restart_ = false;
     int selectedLayer_ = 0;
     int selectedColumn_ = 0;

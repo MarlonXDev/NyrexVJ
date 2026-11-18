@@ -920,7 +920,8 @@ void App::drawCreator() {
     if (cs.editing && !ImGui::IsAnyItemActive()) {
         cs.editing = false;
     }
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::GetIO().KeyCtrl && !ImGui::IsAnyItemActive()) {
+    creatorHasFocus_ = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+    if (creatorHasFocus_ && ImGui::GetIO().KeyCtrl && !ImGui::IsAnyItemActive()) {
         if (ImGui::IsKeyPressed(ImGuiKey_Z) && !cs.undo.empty()) {
             cs.redo.push_back(cs.doc);
             cs.doc = cs.undo.back();

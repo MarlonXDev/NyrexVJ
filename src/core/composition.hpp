@@ -100,6 +100,7 @@ struct AudioMod {
     int band = BandOff;
     int target = TargetOpacity;
     float amount = 0.5f;
+    bool operator==(const AudioMod&) const = default;
 };
 
 struct ColorGrade {
@@ -109,6 +110,7 @@ struct ColorGrade {
     float contrast = 1.0f;
 
     bool isIdentity() const;
+    bool operator==(const ColorGrade&) const = default;
 };
 
 struct EffectSlot {
@@ -119,6 +121,7 @@ struct EffectSlot {
     int reactParam = 0;
     float reactAmount = 0.5f;
     int reactMode = ReactParameter;
+    bool operator==(const EffectSlot&) const = default;
 };
 
 struct Layer {
@@ -138,6 +141,7 @@ struct Layer {
     std::array<EffectSlot, kEffectSlots> fx;
 
     Layer() { cells.fill(-1); }
+    bool operator==(const Layer&) const = default;
 };
 
 struct Master {
@@ -145,11 +149,13 @@ struct Master {
     ColorGrade grade;
     std::array<AudioMod, kModSlots> mods;
     std::array<EffectSlot, kEffectSlots> fx;
+    bool operator==(const Master&) const = default;
 };
 
 struct DeckData {
     Master master;
     std::array<Layer, kLayerCount> layers;
+    bool operator==(const DeckData&) const = default;
 };
 
 struct DeckSettings {
@@ -159,6 +165,7 @@ struct DeckSettings {
     bool syncBeats = false;
     bool autoCycle = false;
     int cycleBeats = 16;
+    bool operator==(const DeckSettings&) const = default;
 };
 
 struct Composition {

@@ -690,6 +690,11 @@ const Translation kGerman[] = {
     {"Darken", "Dunkler"},
     {"Color Dodge", "Abwedeln"},
     {"Linear Burn", "Linear nachbelichten"},
+    {"Edit", "Bearbeiten"},
+    {"Undone", "Rückgängig gemacht"},
+    {"Redone", "Wiederholt"},
+    {"Nothing to undo", "Nichts zum Rückgängigmachen"},
+    {"Nothing to redo", "Nichts zum Wiederholen"},
 };
 
 }

@@ -358,10 +358,13 @@ void App::frame(double dt) {
     drawLayer();
     drawClipPanel();
     drawBrowser();
+    creatorHasFocus_ = false;
     drawCreator();
     drawSettingsWindow();
     drawUpdateCard();
     drawWelcome();
+
+    history_.observe(engine_.comp, dt, ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsAnyItemActive());
 
     autosaveTimer_ += dt;
     if (autosaveTimer_ > 30.0) {
@@ -408,6 +411,17 @@ void App::handleShortcuts() {
             }
         }
     }
+    if (io.KeyCtrl && !creatorHasFocus_) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Z, false)) {
+            if (io.KeyShift) {
+                redoEdit();
+            } else {
+                undoEdit();
+            }
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Y, false)) {
+            redoEdit();
+        }
+    }
     if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
         openSettings(-1);
     }
@@ -432,6 +446,22 @@ void App::handleShortcuts() {
     }
 }
 
+void App::undoEdit() {
+    if (history_.undo(engine_.comp, static_cast<int>(clipLibrary().size()))) {
+        toast(tr("Undone"));
+    } else {
+        toast(tr("Nothing to undo"));
+    }
+}
+
+void App::redoEdit() {
+    if (history_.redo(engine_.comp, static_cast<int>(clipLibrary().size()))) {
+        toast(tr("Redone"));
+    } else {
+        toast(tr("Nothing to redo"));
+    }
+}
+
 void App::drawMenuBar() {
     if (!ImGui::BeginMainMenuBar()) {
         return;
@@ -450,6 +480,15 @@ void App::drawMenuBar() {
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Quit"))) {
             glfwSetWindowShouldClose(window_, GLFW_TRUE);
+        }
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu(tr("Edit"))) {
+        if (ImGui::MenuItem(tr("Undo"), "Ctrl+Z", false, history_.canUndo())) {
+            undoEdit();
+        }
+        if (ImGui::MenuItem(tr("Redo"), "Ctrl+Y", false, history_.canRedo())) {
+            redoEdit();
         }
         ImGui::EndMenu();
     }

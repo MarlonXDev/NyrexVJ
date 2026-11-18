@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.8.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output, the output window, a settings window, OSC and MIDI control, a first 3D model player (glTF/GLB), English and German and the auto-updater work. Video clips are not implemented yet.
+> Status: v0.9.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output, the output window, a settings window, OSC and MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, English and German and the auto-updater work. Video clips are not implemented yet.
 
 ## Download
 
@@ -29,10 +29,11 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 - **Audio reactive.** Pick system audio (your DJ program), a microphone, a line-in or a demo signal. Layers, the master and every effect parameter can follow Bass, Mid, High, Level or Kick, and an effect can be set to Gate so it only shows while the music is loud.
 - **Live control.** Play it from a MIDI controller (learn a knob with one click, Windows) or remote control it over OSC from TouchDesigner, Max, Python and more.
 - **OBS in two clicks.** Spout output with a sender name of your choice. In OBS add the source "Spout2 Capture" and select the sender.
-- **46 clips, 76 effects, 26 presets.** Fractals, raymarched 3D scenes, neon sacred geometry, laser webs, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals, three real 3D models and 3D effects such as Image Terrain, Hyperspace, Chrome Liquid, Shatter and Mirror Corridor. Everything that is new in a version carries a small "new" behind its name until the next minor version.
+- **50 clips, 76 effects, 26 presets.** Fractals, raymarched 3D scenes, neon sacred geometry, laser webs, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals, real 3D models and scenes and 3D effects such as Image Terrain, Hyperspace, Chrome Liquid, Shatter and Mirror Corridor. Everything that is new in a version carries a small "new" behind its name until the next minor version.
 - **Resolume-style layout.** Clip grid on top, deck and tempo rows below it, preview and output at the bottom left, Master, Layer and Clip windows next to them and the Browser on the right. A Pause button freezes the picture.
 - **Nine colour themes.** Settings, Appearance switches the whole interface between Orange (default), Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono.
 - **Your own 3D models.** Drop .glb or .gltf files into the models folder and play them like any clip, with textures, animation and audio reaction.
+- **Clip Creator.** Build your own 3D scenes from shapes, models and lights, let everything move with the music and save them as portable .nyxclip files.
 - **Settings window.** One place for audio, output, Spout, updates, language and interface size, plus a status bar that shows FPS, tempo, deck and audio at a glance.
 - **English and German.** English is the default, switch any time under Help, Language.
 - **Welcome screen.** Shown on the first start and after every update, with everything that is new.
@@ -112,11 +113,17 @@ The effect gallery shows each effect with default settings on the Plasma clip (D
 
 ## 3D models
 
-Besides shader clips there are clips that draw real 3D meshes: Torus Knot Mesh, Crystal Cluster Mesh and Orbit Rings Mesh. They sit in the Library tab like every other clip, follow the layer colours, speed and scale, pulse with bass and kick and go through the same effects.
+Besides shader clips there are clips that draw real 3D meshes: Torus Knot Mesh, Crystal Cluster Mesh, Orbit Rings Mesh, Chrome Orbs Mesh, Neon Cubes Mesh, Gold Knot Mesh and Pulse Columns Mesh. They sit in the Library tab like every other clip, follow the layer colours, speed and scale, pulse with bass and kick and go through the same effects.
 
 To play your own model, put a `.glb` or `.gltf` file into the models folder (`%APPDATA%\NyrexVJ\models`, the Library tab shows the path and has a button that opens it) and press Scan again in the Library tab (no restart needed). It appears as `Model: file name`. Textures (PNG and JPEG), node animation and several meshes are supported. A model loads in the background the first time a deck contains it, so the picture never stalls, with a time limit of 60 seconds and a Cancel loading button, and a file that is damaged, too large or uses an unsupported feature is refused with a message in the log and in the clip tooltip. Layers that play the same model share it in memory.
 
-Not supported yet: skinned characters, morph targets, lights and cameras from the file, Draco or Meshopt compression, transparency and PBR materials (the base colour is drawn lit and opaque). The full list of limits and the measurements are in [docs/SCENE3D.md](docs/SCENE3D.md).
+Models with metallic-roughness materials, normal maps, emissive maps and cut-out transparency are drawn with physically based lighting. Not supported yet: skinned characters, morph targets, lights and cameras from the file, Draco or Meshopt compression and blended transparency (drawn opaque). The full list of limits and the measurements are in [docs/SCENE3D.md](docs/SCENE3D.md).
+
+### Clip Creator
+
+The Creator menu opens the Clip Creator. The left column lists the objects and lights of the scene, the middle shows a live preview (drag to orbit, mouse wheel to zoom, Use this view as the clip camera keeps the view), the right column is the inspector for transform, repeat, material, textures, animation, audio reactions, camera, sky and exposure. Start from a template (Creator menu, Start from a template, or Open in the window) or from an empty scene (New).
+
+Save writes a `.nyxclip` file into the clips folder (`%APPDATA%\NyrexVJ\clips`). It contains the scene description and, as copies, the .glb models and PNG or JPEG textures the scene uses (up to 200 MiB), so one file is all you need to share a scene. It then shows up in the Library under Scenes as `Scene: name`. Use as clip also puts it into the selected cell. Only `.glb` models can be stored in a scene, `.gltf` files that need separate files are listed in the Assets view but cannot be used. The file format and the decisions behind it are in [docs/adr/0004-scene-document-and-clip-pack.md](docs/adr/0004-scene-document-and-clip-pack.md), the lighting model in [docs/adr/0005-pbr-shading.md](docs/adr/0005-pbr-shading.md) and the editor in [docs/adr/0006-clip-creator.md](docs/adr/0006-clip-creator.md).
 
 ## Presets
 
@@ -201,7 +208,7 @@ NyrexVJ/
 │   ├── control/    OSC parser and UDP input, MIDI input, learn mapping, control targets
 │   ├── core/       Composition model, presets, settings, i18n, log, SHA-256
 │   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output window, Spout
-│   ├── scene3d/    glTF/GLB loader with safety limits, scene model, built-in 3D scenes, GLB writer
+│   ├── scene3d/    glTF/GLB loader with safety limits, scene model, scene documents and .nyxclip packs, built-in 3D scenes, GLB writer
 │   ├── update/     Update check, installer, changelog parser
 │   ├── platform/   Windows and fallback platform code
 │   └── main.cpp

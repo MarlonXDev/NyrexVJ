@@ -26,6 +26,10 @@ constexpr Entry kClips[] = {
     {"Laser Web", 0, 8},
     {"Mandelbox Fly", 0, 8},
     {"Prism Bloom", 0, 8},
+    {"Chrome Orbs Mesh", 0, 9},
+    {"Neon Cubes Mesh", 0, 9},
+    {"Gold Knot Mesh", 0, 9},
+    {"Pulse Columns Mesh", 0, 9},
 };
 
 constexpr Entry kEffects[] = {

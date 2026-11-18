@@ -7,6 +7,7 @@
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
+#include "scene3d/builtin_docs.hpp"
 #include "update/changelog.hpp"
 
 #include <GLFW/glfw3.h>
@@ -136,6 +137,12 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         selectedLayer_ = options.selectLayer;
     }
     focusTab_ = options.tab;
+    if (options.libraryMode >= 0) {
+        libraryMode_ = std::clamp(options.libraryMode, 0, 2);
+    }
+    if (options.libraryKind >= 0) {
+        libraryKind_ = std::clamp(options.libraryKind, 0, 4);
+    }
 
     refreshUserPresets();
 
@@ -187,6 +194,13 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.settingsPage >= 0) {
         openSettings(options.settingsPage);
     }
+    if (options.openCreator) {
+        if (options.creator.empty()) {
+            openCreator();
+        } else {
+            openCreatorWith(options.creator);
+        }
+    }
 
     const std::string current = baseVersionString(NYREXVJ_VERSION);
     welcomeSince_ = settings_.lastSeenVersion;
@@ -220,6 +234,7 @@ void App::shutdown() {
     spout_.stop();
     audio_.select("");
     output_.close();
+    shutdownCreator();
     engine_.shutdown();
 }
 
@@ -305,8 +320,9 @@ void App::frame(double dt) {
 
     if (rescanModels_) {
         rescanModels_ = false;
-        const int added = rescanModelClips();
+        const int added = rescanLibrary();
         engine_.syncLibrary();
+        assetsDirty_ = true;
         toast(added > 0 ? std::string(tr("New 3D models found: ")) + std::to_string(added) : std::string(tr("No new 3D models found")));
     }
 
@@ -325,6 +341,7 @@ void App::frame(double dt) {
     drawLayer();
     drawClipPanel();
     drawBrowser();
+    drawCreator();
     drawSettingsWindow();
     drawUpdateCard();
     drawWelcome();
@@ -476,6 +493,27 @@ void App::drawMenuBar() {
     }
     if (ImGui::MenuItem(trId("Settings", "menuSettings"))) {
         openSettings(-1);
+    }
+    if (ImGui::BeginMenu(trId("Creator", "menuCreator"))) {
+        if (ImGui::MenuItem(tr("Open Clip Creator"))) {
+            openCreator();
+        }
+        if (ImGui::MenuItem(tr("New 3D scene"))) {
+            openCreatorWith(std::string());
+        }
+        if (ImGui::BeginMenu(tr("Start from a template"))) {
+            for (const BuiltinDocInfo& info : builtinDocs()) {
+                if (ImGui::MenuItem(info.name)) {
+                    openCreatorWith(info.name);
+                }
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem(tr("Open scenes folder"))) {
+            platform::openFolder(clipsDirectory());
+        }
+        ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(trId("Help", "menuHelp"))) {
         if (ImGui::MenuItem(tr("What's new"))) {

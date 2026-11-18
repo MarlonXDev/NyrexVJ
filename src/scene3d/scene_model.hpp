@@ -16,10 +16,57 @@ struct SceneImage {
     std::vector<uint8_t> rgba;
 };
 
+enum class Shading { Classic, Pbr };
+enum class AlphaMode { Opaque, Mask };
+enum class MotionKind { Spin, Bob, Orbit, Pulse, Sway };
+enum class BindSource { Bass, Mid, High, Level, Kick };
+enum class BindTarget { Scale, Emissive, Twist, Lift, Light, Zoom };
+enum class RepeatKind { None, Ring, Line };
+
 struct SceneMaterial {
     std::array<float, 4> baseColor{1.0f, 1.0f, 1.0f, 1.0f};
     int baseTexture = -1;
     bool doubleSided = false;
+    float metallic = 0.0f;
+    float roughness = 0.6f;
+    std::array<float, 3> emissive{0.0f, 0.0f, 0.0f};
+    float emissiveStrength = 1.0f;
+    int metallicRoughnessTexture = -1;
+    int normalTexture = -1;
+    float normalScale = 1.0f;
+    int emissiveTexture = -1;
+    AlphaMode alphaMode = AlphaMode::Opaque;
+    float alphaCutoff = 0.5f;
+    bool followPalette = false;
+};
+
+struct NodeMotion {
+    MotionKind kind = MotionKind::Spin;
+    float speed = 0.25f;
+    float amount = 1.0f;
+    int axis = 1;
+    float phase = 0.0f;
+};
+
+struct NodeBinding {
+    BindSource source = BindSource::Bass;
+    BindTarget target = BindTarget::Scale;
+    float amount = 0.0f;
+};
+
+struct NodeRepeat {
+    RepeatKind kind = RepeatKind::None;
+    int count = 1;
+    float radius = 2.0f;
+    float spacing = 1.5f;
+};
+
+struct SceneAudio {
+    float bass = 0.0f;
+    float mid = 0.0f;
+    float high = 0.0f;
+    float level = 0.0f;
+    float kick = 0.0f;
 };
 
 struct SceneMesh {
@@ -38,6 +85,10 @@ struct SceneNode {
     Vec3 scale{1.0f, 1.0f, 1.0f};
     std::vector<int> children;
     std::vector<int> meshes;
+    std::vector<NodeMotion> motions;
+    std::vector<NodeBinding> bindings;
+    NodeRepeat repeat;
+    bool framing = true;
 };
 
 enum class AnimPath { Translation, Rotation, Scale };
@@ -47,6 +98,7 @@ struct SceneChannel {
     int node = -1;
     AnimPath path = AnimPath::Translation;
     AnimInterp interp = AnimInterp::Linear;
+    float loop = 0.0f;
     std::vector<float> times;
     std::vector<float> values;
 };
@@ -72,6 +124,8 @@ struct SceneSphere {
 struct SceneInstance {
     int mesh = -1;
     Mat4 world;
+    float emissive = 0.0f;
+    bool framing = true;
 };
 
 struct SceneStats {
@@ -84,9 +138,40 @@ struct SceneStats {
     size_t gpuBytes = 0;
 };
 
+struct SceneLight {
+    bool point = false;
+    Vec3 position{0.5f, 0.8f, 0.6f};
+    std::array<float, 3> color{1.0f, 1.0f, 1.0f};
+    float intensity = 1.0f;
+    std::vector<NodeBinding> bindings;
+};
+
+struct SceneSky {
+    std::array<float, 3> top{0.30f, 0.45f, 0.75f};
+    std::array<float, 3> horizon{0.78f, 0.80f, 0.86f};
+    std::array<float, 3> ground{0.10f, 0.09f, 0.11f};
+    float intensity = 1.0f;
+};
+
+struct SceneCamera {
+    bool authored = false;
+    float fovDegrees = 46.0f;
+    float distance = 1.0f;
+    float pitchDegrees = 18.0f;
+    float yawDegrees = 0.0f;
+    float orbitSpeed = 0.4f;
+    float pitchSway = 0.0f;
+    std::vector<NodeBinding> bindings;
+};
+
 struct Scene {
     std::string name;
     bool paletteTint = false;
+    Shading shading = Shading::Classic;
+    std::vector<SceneLight> lights;
+    SceneSky sky;
+    SceneCamera camera;
+    float exposure = 1.0f;
     std::vector<SceneImage> images;
     std::vector<SceneMaterial> materials;
     std::vector<SceneMesh> meshes;
@@ -97,8 +182,13 @@ struct Scene {
 
 constexpr int kSceneMaxDepth = 64;
 constexpr int kSceneVertexFloats = 12;
+constexpr int kSceneMaxRepeat = 64;
+constexpr size_t kSceneMaxInstances = 8192;
+constexpr size_t kSceneMaxLights = 4;
 
-std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time);
+float audioValue(const SceneAudio& audio, BindSource source);
+float bindingSum(const std::vector<NodeBinding>& bindings, BindTarget target, const SceneAudio& audio);
+std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time, const SceneAudio* audio = nullptr);
 SceneBounds sceneBounds(const Scene& scene, int animation, float time);
 SceneSphere sceneSphere(const Scene& scene, int animation, int samples);
 SceneStats sceneStats(const Scene& scene);

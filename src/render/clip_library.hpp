@@ -9,7 +9,8 @@ namespace nvj {
 enum class ClipKind {
     Shader,
     BuiltinScene,
-    ModelFile
+    ModelFile,
+    ScenePack
 };
 
 struct ClipDef {
@@ -24,11 +25,24 @@ struct ClipDef {
 };
 
 constexpr size_t kMaxModelClips = 64;
+constexpr size_t kMaxPackClips = 128;
+
+struct AssetFile {
+    std::string name;
+    std::string path;
+    unsigned long long bytes = 0;
+};
 
 std::string modelDirectory();
+std::string texturesDirectory();
+std::string clipsDirectory();
+std::vector<AssetFile> listModelAssets();
+std::vector<AssetFile> listTextureAssets();
+std::vector<AssetFile> listPackAssets();
+std::string packClipName(const std::string& stem);
 
 const std::vector<ClipDef>& clipLibrary();
-int rescanModelClips();
+int rescanLibrary();
 int clipIndexByName(const std::string& name);
 const std::string& clipVertexSource();
 std::string clipFragmentSource(const ClipDef& clip);

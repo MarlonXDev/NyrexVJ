@@ -157,12 +157,15 @@ void testMath() {
 }
 
 void testProcedural() {
-    CHECK(builtinScenes().size() == 3);
+    CHECK(builtinScenes().size() == 7);
+    size_t sceneIndex = 0;
     for (const BuiltinSceneInfo& info : builtinScenes()) {
+        const bool classic = sceneIndex++ < 3;
         const Scene scene = info.build();
         std::string error;
         CHECK(validateScene(scene, error));
-        CHECK(scene.paletteTint);
+        CHECK(scene.paletteTint == classic);
+        CHECK((scene.shading == Shading::Pbr) == !classic);
         const SceneStats stats = sceneStats(scene);
         CHECK(stats.vertices > 50);
         CHECK(stats.triangles > 20);
@@ -207,6 +210,9 @@ void testSphere() {
         const float duration = sceneDuration(scene, animation);
         for (int s = 0; s < 24; ++s) {
             for (const SceneInstance& instance : evaluateScene(scene, animation, duration * static_cast<float>(s) / 24.0f + 0.1f)) {
+                if (!instance.framing) {
+                    continue;
+                }
                 for (const Vec3& p : scene.meshes[static_cast<size_t>(instance.mesh)].positions) {
                     CHECK(length(transformPoint(instance.world, p) - sphere.center) <= sphere.radius * 1.001f);
                 }
@@ -266,7 +272,9 @@ void testAnimation() {
 }
 
 void testRoundTrip() {
+    size_t sceneIndex = 0;
     for (const BuiltinSceneInfo& info : builtinScenes()) {
+        const bool classic = sceneIndex++ < 3;
         const Scene original = info.build();
         const std::vector<uint8_t> glb = writeGlb(original);
         CHECK(glb.size() > 1000);
@@ -291,7 +299,10 @@ void testRoundTrip() {
         for (const SceneMesh& m : original.meshes) {
             colorsOriginal += m.colors.size();
         }
-        CHECK(colorsLoaded == colorsOriginal && colorsLoaded > 0);
+        CHECK(colorsLoaded == colorsOriginal && (colorsLoaded > 0) == classic);
+        if (!classic) {
+            continue;
+        }
         if (!original.animations.empty()) {
             CHECK(near(sceneDuration(scene, 0), sceneDuration(original, 0)));
         }
@@ -594,6 +605,71 @@ void testTextures() {
     CHECK(rejected.ok && rejected.scene.images.empty() && !rejected.warnings.empty());
 }
 
+void testPbrMaterials() {
+    std::vector<uint8_t> pixels;
+    for (int i = 0; i < 4; ++i) {
+        pixels.insert(pixels.end(), {static_cast<uint8_t>(60 * i), 128, 255, 255});
+    }
+    std::vector<uint8_t> png;
+    CHECK(stbi_write_png_to_func(pngWrite, &png, 2, 2, 4, pixels.data(), 8) != 0);
+
+    Blob blob = triangleBlob();
+    alignBlob(blob.bin);
+    const size_t offset = blob.bin.size();
+    blob.bin.insert(blob.bin.end(), png.begin(), png.end());
+    const size_t pngBytes = png.size();
+    alignBlob(blob.bin);
+    blob.doc["buffers"][0]["byteLength"] = blob.bin.size();
+    blob.doc["bufferViews"].push_back({{"buffer", 0}, {"byteOffset", offset}, {"byteLength", pngBytes}});
+    blob.doc["images"] = json::array({{{"bufferView", 2}, {"mimeType", "image/png"}}});
+    blob.doc["textures"] = json::array({{{"source", 0}}});
+    blob.doc["materials"] = json::array({
+        {{"pbrMetallicRoughness", {{"metallicFactor", 0.25}, {"roughnessFactor", 0.75}, {"metallicRoughnessTexture", {{"index", 0}}}}},
+         {"normalTexture", {{"index", 0}, {"scale", 2.0}}},
+         {"emissiveTexture", {{"index", 0}}},
+         {"emissiveFactor", {1.0, 0.5, 0.0}},
+         {"extensions", {{"KHR_materials_emissive_strength", {{"emissiveStrength", 4.0}}}}},
+         {"alphaMode", "MASK"},
+         {"alphaCutoff", 0.3}},
+        {{"alphaMode", "BLEND"}},
+        {{"pbrMetallicRoughness", {{"metallicFactor", 9.0}, {"roughnessFactor", -3.0}}}, {"emissiveFactor", {5.0, 5.0, 5.0}}},
+    });
+    blob.doc["meshes"][0]["primitives"][0]["material"] = 0;
+    const GltfResult result = loadBlob(blob);
+    CHECK(result.ok);
+    CHECK(result.scene.shading == Shading::Pbr);
+    CHECK(result.scene.materials.size() == 3);
+    if (result.scene.materials.size() == 3) {
+        const SceneMaterial& m = result.scene.materials[0];
+        CHECK(near(m.metallic, 0.25f) && near(m.roughness, 0.75f));
+        CHECK(m.metallicRoughnessTexture == 0 && m.normalTexture == 0 && m.emissiveTexture == 0);
+        CHECK(near(m.normalScale, 2.0f));
+        CHECK(near(m.emissive[0], 1.0f) && near(m.emissive[1], 0.5f) && near(m.emissive[2], 0.0f));
+        CHECK(near(m.emissiveStrength, 4.0f));
+        CHECK(m.alphaMode == AlphaMode::Mask && near(m.alphaCutoff, 0.3f));
+        CHECK(result.scene.materials[1].alphaMode == AlphaMode::Opaque);
+        CHECK(near(result.scene.materials[1].metallic, 1.0f) && near(result.scene.materials[1].roughness, 1.0f));
+        CHECK(near(result.scene.materials[2].metallic, 1.0f) && near(result.scene.materials[2].roughness, 0.0f));
+        CHECK(result.scene.materials[2].emissive[0] == 1.0f);
+    }
+    bool blendWarning = false;
+    for (const std::string& warning : result.warnings) {
+        blendWarning = blendWarning || warning.find("BLEND") != std::string::npos;
+    }
+    CHECK(blendWarning);
+
+    Blob broken = blob;
+    broken.doc["materials"][0]["normalTexture"] = {{"index", 99}};
+    const GltfResult tolerant = loadBlob(broken);
+    CHECK(tolerant.ok && tolerant.scene.materials[0].normalTexture == -1);
+
+    Blob nan = blob;
+    nan.doc["materials"][0]["pbrMetallicRoughness"]["roughnessFactor"] = "high";
+    nan.doc["materials"][0]["emissiveFactor"] = {"a", 1, 2};
+    const GltfResult sloppy = loadBlob(nan);
+    CHECK(sloppy.ok && near(sloppy.scene.materials[0].roughness, 1.0f) && near(sloppy.scene.materials[0].emissive[0], 0.0f));
+}
+
 void testInterruption() {
     const Blob good = triangleBlob();
     CHECK(loadBlob(good).ok);
@@ -659,6 +735,7 @@ int main() {
     testRejections();
     testDataUriAndFiles();
     testTextures();
+    testPbrMaterials();
     testInterruption();
     testDeterministicAndSmall();
     return testing::finish();

@@ -55,21 +55,114 @@ void sampleChannel(const SceneChannel& channel, float time, Pose& pose) {
     }
 }
 
-void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const Mat4& parent, int depth, std::vector<SceneInstance>& out) {
-    if (depth > kSceneMaxDepth || index < 0 || index >= static_cast<int>(scene.nodes.size())) {
+constexpr float kTau = 6.28318531f;
+
+Vec3 axisVector(int axis) {
+    return axis == 0 ? Vec3{1.0f, 0.0f, 0.0f} : (axis == 2 ? Vec3{0.0f, 0.0f, 1.0f} : Vec3{0.0f, 1.0f, 0.0f});
+}
+
+struct EvalContext {
+    float time = 0.0f;
+    SceneAudio audio;
+    std::vector<SceneInstance>* out = nullptr;
+};
+
+Mat4 localMatrix(const SceneNode& node, const Pose& pose, const EvalContext& ctx, int copy, float& emissive) {
+    Vec3 t = pose.translation;
+    Quat r = pose.rotation;
+    Vec3 s = pose.scale;
+    for (const NodeMotion& m : node.motions) {
+        const float cycle = kTau * (m.speed * ctx.time + m.phase * static_cast<float>(copy));
+        switch (m.kind) {
+        case MotionKind::Spin:
+            r = r * axisAngle(axisVector(m.axis), cycle);
+            break;
+        case MotionKind::Bob:
+            t.y += m.amount * std::sin(cycle);
+            break;
+        case MotionKind::Orbit:
+            t.x += m.amount * std::cos(cycle);
+            t.z += m.amount * std::sin(cycle);
+            break;
+        case MotionKind::Pulse:
+            s = s * std::max(1.0f + m.amount * std::sin(cycle), 0.05f);
+            break;
+        case MotionKind::Sway:
+            r = r * axisAngle(axisVector(m.axis), m.amount * std::sin(cycle));
+            break;
+        }
+    }
+    if (!node.bindings.empty()) {
+        s = s * std::max(1.0f + bindingSum(node.bindings, BindTarget::Scale, ctx.audio), 0.05f);
+        t.y += bindingSum(node.bindings, BindTarget::Lift, ctx.audio);
+        const float twist = bindingSum(node.bindings, BindTarget::Twist, ctx.audio);
+        if (twist != 0.0f) {
+            r = r * axisAngle({0.0f, 1.0f, 0.0f}, twist);
+        }
+        emissive += std::max(bindingSum(node.bindings, BindTarget::Emissive, ctx.audio), 0.0f);
+    }
+    return composeTrs(t, r, s);
+}
+
+Mat4 repeatMatrix(const NodeRepeat& repeat, int copy, int count) {
+    if (repeat.kind == RepeatKind::Ring) {
+        const float angle = kTau * static_cast<float>(copy) / static_cast<float>(count);
+        return rotation(axisAngle({0.0f, 1.0f, 0.0f}, -angle)) * translation({repeat.radius, 0.0f, 0.0f});
+    }
+    return translation({(static_cast<float>(copy) - 0.5f * static_cast<float>(count - 1)) * repeat.spacing, 0.0f, 0.0f});
+}
+
+void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const Mat4& parent, int depth, EvalContext& ctx, int copy, float inheritedEmissive, bool framing) {
+    if (depth > kSceneMaxDepth || index < 0 || index >= static_cast<int>(scene.nodes.size()) || ctx.out->size() >= kSceneMaxInstances) {
         return;
     }
     const SceneNode& node = scene.nodes[static_cast<size_t>(index)];
     const Pose& pose = poses[static_cast<size_t>(index)];
-    const Mat4 world = parent * composeTrs(pose.translation, pose.rotation, pose.scale);
-    for (const int mesh : node.meshes) {
-        out.push_back({mesh, world});
-    }
-    for (const int child : node.children) {
-        walk(scene, poses, child, world, depth + 1, out);
+    const int copies = node.repeat.kind != RepeatKind::None ? std::clamp(node.repeat.count, 1, kSceneMaxRepeat) : 1;
+    const bool nodeFraming = framing && node.framing;
+    for (int c = 0; c < copies; ++c) {
+        const int copyIndex = copies > 1 ? c : copy;
+        float emissive = inheritedEmissive;
+        const Mat4 local = localMatrix(node, pose, ctx, copyIndex, emissive);
+        const Mat4 world = copies > 1 ? parent * repeatMatrix(node.repeat, c, copies) * local : parent * local;
+        for (const int mesh : node.meshes) {
+            if (ctx.out->size() >= kSceneMaxInstances) {
+                return;
+            }
+            ctx.out->push_back({mesh, world, emissive, nodeFraming});
+        }
+        for (const int child : node.children) {
+            walk(scene, poses, child, world, depth + 1, ctx, copyIndex, emissive, nodeFraming);
+        }
     }
 }
 
+}
+
+float audioValue(const SceneAudio& audio, BindSource source) {
+    switch (source) {
+    case BindSource::Bass:
+        return audio.bass;
+    case BindSource::Mid:
+        return audio.mid;
+    case BindSource::High:
+        return audio.high;
+    case BindSource::Level:
+        return audio.level;
+    case BindSource::Kick:
+        return audio.kick;
+    }
+    return 0.0f;
+}
+
+float bindingSum(const std::vector<NodeBinding>& bindings, BindTarget target, const SceneAudio& audio) {
+    float sum = 0.0f;
+    for (const NodeBinding& binding : bindings) {
+        if (binding.target == target) {
+            sum += binding.amount * audioValue(audio, binding.source);
+        }
+    }
+    return sum;
 }
 
 float sceneDuration(const Scene& scene, int animation) {
@@ -79,7 +172,7 @@ float sceneDuration(const Scene& scene, int animation) {
     return scene.animations[static_cast<size_t>(animation)].duration;
 }
 
-std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time) {
+std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time, const SceneAudio* audio) {
     std::vector<Pose> poses(scene.nodes.size());
     for (size_t i = 0; i < scene.nodes.size(); ++i) {
         poses[i].translation = scene.nodes[i].translation;
@@ -88,22 +181,30 @@ std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, floa
     }
     if (animation >= 0 && animation < static_cast<int>(scene.animations.size())) {
         const SceneAnimation& clip = scene.animations[static_cast<size_t>(animation)];
-        float local = time;
-        if (clip.duration > 1e-6f) {
-            local = std::fmod(time, clip.duration);
-            if (local < 0.0f) {
-                local += clip.duration;
-            }
-        }
         for (const SceneChannel& channel : clip.channels) {
-            if (channel.node >= 0 && channel.node < static_cast<int>(poses.size())) {
-                sampleChannel(channel, local, poses[static_cast<size_t>(channel.node)]);
+            if (channel.node < 0 || channel.node >= static_cast<int>(poses.size())) {
+                continue;
             }
+            const float period = channel.loop > 1e-6f ? channel.loop : clip.duration;
+            float local = time;
+            if (period > 1e-6f) {
+                local = std::fmod(time, period);
+                if (local < 0.0f) {
+                    local += period;
+                }
+            }
+            sampleChannel(channel, local, poses[static_cast<size_t>(channel.node)]);
         }
     }
     std::vector<SceneInstance> out;
+    EvalContext ctx;
+    ctx.time = time;
+    if (audio != nullptr) {
+        ctx.audio = *audio;
+    }
+    ctx.out = &out;
     for (const int root : scene.roots) {
-        walk(scene, poses, root, Mat4{}, 0, out);
+        walk(scene, poses, root, Mat4{}, 0, ctx, 0, 0.0f, true);
     }
     return out;
 }
@@ -113,8 +214,10 @@ SceneBounds sceneBounds(const Scene& scene, int animation, float time) {
     constexpr float big = std::numeric_limits<float>::max();
     Vec3 lo{big, big, big};
     Vec3 hi{-big, -big, -big};
-    for (const SceneInstance& instance : evaluateScene(scene, animation, time)) {
-        if (instance.mesh < 0 || instance.mesh >= static_cast<int>(scene.meshes.size())) {
+    const std::vector<SceneInstance> evaluated = evaluateScene(scene, animation, time);
+    const bool restrictFraming = std::any_of(evaluated.begin(), evaluated.end(), [](const SceneInstance& i) { return i.framing; });
+    for (const SceneInstance& instance : evaluated) {
+        if (instance.mesh < 0 || instance.mesh >= static_cast<int>(scene.meshes.size()) || (restrictFraming && !instance.framing)) {
             continue;
         }
         for (const Vec3& p : scene.meshes[static_cast<size_t>(instance.mesh)].positions) {
@@ -167,12 +270,21 @@ SceneSphere sceneSphere(const Scene& scene, int animation, int samples) {
     const float duration = sceneDuration(scene, animation);
     const int count = std::max(samples, 1);
     std::vector<std::vector<SceneInstance>> frames;
-    Vec3 lo{big, big, big};
-    Vec3 hi{-big, -big, -big};
+    bool restrictFraming = false;
     for (int s = 0; s < count; ++s) {
         frames.push_back(evaluateScene(scene, animation, duration * static_cast<float>(s) / static_cast<float>(count)));
         for (const SceneInstance& instance : frames.back()) {
-            if (instance.mesh < 0 || instance.mesh >= static_cast<int>(locals.size()) || !locals[static_cast<size_t>(instance.mesh)].valid) {
+            restrictFraming = restrictFraming || instance.framing;
+        }
+    }
+    const auto usable = [&](const SceneInstance& instance) {
+        return instance.mesh >= 0 && instance.mesh < static_cast<int>(locals.size()) && locals[static_cast<size_t>(instance.mesh)].valid && (!restrictFraming || instance.framing);
+    };
+    Vec3 lo{big, big, big};
+    Vec3 hi{-big, -big, -big};
+    for (const std::vector<SceneInstance>& frame : frames) {
+        for (const SceneInstance& instance : frame) {
+            if (!usable(instance)) {
                 continue;
             }
             const LocalSphere& local = locals[static_cast<size_t>(instance.mesh)];
@@ -192,7 +304,7 @@ SceneSphere sceneSphere(const Scene& scene, int animation, int samples) {
     float radius = 0.0f;
     for (const std::vector<SceneInstance>& frame : frames) {
         for (const SceneInstance& instance : frame) {
-            if (instance.mesh < 0 || instance.mesh >= static_cast<int>(locals.size()) || !locals[static_cast<size_t>(instance.mesh)].valid) {
+            if (!usable(instance)) {
                 continue;
             }
             const LocalSphere& local = locals[static_cast<size_t>(instance.mesh)];
@@ -236,11 +348,34 @@ bool validateScene(const Scene& scene, std::string& error) {
             return false;
         }
     }
+    const int imageCount = static_cast<int>(scene.images.size());
     for (size_t i = 0; i < scene.materials.size(); ++i) {
-        if (scene.materials[i].baseTexture >= static_cast<int>(scene.images.size())) {
+        const SceneMaterial& m = scene.materials[i];
+        if (m.baseTexture >= imageCount || m.metallicRoughnessTexture >= imageCount || m.normalTexture >= imageCount || m.emissiveTexture >= imageCount) {
             error = "material " + std::to_string(i) + " references a missing image";
             return false;
         }
+        const float values[] = {m.metallic, m.roughness, m.emissiveStrength, m.normalScale, m.alphaCutoff, m.emissive[0], m.emissive[1], m.emissive[2], m.baseColor[0], m.baseColor[1], m.baseColor[2], m.baseColor[3]};
+        for (const float v : values) {
+            if (!std::isfinite(v)) {
+                error = "material " + std::to_string(i) + " has a non-finite value";
+                return false;
+            }
+        }
+    }
+    if (scene.lights.size() > kSceneMaxLights) {
+        error = "the scene has too many lights";
+        return false;
+    }
+    for (const SceneLight& light : scene.lights) {
+        if (!std::isfinite(light.position.x) || !std::isfinite(light.position.y) || !std::isfinite(light.position.z) || !std::isfinite(light.intensity)) {
+            error = "a light has a non-finite value";
+            return false;
+        }
+    }
+    if (!std::isfinite(scene.camera.fovDegrees) || !std::isfinite(scene.camera.distance) || !std::isfinite(scene.camera.pitchDegrees) || scene.camera.fovDegrees < 10.0f || scene.camera.fovDegrees > 120.0f || scene.camera.distance <= 0.0f) {
+        error = "the camera has invalid values";
+        return false;
     }
     for (size_t i = 0; i < scene.meshes.size(); ++i) {
         const SceneMesh& mesh = scene.meshes[i];
@@ -297,6 +432,16 @@ bool validateScene(const Scene& scene, std::string& error) {
         }
         seen[static_cast<size_t>(index)] = 1;
         const SceneNode& node = scene.nodes[static_cast<size_t>(index)];
+        if (node.repeat.kind != RepeatKind::None && (node.repeat.count < 1 || node.repeat.count > kSceneMaxRepeat || !std::isfinite(node.repeat.radius) || !std::isfinite(node.repeat.spacing))) {
+            error = "node " + std::to_string(index) + " has an invalid repeat";
+            return false;
+        }
+        for (const NodeMotion& motion : node.motions) {
+            if (!std::isfinite(motion.speed) || !std::isfinite(motion.amount) || !std::isfinite(motion.phase) || motion.axis < 0 || motion.axis > 2) {
+                error = "node " + std::to_string(index) + " has an invalid motion";
+                return false;
+            }
+        }
         for (const int mesh : node.meshes) {
             if (mesh < 0 || mesh >= meshCount) {
                 error = "node " + std::to_string(index) + " references a missing mesh";

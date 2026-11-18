@@ -568,6 +568,15 @@ void testNovelty() {
         CHECK(nvj::isNewPresetIn(name, "0.8.2"));
         CHECK(!nvj::isNewPresetIn(name, "0.9.0"));
     }
+    const char* sceneClips[] = {"Chrome Orbs Mesh", "Neon Cubes Mesh", "Gold Knot Mesh", "Pulse Columns Mesh"};
+    for (const char* name : sceneClips) {
+        CHECK(nvj::clipIndexByName(name) >= 0);
+        CHECK(nvj::isNewClipIn(name, "0.9.0"));
+        CHECK(nvj::isNewClipIn(name, "0.9.3-dev"));
+        CHECK(!nvj::isNewClipIn(name, "0.8.0"));
+        CHECK(!nvj::isNewClipIn(name, "0.10.0"));
+        CHECK(!nvj::isNewClipIn(name, "1.9.0"));
+    }
     CHECK(!nvj::isNewClipIn("Plasma", "0.8.0"));
     CHECK(!nvj::isNewEffectIn("Glow", "0.8.0"));
     CHECK(!nvj::isNewPresetIn("Neon Club", "0.8.0"));

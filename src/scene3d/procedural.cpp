@@ -1,5 +1,7 @@
 #include "scene3d/procedural.hpp"
 
+#include "scene3d/builtin_docs.hpp"
+
 #include <cmath>
 #include <string>
 #include <utility>
@@ -200,6 +202,18 @@ SceneChannel rotationChannel(int node, Vec3 axis, float seconds, int turns) {
 
 }
 
+SceneMesh plainSphereMesh() {
+    return makeSphere(1.0f, 48, 32);
+}
+
+SceneMesh plainTorusMesh() {
+    return makeTorus(1.0f, 0.36f, 64, 32);
+}
+
+SceneMesh plainTorusKnotMesh() {
+    return makeTorusKnot(2.0f, 3.0f, 0.3f, 220, 20);
+}
+
 Scene makeTorusKnotScene() {
     Scene scene;
     scene.name = "Torus Knot";
@@ -301,6 +315,10 @@ const std::vector<BuiltinSceneInfo>& builtinScenes() {
         {"Torus Knot Mesh", &makeTorusKnotScene},
         {"Crystal Cluster Mesh", &makeCrystalClusterScene},
         {"Orbit Rings Mesh", &makeOrbitRingsScene},
+        {"Chrome Orbs Mesh", &makeChromeOrbsScene},
+        {"Neon Cubes Mesh", &makeNeonCubesScene},
+        {"Gold Knot Mesh", &makeGoldKnotScene},
+        {"Pulse Columns Mesh", &makePulseColumnsScene},
     };
     return scenes;
 }

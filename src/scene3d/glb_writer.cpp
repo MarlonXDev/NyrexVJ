@@ -101,7 +101,17 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
     json materials = json::array();
     for (const SceneMaterial& m : scene.materials) {
         json material;
-        material["pbrMetallicRoughness"] = {{"baseColorFactor", {m.baseColor[0], m.baseColor[1], m.baseColor[2], m.baseColor[3]}}, {"metallicFactor", 0.0}, {"roughnessFactor", 1.0}};
+        material["pbrMetallicRoughness"] = {{"baseColorFactor", {m.baseColor[0], m.baseColor[1], m.baseColor[2], m.baseColor[3]}}, {"metallicFactor", m.metallic}, {"roughnessFactor", m.roughness}};
+        if (m.emissive[0] > 0.0f || m.emissive[1] > 0.0f || m.emissive[2] > 0.0f) {
+            material["emissiveFactor"] = {m.emissive[0], m.emissive[1], m.emissive[2]};
+            if (m.emissiveStrength != 1.0f) {
+                material["extensions"] = {{"KHR_materials_emissive_strength", {{"emissiveStrength", m.emissiveStrength}}}};
+            }
+        }
+        if (m.alphaMode == AlphaMode::Mask) {
+            material["alphaMode"] = "MASK";
+            material["alphaCutoff"] = m.alphaCutoff;
+        }
         if (m.doubleSided) {
             material["doubleSided"] = true;
         }

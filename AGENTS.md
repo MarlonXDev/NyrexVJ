@@ -28,12 +28,28 @@ These instructions apply to Codex, Claude, and other AI coding assistants workin
 3. Implement in a feature branch; do not commit directly to `main`.
 4. Run the relevant build, tests, translation checker, and shader checker when possible; report commands and any tests that could not run.
 5. Update user-facing docs and both changelogs when required by `CONTRIBUTING.md`.
-6. Open a PR explaining the change, risks, tests, and linked issue. Wait for human review before merging.
+6. Open a PR with the template: change, risks, tests, linked issue. Merge only as the review policy below allows.
 
-## Roadmap statuses
+## Claiming work and avoiding collisions
+- Every task has an issue. Assign it or comment with the branch name, and set the `in progress` label.
+- Name branches `feature/<topic>`, `fix/<topic>` or `docs/<topic>`. For parallel work use a separate worktree: `git worktree add ../NyrexVJ-<topic> -b feature/<topic> origin/main`.
+- Before starting, look at open branches and pull requests that touch the same files. If they overlap, agree in the issue first.
+- Branch from a current `main`. Rebase or merge only your own branch.
+- Label AI-authored issues and pull requests `ai-authored` and name the assistant in the pull request body.
+
+## Roadmap statuses and labels
 - **Existing**: documented in the current application or code.
-- **Proposed**: an idea under discussion, not authorized for implementation.
-- **Approved**: explicitly accepted by the maintainers in an issue, PR, or decision record.
-- **In progress / Done**: tracked in GitHub Issues and PRs, not inferred from a version label.
+- **Proposed** (`proposal`): an idea under discussion, not authorized for implementation.
+- **Approved** (`approved`): explicitly accepted by the maintainers in an issue, PR, or decision record.
+- **In progress** (`in progress`) and **Done** (`done`): tracked in GitHub Issues and PRs, not inferred from a version label.
+
+## Review and merging
+- AI-authored changes get a human review before they are merged.
+- Exception: the repository owner may allow an assistant in a session that the owner directs to merge that assistant's own pull requests once the checks pass. This permission belongs to the owner and that session, is never inferred, and does not extend to assistants working for other contributors.
+- Pull requests that change `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md` or the status of an ADR are always merged by a human.
+
+## Tool-specific files
+- `CLAUDE.md` points Claude to this file. Codex and other assistants read this file directly.
+- A tool-specific exception stays narrow and never loosens a rule in this file.
 
 If instructions conflict, ask maintainers rather than silently choosing.

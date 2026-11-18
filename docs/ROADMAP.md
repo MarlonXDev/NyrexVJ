@@ -54,6 +54,7 @@ These existing commitments/ideas should be reconciled with the proposed mileston
 
 ## Tracking rules
 - One GitHub Issue per scoped feature or research task, with acceptance criteria and dependencies.
-- Use labels/statuses such as `proposal`, `approved`, `in progress`, and `done` if maintainers adopt them.
+- Use the labels `proposal`, `approved`, `in progress` and `done` ([ADR 0003](adr/0003-shared-ai-collaboration.md)).
+- A verified status check of every item above is tracked in issue [#25](https://github.com/MarlonXDev/NyrexVJ/issues/25).
 - Do not mark features as done until verified against code and tests.
 - Track unresolved design decisions in Issues or decision records.

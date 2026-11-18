@@ -1,6 +1,6 @@
 # Native 3D scene player (prototype)
 
-This is the prototype that [ADR 0001](adr/0001-native-3d-runtime.md) asked for. It plays 3D scenes as ordinary clips inside the existing layer and effect pipeline. It is **not** the Clip Creator, it has no editor and no clip file format. Both are deliberately left open until real measurements exist (see "Decisions not made").
+This is the 3D scene player that [ADR 0001](adr/0001-native-3d-runtime.md) asked for. It plays 3D scenes as ordinary clips inside the existing layer and effect pipeline. Since v0.9.0 the scenes can also come from the Clip Creator and from `.nyxclip` files ([ADR 0004](adr/0004-scene-document-and-clip-pack.md), [ADR 0005](adr/0005-pbr-shading.md), [ADR 0006](adr/0006-clip-creator.md)); see "Decisions" at the end.
 
 ## How it fits into the renderer
 
@@ -13,7 +13,7 @@ This is the prototype that [ADR 0001](adr/0001-native-3d-runtime.md) asked for. 
     -> layer effect chain -> composite     (unchanged)
 ```
 
-- A scene clip is a `ClipDef` with `kind` `BuiltinScene` or `ModelFile` instead of a fragment shader body. Presets store it by name like any other clip, an unknown name stays an empty cell.
+- A scene clip is a `ClipDef` with `kind` `BuiltinScene`, `ModelFile` or `ScenePack` (a `.nyxclip` file) instead of a fragment shader body. Presets store it by name like any other clip, an unknown name stays an empty cell.
 - `SceneRenderer` attaches the layer texture (`layerA_`) to its own framebuffer together with one depth renderbuffer. There is no extra colour target, no blit and no per-clip framebuffer. The depth buffer is shared by every scene clip.
 - `Engine::renderDeck` draws a scene clip and a shader clip through the same code path afterwards: effects, blend mode, opacity and master chain are untouched.
 - Scene data is loaded by `std::async`, so file reading, parsing and image decoding never run on the render thread. The upload to the GPU is done on the render thread the first time the clip is in a deck cell. Until it is ready the layer is simply empty.
@@ -25,7 +25,7 @@ This is the prototype that [ADR 0001](adr/0001-native-3d-runtime.md) asked for. 
 | --- | --- | --- |
 | Container | `.glb` and `.gltf` (external `.bin`, `data:` URIs, relative image files) | Draco, Meshopt, any other required extension |
 | Geometry | triangles, triangle strips, triangle fans, indexed or not, `POSITION`, `NORMAL` (computed when missing), `TEXCOORD_0`, `COLOR_0`, normalized and quantized integer attributes | points, lines, sparse accessors, second UV set, tangents |
-| Materials | base colour factor, base colour texture (PNG and JPEG), double sided | metallic roughness, normal, occlusion, emissive, alpha blend and mask (drawn opaque), texture transforms |
+| Materials | base colour factor and texture (PNG and JPEG), metallic-roughness factors and texture, normal texture, emissive factor, texture and `KHR_materials_emissive_strength`, alpha mode opaque and mask, double sided | occlusion, alpha blend (drawn opaque, with a warning), texture transforms, other material extensions |
 | Hierarchy | node tree with translation, rotation, scale or matrix, mesh sharing between nodes | skins, morph targets, cameras and lights from the file |
 | Animation | translation, rotation and scale channels, linear and step, cubic spline approximated as linear, looping | weights, skeletal animation |
 
@@ -82,13 +82,15 @@ So the fixed cost of the first 3D clip is about 8 MiB of depth buffer, every fur
 
 **Frame times are not measured yet on real hardware.** The numbers collected so far come from a software OpenGL renderer (llvmpipe) on a build server: 4 layers of Torus Knot Mesh took 190 ms per frame, 4 layers of the Plasma shader 209 ms. They show that the mesh path is not slower than a full screen shader there and that the benchmark works, they say nothing about a real GPU. The benchmark has to be run on the target PC (and on a weaker one) before anything is decided from it.
 
-## Decisions not made
+## Decisions
 
-ADR 0001 says to benchmark before committing. These are still open and the prototype does not settle them:
+ADR 0001 said to benchmark before committing. The decisions that followed are recorded in the ADRs and implemented in v0.9.0:
 
-- A scene graph of our own. The runtime only keeps the glTF node tree it needs for animation.
-- An asset library, packaging of models and textures, and handling of missing assets in presets (today a missing model is an empty cell).
-- A physically based shading model. The fixed lighting is the cheapest thing that looks decent, PBR needs maintainer approval and measurements.
-- Any `.nyxclip` or scene file format, and any editor UI.
-- Unloading models that are no longer used, and rescanning the models folder without a restart.
-- How much of glTF (skins, morph targets, lights, cameras, transparency) is worth supporting.
+- A scene graph of our own: the scene runtime evaluates node motions, repeats, framing and audio bindings itself ([ADR 0004](adr/0004-scene-document-and-clip-pack.md)).
+- Scene file and asset packaging: a JSON scene document inside a `.nyxclip` container with embedded `.glb` models and textures; a missing asset gives a warning and the rest of the scene still plays.
+- Physically based shading with an analytic sky and up to four lights, next to the unchanged classic shading ([ADR 0005](adr/0005-pbr-shading.md)).
+- The Clip Creator as a floating window with a live preview ([ADR 0006](adr/0006-clip-creator.md)).
+- Unloading: a scene that is in no cell and was not used for 120 seconds releases its GPU memory and loads again on demand; the models folder is rescanned without a restart.
+- glTF breadth: materials and textures as listed above. Skins, morph targets, glTF lights and cameras and blended transparency stay unsupported and are ignored with a warning.
+
+Still open: frame times on a real GPU. Run `NyrexVJ --bench-scene 4:300:"Torus Knot Mesh" --bench-out result.json` and the same with `Chrome Orbs Mesh` on the target PC and on a weaker one.

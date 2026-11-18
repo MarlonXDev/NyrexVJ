@@ -1,7 +1,7 @@
 # ADR 0001: Native 3D runtime and separate Clip Creator
 
 - **Status:** Accepted (2026-11-18, approved by MarlonXDev)
-- **Implementation:** Prototype implemented in v0.6.0 ([#6](https://github.com/MarlonXDev/NyrexVJ/issues/6), [#7](https://github.com/MarlonXDev/NyrexVJ/pull/7)). Open follow-ups are listed at the end.
+- **Implementation:** Prototype implemented in v0.6.0 ([#6](https://github.com/MarlonXDev/NyrexVJ/issues/6), [#7](https://github.com/MarlonXDev/NyrexVJ/pull/7)). The decisions this ADR left open were taken in [ADR 0004](0004-scene-document-and-clip-pack.md), [ADR 0005](0005-pbr-shading.md) and [ADR 0006](0006-clip-creator.md) and implemented in v0.9.0. One open follow-up remains at the end.
 - **Date:** 2026-11-18
 - **Owners:** Maintainers (pending assignment)
 - **Related:** [Architecture](../ARCHITECTURE.md), [Roadmap](../ROADMAP.md), [SCENE3D.md](../SCENE3D.md), [#3](https://github.com/MarlonXDev/NyrexVJ/pull/3)
@@ -37,12 +37,10 @@ This ADR approves the direction and the prototype. It does **not** approve a Cli
 | One glTF/GLB scene in a compositor-compatible texture | Done, with textures, node hierarchy and looping animation. Verified on Linux (headless) and by unit tests; the Windows build passes CI. |
 | Memory with several simultaneous 3D clips | Measured. Render targets about 40 MiB and the shared depth buffer about 8 MiB at 1080p with four layers; geometry is paid once per model. |
 | Frame times with several simultaneous 3D clips | **Open.** Measured only on a software renderer, which proves the benchmark but not the performance. Needs `NyrexVJ --bench-scene` on a real GPU. |
-| Scene serialization and asset packaging | Deliberately not decided. Models are plain `.glb`/`.gltf` files in a folder; presets reference them by name. |
-| Material, animation and lighting scope | Prototype scope: base colour and texture, node animation, fixed lights. **Open:** maintainers confirm or change it. |
-| Safe loading policy | Done. Size, count, depth, path and range limits with tests. **Open:** cancelling a very slow load. |
+| Scene serialization and asset packaging | Decided in ADR 0004 and implemented in v0.9.0: a scene document (`nyxscene`, JSON) inside a `.nyxclip` container that embeds `.glb` models and PNG/JPEG textures. Plain `.glb`/`.gltf` files in the models folder keep working. |
+| Material, animation and lighting scope | Decided in ADR 0005 and ADR 0006 and implemented in v0.9.0: physically based shading with an analytic sky and up to four lights, node animation, audio bindings. The classic shading of the three built-in clips of v0.6.0 is unchanged. |
+| Safe loading policy | Done. Size, count, depth, path and range limits with tests, a 60 second time limit and a Cancel loading button since v0.8.0. Clip packs add entry, size, name and checksum checks. |
 
 ## Open follow-ups
 - Run `NyrexVJ.exe --bench-scene 4:300:"Torus Knot Mesh" --bench-out result.json` on a real GPU and record the result here.
-- Maintainers confirm the prototype scope (materials, animation, lighting) or request changes.
-- Cancellation and a time limit for slow model loads.
-- A separate ADR before any scene file format, clip pack format (`.nyxclip`), asset packaging, PBR shading, or Creator UI is started.
+- Frame times of the PBR path and of scenes with many repeated objects are measured only on a software renderer too. The same benchmark on a real GPU covers them.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 - 2026-11-18
+
+- Clip Creator: the new Creator menu opens a window where you build your own 3D scenes. Add spheres, cubes, cylinders, cones, planes, tori, torus knots and your own .glb models, place, rotate and scale them, repeat any object in a ring or a line, add up to four lights, and see the result live in a preview you can orbit with the mouse. Undo, redo and four ready made templates (the new Mesh scenes) are included.
+- Your scenes are saved as .nyxclip files in the new clips folder. A .nyxclip is a single portable file that carries the scene together with the models and textures it uses, so you can send it to a friend and it plays without anything else. Use as clip saves the scene and puts it into the selected cell at once.
+- Everything can move with the music: every object, light and the camera can react to Bass, Mid, High, Level or Kick (bigger, glowing, twisting, lifted, brighter, zooming), and every object can spin, bob, orbit, pulse or sway on its own.
+- Realistic lighting for 3D clips and imported models: metallic and rough surfaces, normal maps, glowing materials, cut-out transparency, reflections of a built-in sky and up to four lights. Models with PBR materials now look the way their authors made them. The old built-in 3D clips keep their look.
+- 4 new 3D clips made with the Creator, 50 clips in total: Chrome Orbs Mesh, Neon Cubes Mesh, Gold Knot Mesh and Pulse Columns Mesh. They follow the layer colours where it makes sense and react to bass, mid, high and kick.
+- Library: the new Scenes filter shows only your own scenes, the new Assets mode lists your models, textures and scenes with their sizes and opens their folders, and a right click on a scene clip offers Edit in the Clip Creator.
+- Less memory: a 3D scene that is in no cell and was not used for two minutes is unloaded and loads again when you need it. Its thumbnail stays.
+
 ## 0.8.0 - 2026-11-18
 
 - New window layout in the style of Resolume Arena: the clip grid with its layer headers fills the top, the deck buttons and the tempo row sit right below it, the preview and the output are at the bottom left, Master and Layer share one tabbed window, the selected clip has its own Clip window and the Browser with Presets, Library and Audio is on the right. The window layout is reset once by this update (Settings, Appearance, Reset window layout does it any time).

@@ -31,6 +31,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 - Unreal integration proof of concept: Spout video into NyrexVJ, control/audio data to Unreal via OSC.
 
 ### Integrated 3D Clip Creator (candidate v0.8)
+- **Status:** a first Clip Creator and the `.nyxclip` format landed in v0.9.0 (see [ADR 0006](adr/0006-clip-creator.md) and [SCENE3D.md](SCENE3D.md)). The list below stays as the longer term wish list; what exists is described in the ADRs.
 - Dedicated editor for simple scenes, cameras, primitives, imported models, materials, and looping animation.
 - Audio-reactive 3D parameters.
 - Reuse the native 3D runtime and render scenes to offscreen textures usable as ordinary clips.

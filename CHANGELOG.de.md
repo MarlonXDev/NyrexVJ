@@ -1,5 +1,15 @@
 # Änderungsprotokoll
 
+## 0.9.0 - 2026-11-18
+
+- Clip Creator: Das neue Menü Creator öffnet ein Fenster, in dem du eigene 3D-Szenen baust. Füge Kugeln, Würfel, Zylinder, Kegel, Flächen, Ringe, Torusknoten und deine eigenen .glb-Modelle hinzu, platziere, drehe und skaliere sie, wiederhole jedes Objekt in einem Ring oder einer Reihe, setze bis zu vier Lichter und sieh das Ergebnis live in einer Vorschau, die du mit der Maus umkreisen kannst. Rückgängig, Wiederherstellen und vier fertige Vorlagen (die neuen Mesh-Szenen) sind dabei.
+- Deine Szenen werden als .nyxclip-Dateien im neuen Clips-Ordner gespeichert. Eine .nyxclip ist eine einzelne, tragbare Datei, die die Szene samt den benutzten Modellen und Texturen enthält. Du kannst sie einem Freund schicken und sie läuft ohne alles andere. Als Clip nutzen speichert die Szene und legt sie sofort in die gewählte Zelle.
+- Alles kann sich zur Musik bewegen: Jedes Objekt, jedes Licht und die Kamera können auf Bass, Mitten, Höhen, Pegel oder Kick reagieren (größer, leuchtend, verdreht, angehoben, heller, zoomend), und jedes Objekt kann von allein rotieren, wippen, kreisen, pulsieren oder schwanken.
+- Realistische Beleuchtung für 3D-Clips und importierte Modelle: metallische und raue Oberflächen, Normalenkarten, leuchtende Materialien, ausgeschnittene Transparenz, Spiegelungen eines eingebauten Himmels und bis zu vier Lichter. Modelle mit PBR-Materialien sehen jetzt so aus, wie ihre Macher sie gebaut haben. Die alten eingebauten 3D-Clips behalten ihren Look.
+- 4 neue 3D-Clips, mit dem Creator gebaut, insgesamt 50 Clips: Chrome Orbs Mesh, Neon Cubes Mesh, Gold Knot Mesh und Pulse Columns Mesh. Sie folgen den Ebenenfarben, wo es passt, und reagieren auf Bass, Mitten, Höhen und Kick.
+- Bibliothek: Der neue Filter Szenen zeigt nur deine eigenen Szenen, der neue Modus Dateien listet deine Modelle, Texturen und Szenen mit ihrer Größe auf und öffnet ihre Ordner, und ein Rechtsklick auf einen Szenen-Clip bietet Im Clip Creator bearbeiten an.
+- Weniger Speicher: Eine 3D-Szene, die in keiner Zelle liegt und zwei Minuten nicht benutzt wurde, wird entladen und lädt wieder, wenn du sie brauchst. Ihr Vorschaubild bleibt.
+
 ## 0.8.0 - 2026-11-18
 
 - Neues Fensterlayout im Stil von Resolume Arena: Das Clip-Raster mit seinen Ebenenköpfen füllt den oberen Bereich, die Deck-Knöpfe und die Tempozeile liegen direkt darunter, Vorschau und Ausgabe sitzen unten links, Master und Ebene teilen sich ein Fenster mit Reitern, der gewählte Clip hat ein eigenes Clip-Fenster und der Browser mit Presets, Bibliothek und Audio steht rechts. Das Fensterlayout wird mit diesem Update einmal zurückgesetzt (Einstellungen, Aussehen, Fensterlayout zurücksetzen geht jederzeit).

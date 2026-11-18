@@ -40,6 +40,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     outputMonitor_ = settings_.outputMonitor;
     uiScaleEdit_ = settings_.uiScale;
     appliedVsync_ = settings_.vsync ? 1 : 0;
+    oscOverridePort_ = options.oscPort;
+    control_.loadBindings();
+    control_.refreshMidiDevices();
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
 
     if (!engine_.init()) {
@@ -283,6 +286,13 @@ void App::frame(double dt) {
         appliedVsync_ = vsync;
     }
     ImGui::GetStyle().FontScaleMain = settings_.uiScale;
+    ControlConfig control;
+    control.oscEnabled = settings_.oscEnabled || oscOverridePort_ > 0;
+    control.oscPort = oscOverridePort_ > 0 ? oscOverridePort_ : settings_.oscPort;
+    control.oscAllowRemote = settings_.oscAllowRemote;
+    control.midiDevice = settings_.midiDevice;
+    control_.configure(control);
+    control_.update(dt);
     updateAudio(dt);
     engine_.update(dt);
     engine_.render();
@@ -476,7 +486,7 @@ void App::drawMenuBar() {
         if (ImGui::MenuItem(tr("Check for updates"), nullptr, false, !updater_.busy())) {
             updater_.checkAsync();
             updateCardCollapsed_ = false;
-            openSettings(3);
+            openSettings(SettingsUpdates);
         }
         ImGui::EndMenu();
     }

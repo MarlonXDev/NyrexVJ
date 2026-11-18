@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.5.0 - 2026-11-18
+
+- Live-Steuerung per OSC: Schalte sie unter Einstellungen, Steuerung ein (standardmäßig aus, Port 9010, nur dieser Computer, außer du erlaubst andere). NyrexVJ reagiert dann auf 207 Adressen unter /nyrex/ für den Master, die 16 Decks, die 8 Spalten, jeden Clip, Deckkraft, Tempo, Größe und Farbe jeder Ebene, Bypass, Solo, Leeren sowie alle Effektschalter und Parameter. Sende einen Wert von 0 bis 1 oder gar nichts, um einen Auslöser zu feuern. Das klappt mit TouchDesigner, Max, Pure Data, Python-Skripten und allem anderen, das OSC spricht.
+- MIDI-Controller-Zuordnung unter Windows: Wähle deinen Controller, drücke Zuordnung hinzufügen, wähle was gesteuert wird und bewege einen Regler oder drücke eine Taste, um beides zu verbinden. Fader und Regler setzen Werte, Tasten lösen Clips, Spalten und Decks aus oder schalten Dinge an und aus, und Invertieren dreht einen Fader um. Zuordnungen werden in controls.json gespeichert.
+- Neue Seite Steuerung im Einstellungen-Fenster mit dem Status von OSC und MIDI, der zuletzt eingegangenen Nachricht, der Zuordnungsliste mit Lernen und Entfernen und einer durchsuchbaren Liste aller OSC-Adressen, die sich mit einem Klick kopieren lassen.
+
 ## 0.4.0 - 2026-11-18
 
 - Decks: Richte bis zu 16 Decks mit eigenen Ebenen, Clips, Farben und Effekten ein und wechsle mit einem weichen Übergang statt eines harten Schnitts. Sieben Übergänge: Ausblenden, Auflösen, Zoom, Wischen, Kreis, Rotation und Schieben, mit Länge in Sekunden oder in Beats und optionalem Auto-Wechsel. Klicke die Deck-Knöpfe über dem Clip-Raster, drücke Bild auf und Bild ab oder nutze Strg und 1 bis 8 (mit Umschalt für Deck 9 bis 16). Per Rechtsklick auf ein Deck kannst du es umbenennen, kopieren, füllen oder leeren. Alle Decks werden in Presets gespeichert.

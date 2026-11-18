@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.4.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.5.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -122,14 +122,18 @@ set(NYREXVJ_CORE_SOURCES
     src/core/preset.cpp
     src/core/settings.cpp
     src/core/sha256.cpp
+    src/control/control_system.cpp
+    src/control/control_targets.cpp
+    src/control/midi_map.cpp
+    src/control/osc.cpp
     src/update/update_logic.cpp
     src/update/updater.cpp
 )
 
 if(WIN32)
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_win.cpp src/audio/audio_input_win.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_win.cpp src/audio/audio_input_win.cpp src/control/midi_input_win.cpp src/control/udp_socket_win.cpp)
 else()
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/audio/audio_input_other.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/audio/audio_input_other.cpp src/control/midi_input_other.cpp src/control/udp_socket_posix.cpp)
 endif()
 
 add_library(nvj_core STATIC ${NYREXVJ_CORE_SOURCES})
@@ -141,7 +145,7 @@ target_compile_definitions(nvj_core PUBLIC
 )
 
 if(WIN32)
-    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32)
+    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32 ws2_32 winmm)
 else()
     find_package(Threads REQUIRED)
     target_link_libraries(nvj_core PUBLIC Threads::Threads)
@@ -153,6 +157,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/theme.cpp
     src/app/ui_browser.cpp
     src/app/ui_deck.cpp
+    src/app/ui_control.cpp
     src/app/ui_settings.cpp
     src/app/ui_panels.cpp
     src/app/ui_welcome.cpp
@@ -198,6 +203,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_audio_tests PRIVATE nvj_core)
     target_include_directories(nvj_audio_tests PRIVATE tests)
     add_test(NAME nvj_audio_tests COMMAND nvj_audio_tests)
+    add_executable(nvj_control_tests tests/test_control.cpp)
+    target_link_libraries(nvj_control_tests PRIVATE nvj_core)
+    target_include_directories(nvj_control_tests PRIVATE tests)
+    add_test(NAME nvj_control_tests COMMAND nvj_control_tests)
     add_executable(nvj_i18n_tests tests/test_i18n.cpp)
     target_link_libraries(nvj_i18n_tests PRIVATE nvj_core)
     target_include_directories(nvj_i18n_tests PRIVATE tests)

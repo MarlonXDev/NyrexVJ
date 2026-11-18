@@ -90,6 +90,16 @@ bool loadSettings(Settings& settings) {
     if (spoutName != doc.end() && spoutName->is_string() && !spoutName->get<std::string>().empty()) {
         result.spoutName = spoutName->get<std::string>().substr(0, 60);
     }
+    result.oscEnabled = boolean("oscEnabled", false);
+    result.oscAllowRemote = boolean("oscAllowRemote", false);
+    auto oscPort = doc.find("oscPort");
+    if (oscPort != doc.end() && oscPort->is_number_integer()) {
+        result.oscPort = std::clamp(oscPort->get<int>(), 1, 65535);
+    }
+    auto midiDevice = doc.find("midiDevice");
+    if (midiDevice != doc.end() && midiDevice->is_string()) {
+        result.midiDevice = midiDevice->get<std::string>();
+    }
     settings = result;
     return true;
 }
@@ -114,6 +124,10 @@ bool saveSettings(const Settings& settings) {
     doc["audioSyncBpm"] = settings.audioSyncBpm;
     doc["spoutEnabled"] = settings.spoutEnabled;
     doc["spoutName"] = settings.spoutName;
+    doc["oscEnabled"] = settings.oscEnabled;
+    doc["oscPort"] = settings.oscPort;
+    doc["oscAllowRemote"] = settings.oscAllowRemote;
+    doc["midiDevice"] = settings.midiDevice;
     std::ofstream file(settingsPath(), std::ios::binary | std::ios::trunc);
     if (!file) {
         return false;

@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.4.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output, the output window, a settings window, English and German and the auto-updater work. Video clips and MIDI are not implemented yet.
+> Status: v0.5.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output, the output window, a settings window, OSC and MIDI control, English and German and the auto-updater work. Video clips are not implemented yet.
 
 ## Download
 
@@ -27,6 +27,7 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 
 - **16 decks, smooth transitions.** Set up to 16 looks and glide between them with Fade, Dissolve, Zoom, Wipe, Radial, Spin or Slide, timed in seconds or beats, with an optional auto cycle.
 - **Audio reactive.** Pick system audio (your DJ program), a microphone, a line-in or a demo signal. Layers, the master and every effect parameter can follow Bass, Mid, High, Level or Kick, and an effect can be set to Gate so it only shows while the music is loud.
+- **Live control.** Play it from a MIDI controller (learn a knob with one click, Windows) or remote control it over OSC from TouchDesigner, Max, Python and more.
 - **OBS in two clicks.** Spout output with a sender name of your choice. In OBS add the source "Spout2 Capture" and select the sender.
 - **35 clips, 58 effects, 18 presets.** Fractals, raymarched 3D scenes, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals and more.
 - **Settings window.** One place for audio, output, Spout, updates, language and interface size, plus a status bar that shows FPS, tempo, deck and audio at a glance.
@@ -125,6 +126,39 @@ The effect gallery shows each effect with default settings on the Plasma clip (D
 | Drag from Library to a cell | Assign a clip |
 | B / S / X on a layer | Bypass / solo / stop the layer |
 
+## Live control
+
+Everything lives under Settings, Control. Mappings and addresses refer to the working deck, the one you see in the clip grid.
+
+### MIDI
+
+Windows only. Pick your controller under Device, press Add mapping, choose what it should control and then move a knob or press a key on the controller. The two are linked from that moment on. Knobs and faders (CC) set values, keys (notes) fire triggers or switch things on while held. Tick Invert to flip a fader, press Learn to give a row a new knob and Remove to delete it. Mappings are saved in `controls.json` in the user data folder. Controllers that another program has opened exclusively cannot be used by two programs at once.
+
+### OSC
+
+Tick Receive OSC messages. OSC is off by default and listens on port 9010 (VRChat uses 9000, so the two do not collide). Only this computer can send to it unless you tick Accept messages from other computers, which lets anyone on your network control NyrexVJ. Send one number to an address. Floats, integers and true or false are accepted and are read as 0 to 1. A message without a value fires a trigger or flips a switch. The Settings page lists every address, click one to copy it.
+
+| Address | Meaning |
+| --- | --- |
+| `/nyrex/master/level` | Master level, 0 to 1 |
+| `/nyrex/master/blackout` | Blackout, on at 0.5 and above |
+| `/nyrex/master/bpm` | Tempo, 0 to 1 maps to 40 to 240 BPM |
+| `/nyrex/master/tap`, `/nyrex/master/resync` | Tap tempo, restart the beat |
+| `/nyrex/master/hue`, `saturation`, `brightness`, `contrast` | Master colour, 0 to 1 over the usual range of each |
+| `/nyrex/deck/1` to `/nyrex/deck/16` | Switch to that deck |
+| `/nyrex/deck/next`, `/nyrex/deck/previous` | Next or previous used deck |
+| `/nyrex/column/1` to `/nyrex/column/8` | Trigger a column |
+| `/nyrex/layer/L/clip/C` | Trigger the clip of layer L in column C |
+| `/nyrex/layer/L/opacity`, `speed`, `scale` | Layer values, speed 0.1 to 4 and scale 0.25 to 4 |
+| `/nyrex/layer/L/hue`, `saturation`, `brightness`, `contrast` | Layer colour |
+| `/nyrex/layer/L/bypass`, `solo` | Layer switches |
+| `/nyrex/layer/L/clear` | Stop the layer |
+| `/nyrex/layer/L/fx/S/enable` | Effect slot S on or off |
+| `/nyrex/layer/L/fx/S/param/P` | Parameter P of the effect in slot S |
+| `/nyrex/master/fx/S/enable`, `/nyrex/master/fx/S/param/P` | The same for the master effects |
+
+Layers go from 1 to 4, effect slots from 1 to 4 and parameters from 1 to 4. A quick test from Python with the `python-osc` package: `SimpleUDPClient("127.0.0.1", 9010).send_message("/nyrex/master/level", 0.5)`.
+
 ## Languages
 
 English is the default. German is built in. Change it under Settings, General, under Help, Language or on the welcome screen, the choice is saved. Clip and effect names stay in English so they match what other VJ programs call them. A new language needs a translation table next to `src/core/i18n_de.cpp` and an entry in `src/core/i18n.cpp`.
@@ -147,12 +181,13 @@ NyrexVJ/
 ├── src/
 │   ├── app/        Dear ImGui interface: deck, panels, browser, settings window, status bar, update card, welcome screen, theme
 │   ├── audio/      WASAPI capture and loopback, FFT analysis, beat and tempo detection
+│   ├── control/    OSC parser and UDP input, MIDI input, learn mapping, control targets
 │   ├── core/       Composition model, presets, settings, i18n, log, SHA-256
 │   ├── render/     OpenGL engine, clip and effect libraries, output window, Spout
 │   ├── update/     Update check, installer, changelog parser
 │   ├── platform/   Windows and fallback platform code
 │   └── main.cpp
-├── tests/          Unit tests for core, audio, i18n and update logic
+├── tests/          Unit tests for core, audio, control, i18n and update logic
 ├── scripts/        Repository checks (translation coverage)
 ├── resources/      Windows icon and resource template
 ├── docs/           Images used by this readme
@@ -211,7 +246,9 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--select-layer N` | Select layer N (1-based) |
 | `--resolution IDX` | Output resolution index |
 | `--tab IDX` | Browser tab to show (0 Presets, 1 Library, 2 Audio) |
-| `--settings IDX` | Open the settings window on page IDX (0 to 6) |
+| `--settings IDX` | Open the settings window on page IDX (0 to 7, 3 is Control) |
+| `--osc-port N` | Listen for OSC on port N even if it is switched off in the settings |
+| `--midi-inject FRAME:STATUS:D1:D2` | With `--frames`, feed a MIDI message to the mappings at that frame |
 | `--decks A,B,C` | Fill decks 1, 2, 3 with these factory looks |
 | `--transition NAME` | Transition type for deck changes |
 | `--transition-seconds S` | Transition length in seconds |
@@ -234,8 +271,6 @@ User data lives in `%APPDATA%\NyrexVJ` on Windows and `~/.config/NyrexVJ` on Lin
 ## Roadmap
 
 - Video clips (H.264 and HAP) through FFmpeg
-- MIDI controller mapping
-- OSC input
 - DMX strip output for VRSL
 - Custom shader clips loaded from files
 - More languages

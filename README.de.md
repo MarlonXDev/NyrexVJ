@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.4.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe, Ausgabefenster, Einstellungsfenster, Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips und MIDI gibt es noch nicht.
+> Stand: v0.5.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe, Ausgabefenster, Einstellungsfenster, OSC- und MIDI-Steuerung, Englisch und Deutsch sowie der Auto-Updater funktionieren. Video-Clips gibt es noch nicht.
 
 ## Download
 
@@ -27,6 +27,7 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 
 - **16 Decks, weiche Übergänge.** Richte bis zu 16 Looks ein und gleite mit Ausblenden, Auflösen, Zoom, Wischen, Kreis, Rotation oder Schieben dazwischen hin und her, in Sekunden oder Beats, auf Wunsch mit automatischem Wechsel.
 - **Audio-reaktiv.** Wähle Systemaudio (dein DJ-Programm), ein Mikrofon, einen Line-In oder ein Demo-Signal. Ebenen, Master und jeder Effektparameter können Bass, Mitten, Höhen, Pegel oder Kick folgen, und ein Effekt lässt sich auf Gate stellen, damit er nur bei lauter Musik sichtbar ist.
+- **Live-Steuerung.** Spiele es mit einem MIDI-Controller (Regler mit einem Klick anlernen, Windows) oder steuere es per OSC aus TouchDesigner, Max, Python und mehr fern.
 - **OBS mit zwei Klicks.** Spout-Ausgabe mit frei wählbarem Sendernamen. In OBS die Quelle "Spout2 Capture" hinzufügen und den Sender auswählen.
 - **35 Clips, 58 Effekte, 18 Presets.** Fraktale, 3D-Szenen mit Raymarching, Konturlinien-Flüssigkeiten, Kristalltunnel, Blitze, Feuer, Spektrum-Visuals und mehr.
 - **Einstellungsfenster.** Ein Ort für Audio, Ausgabe, Spout, Updates, Sprache und Oberflächengröße, dazu eine Statusleiste mit FPS, Tempo, Deck und Audio auf einen Blick.
@@ -125,6 +126,39 @@ Die Effekt-Galerie zeigt jeden Effekt mit Standardwerten auf dem Clip Plasma (Du
 | Aus der Bibliothek auf eine Zelle ziehen | Clip zuweisen |
 | B / S / X an einer Ebene | Bypass / Solo / Ebene stoppen |
 
+## Live-Steuerung
+
+Alles liegt unter Einstellungen, Steuerung. Zuordnungen und Adressen beziehen sich auf das aktuelle Deck, also das, das du im Clip-Raster siehst.
+
+### MIDI
+
+Nur unter Windows. Wähle deinen Controller unter Gerät, drücke Zuordnung hinzufügen, wähle was gesteuert werden soll und bewege dann einen Regler oder drücke eine Taste am Controller. Ab dann sind beide verbunden. Regler und Fader (CC) setzen Werte, Tasten (Noten) lösen Auslöser aus oder schalten Dinge ein, solange sie gehalten werden. Mit Invertieren drehst du einen Fader um, mit Lernen bekommt eine Zeile einen neuen Regler und mit Entfernen löschst du sie. Die Zuordnungen stehen in `controls.json` im Datenordner. Ein Controller, den ein anderes Programm exklusiv geöffnet hat, lässt sich nicht von zwei Programmen gleichzeitig nutzen.
+
+### OSC
+
+Hake OSC-Nachrichten empfangen an. OSC ist standardmäßig aus und lauscht auf Port 9010 (VRChat nutzt 9000, so kommen sich beide nicht in die Quere). Nur dieser Computer darf senden, außer du hakst Nachrichten von anderen Computern annehmen an, dann kann jeder in deinem Netzwerk NyrexVJ steuern. Sende eine Zahl an eine Adresse. Float, Integer und true oder false werden akzeptiert und als 0 bis 1 gelesen. Eine Nachricht ohne Wert feuert einen Auslöser oder schaltet einen Schalter um. Die Einstellungsseite listet jede Adresse, ein Klick kopiert sie.
+
+| Adresse | Bedeutung |
+| --- | --- |
+| `/nyrex/master/level` | Master-Pegel, 0 bis 1 |
+| `/nyrex/master/blackout` | Blackout, an ab 0,5 |
+| `/nyrex/master/bpm` | Tempo, 0 bis 1 entspricht 40 bis 240 BPM |
+| `/nyrex/master/tap`, `/nyrex/master/resync` | Tap-Tempo, Beat neu starten |
+| `/nyrex/master/hue`, `saturation`, `brightness`, `contrast` | Master-Farbe, 0 bis 1 über den üblichen Bereich |
+| `/nyrex/deck/1` bis `/nyrex/deck/16` | Zu diesem Deck wechseln |
+| `/nyrex/deck/next`, `/nyrex/deck/previous` | Nächstes oder vorheriges benutztes Deck |
+| `/nyrex/column/1` bis `/nyrex/column/8` | Spalte auslösen |
+| `/nyrex/layer/L/clip/C` | Clip der Ebene L in Spalte C auslösen |
+| `/nyrex/layer/L/opacity`, `speed`, `scale` | Ebenenwerte, Tempo 0,1 bis 4 und Größe 0,25 bis 4 |
+| `/nyrex/layer/L/hue`, `saturation`, `brightness`, `contrast` | Ebenenfarbe |
+| `/nyrex/layer/L/bypass`, `solo` | Ebenenschalter |
+| `/nyrex/layer/L/clear` | Ebene stoppen |
+| `/nyrex/layer/L/fx/S/enable` | Effektplatz S an oder aus |
+| `/nyrex/layer/L/fx/S/param/P` | Parameter P des Effekts in Platz S |
+| `/nyrex/master/fx/S/enable`, `/nyrex/master/fx/S/param/P` | Dasselbe für die Master-Effekte |
+
+Ebenen gehen von 1 bis 4, Effektplätze von 1 bis 4 und Parameter von 1 bis 4. Ein schneller Test mit Python und dem Paket `python-osc`: `SimpleUDPClient("127.0.0.1", 9010).send_message("/nyrex/master/level", 0.5)`.
+
 ## Sprachen
 
 Englisch ist die Standardsprache, Deutsch ist eingebaut. Umschalten unter Einstellungen, Allgemein, unter Hilfe, Sprache oder auf dem Willkommensbildschirm, die Wahl wird gespeichert. Für eine neue Sprache braucht es eine Übersetzungstabelle neben `src/core/i18n_de.cpp` und einen Eintrag in `src/core/i18n.cpp`.
@@ -147,12 +181,13 @@ NyrexVJ/
 ├── src/
 │   ├── app/        Dear-ImGui-Oberfläche: Deck, Panels, Browser, Einstellungsfenster, Statusleiste, Update-Karte, Willkommensbildschirm, Theme
 │   ├── audio/      WASAPI-Aufnahme und Loopback, FFT-Analyse, Beat- und Tempo-Erkennung
+│   ├── control/    OSC-Parser und UDP-Eingang, MIDI-Eingang, Lern-Zuordnung, Steuerziele
 │   ├── core/       Kompositionsmodell, Presets, Einstellungen, i18n, Log, SHA-256
 │   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, Ausgabefenster, Spout
 │   ├── update/     Update-Prüfung, Installer, Changelog-Parser
 │   ├── platform/   Windows- und Ersatz-Plattformcode
 │   └── main.cpp
-├── tests/          Unit-Tests für Core, Audio, i18n und Update-Logik
+├── tests/          Unit-Tests für Core, Audio, Steuerung, i18n und Update-Logik
 ├── scripts/        Repository-Prüfungen (Übersetzungsabdeckung)
 ├── resources/      Windows-Icon und Ressourcenvorlage
 ├── docs/           Bilder für die Readme
@@ -211,7 +246,9 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--select-layer N` | Ebene N (ab 1) auswählen |
 | `--resolution IDX` | Index der Ausgabeauflösung |
 | `--tab IDX` | Anzuzeigender Browser-Tab (0 Presets, 1 Bibliothek, 2 Audio) |
-| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 6) |
+| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 7, 3 ist Steuerung) |
+| `--osc-port N` | OSC auf Port N empfangen, auch wenn es in den Einstellungen aus ist |
+| `--midi-inject FRAME:STATUS:D1:D2` | Mit `--frames` in diesem Frame eine MIDI-Nachricht an die Zuordnungen schicken |
 | `--decks A,B,C` | Deck 1, 2, 3 mit diesen Werks-Looks füllen |
 | `--transition NAME` | Übergangsart für Deckwechsel |
 | `--transition-seconds S` | Übergangsdauer in Sekunden |
@@ -234,8 +271,6 @@ Nutzerdaten liegen unter Windows in `%APPDATA%\NyrexVJ` und unter Linux in `~/.c
 ## Fahrplan
 
 - Video-Clips (H.264 und HAP) über FFmpeg
-- MIDI-Controller-Zuordnung
-- OSC-Eingang
 - DMX-Strip-Ausgabe für VRSL
 - Eigene Shader-Clips aus Dateien
 - Weitere Sprachen

@@ -17,7 +17,26 @@ namespace nvj {
 
 namespace {
 
-constexpr int kPageCount = 7;
+const char* settingsPageTitle(int page) {
+    switch (page) {
+    case SettingsGeneral:
+        return tr("General");
+    case SettingsAudio:
+        return tr("Audio");
+    case SettingsOutput:
+        return tr("Output");
+    case SettingsControl:
+        return tr("Control");
+    case SettingsUpdates:
+        return tr("Updates");
+    case SettingsInterface:
+        return tr("Interface");
+    case SettingsShortcuts:
+        return tr("Shortcuts");
+    default:
+        return tr("About");
+    }
+}
 
 std::string releaseLabel(const ReleaseInfo& release) {
     std::string label;
@@ -55,13 +74,16 @@ void App::openSettings(int page) {
     settingsOpen_ = true;
     settingsFocus_ = true;
     if (page >= 0) {
-        settingsPage_ = std::clamp(page, 0, kPageCount - 1);
+        settingsPage_ = std::clamp(page, 0, static_cast<int>(SettingsPageCount) - 1);
     }
     uiScaleEdit_ = settings_.uiScale;
 }
 
 void App::drawSettingsWindow() {
     if (!settingsOpen_) {
+        if (control_.learning()) {
+            control_.cancelLearn();
+        }
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -80,11 +102,10 @@ void App::drawSettingsWindow() {
         settingsOpen_ = false;
     }
 
-    const char* pages[kPageCount] = {tr("General"), tr("Audio"), tr("Output"), tr("Updates"), tr("Interface"), tr("Shortcuts"), tr("About")};
     ImGui::BeginChild("settingsNav", ImVec2(170.0f, 0.0f), ImGuiChildFlags_Borders);
-    for (int i = 0; i < kPageCount; ++i) {
+    for (int i = 0; i < SettingsPageCount; ++i) {
         ImGui::PushID(i);
-        if (ImGui::Selectable(pages[i], settingsPage_ == i, 0, ImVec2(0.0f, 28.0f))) {
+        if (ImGui::Selectable(settingsPageTitle(i), settingsPage_ == i, 0, ImVec2(0.0f, 28.0f))) {
             settingsPage_ = i;
         }
         ImGui::PopID();
@@ -99,12 +120,15 @@ void App::drawSettingsWindow() {
 
 void App::drawSettingsPage(int page) {
     auto persist = [this]() { saveSettings(settings_); };
+    if (page != SettingsControl && control_.learning()) {
+        control_.cancelLearn();
+    }
     ImGui::PushFont(nullptr, 20.0f);
-    ImGui::TextColored(ui::kAccent, "%s", page == 0 ? tr("General") : page == 1 ? tr("Audio") : page == 2 ? tr("Output") : page == 3 ? tr("Updates") : page == 4 ? tr("Interface") : page == 5 ? tr("Shortcuts") : tr("About"));
+    ImGui::TextColored(ui::kAccent, "%s", settingsPageTitle(page));
     ImGui::PopFont();
     ImGui::Spacing();
 
-    if (page == 0) {
+    if (page == SettingsGeneral) {
         ImGui::SeparatorText(tr("Language"));
         ImGui::SetNextItemWidth(220.0f);
         if (ImGui::BeginCombo("##language", languageLabel(currentLanguage()))) {
@@ -127,7 +151,7 @@ void App::drawSettingsPage(int page) {
         ImGui::SeparatorText(tr("Decks"));
         ImGui::TextWrapped("%s", tr("You can set up to 16 decks and switch between them with a smooth transition. Click a deck button above the clip grid, right click it for rename, duplicate and more."));
         ImGui::TextWrapped("%s", tr("Choosing a factory look in Presets loads it into the current deck."));
-    } else if (page == 1) {
+    } else if (page == SettingsAudio) {
         drawAudioSource();
         ImGui::SeparatorText(tr("Analysis"));
         ImGui::SetNextItemWidth(-170.0f);
@@ -141,7 +165,7 @@ void App::drawSettingsPage(int page) {
         }
         ImGui::Spacing();
         ImGui::TextWrapped("%s", tr("Effects can react to the music in two ways. Parameter moves one value with a band. Gate shows the effect only while that band is loud."));
-    } else if (page == 2) {
+    } else if (page == SettingsOutput) {
         drawOutputControls();
         ImGui::SeparatorText(tr("Quality"));
         Composition& comp = engine_.comp;
@@ -159,9 +183,11 @@ void App::drawSettingsPage(int page) {
         }
         ImGui::SetItemTooltip("%s", tr("Turn this off to let the program render as fast as possible."));
         drawSpoutControls();
-    } else if (page == 3) {
+    } else if (page == SettingsControl) {
+        drawControlPage();
+    } else if (page == SettingsUpdates) {
         drawUpdateSection();
-    } else if (page == 4) {
+    } else if (page == SettingsInterface) {
         ImGui::SeparatorText(tr("Scale"));
         ImGui::SetNextItemWidth(260.0f);
         ImGui::SliderFloat(trId("Interface size", "optScale"), &uiScaleEdit_, 0.7f, 1.8f, "%.2f");
@@ -184,7 +210,7 @@ void App::drawSettingsPage(int page) {
             toast(tr("Window layout reset"));
         }
         ImGui::SetItemTooltip("%s", tr("Puts all panels back to their default places."));
-    } else if (page == 5) {
+    } else if (page == SettingsShortcuts) {
         ImGui::SeparatorText(tr("Clips and tempo"));
         ImGui::BulletText("%s", tr("1 - 8  trigger a column"));
         ImGui::BulletText("%s", tr("Space  tap tempo"));

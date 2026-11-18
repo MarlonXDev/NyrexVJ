@@ -26,6 +26,7 @@ struct Options {
     std::string dumpOutput;
     std::vector<std::pair<int, int>> switches;
     std::vector<std::pair<int, std::string>> dumps;
+    std::vector<std::pair<int, nvj::MidiMessage>> midi;
     nvj::StartOptions start;
 };
 
@@ -59,6 +60,23 @@ Options parseOptions(int argc, char** argv) {
             const size_t colon = value.find(':');
             if (colon != std::string::npos) {
                 options.dumps.emplace_back(std::atoi(value.substr(0, colon).c_str()), value.substr(colon + 1));
+            }
+        } else if (arg == "--osc-port" && hasValue) {
+            options.start.oscPort = std::atoi(argv[++i]);
+        } else if (arg == "--midi-inject" && hasValue) {
+            std::vector<int> parts;
+            std::string value = argv[++i];
+            size_t from = 0;
+            while (from <= value.size()) {
+                const size_t colon = value.find(':', from);
+                parts.push_back(std::atoi(value.substr(from, colon == std::string::npos ? std::string::npos : colon - from).c_str()));
+                if (colon == std::string::npos) {
+                    break;
+                }
+                from = colon + 1;
+            }
+            if (parts.size() == 4) {
+                options.midi.push_back({parts[0], {parts[1], parts[2], parts[3]}});
             }
         } else if (arg == "--demo-update" && hasValue) {
             options.start.demoUpdate = argv[++i];
@@ -248,6 +266,11 @@ int main(int argc, char** argv) {
         for (const auto& entry : options.dumps) {
             if (entry.first == frameCount) {
                 saveOutput(entry.second, app.engine());
+            }
+        }
+        for (const auto& entry : options.midi) {
+            if (entry.first == frameCount) {
+                app.control().injectMidi(entry.second);
             }
         }
         for (const auto& entry : options.switches) {

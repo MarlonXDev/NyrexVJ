@@ -9,7 +9,7 @@
 - Spout **output** and fullscreen output window.
 - English/German UI and application updates.
 
-The current README explicitly says video clips and MIDI are not implemented. Shader-based 3D visuals already exist; this does **not** imply a scene editor or imported 3D models.
+The current README explicitly says video clips are not implemented. MIDI mapping and OSC input shipped in v0.5.0. Shader-based 3D visuals already exist; this does **not** imply a scene editor or imported 3D models.
 
 ## Proposed milestones
 
@@ -26,7 +26,7 @@ The current README explicitly says video clips and MIDI are not implemented. Sha
 - Prototype glTF/GLB model import and a lightweight native 3D scene renderer.
 
 ### Live control (candidate v0.7)
-- MIDI mapping and OSC input/output.
+- OSC output and a documented, versioned OSC protocol (MIDI mapping and OSC input already exist since v0.5.0).
 - Beatgrid/tempo synchronization improvements and reusable modulation sources.
 - Unreal integration proof of concept: Spout video into NyrexVJ, control/audio data to Unreal via OSC.
 
@@ -45,8 +45,6 @@ The current README explicitly says video clips and MIDI are not implemented. Sha
 
 ## Already listed in the README roadmap
 - Video clips via FFmpeg (H.264/HAP).
-- MIDI controller mapping.
-- OSC input.
 - DMX strip output for VRSL.
 - Custom shader clips loaded from files.
 - More languages.

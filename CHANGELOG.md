@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 - 2026-11-18
+
+- Live control over OSC: switch it on under Settings, Control (off by default, port 9010, only this computer unless you allow others). NyrexVJ then answers to 207 addresses under /nyrex/ for the master, the 16 decks, the 8 columns, every clip, layer opacity, speed, scale and colour, bypass, solo, clear and all effect switches and parameters. Send a value from 0 to 1, or nothing at all to fire a trigger. It works with TouchDesigner, Max, Pure Data, Python scripts and anything else that speaks OSC.
+- MIDI controller mapping on Windows: pick your controller, press Add mapping, choose what to control and move a knob or press a key to link them. Faders and knobs set values, keys trigger clips, columns and decks or switch things on and off, and Invert flips a fader. Mappings are saved in controls.json.
+- New Control page in the Settings window with the status of OSC and MIDI, the last message that arrived, the mapping list with Learn and Remove, and a searchable list of every OSC address that copies it with one click.
+
 ## 0.4.0 - 2026-11-18
 
 - Decks: set up to 16 decks, each with its own layers, clips, colours and effects, and switch between them with a smooth transition instead of a hard cut. Seven transitions: Fade, Dissolve, Zoom, Wipe, Radial, Spin and Slide, with a length in seconds or in beats and an optional auto cycle. Click the deck buttons above the clip grid, press Page Up and Page Down, or use Ctrl and 1 to 8 (with Shift for decks 9 to 16). Right click a deck to rename, copy, fill or clear it. All decks are saved in presets.

@@ -37,7 +37,11 @@ NyrexVJ does not contain FFmpeg and does not link it. It loads the FFmpeg librar
 
 On Windows get a **shared LGPL build of FFmpeg 8.1** (for example the `ffmpeg-n8.1-latest-win64-lgpl-shared-8.1.zip` asset of the BtbN FFmpeg-Builds project on GitHub) and copy these files from its `bin` folder into the `ffmpeg` folder inside the NyrexVJ data folder (the Clip window has an Open FFmpeg folder button that shows the exact folder and the exact file names), or next to `NyrexVJ.exe`:
 
-The five files are avutil, swscale, avcodec, avformat and swresample, each with the library version in the name. The Clip window shows the exact names this NyrexVJ was built for; the library version must match the headers the program was built with, which is why the FFmpeg release is fixed.
+```
+avutil-60.dll  swscale-9.dll  avcodec-62.dll  avformat-62.dll  swresample-6.dll
+```
+
+The library version in each name must match the headers NyrexVJ was built with, which is why the FFmpeg release is fixed. The Clip window always shows the exact names this NyrexVJ was built for.
 
 The Clip window of a video clip lists the files and has a Check again button, so no restart is needed. On Linux install the FFmpeg libraries of your distribution (`libavcodec`, `libavformat`, `libavutil`, `libswscale`, `libswresample`); the program uses the library versions it was built against.
 
@@ -52,4 +56,4 @@ Whoever distributes NyrexVJ together with the FFmpeg libraries has to follow the
 
 ## What was and was not tested
 
-Tested on Linux with FFmpeg 6.1 and software OpenGL: everything above, including the thumbnails and the transparency over other layers. Not tested: a Windows run with the 8.1 DLLs (the Windows workflow builds against them and runs the tests with them, which is the first real test), hardware GPUs, videos in 4K, long videos and the memory use of many videos at once.
+Tested on Linux with FFmpeg 6.1 and software OpenGL: everything above, including the thumbnails and the transparency over other layers. On Windows (MSVC, the build workflow) with the FFmpeg 8.1 headers and DLLs: the build and the decode tests for H.264 and HAP. Not tested: starting NyrexVJ itself on Windows with video clips, hardware GPUs, videos in 4K, long videos and the memory use of many videos at once.

@@ -22,6 +22,8 @@ struct Settings {
     bool vsync = true;
     bool openOutputOnStart = false;
     bool showStatusBar = true;
+    int perfBudgetFps = 60;
+    bool showTimings = true;
     float uiScale = 1.0f;
     UpdateChannel channel = UpdateChannel::Nightly;
     int outputMonitor = 0;

@@ -432,6 +432,7 @@ int Engine::loadedSceneCount() const {
 
 bool Engine::init() {
     triangle_.create();
+    glGenQueries(kGpuQueries, gpuQueries_.data());
     glGenTextures(1, &audioTexture_);
     glBindTexture(GL_TEXTURE_2D, audioTexture_);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kSpectrumBins, 2, 0, GL_RED, GL_FLOAT, nullptr);
@@ -654,6 +655,11 @@ int Engine::prepareAll(std::string& report) {
 }
 
 void Engine::shutdown() {
+    if (gpuQueries_[0]) {
+        glDeleteQueries(kGpuQueries, gpuQueries_.data());
+        gpuQueries_.fill(0);
+        gpuPending_.fill(false);
+    }
     previewA_.destroy();
     previewB_.destroy();
     for (RenderTarget& target : previewFeedback_) {
@@ -1544,6 +1550,13 @@ void Engine::render() {
     }
 
     ++frameId_;
+    pollGpuQueries();
+    gpuActive_ = false;
+    const size_t slot = static_cast<size_t>(gpuSlot_);
+    if (gpuTiming_ && gpuQueries_[slot] && !gpuPending_[slot]) {
+        glBeginQuery(GL_TIME_ELAPSED, gpuQueries_[slot]);
+        gpuActive_ = true;
+    }
     renderClipThumbnails(2);
     serviceScenes();
     serviceSpout();
@@ -1572,9 +1585,32 @@ void Engine::render() {
 
     renderPreview();
 
+    if (gpuActive_) {
+        glEndQuery(GL_TIME_ELAPSED);
+        gpuPending_[slot] = true;
+        gpuSlot_ = (gpuSlot_ + 1) % kGpuQueries;
+        gpuActive_ = false;
+    }
+
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Engine::pollGpuQueries() {
+    for (size_t i = 0; i < gpuQueries_.size(); ++i) {
+        if (!gpuPending_[i]) {
+            continue;
+        }
+        GLint available = 0;
+        glGetQueryObjectiv(gpuQueries_[i], GL_QUERY_RESULT_AVAILABLE, &available);
+        if (available) {
+            GLuint64 nanoseconds = 0;
+            glGetQueryObjectui64v(gpuQueries_[i], GL_QUERY_RESULT, &nanoseconds);
+            gpuMs_ = static_cast<double>(nanoseconds) / 1.0e6;
+            gpuPending_[i] = false;
+        }
+    }
 }
 
 }

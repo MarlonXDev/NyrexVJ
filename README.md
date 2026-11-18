@@ -280,7 +280,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--select-layer N` | Select layer N (1-based) |
 | `--resolution IDX` | Output resolution index |
 | `--tab IDX` | Browser tab to show (0 Presets, 1 Library, 2 Audio) |
-| `--settings IDX` | Open the settings window on page IDX (0 to 7, 4 is Control) |
+| `--settings IDX` | Open the settings window on page IDX (0 to 8, 4 is Control) |
 | `--osc-port N` | Listen for OSC on port N even if it is switched off in the settings |
 | `--spout-test-pattern` | Offer a fake Spout sender called Test Pattern (for trying the Spout input without Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | With `--frames`, feed a MIDI message to the mappings at that frame |
@@ -298,7 +298,10 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--no-update-check` | Skip the update check |
 | `--check-shaders` | Compile every shader and exit |
 | `--bench-scene LAYERS:FRAMES[:CLIP]` | Measure frame times and memory with LAYERS (1 to 4) layers playing CLIP, then exit |
-| `--bench-out FILE.json` | With `--bench-scene`, also write the result as JSON |
+| `--bench-comp FRAMES` | Measure the loaded composition (CPU submit, GPU and total frame time) over FRAMES frames, then exit |
+| `--bench-budget MS` | With `--bench-comp`, exit with code 2 when the average frame time is above MS |
+| `--bench-all` | With `--bench-comp`, measure every factory look one after another |
+| `--bench-out FILE.json` | With `--bench-scene` or `--bench-comp`, also write the result as JSON |
 | `--frames N` | Run N frames at a fixed 60 FPS step, then exit |
 | `--screenshot FILE.png` | With `--frames`, save the window as PNG |
 | `--dump-output FILE.png` | With `--frames`, save the engine output as PNG |

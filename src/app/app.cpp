@@ -15,6 +15,7 @@
 #include <imgui_internal.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -298,6 +299,7 @@ void App::updateAudio(double dt) {
 }
 
 void App::frame(double dt) {
+    const auto frameStart = std::chrono::steady_clock::now();
     const int vsync = settings_.vsync ? 1 : 0;
     if (vsync != appliedVsync_) {
         glfwSwapInterval(vsync);
@@ -370,6 +372,19 @@ void App::frame(double dt) {
     if (autosaveTimer_ > 30.0) {
         autosaveTimer_ = 0.0;
         saveSession(engine_.comp);
+    }
+
+    perfCpu_.add(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - frameStart).count());
+    perfFrame_.add(dt * 1000.0);
+    if (engine_.gpuTimingAvailable()) {
+        perfGpu_.add(engine_.gpuFrameMs());
+    }
+    perfRefresh_ += dt;
+    if (perfRefresh_ >= 0.25) {
+        perfRefresh_ = 0.0;
+        perfFrameSummary_ = perfFrame_.summary();
+        perfCpuSummary_ = perfCpu_.summary();
+        perfGpuSummary_ = perfGpu_.summary();
     }
 }
 

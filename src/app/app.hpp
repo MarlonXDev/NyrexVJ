@@ -6,6 +6,7 @@
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
 #include "core/edit_history.hpp"
+#include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
 #include "core/settings.hpp"
 #include "render/engine.hpp"
@@ -31,6 +32,7 @@ enum SettingsPage {
     SettingsControl,
     SettingsUpdates,
     SettingsShortcuts,
+    SettingsPerformance,
     SettingsAbout,
     SettingsPageCount
 };
@@ -96,6 +98,7 @@ private:
     void openCreatorWith(const std::string& clipName);
     bool creatorSave(bool copy, bool useAsClip);
     void undoEdit();
+    void drawPerformancePage();
     void redoEdit();
     void drawCreator();
     void shutdownCreator();
@@ -160,6 +163,13 @@ private:
     bool creatorFocus_ = false;
     bool creatorHasFocus_ = false;
     EditHistory history_;
+    FrameStats perfFrame_{240};
+    FrameStats perfCpu_{240};
+    FrameStats perfGpu_{240};
+    FrameSummary perfFrameSummary_;
+    FrameSummary perfCpuSummary_;
+    FrameSummary perfGpuSummary_;
+    double perfRefresh_ = 0.0;
     bool restart_ = false;
     int selectedLayer_ = 0;
     int selectedColumn_ = 0;

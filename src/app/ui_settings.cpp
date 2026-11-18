@@ -12,7 +12,9 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdio>
 #include <string>
+#include <vector>
 
 namespace nvj {
 
@@ -34,6 +36,8 @@ const char* settingsPageTitle(int page) {
         return tr("Updates");
     case SettingsShortcuts:
         return tr("Shortcuts");
+    case SettingsPerformance:
+        return tr("Performance");
     default:
         return tr("About");
     }
@@ -55,6 +59,8 @@ const char* settingsPageHint(int page) {
         return tr("Update channel and automatic updates.");
     case SettingsShortcuts:
         return tr("Keyboard shortcuts for live use.");
+    case SettingsPerformance:
+        return tr("Frame time, budget and memory.");
     default:
         return tr("Version and links.");
     }
@@ -297,6 +303,8 @@ void App::drawSettingsPage(int page) {
             toast(tr("Window layout reset"));
         }
         ImGui::SetItemTooltip("%s", tr("Puts all panels back to their default places."));
+    } else if (page == SettingsPerformance) {
+        drawPerformancePage();
     } else if (page == SettingsShortcuts) {
         ImGui::SeparatorText(tr("Clips and tempo"));
         ImGui::BulletText("%s", tr("1 - 8  trigger a column"));
@@ -493,6 +501,97 @@ void App::drawUpdateCard() {
     }
 }
 
+void App::drawPerformancePage() {
+    auto persist = [this]() { saveSettings(settings_); };
+    const double budget = budgetMilliseconds(settings_.perfBudgetFps);
+
+    ImGui::SeparatorText(tr("Frame budget"));
+    static const int kBudgets[] = {30, 45, 60, 90, 120, 144};
+    char current[48];
+    std::snprintf(current, sizeof(current), "%d FPS  (%.1f ms)", settings_.perfBudgetFps, budget);
+    ImGui::SetNextItemWidth(220.0f);
+    if (ImGui::BeginCombo(trId("Target frame rate", "optBudget"), current)) {
+        for (const int fps : kBudgets) {
+            char label[48];
+            std::snprintf(label, sizeof(label), "%d FPS  (%.1f ms)", fps, budgetMilliseconds(fps));
+            if (ImGui::Selectable(label, settings_.perfBudgetFps == fps)) {
+                settings_.perfBudgetFps = fps;
+                persist();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("The budget is the time one frame may take. Frames above it count as too slow."));
+    if (ImGui::Checkbox(trId("Show timings in the status bar", "optTimings"), &settings_.showTimings)) {
+        persist();
+    }
+
+    ImGui::SeparatorText(tr("Measured"));
+    if (ImGui::BeginTable("##perf", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("##name", ImGuiTableColumnFlags_WidthStretch, 1.6f);
+        ImGui::TableSetupColumn(tr("Average"));
+        ImGui::TableSetupColumn(tr("Slowest 5%"));
+        ImGui::TableSetupColumn(tr("Worst"));
+        ImGui::TableHeadersRow();
+        const auto row = [&](const char* name, const FrameSummary& summary, bool available) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(name);
+            const double values[3] = {summary.avg, summary.p95, summary.max};
+            for (int i = 0; i < 3; ++i) {
+                ImGui::TableSetColumnIndex(i + 1);
+                if (!available) {
+                    ImGui::TextDisabled("-");
+                } else if (values[i] > budget) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.2f, 1.0f), "%.1f ms", values[i]);
+                } else {
+                    ImGui::Text("%.1f ms", values[i]);
+                }
+            }
+        };
+        row(tr("Frame interval"), perfFrameSummary_, perfFrameSummary_.count > 0);
+        row(tr("CPU work"), perfCpuSummary_, perfCpuSummary_.count > 0);
+        row(tr("GPU"), perfGpuSummary_, engine_.gpuTimingAvailable() && perfGpuSummary_.count > 0);
+        ImGui::EndTable();
+    }
+    if (!engine_.gpuTimingAvailable()) {
+        ImGui::TextDisabled("%s", tr("GPU timing is not available on this graphics card."));
+    }
+    const double within = 1.0 - perfFrame_.overBudgetFraction(budget * 1.1);
+    char overlay[48];
+    std::snprintf(overlay, sizeof(overlay), "%.0f %%", within * 100.0);
+    ImGui::ProgressBar(static_cast<float>(within), ImVec2(-170.0f, 0.0f), overlay);
+    ImGui::SameLine();
+    ImGui::TextUnformatted(tr("Frames within budget"));
+    const std::vector<float> history = perfFrame_.ordered();
+    if (!history.empty()) {
+        ImGui::PlotLines("##frametimes", history.data(), static_cast<int>(history.size()), 0, nullptr, 0.0f, static_cast<float>(budget * 3.0), ImVec2(-1.0f, 70.0f));
+    }
+    if (perfFrameSummary_.count > 0 && perfFrameSummary_.p95 > budget * 1.1) {
+        ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.2f, 1.0f), "%s", tr("Over budget. Use fewer layers or effects, or a lower resolution."));
+    }
+    if (ImGui::Button(trId("Restart measurement", "optPerfReset"))) {
+        perfFrame_.clear();
+        perfCpu_.clear();
+        perfGpu_.clear();
+        perfFrameSummary_ = FrameSummary{};
+        perfCpuSummary_ = FrameSummary{};
+        perfGpuSummary_ = FrameSummary{};
+    }
+
+    ImGui::SeparatorText(tr("Memory"));
+    const GpuMemory memory = engine_.gpuMemory();
+    ImGui::Text("%s: %.0f MB", tr("GPU memory (estimate)"), static_cast<double>(memory.total()) / (1024.0 * 1024.0));
+    ImGui::Text("%s: %.0f MB", tr("Program memory"), static_cast<double>(platform::processMemoryBytes()) / (1024.0 * 1024.0));
+    ImGui::Text("%s: %d", tr("3D scenes loaded"), engine_.loadedSceneCount());
+
+    ImGui::SeparatorText(tr("Load"));
+    const RenderCost cost = estimateRenderCost(engine_.comp);
+    ImGui::Text("%s: %d", tr("Layers on air"), cost.layers());
+    ImGui::Text("%s: %d", tr("Effect passes"), cost.layerEffects + cost.masterEffects);
+    ImGui::Text("%s: %d", tr("Render passes per frame"), cost.total());
+}
+
 void App::drawStatusBar() {
     if (!settings_.showStatusBar) {
         return;
@@ -505,8 +604,16 @@ void App::drawStatusBar() {
     if (ImGui::BeginViewportSideBar("##statusbar", const_cast<ImGuiViewport*>(viewport), ImGuiDir_Down, height, flags)) {
         ImGui::AlignTextToFramePadding();
         const float fps = ImGui::GetIO().Framerate;
-        ImGui::TextColored(fps >= 50.0f ? ImVec4(0.45f, 0.85f, 0.45f, 1.0f) : ImVec4(1.0f, 0.65f, 0.2f, 1.0f), "%.0f FPS", fps);
+        ImGui::TextColored(fps >= static_cast<float>(settings_.perfBudgetFps) * 0.92f ? ImVec4(0.45f, 0.85f, 0.45f, 1.0f) : ImVec4(1.0f, 0.65f, 0.2f, 1.0f), "%.0f FPS", fps);
         ImGui::SameLine();
+        if (settings_.showTimings && perfCpuSummary_.count > 0) {
+            if (engine_.gpuTimingAvailable() && perfGpuSummary_.count > 0) {
+                ImGui::TextDisabled("CPU %.1f  GPU %.1f ms", perfCpuSummary_.avg, perfGpuSummary_.avg);
+            } else {
+                ImGui::TextDisabled("CPU %.1f ms", perfCpuSummary_.avg);
+            }
+            ImGui::SameLine();
+        }
         ImGui::TextDisabled("%d x %d", engine_.width(), engine_.height());
         ImGui::SameLine();
         ImGui::TextDisabled("|");

@@ -2,6 +2,7 @@
 #include "render/clip_library.hpp"
 #include "core/composition.hpp"
 #include "core/edit_history.hpp"
+#include "core/frame_stats.hpp"
 #include "core/novelty.hpp"
 #include "render/effect_library.hpp"
 #include "core/preset.hpp"
@@ -626,6 +627,100 @@ void testBlendModes() {
     }
 }
 
+void testFrameStats() {
+    nvj::FrameStats empty(8);
+    CHECK(empty.size() == 0);
+    CHECK(empty.capacity() == 8);
+    CHECK(empty.last() == 0.0);
+    CHECK(empty.summary().count == 0);
+    CHECK(empty.overBudgetFraction(10.0) == 0.0);
+    CHECK(empty.ordered().empty());
+
+    nvj::FrameStats stats(100);
+    for (int i = 1; i <= 100; ++i) {
+        stats.add(static_cast<double>(i));
+    }
+    const nvj::FrameSummary summary = stats.summary();
+    CHECK(summary.count == 100);
+    CHECK(std::fabs(summary.avg - 50.5) < 1e-9);
+    CHECK(summary.min == 1.0);
+    CHECK(summary.max == 100.0);
+    CHECK(summary.p50 >= 49.0 && summary.p50 <= 51.0);
+    CHECK(summary.p95 >= 94.0 && summary.p95 <= 96.0);
+    CHECK(summary.p99 >= 98.0 && summary.p99 <= 100.0);
+    CHECK(summary.min <= summary.p50 && summary.p50 <= summary.p95 && summary.p95 <= summary.p99 && summary.p99 <= summary.max);
+    CHECK(std::fabs(stats.overBudgetFraction(90.0) - 0.10) < 1e-9);
+    CHECK(stats.overBudgetFraction(100.0) == 0.0);
+    CHECK(stats.last() == 100.0);
+
+    nvj::FrameStats wrap(4);
+    for (int i = 1; i <= 10; ++i) {
+        wrap.add(static_cast<double>(i));
+    }
+    CHECK(wrap.size() == 4);
+    const std::vector<float> ordered = wrap.ordered();
+    CHECK(ordered.size() == 4);
+    CHECK(ordered[0] == 7.0f && ordered[1] == 8.0f && ordered[2] == 9.0f && ordered[3] == 10.0f);
+    CHECK(wrap.summary().min == 7.0);
+    CHECK(wrap.summary().max == 10.0);
+    wrap.clear();
+    CHECK(wrap.size() == 0);
+    CHECK(wrap.summary().count == 0);
+    nvj::FrameStats zero(0);
+    zero.add(3.0);
+    CHECK(zero.size() == 1 && zero.last() == 3.0);
+
+    CHECK(nvj::clampBudgetFps(1) == nvj::kMinBudgetFps);
+    CHECK(nvj::clampBudgetFps(100000) == nvj::kMaxBudgetFps);
+    CHECK(nvj::clampBudgetFps(60) == 60);
+    CHECK(std::fabs(nvj::budgetMilliseconds(60) - 1000.0 / 60.0) < 1e-9);
+    CHECK(std::fabs(nvj::budgetMilliseconds(0) - 1000.0 / nvj::kMinBudgetFps) < 1e-9);
+}
+
+void testRenderCost() {
+    nvj::Composition empty;
+    for (nvj::Layer& layer : empty.layers) {
+        layer.activeColumn = -1;
+    }
+    const nvj::RenderCost none = nvj::estimateRenderCost(empty);
+    CHECK(none.layers() == 0);
+    CHECK(none.total() == none.finals + none.masterEffects);
+
+    nvj::Composition comp;
+    for (nvj::Layer& layer : comp.layers) {
+        layer.activeColumn = -1;
+    }
+    comp.layers[0].cells[0] = 0;
+    comp.layers[0].activeColumn = 0;
+    comp.layers[1].cells[0] = 1;
+    comp.layers[1].activeColumn = 0;
+    const nvj::RenderCost two = nvj::estimateRenderCost(comp);
+    CHECK(two.layers() == 2);
+    CHECK(two.composites == 2);
+    CHECK(two.total() > none.total());
+
+    comp.layers[1].bypass = true;
+    CHECK(nvj::estimateRenderCost(comp).layers() == 1);
+    comp.layers[1].bypass = false;
+    comp.layers[0].solo = true;
+    CHECK(nvj::estimateRenderCost(comp).layers() == 1);
+    comp.layers[0].solo = false;
+
+    comp.layers[0].fx[0].effect = 0;
+    comp.layers[0].fx[0].enabled = true;
+    const nvj::RenderCost withEffect = nvj::estimateRenderCost(comp);
+    CHECK(withEffect.layerEffects == 1);
+    CHECK(withEffect.total() == two.total() + 1);
+    comp.layers[0].fx[0].enabled = false;
+    CHECK(nvj::estimateRenderCost(comp).layerEffects == 0);
+
+    for (const nvj::Composition& look : nvj::factoryPresets()) {
+        const nvj::RenderCost cost = nvj::estimateRenderCost(look);
+        CHECK(cost.total() <= 40);
+        CHECK(cost.layers() <= nvj::kLayerCount);
+    }
+}
+
 void settleHistory(nvj::EditHistory& history, const nvj::Composition& comp) {
     history.observe(comp, 0.1, false);
     history.observe(comp, 0.5, false);
@@ -733,6 +828,8 @@ int main() {
     testLibraries();
     testPresets();
     testBlendModes();
+    testFrameStats();
+    testRenderCost();
     testEditHistory();
     testDecks();
     testPresetFiles();

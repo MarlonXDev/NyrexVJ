@@ -280,7 +280,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--select-layer N` | Ebene N (ab 1) auswählen |
 | `--resolution IDX` | Index der Ausgabeauflösung |
 | `--tab IDX` | Anzuzeigender Browser-Tab (0 Presets, 1 Bibliothek, 2 Audio) |
-| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 7, 4 ist Steuerung) |
+| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 8, 4 ist Steuerung) |
 | `--osc-port N` | OSC auf Port N empfangen, auch wenn es in den Einstellungen aus ist |
 | `--spout-test-pattern` | Einen falschen Spout-Sender namens Test Pattern anbieten (zum Ausprobieren des Spout-Eingangs ohne Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | Mit `--frames` in diesem Frame eine MIDI-Nachricht an die Zuordnungen schicken |
@@ -298,7 +298,10 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--no-update-check` | Update-Prüfung überspringen |
 | `--check-shaders` | Alle Shader kompilieren und beenden |
 | `--bench-scene EBENEN:FRAMES[:CLIP]` | Bildzeiten und Speicher messen, mit EBENEN (1 bis 4) Ebenen, die CLIP spielen, dann beenden |
-| `--bench-out DATEI.json` | Mit `--bench-scene` das Ergebnis zusätzlich als JSON schreiben |
+| `--bench-comp FRAMES` | Die geladene Komposition über FRAMES Bilder messen (CPU-Abgabe, GPU und Gesamt-Bildzeit), dann beenden |
+| `--bench-budget MS` | Mit `--bench-comp` mit Code 2 beenden, wenn die mittlere Bildzeit über MS liegt |
+| `--bench-all` | Mit `--bench-comp` alle Werks-Looks nacheinander messen |
+| `--bench-out DATEI.json` | Mit `--bench-scene` oder `--bench-comp` das Ergebnis zusätzlich als JSON schreiben |
 | `--frames N` | N Frames mit festen 60 FPS rendern, dann beenden |
 | `--screenshot DATEI.png` | Mit `--frames` das Fenster als PNG speichern |
 | `--dump-output DATEI.png` | Mit `--frames` die Engine-Ausgabe als PNG speichern |

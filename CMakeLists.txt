@@ -127,6 +127,7 @@ set(NYREXVJ_CORE_SOURCES
     src/scene3d/scene_pack.cpp
     src/core/composition.cpp
     src/core/edit_history.cpp
+    src/core/frame_stats.cpp
     src/render/effect_library.cpp
     src/render/effects_extra.cpp
     src/core/factory_presets.cpp

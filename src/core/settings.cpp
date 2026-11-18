@@ -47,6 +47,11 @@ bool loadSettings(Settings& settings) {
     result.vsync = boolean("vsync", true);
     result.openOutputOnStart = boolean("openOutputOnStart", false);
     result.showStatusBar = boolean("showStatusBar", true);
+    result.showTimings = boolean("showTimings", true);
+    auto perfBudget = doc.find("perfBudgetFps");
+    if (perfBudget != doc.end() && perfBudget->is_number_integer()) {
+        result.perfBudgetFps = std::clamp(perfBudget->get<int>(), 24, 360);
+    }
     auto channel = doc.find("channel");
     if (channel != doc.end() && channel->is_string()) {
         result.channel = channelFromName(channel->get<std::string>());
@@ -152,6 +157,8 @@ bool saveSettings(const Settings& settings) {
     doc["vsync"] = settings.vsync;
     doc["openOutputOnStart"] = settings.openOutputOnStart;
     doc["showStatusBar"] = settings.showStatusBar;
+    doc["showTimings"] = settings.showTimings;
+    doc["perfBudgetFps"] = settings.perfBudgetFps;
     doc["uiScale"] = settings.uiScale;
     doc["theme"] = settings.theme;
     doc["channel"] = channelName(settings.channel);

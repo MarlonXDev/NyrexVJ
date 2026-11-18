@@ -66,6 +66,9 @@ public:
     void reloadScene(int clip);
     int loadedSceneCount() const;
     GpuMemory gpuMemory() const;
+    void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
+    bool gpuTimingAvailable() const { return gpuQueries_[0] != 0; }
+    double gpuFrameMs() const { return gpuMs_; }
     GLuint layerPreview(int layer) const;
     void requestPreview(int layer, int column);
     GLuint previewTexture() const { return previewResult_ ? previewResult_->texture : 0; }
@@ -204,6 +207,7 @@ private:
     bool* chainUsed(int chain) { return &feedbackUsed_[static_cast<size_t>(chain * kEffectSlots)]; }
     void drawLayerSource(int clipIndex, const Layer& layer, float scale, double clock, const RenderTarget& target);
     void renderPreview();
+    void pollGpuQueries();
     void downsample(const RenderTarget& source, const RenderTarget& target);
     void prepareSpout(int slot);
     bool drawSpout(int slot, float scale);
@@ -251,6 +255,13 @@ private:
     std::vector<size_t> deferredThumbs_;
     size_t nextThumb_ = 0;
     std::array<RenderTarget, kLayerCount> previews_;
+    static constexpr int kGpuQueries = 3;
+    std::array<GLuint, kGpuQueries> gpuQueries_{};
+    std::array<bool, kGpuQueries> gpuPending_{};
+    int gpuSlot_ = 0;
+    bool gpuTiming_ = true;
+    bool gpuActive_ = false;
+    double gpuMs_ = 0.0;
     RenderTarget previewA_;
     RenderTarget previewB_;
     std::array<RenderTarget, kEffectSlots> previewFeedback_;

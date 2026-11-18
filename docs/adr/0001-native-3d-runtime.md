@@ -1,6 +1,6 @@
 # ADR 0001: Native 3D runtime and separate Clip Creator
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-11-18, approved by MarlonXDev)
 - **Date:** 2026-11-18
 - **Owners:** Maintainers (pending assignment)
 - **Related:** [Architecture](../ARCHITECTURE.md), [Roadmap](../ROADMAP.md)

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "render/clip_library.hpp"
 #include "core/composition.hpp"
 #include "core/novelty.hpp"
@@ -597,6 +598,33 @@ void testNovelty() {
     CHECK(!nvj::isNewPresetIn("Neon Sigil", "0.8.0"));
 }
 
+void testBlendModes() {
+    CHECK(nvj::BlendModeCount == 14);
+    std::vector<std::string> names;
+    for (int i = 0; i < nvj::BlendModeCount; ++i) {
+        const std::string name = nvj::blendName(i);
+        CHECK(!name.empty());
+        CHECK(std::find(names.begin(), names.end(), name) == names.end());
+        names.push_back(name);
+        CHECK(nvj::blendFromName(name) == i);
+    }
+    CHECK(nvj::blendFromName("soft light") == nvj::BlendSoftLight);
+    CHECK(nvj::blendFromName("unknown") == nvj::BlendNormal);
+    CHECK(std::string(nvj::blendName(-1)) == "Normal");
+    CHECK(std::string(nvj::blendName(nvj::BlendModeCount)) == "Normal");
+
+    nvj::Composition comp;
+    for (int i = 0; i < nvj::kLayerCount; ++i) {
+        comp.layers[static_cast<size_t>(i)].blend = nvj::BlendOverlay + i;
+    }
+    nvj::Composition loaded;
+    std::string error;
+    CHECK(nvj::compositionFromJson(nvj::compositionToJson(comp), loaded, error));
+    for (int i = 0; i < nvj::kLayerCount; ++i) {
+        CHECK(loaded.layers[static_cast<size_t>(i)].blend == nvj::BlendOverlay + i);
+    }
+}
+
 int main() {
     testSha256();
     testVersions();
@@ -604,6 +632,7 @@ int main() {
     testHashFile();
     testLibraries();
     testPresets();
+    testBlendModes();
     testDecks();
     testPresetFiles();
     testNovelty();

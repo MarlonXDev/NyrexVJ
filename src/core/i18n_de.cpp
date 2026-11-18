@@ -680,6 +680,16 @@ const Translation kGerman[] = {
     {"Waiting for a sender. The clip shows a placeholder until one arrives.", "Warte auf einen Sender. Bis einer ankommt, zeigt der Clip einen Platzhalter."},
     {"Flip the image vertically", "Bild vertikal spiegeln"},
     {"Use this if the image arrives upside down.", "Nutze das, wenn das Bild kopfüber ankommt."},
+    {"Subtract", "Subtrahieren"},
+    {"Difference", "Differenz"},
+    {"Exclusion", "Ausschluss"},
+    {"Overlay", "Überlagern"},
+    {"Soft Light", "Weiches Licht"},
+    {"Hard Light", "Hartes Licht"},
+    {"Lighten", "Heller"},
+    {"Darken", "Dunkler"},
+    {"Color Dodge", "Abwedeln"},
+    {"Linear Burn", "Linear nachbelichten"},
 };
 
 }

@@ -9,7 +9,7 @@ namespace nvj {
 
 namespace {
 
-const char* const kBlendNames[BlendModeCount] = {"Normal", "Add", "Screen", "Multiply"};
+const char* const kBlendNames[BlendModeCount] = {"Normal", "Add", "Screen", "Multiply", "Subtract", "Difference", "Exclusion", "Overlay", "Soft Light", "Hard Light", "Lighten", "Darken", "Color Dodge", "Linear Burn"};
 const char* const kBandNames[AudioBandCount] = {"Off", "Bass", "Mid", "High", "Level", "Kick"};
 const char* const kTargetNames[ModTargetCount] = {"Opacity", "Scale", "Speed", "Hue", "Brightness", "Saturation"};
 const char* const kTransitionNames[TransitionTypeCount] = {"Fade", "Dissolve", "Zoom", "Wipe", "Radial", "Spin", "Slide"};

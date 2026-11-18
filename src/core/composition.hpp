@@ -16,6 +16,16 @@ enum BlendMode {
     BlendAdd,
     BlendScreen,
     BlendMultiply,
+    BlendSubtract,
+    BlendDifference,
+    BlendExclusion,
+    BlendOverlay,
+    BlendSoftLight,
+    BlendHardLight,
+    BlendLighten,
+    BlendDarken,
+    BlendColorDodge,
+    BlendLinearBurn,
     BlendModeCount
 };
 

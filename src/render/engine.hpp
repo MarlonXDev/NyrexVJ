@@ -126,6 +126,15 @@ private:
         GLint grade = -1;
     };
 
+    struct BlendProgram {
+        GLuint id = 0;
+        GLint tex = -1;
+        GLint back = -1;
+        GLint opacity = -1;
+        GLint mode = -1;
+        GLint grade = -1;
+    };
+
     struct FinalProgram {
         GLuint id = 0;
         GLint tex = -1;
@@ -198,6 +207,7 @@ private:
     std::vector<ClipProgram> clips_;
     std::vector<EffectProgram> effects_;
     CompositeProgram composite_;
+    BlendProgram blend_;
     FinalProgram final_;
     TransitionProgram transition_program_;
     ThumbProgram thumb_;

@@ -41,6 +41,56 @@ void main() {
 }
 )glsl";
 
+const char* kBlendBody = R"glsl(
+uniform sampler2D uTex;
+uniform sampler2D uBack;
+uniform float uOpacity;
+uniform int uMode;
+uniform vec4 uGrade;
+
+vec3 blendColors(vec3 b, vec3 s, int mode) {
+    if (mode == 4) {
+        return max(b - s, 0.0);
+    }
+    if (mode == 5) {
+        return abs(b - s);
+    }
+    if (mode == 6) {
+        return b + s - 2.0 * b * s;
+    }
+    if (mode == 7) {
+        return mix(2.0 * b * s, 1.0 - 2.0 * (1.0 - b) * (1.0 - s), step(0.5, b));
+    }
+    if (mode == 8) {
+        vec3 d = mix(((16.0 * b - 12.0) * b + 4.0) * b, sqrt(b), step(0.25, b));
+        return mix(b - (1.0 - 2.0 * s) * b * (1.0 - b), b + (2.0 * s - 1.0) * (d - b), step(0.5, s));
+    }
+    if (mode == 9) {
+        return mix(2.0 * b * s, 1.0 - 2.0 * (1.0 - b) * (1.0 - s), step(0.5, s));
+    }
+    if (mode == 10) {
+        return max(b, s);
+    }
+    if (mode == 11) {
+        return min(b, s);
+    }
+    if (mode == 12) {
+        return b / max(1.0 - s, vec3(0.001));
+    }
+    if (mode == 13) {
+        return max(b + s - 1.0, 0.0);
+    }
+    return s;
+}
+
+void main() {
+    vec3 s = clamp(applyGrade(texture(uTex, vUv).rgb, uGrade), 0.0, 1.0);
+    vec3 b = texture(uBack, vUv).rgb;
+    vec3 r = clamp(blendColors(b, s, uMode), 0.0, 1.0);
+    fragColor = vec4(mix(b, r, uOpacity), 1.0);
+}
+)glsl";
+
 const char* kFinalBody = R"glsl(
 uniform sampler2D uTex;
 uniform float uLevel;
@@ -238,6 +288,18 @@ bool Engine::buildPrograms() {
     composite_.opacity = glGetUniformLocation(composite_.id, "uOpacity");
     composite_.mode = glGetUniformLocation(composite_.id, "uMode");
     composite_.grade = glGetUniformLocation(composite_.id, "uGrade");
+
+    error.clear();
+    blend_.id = buildProgram(clipVertexSource(), std::string(kPassHeader) + grade + kBlendBody, &error);
+    if (!blend_.id) {
+        logLine("Blend shader failed: " + error);
+        return false;
+    }
+    blend_.tex = glGetUniformLocation(blend_.id, "uTex");
+    blend_.back = glGetUniformLocation(blend_.id, "uBack");
+    blend_.opacity = glGetUniformLocation(blend_.id, "uOpacity");
+    blend_.mode = glGetUniformLocation(blend_.id, "uMode");
+    blend_.grade = glGetUniformLocation(blend_.id, "uGrade");
 
     error.clear();
     final_.id = buildProgram(clipVertexSource(), std::string(kPassHeader) + grade + kFinalBody, &error);
@@ -612,12 +674,13 @@ void Engine::shutdown() {
         }
     }
     effects_.clear();
-    for (GLuint program : {composite_.id, final_.id, thumb_.id, transition_program_.id}) {
+    for (GLuint program : {composite_.id, blend_.id, final_.id, thumb_.id, transition_program_.id}) {
         if (program) {
             glDeleteProgram(program);
         }
     }
     composite_ = CompositeProgram{};
+    blend_ = BlendProgram{};
     final_ = FinalProgram{};
     thumb_ = ThumbProgram{};
     transition_program_ = TransitionProgram{};
@@ -1283,7 +1346,9 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
     const float h = static_cast<float>(out_.height);
     const int chainBase = feedbackSet * kChainsPerSet;
 
-    compA_.bind();
+    RenderTarget* accum = &compA_;
+    RenderTarget* spare = &compB_;
+    accum->bind();
     glDisable(GL_BLEND);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -1342,7 +1407,28 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
             downsample(*result, previews_[li]);
         }
 
-        compA_.bind();
+        const ColorGrade& layerGrade = effective[li].grade;
+        if (layer.blend >= BlendSubtract) {
+            spare->bind();
+            glDisable(GL_BLEND);
+            glUseProgram(blend_.id);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, result->texture);
+            glUniform1i(blend_.tex, 0);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, accum->texture);
+            glUniform1i(blend_.back, 1);
+            glUniform1f(blend_.opacity, effective[li].opacity);
+            glUniform1i(blend_.mode, layer.blend);
+            glUniform4f(blend_.grade, layerGrade.hue, layerGrade.saturation, layerGrade.brightness, layerGrade.contrast);
+            triangle_.draw();
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0);
+            std::swap(accum, spare);
+            continue;
+        }
+        accum->bind();
         glEnable(GL_BLEND);
         applyBlend(layer.blend);
         glUseProgram(composite_.id);
@@ -1351,13 +1437,12 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         glUniform1i(composite_.tex, 0);
         glUniform1f(composite_.opacity, effective[li].opacity);
         glUniform1i(composite_.mode, layer.blend);
-        const ColorGrade& layerGrade = effective[li].grade;
         glUniform4f(composite_.grade, layerGrade.hue, layerGrade.saturation, layerGrade.brightness, layerGrade.contrast);
         triangle_.draw();
     }
 
     glDisable(GL_BLEND);
-    return runChain(master.fx, chainBase + kLayerCount, &compA_, &compB_);
+    return runChain(master.fx, chainBase + kLayerCount, accum, spare);
 }
 
 void Engine::finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination) {

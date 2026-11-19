@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <chrono>
 #include <cstring>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -43,7 +44,7 @@ void testBinding() {
 
     nvj::SourceBinding nan;
     nan.source = 1;
-    auto bad = [](int) { return 1.0f / 0.0f; };
+    auto bad = [](int) { return std::numeric_limits<float>::infinity(); };
     const float value = nvj::evaluateBinding(nan, bad);
     CHECK(value >= 0.0f && value <= 1.0f);
 

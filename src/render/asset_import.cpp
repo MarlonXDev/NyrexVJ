@@ -3,6 +3,7 @@
 #include "core/log.hpp"
 #include "media/media_image.hpp"
 #include "render/clip_library.hpp"
+#include "render/shader_source.hpp"
 #include "scene3d/scene_pack.hpp"
 
 #include <filesystem>
@@ -61,6 +62,9 @@ ImportResult importAsset(const std::string& sourceUtf8) {
     } else if (isModelAssetName(name)) {
         result.kind = ImportKind::Model;
         directoryText = modelDirectory();
+    } else if (isShaderFileName(name)) {
+        result.kind = ImportKind::Shader;
+        directoryText = shaderDirectory();
     } else {
         result.kind = ImportKind::Unsupported;
         result.reason = "unsupported file type";
@@ -72,9 +76,10 @@ ImportResult importAsset(const std::string& sourceUtf8) {
         result.reason = ec.message();
         return result;
     }
-    if (size > kMaxMediaFileBytes) {
+    const bool shaderFile = result.kind == ImportKind::Shader;
+    if (shaderFile ? size > kMaxShaderFileBytes : size > kMaxMediaFileBytes) {
         result.kind = ImportKind::TooLarge;
-        result.reason = "file is larger than 256 MiB";
+        result.reason = shaderFile ? "shader file is larger than 256 KiB" : "file is larger than 256 MiB";
         return result;
     }
     const fs::path directory = pathFromUtf8(directoryText);

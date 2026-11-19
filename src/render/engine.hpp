@@ -60,7 +60,9 @@ public:
     void setDmxStrip(bool enabled, bool atTop, const std::uint8_t* grid);
     bool dmxStripActive() const { return stripEnabled_; }
     int prepareAll(std::string& report);
-    bool thumbnailsReady() const { return nextThumb_ >= clips_.size() && deferredThumbs_.empty(); }
+    bool thumbnailsReady() const { return nextThumb_ >= clips_.size() && deferredThumbs_.empty() && reloadThumbs_.empty(); }
+    void reloadShaderClips(const std::vector<size_t>& indices);
+    std::string clipError(int clip) const;
 
     GLuint outputTexture() const { return out_.texture; }
     int width() const { return out_.width; }
@@ -97,6 +99,7 @@ private:
     struct ClipProgram {
         GLuint id = 0;
         bool tried = false;
+        std::string error;
         GLint time = -1;
         GLint beat = -1;
         GLint bpm = -1;
@@ -280,6 +283,7 @@ private:
     std::vector<std::unique_ptr<ScenePlayer>> scenes_;
     SceneRenderer sceneRenderer_;
     std::vector<size_t> deferredThumbs_;
+    std::vector<size_t> reloadThumbs_;
     size_t nextThumb_ = 0;
     std::array<RenderTarget, kLayerCount> previews_;
     static constexpr int kGpuQueries = 3;

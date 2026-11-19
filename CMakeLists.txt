@@ -114,6 +114,7 @@ set(NYREXVJ_CORE_SOURCES
     src/audio/synthetic_source.cpp
     src/render/asset_import.cpp
     src/render/clip_library.cpp
+    src/render/shader_source.cpp
     src/render/clips_extra.cpp
     src/core/clip_pack.cpp
     src/scene3d/builtin_docs.cpp
@@ -301,6 +302,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_stage_tests PRIVATE nvj_core)
     target_include_directories(nvj_stage_tests PRIVATE tests)
     add_test(NAME nvj_stage_tests COMMAND nvj_stage_tests)
+    add_executable(nvj_shader_tests tests/test_shaders.cpp)
+    target_link_libraries(nvj_shader_tests PRIVATE nvj_core)
+    target_include_directories(nvj_shader_tests PRIVATE tests)
+    add_test(NAME nvj_shader_tests COMMAND nvj_shader_tests)
     if(WIN32)
         add_executable(nvj_update_tests tests/test_update_replace.cpp)
         target_link_libraries(nvj_update_tests PRIVATE nvj_core)

@@ -4,7 +4,7 @@
 
 namespace nvj {
 
-enum class ImportKind { Media, Model, Unsupported, Missing, TooLarge, Failed };
+enum class ImportKind { Media, Model, Shader, Unsupported, Missing, TooLarge, Failed };
 
 struct ImportResult {
     ImportKind kind = ImportKind::Failed;

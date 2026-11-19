@@ -180,6 +180,7 @@ private:
     OscSender oscOut_;
     StageOutput stage_;
     bool stageDirty_ = false;
+    double shaderPoll_ = 0.0;
     Settings settings_;
     Updater updater_;
     OutputManager outputs_;

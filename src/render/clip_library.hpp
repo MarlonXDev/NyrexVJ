@@ -13,7 +13,8 @@ enum class ClipKind {
     ScenePack,
     SpoutSource,
     ImageFile,
-    VideoFile
+    VideoFile,
+    ShaderFile
 };
 
 struct ClipDef {
@@ -23,7 +24,12 @@ struct ClipDef {
     ClipKind kind = ClipKind::Shader;
     int sceneIndex = -1;
     std::string path = {};
+    bool shadertoy = false;
+    std::string error = {};
+    long long stamp = 0;
+    unsigned long long bytes = 0;
 
+    bool isShaderFile() const { return kind == ClipKind::ShaderFile; }
     bool isScene() const { return kind == ClipKind::BuiltinScene || kind == ClipKind::ModelFile || kind == ClipKind::ScenePack; }
     bool isMedia() const { return kind == ClipKind::ImageFile || kind == ClipKind::VideoFile; }
 };
@@ -42,6 +48,7 @@ std::string modelDirectory();
 std::string texturesDirectory();
 std::string clipsDirectory();
 std::string mediaDirectory();
+std::string shaderDirectory();
 std::vector<AssetFile> listModelAssets();
 std::vector<AssetFile> listTextureAssets();
 std::vector<AssetFile> listPackAssets();
@@ -52,6 +59,14 @@ std::string packClipName(const std::string& stem);
 
 const std::vector<ClipDef>& clipLibrary();
 int rescanLibrary();
+
+struct ShaderScan {
+    std::vector<size_t> changed;
+    int added = 0;
+};
+
+ShaderScan refreshShaderClips();
+std::string createExampleShader();
 int clipIndexByName(const std::string& name);
 const std::string& clipVertexSource();
 std::string clipFragmentSource(const ClipDef& clip);

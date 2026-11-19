@@ -3,13 +3,17 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <fstream>
 #include <set>
+#include <sstream>
 
 #include "core/log.hpp"
 #include "core/settings.hpp"
 #include "media/media_image.hpp"
 #include "render/clip_library_extra.hpp"
+#include "render/shader_source.hpp"
 #include "scene3d/procedural.hpp"
+#include "scene3d/scene_pack.hpp"
 
 namespace nvj {
 
@@ -24,6 +28,8 @@ std::string utf8(const std::filesystem::path& path) {
     const std::u8string text = path.u8string();
     return std::string(text.begin(), text.end());
 }
+
+int appendShaderClips(std::vector<ClipDef>& clips);
 
 int appendModelClips(std::vector<ClipDef>& clips) {
     namespace fs = std::filesystem;
@@ -234,7 +240,100 @@ void appendSceneClips(std::vector<ClipDef>& clips) {
     appendModelClips(clips);
     appendPackClips(clips);
     appendMediaClips(clips);
+    appendShaderClips(clips);
 }
+
+
+void fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const auto size = fs::file_size(file, ec);
+    def.bytes = ec ? 0 : static_cast<unsigned long long>(size);
+    const auto time = fs::last_write_time(file, ec);
+    def.stamp = ec ? 0 : static_cast<long long>(time.time_since_epoch().count());
+    def.body.clear();
+    def.error.clear();
+    def.shadertoy = false;
+    if (def.bytes > kMaxShaderFileBytes) {
+        def.error = "The shader file is larger than 256 KiB";
+        return;
+    }
+    std::ifstream stream(file, std::ios::binary);
+    if (!stream) {
+        def.error = "The shader file cannot be read";
+        return;
+    }
+    std::ostringstream buffer;
+    buffer << stream.rdbuf();
+    const ShaderSource prepared = prepareShaderSource(buffer.str());
+    if (!prepared.ok) {
+        def.error = prepared.error;
+        return;
+    }
+    def.body = prepared.body;
+    def.shadertoy = prepared.shadertoy;
+}
+
+int appendShaderClips(std::vector<ClipDef>& clips) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path directory = pathFromUtf8(shaderDirectory());
+    fs::create_directories(directory, ec);
+    std::vector<fs::path> files;
+    for (fs::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code entryEc;
+        if (!it->is_regular_file(entryEc) || entryEc) {
+            continue;
+        }
+        if (isShaderFileName(utf8(it->path().filename()))) {
+            files.push_back(it->path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    std::set<std::string> taken;
+    size_t count = 0;
+    for (const ClipDef& clip : clips) {
+        taken.insert(lowerCase(clip.name));
+        if (clip.isShaderFile()) {
+            ++count;
+        }
+    }
+    int added = 0;
+    for (const fs::path& file : files) {
+        if (count >= kMaxShaderClips) {
+            logLine("More than " + std::to_string(kMaxShaderClips) + " shader files found, the rest is ignored");
+            break;
+        }
+        const std::string name = shaderClipName(utf8(file.stem()));
+        if (!taken.insert(lowerCase(name)).second) {
+            continue;
+        }
+        ClipDef def;
+        def.name = name;
+        def.kind = ClipKind::ShaderFile;
+        def.path = utf8(file);
+        fillShaderDef(def, file);
+        if (!def.error.empty()) {
+            logLine("Shader file '" + def.name + "': " + def.error);
+        }
+        clips.push_back(std::move(def));
+        ++count;
+        ++added;
+    }
+    return added;
+}
+
+const char* kExampleShader = R"glsl(void main() {
+    vec2 p = centered();
+    float r = length(p);
+    float bass = uAudio.x;
+    float ring = sin(r * 10.0 - uTime * 2.0 - uBeat * 0.5) * 0.5 + 0.5;
+    float glow = 0.04 / (abs(r - 0.6 - bass * 0.25) + 0.002);
+    vec3 col = pal(r * 0.4 + uBeat * 0.05) * ring * (0.3 + bass);
+    col += duo(0.7) * glow * (0.4 + uKick);
+    fragColor = vec4(col, 1.0);
+}
+)glsl";
 
 const char* kVertex = R"glsl(#version 330 core
 out vec2 vUv;
@@ -333,6 +432,39 @@ vec3 pal(float t) {
 
 vec2 centered() {
     return (vUv - 0.5) * vec2(uRes.x / uRes.y, 1.0) * 2.0 / max(uScale, 0.05);
+}
+)glsl";
+
+const char* kShadertoyHeader = R"glsl(#version 330 core
+in vec2 vUv;
+out vec4 fragColor;
+uniform float uTime;
+uniform float uBeat;
+uniform float uBpm;
+uniform vec2 uRes;
+uniform vec3 uColorA;
+uniform vec3 uColorB;
+uniform float uRainbow;
+uniform float uScale;
+uniform vec4 uAudio;
+uniform float uKick;
+uniform sampler2D uAudioTex;
+#define iResolution vec3(uRes, 1.0)
+#define iTime uTime
+#define iTimeDelta 0.016667
+#define iFrame int(uTime * 60.0)
+#define iMouse vec4(0.0)
+#define iDate vec4(2026.0, 1.0, 1.0, 0.0)
+#define iSampleRate 44100.0
+#define iChannel0 uAudioTex
+)glsl";
+
+const char* kShadertoyMain = R"glsl(
+void main() {
+    vec4 shaderColor = vec4(0.0, 0.0, 0.0, 1.0);
+    vec2 shaderCoord = ((vUv - 0.5) / max(uScale, 0.05) + 0.5) * uRes;
+    mainImage(shaderColor, shaderCoord);
+    fragColor = vec4(shaderColor.rgb, 1.0);
 }
 )glsl";
 
@@ -733,6 +865,10 @@ std::string mediaDirectory() {
     return (std::filesystem::path(userDataDir()) / "media").string();
 }
 
+std::string shaderDirectory() {
+    return (std::filesystem::path(userDataDir()) / "shaders").string();
+}
+
 std::string packClipName(const std::string& stem) {
     return "Scene: " + stem;
 }
@@ -776,7 +912,63 @@ const std::vector<ClipDef>& clipLibrary() {
 }
 
 int rescanLibrary() {
-    return appendModelClips(mutableLibrary()) + appendPackClips(mutableLibrary()) + appendMediaClips(mutableLibrary());
+    return appendModelClips(mutableLibrary()) + appendPackClips(mutableLibrary()) + appendMediaClips(mutableLibrary()) + appendShaderClips(mutableLibrary());
+}
+
+ShaderScan refreshShaderClips() {
+    namespace fs = std::filesystem;
+    ShaderScan scan;
+    std::vector<ClipDef>& library = mutableLibrary();
+    for (size_t i = 0; i < library.size(); ++i) {
+        ClipDef& def = library[i];
+        if (!def.isShaderFile()) {
+            continue;
+        }
+        const fs::path file = pathFromUtf8(def.path);
+        std::error_code ec;
+        const auto size = fs::file_size(file, ec);
+        if (ec) {
+            if (def.error != "The shader file is gone") {
+                def.error = "The shader file is gone";
+                def.body.clear();
+                scan.changed.push_back(i);
+            }
+            continue;
+        }
+        const auto time = fs::last_write_time(file, ec);
+        const long long stamp = ec ? 0 : static_cast<long long>(time.time_since_epoch().count());
+        if (stamp == def.stamp && static_cast<unsigned long long>(size) == def.bytes) {
+            continue;
+        }
+        fillShaderDef(def, file);
+        scan.changed.push_back(i);
+    }
+    scan.added = appendShaderClips(library);
+    return scan;
+}
+
+std::string createExampleShader() {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path directory = pathFromUtf8(shaderDirectory());
+    fs::create_directories(directory, ec);
+    fs::path target = directory / "example.glsl";
+    for (int i = 2; fs::exists(target, ec) && i < 1000; ++i) {
+        target = directory / pathFromUtf8("example (" + std::to_string(i) + ").glsl");
+    }
+    if (fs::exists(target, ec)) {
+        return std::string();
+    }
+    std::ofstream out(target, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        return std::string();
+    }
+    out << kExampleShader;
+    out.close();
+    if (!out) {
+        return std::string();
+    }
+    return utf8(target.filename());
 }
 
 int clipIndexByName(const std::string& name) {
@@ -799,6 +991,12 @@ const std::string& clipVertexSource() {
 }
 
 std::string clipFragmentSource(const ClipDef& clip) {
+    if (clip.shadertoy) {
+        return std::string(kShadertoyHeader) + "#line 1\n" + clip.body + "\n" + kShadertoyMain;
+    }
+    if (clip.isShaderFile()) {
+        return std::string(kHeader) + "#line 1\n" + clip.body;
+    }
     return std::string(kHeader) + clip.body;
 }
 

@@ -170,6 +170,8 @@ bool matchesKind(const ClipDef& clip, int kind) {
         return clip.kind == ClipKind::SpoutSource;
     case 6:
         return clip.isMedia();
+    case 7:
+        return clip.isShaderFile();
     default:
         return true;
     }
@@ -450,8 +452,8 @@ void App::drawClipTile(int index, const ImVec2& size) {
 
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media")};
-    for (int k = 0; k < 7; ++k) {
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders")};
+    for (int k = 0; k < 8; ++k) {
         if (k > 0) {
             ImGui::SameLine(0.0f, 4.0f);
         }
@@ -499,6 +501,8 @@ void App::drawLibraryClips() {
     ImGui::TextDisabled("%s", modelDirectory().c_str());
     ImGui::TextDisabled("%s", tr("Images and videos: drag files onto this window or put them into this folder"));
     ImGui::TextDisabled("%s", mediaDirectory().c_str());
+    ImGui::TextDisabled("%s", tr("Your own shaders: put .glsl, .frag or .fs files into this folder, changes are picked up when you save"));
+    ImGui::TextDisabled("%s", shaderDirectory().c_str());
     ImGui::PopTextWrapPos();
     if (ImGui::SmallButton(tr("Open models folder"))) {
         platform::openFolder(modelDirectory());
@@ -507,6 +511,21 @@ void App::drawLibraryClips() {
     if (ImGui::SmallButton(tr("Open media folder"))) {
         platform::openFolder(mediaDirectory());
     }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Open shaders folder"))) {
+        platform::openFolder(shaderDirectory());
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Create example shader"))) {
+        const std::string created = createExampleShader();
+        if (created.empty()) {
+            toast(tr("The example shader could not be created"));
+        } else {
+            rescanModels_ = true;
+            toast(std::string(tr("Created: ")) + created);
+        }
+    }
+    ImGui::SetItemTooltip("%s", tr("Writes a small shader into the shaders folder that you can open in any text editor"));
     ImGui::SameLine();
     if (ImGui::SmallButton(trId("Scan again", "scanModels"))) {
         rescanModels_ = true;

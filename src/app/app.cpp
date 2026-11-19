@@ -298,6 +298,7 @@ void App::shutdown() {
     spout_.stop();
     ndi_.stop();
     oscOut_.stop();
+    stage_.stop();
     audio_.select("");
     outputs_.closeAll();
     shutdownCreator();
@@ -511,6 +512,9 @@ void App::frame(double dt) {
     oscFrame.bpm = engine_.comp.bpm;
     oscFrame.beat = engine_.beat();
     oscOut_.update(dt, oscFrame, control_.router());
+    stage_.configure(settings_.dmx, settings_.vrchat);
+    stage_.update(dt, [this](int id) { return engine_.sourceValue(id); });
+    engine_.setDmxStrip(settings_.dmx.stripEnabled, settings_.dmx.stripAtTop, stage_.vrslGrid());
     engine_.render();
     if (spout_.active()) {
         spout_.send(engine_.outputTexture(), engine_.width(), engine_.height());

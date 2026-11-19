@@ -5,6 +5,7 @@
 #include "audio/audio_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
+#include "control/stage_out.hpp"
 #include "core/edit_history.hpp"
 #include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
@@ -37,6 +38,7 @@ enum SettingsPage {
     SettingsAudio,
     SettingsOutput,
     SettingsControl,
+    SettingsStage,
     SettingsUpdates,
     SettingsShortcuts,
     SettingsPerformance,
@@ -132,6 +134,7 @@ private:
     void drawSettingsPage(int page);
     void drawUpdateSection();
     void drawControlPage();
+    void drawStagePage();
     void drawOscSection();
     void drawOscOutSection();
     void drawMidiSection();
@@ -175,6 +178,8 @@ private:
     EngineControlHost controlHost_{engine_};
     ControlSystem control_{engine_.comp, controlHost_};
     OscSender oscOut_;
+    StageOutput stage_;
+    bool stageDirty_ = false;
     Settings settings_;
     Updater updater_;
     OutputManager outputs_;

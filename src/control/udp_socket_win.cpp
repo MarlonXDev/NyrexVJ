@@ -107,6 +107,8 @@ bool UdpSocket::connectTo(const std::string& host, int port, std::string& error)
     }
     u_long nonBlocking = 1;
     ::ioctlsocket(handle, FIONBIO, &nonBlocking);
+    const BOOL broadcast = TRUE;
+    ::setsockopt(handle, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&broadcast), sizeof(broadcast));
     impl_->handle = handle;
     impl_->target = address;
     impl_->hasTarget = true;

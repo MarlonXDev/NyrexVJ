@@ -585,6 +585,7 @@ int Engine::loadedSceneCount() const {
 
 bool Engine::init() {
     triangle_.create();
+    strip_.init();
     glGenQueries(kGpuQueries, gpuQueries_.data());
     glGenTextures(1, &audioTexture_);
     glBindTexture(GL_TEXTURE_2D, audioTexture_);
@@ -877,6 +878,7 @@ void Engine::shutdown() {
         glDeleteTextures(1, &audioTexture_);
         audioTexture_ = 0;
     }
+    strip_.shutdown();
     triangle_.destroy();
 }
 
@@ -1392,6 +1394,14 @@ bool Engine::readOutput(std::vector<unsigned char>& rgba, int& width, int& heigh
     return true;
 }
 
+void Engine::setDmxStrip(bool enabled, bool atTop, const std::uint8_t* grid) {
+    stripEnabled_ = enabled;
+    stripAtTop_ = atTop;
+    if (enabled && grid) {
+        strip_.upload(grid);
+    }
+}
+
 void Engine::drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale) {
     glUseProgram(clip.id);
     glUniform1f(clip.time, time);
@@ -1766,6 +1776,10 @@ void Engine::render() {
         if (feedback_[k].fbo && !feedbackUsed_[k]) {
             feedback_[k].destroy();
         }
+    }
+
+    if (stripEnabled_) {
+        strip_.draw(out_, stripAtTop_, triangle_);
     }
 
     renderPreview();

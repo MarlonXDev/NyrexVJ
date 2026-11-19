@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/output_map.hpp"
+#include "core/stage.hpp"
 #include "update/update_logic.hpp"
 
 #include <array>
@@ -50,6 +51,8 @@ struct Settings {
     int oscOutRate = 60;
     bool oscOutSpectrum = true;
     std::vector<OscOutParam> oscOutParams;
+    DmxConfig dmx;
+    VrchatConfig vrchat;
     std::array<std::string, kSpoutInputSlots> spoutInputs;
     bool spoutInputFlip = false;
 };

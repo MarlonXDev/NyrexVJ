@@ -32,6 +32,8 @@ const char* settingsPageTitle(int page) {
         return tr("Output");
     case SettingsControl:
         return tr("Control");
+    case SettingsStage:
+        return tr("Stage");
     case SettingsUpdates:
         return tr("Updates");
     case SettingsShortcuts:
@@ -55,6 +57,8 @@ const char* settingsPageHint(int page) {
         return tr("Output window, resolution and Spout.");
     case SettingsControl:
         return tr("Play NyrexVJ with OSC and MIDI.");
+    case SettingsStage:
+        return tr("DMX for stage lights, the VRSL strip and VRChat.");
     case SettingsUpdates:
         return tr("Update channel and automatic updates.");
     case SettingsShortcuts:
@@ -277,6 +281,8 @@ void App::drawSettingsPage(int page) {
         drawNdiControls();
     } else if (page == SettingsControl) {
         drawControlPage();
+    } else if (page == SettingsStage) {
+        drawStagePage();
     } else if (page == SettingsUpdates) {
         drawUpdateSection();
     } else if (page == SettingsAppearance) {

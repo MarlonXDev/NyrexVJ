@@ -4,12 +4,14 @@
 #include "core/composition.hpp"
 #include "core/settings.hpp"
 #include "render/clip_library.hpp"
+#include "render/dmx_strip.hpp"
 #include "render/gl_util.hpp"
 #include "render/media_player.hpp"
 #include "render/scene_player.hpp"
 #include "render/spout_input.hpp"
 
 #include <array>
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <string>
@@ -55,6 +57,8 @@ public:
     float sourceValue(int source) const;
     void setAudio(const AudioFeatures& features);
     bool readOutput(std::vector<unsigned char>& rgba, int& width, int& height);
+    void setDmxStrip(bool enabled, bool atTop, const std::uint8_t* grid);
+    bool dmxStripActive() const { return stripEnabled_; }
     int prepareAll(std::string& report);
     bool thumbnailsReady() const { return nextThumb_ >= clips_.size() && deferredThumbs_.empty(); }
 
@@ -303,6 +307,9 @@ private:
     std::array<bool, kFeedbackSets * kChainsPerSet * kEffectSlots> feedbackUsed_{};
     std::array<double, kLayerCount> layerClock_{};
     FullscreenTriangle triangle_;
+    DmxStrip strip_;
+    bool stripEnabled_ = false;
+    bool stripAtTop_ = true;
     int currentResolution_ = -1;
     double time_ = 0.0;
     double beat_ = 0.0;

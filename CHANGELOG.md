@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0 - 2026-11-19
+
+- Several outputs: up to four output windows, each on its own display, with its own Open, Fullscreen and Test pattern. Settings, Output has a tab per output. With the default settings the first output looks exactly as before.
+- Projection mapping and warping: every output shows a part of the picture you choose (for example the left half), can be mirrored, and its four corners can be dragged in a live canvas so a tilted projector fits a wall. A warp grid from 2 x 2 to 9 x 9 points bends the picture over curved or uneven surfaces.
+- Edge blending and several projectors: soft fades for the edges where projectors overlap, with curve, gamma and brightness, and Arrange outputs sets up a grid of up to four projectors with the right overlap in one click. The test pattern shows the grid, corners and blending on every output.
+- NDI output: Settings, Output, NDI sends the main picture to OBS, Resolume, vMix and other programs over the network. NyrexVJ does not ship the NDI library, install the free NDI Tools or Runtime. It only reads the picture back while a receiver is connected. Tested with a stand-in library, not yet with the real NDI runtime, see docs/OUTPUTS.md.
+
 ## 0.13.0 - 2026-11-19
 
 - Image clips: put .png, .jpg, .bmp, .tga or .gif files into the new media folder, or drag them onto the NyrexVJ window, and they appear in the Library as clips (filter Media). PNG and TGA keep their transparency, so a logo with soft edges lies over the layers below it. Every layer is now composited with transparency; all older looks render exactly as before.

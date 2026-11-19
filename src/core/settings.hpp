@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/output_map.hpp"
 #include "update/update_logic.hpp"
 
 #include <array>
@@ -26,7 +27,7 @@ struct Settings {
     bool showTimings = true;
     float uiScale = 1.0f;
     UpdateChannel channel = UpdateChannel::Nightly;
-    int outputMonitor = 0;
+    std::array<OutputSpec, kMaxOutputs> outputs = defaultOutputs();
     std::string language = "en";
     std::string theme = "orange";
     std::string lastSeenVersion;
@@ -37,6 +38,8 @@ struct Settings {
     bool audioSyncBpm = false;
     bool spoutEnabled = false;
     std::string spoutName = "NyrexVJ";
+    bool ndiEnabled = false;
+    std::string ndiName = "NyrexVJ";
     bool oscEnabled = false;
     int oscPort = 9010;
     bool oscAllowRemote = false;

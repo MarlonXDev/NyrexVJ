@@ -379,41 +379,6 @@ void App::drawClipPanel() {
     ImGui::End();
 }
 
-void App::drawOutputControls() {
-    ImGui::SeparatorText(tr("Output window"));
-    bool open = output_.isOpen();
-    if (ImGui::Button(open ? tr("Close") : tr("Open"))) {
-        if (open) {
-            output_.close();
-        } else {
-            openOutputWindow(false);
-        }
-    }
-    ImGui::SameLine();
-    ImGui::BeginDisabled(!output_.isOpen());
-    if (ImGui::Button(output_.isFullscreen() ? tr("Windowed") : tr("Fullscreen"))) {
-        output_.setFullscreen(!output_.isFullscreen(), outputMonitor_);
-    }
-    ImGui::EndDisabled();
-    std::vector<std::string> monitors = OutputWindow::monitorNames();
-    if (!monitors.empty()) {
-        outputMonitor_ = std::clamp(outputMonitor_, 0, static_cast<int>(monitors.size()) - 1);
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::BeginCombo("##display", monitors[static_cast<size_t>(outputMonitor_)].c_str())) {
-            for (int i = 0; i < static_cast<int>(monitors.size()); ++i) {
-                if (ImGui::Selectable(monitors[static_cast<size_t>(i)].c_str(), i == outputMonitor_)) {
-                    outputMonitor_ = i;
-                    if (output_.isFullscreen()) {
-                        output_.setFullscreen(true, outputMonitor_);
-                    }
-                }
-            }
-            ImGui::EndCombo();
-        }
-    }
-    ImGui::TextDisabled("%s", tr("F11 fullscreen, Esc leaves it"));
-}
-
 void App::drawSpoutInputControls(int slot) {
     if (slot < 0 || slot >= kSpoutInputSlots) {
         return;
@@ -499,6 +464,53 @@ void App::drawSpoutControls() {
     if (ImGui::SmallButton(trId("OBS Spout plugin", "obsPlugin"))) {
         platform::openUrl(ui::kObsPluginUrl);
     }
+}
+
+void App::drawNdiControls() {
+    ImGui::SeparatorText(tr("NDI"));
+    const bool available = NdiSender::available();
+    bool active = ndi_.active();
+    ImGui::BeginDisabled(!available);
+    if (ImGui::Checkbox(trId("Send via NDI", "ndiToggle"), &active)) {
+        if (active) {
+            if (!ndi_.start(ndiName_)) {
+                toast(tr("NDI sender could not be started"));
+            }
+        } else {
+            ndi_.stop();
+        }
+    }
+    ImGui::SetNextItemWidth(-90.0f);
+    if (ImGui::InputText(trId("NDI name", "ndiName"), ndiName_, sizeof(ndiName_), ImGuiInputTextFlags_EnterReturnsTrue)) {
+        if (ndi_.active()) {
+            ndi_.start(ndiName_);
+        }
+    }
+    ImGui::EndDisabled();
+    if (!available) {
+        ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", tr("NDI runtime not found"));
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextDisabled("%s", tr("Install the free NDI Tools or the NDI Runtime from ndi.video. NyrexVJ does not ship the NDI library."));
+        ImGui::PopTextWrapPos();
+        if (ImGui::SmallButton(tr("Download NDI Tools"))) {
+            platform::openUrl("https://ndi.video/tools/");
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Search again"))) {
+            NdiSender::recheck();
+        }
+        return;
+    }
+    if (active) {
+        if (ndi_.connections() > 0) {
+            ImGui::TextColored(ui::kAccent, "%s '%s' (%d)", tr("Sending as"), ndi_.name().c_str(), ndi_.connections());
+        } else {
+            ImGui::TextDisabled("%s '%s' - %s", tr("Sending as"), ndi_.name().c_str(), tr("no receiver connected, nothing is read back"));
+        }
+    }
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("The picture of the main output is sent over the network. Receivers: OBS with the NDI plugin, Resolume, vMix, NDI Studio Monitor."));
+    ImGui::PopTextWrapPos();
 }
 
 void App::drawMaster() {

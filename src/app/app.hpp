@@ -13,12 +13,15 @@
 #include "render/asset_import.hpp"
 #include "render/engine.hpp"
 #include "render/media_player.hpp"
+#include "render/output_manager.hpp"
 #include "render/output_window.hpp"
+#include "render/ndi_output.hpp"
 #include "render/spout_output.hpp"
 #include "update/updater.hpp"
 
 #include <imgui.h>
 
+#include <array>
 #include <future>
 #include <memory>
 #include <string>
@@ -60,6 +63,9 @@ struct StartOptions {
     int libraryKind = -1;
     int oscPort = 0;
     bool openOutput = false;
+    bool outputPattern = false;
+    std::string ndiName;
+    int selectOutput = -1;
     bool openCreator = false;
     bool fresh = false;
     bool skipUpdateCheck = false;
@@ -77,6 +83,7 @@ public:
     Engine& engine() { return engine_; }
     ControlSystem& control() { return control_; }
     bool wantsRestart() const { return restart_; }
+    int dumpOutputs(const std::string& prefix);
     bool wantsVsync() const { return settings_.vsync; }
 
 private:
@@ -149,7 +156,11 @@ private:
     void drawModulators(Modulators& modulators);
     void drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots);
     void drawOutputControls();
+    void drawOutputMapping(int index);
+    void drawMappingCanvas(OutputSpec& spec, int index);
+    bool captureOutput(int index, OutputCapture& out);
     void drawSpoutControls();
+    void drawNdiControls();
     void drawSpoutInputControls(int slot);
     void loadComposition(const Composition& comp, const std::string& message);
     void saveCurrentPreset();
@@ -166,9 +177,10 @@ private:
     OscSender oscOut_;
     Settings settings_;
     Updater updater_;
-    OutputWindow output_;
+    OutputManager outputs_;
     AudioSystem audio_;
     SpoutOutput spout_;
+    NdiOutput ndi_;
     GLFWwindow* window_ = nullptr;
     std::string iniPath_;
     bool needsLayout_ = false;
@@ -202,9 +214,18 @@ private:
     char libraryFilter_[64] = {};
     char effectPickFilter_[64] = {};
     int focusTab_ = -1;
-    int outputMonitor_ = 0;
+    int selectedOutput_ = 0;
+    int outputTabForce_ = 0;
+    std::array<OutputSpec, kMaxOutputs> savedOutputs_ = defaultOutputs();
+    int gridColumns_ = 2;
+    int gridRows_ = 1;
+    float gridOverlap_ = 0.1f;
+    int draggedPoint_ = -1;
+    int draggedWarp_ = -1;
+    bool mappingFollowsTexture_ = true;
     char presetName_[64] = {};
     char spoutName_[64] = {};
+    char ndiName_[64] = {};
     char oscOutFilter_[64] = {};
     int oscOutPick_ = -1;
     std::string selectedUserPreset_;

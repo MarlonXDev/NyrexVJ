@@ -15,6 +15,8 @@
 
 #include <imgui_internal.h>
 
+#include <stb_image_write.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -58,7 +60,8 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
 
     loadSettings(settings_);
     applyTheme(themeIndex(settings_.theme));
-    outputMonitor_ = settings_.outputMonitor;
+    outputs_.attach(&settings_.outputs);
+    savedOutputs_ = settings_.outputs;
     uiScaleEdit_ = settings_.uiScale;
     appliedVsync_ = settings_.vsync ? 1 : 0;
     oscOverridePort_ = options.oscPort;
@@ -199,6 +202,16 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         spout_.start(spoutName_);
     }
 
+    std::snprintf(ndiName_, sizeof(ndiName_), "%s", settings_.ndiName.c_str());
+    if (!options.ndiName.empty()) {
+        std::snprintf(ndiName_, sizeof(ndiName_), "%s", options.ndiName.c_str());
+        if (!ndi_.start(ndiName_)) {
+            logLine("NDI could not be started: " + ndi_.error());
+        }
+    } else if (settings_.ndiEnabled && NdiSender::available()) {
+        ndi_.start(ndiName_);
+    }
+
     updater_.setChannel(settings_.channel);
     if (settings_.checkUpdates && !options.skipUpdateCheck) {
         updater_.checkAsync();
@@ -227,8 +240,17 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         }
     }
 
+    if (options.selectOutput >= 0 && options.selectOutput < kMaxOutputs) {
+        selectedOutput_ = options.selectOutput;
+        outputTabForce_ = 4;
+    }
     if (options.openOutput || (settings_.openOutputOnStart && options.skipUpdateCheck == false)) {
         openOutputWindow(false);
+    }
+    if (options.outputPattern) {
+        for (int i = 0; i < kMaxOutputs; ++i) {
+            outputs_.setTestPattern(i, true);
+        }
     }
     if (options.settingsPage >= 0) {
         openSettings(options.settingsPage);
@@ -267,15 +289,17 @@ void App::shutdown() {
     if (!recoveryPending()) {
         saveSession(engine_.comp);
     }
-    settings_.outputMonitor = outputMonitor_;
     settings_.audioDevice = audio_.selected() == AudioSystem::demoId() ? std::string() : audio_.selected();
     settings_.spoutEnabled = spout_.active();
     settings_.spoutName = spoutName_;
+    settings_.ndiEnabled = ndi_.active();
+    settings_.ndiName = ndiName_;
     saveSettings(settings_);
     spout_.stop();
+    ndi_.stop();
     oscOut_.stop();
     audio_.select("");
-    output_.close();
+    outputs_.closeAll();
     shutdownCreator();
     engine_.shutdown();
     if (ownsSession_) {
@@ -381,9 +405,30 @@ void App::toast(const std::string& message) {
 }
 
 void App::openOutputWindow(bool fullscreen) {
-    if (!output_.open(window_, outputMonitor_, fullscreen)) {
+    if (outputs_.openEnabled(window_, fullscreen) == 0) {
         toast(tr("Could not open the output window"));
     }
+}
+
+int App::dumpOutputs(const std::string& prefix) {
+    int written = 0;
+    for (int i = 0; i < kMaxOutputs; ++i) {
+        OutputCapture capture;
+        if (!captureOutput(i, capture)) {
+            continue;
+        }
+        stbi_flip_vertically_on_write(1);
+        const std::string path = prefix + std::to_string(i + 1) + ".png";
+        if (stbi_write_png(path.c_str(), capture.width, capture.height, 3, capture.rgb.data(), capture.width * 3) != 0) {
+            logLine("Output " + std::to_string(i + 1) + " saved to " + path);
+            ++written;
+        }
+    }
+    return written;
+}
+
+bool App::captureOutput(int index, OutputCapture& out) {
+    return outputs_.capture(index, engine_.outputTexture(), engine_.width(), engine_.height(), out);
 }
 
 void App::refreshUserPresets() {
@@ -470,7 +515,10 @@ void App::frame(double dt) {
     if (spout_.active()) {
         spout_.send(engine_.outputTexture(), engine_.width(), engine_.height());
     }
-    output_.render(engine_.outputTexture(), engine_.width(), engine_.height());
+    if (ndi_.active()) {
+        ndi_.send(engine_.outputTexture(), engine_.width(), engine_.height());
+    }
+    outputs_.render(engine_.outputTexture(), engine_.width(), engine_.height());
 
     if (rescanModels_) {
         rescanModels_ = false;
@@ -592,11 +640,7 @@ void App::handleShortcuts() {
         engine_.blackout = !engine_.blackout;
     }
     if (ImGui::IsKeyPressed(ImGuiKey_F11, false)) {
-        if (output_.isOpen()) {
-            output_.setFullscreen(!output_.isFullscreen(), outputMonitor_);
-        } else {
-            openOutputWindow(true);
-        }
+        outputs_.toggleFullscreen(window_);
     }
 }
 
@@ -647,27 +691,18 @@ void App::drawMenuBar() {
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(trId("Output", "menuOutput"))) {
-        if (ImGui::MenuItem(output_.isOpen() ? tr("Close output window") : tr("Open output window"))) {
-            if (output_.isOpen()) {
-                output_.close();
+        if (ImGui::MenuItem(outputs_.anyOpen() ? tr("Close output windows") : tr("Open output windows"))) {
+            if (outputs_.anyOpen()) {
+                outputs_.closeAll();
             } else {
                 openOutputWindow(false);
             }
         }
-        if (ImGui::MenuItem(tr("Fullscreen"), "F11", output_.isFullscreen(), output_.isOpen())) {
-            output_.setFullscreen(!output_.isFullscreen(), outputMonitor_);
+        if (ImGui::MenuItem(tr("Fullscreen"), "F11", outputs_.anyFullscreen(), outputs_.anyOpen())) {
+            outputs_.toggleFullscreen(window_);
         }
-        std::vector<std::string> monitors = OutputWindow::monitorNames();
-        if (!monitors.empty() && ImGui::BeginMenu(tr("Display"))) {
-            for (int i = 0; i < static_cast<int>(monitors.size()); ++i) {
-                if (ImGui::MenuItem(monitors[static_cast<size_t>(i)].c_str(), nullptr, i == outputMonitor_)) {
-                    outputMonitor_ = i;
-                    if (output_.isFullscreen()) {
-                        output_.setFullscreen(true, outputMonitor_);
-                    }
-                }
-            }
-            ImGui::EndMenu();
+        if (ImGui::MenuItem(tr("Outputs and mapping..."))) {
+            openSettings(SettingsOutput);
         }
         ImGui::Separator();
         bool spoutActive = spout_.active();
@@ -676,6 +711,14 @@ void App::drawMenuBar() {
                 spout_.stop();
             } else {
                 spout_.start(spoutName_);
+            }
+        }
+        const bool ndiActive = ndi_.active();
+        if (ImGui::MenuItem(tr("Send via NDI"), nullptr, ndiActive)) {
+            if (ndiActive) {
+                ndi_.stop();
+            } else if (!ndi_.start(ndiName_)) {
+                toast(tr("NDI runtime not found. See Settings, Output."));
             }
         }
         ImGui::EndMenu();

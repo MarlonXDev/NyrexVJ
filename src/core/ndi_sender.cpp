@@ -269,7 +269,8 @@ int NdiSender::connections() const {
     if (!api.connections) {
         return 1;
     }
-    return std::max(0, api.connections(impl_->sender, 0));
+    const int count = api.connections(impl_->sender, 0);
+    return count > 0 ? count : 0;
 }
 
 bool NdiSender::sendRgbaBottomUp(const uint8_t* rgba, int width, int height) {

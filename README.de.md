@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.15.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264 und HAP, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), Englisch und Deutsch sowie der Auto-Updater funktionieren.
+> Stand: v0.16.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264 und HAP, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen sowie der Auto-Updater funktionieren.
 
 ## Download
 
@@ -36,7 +36,8 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 - **Eigene 3D-Modelle.** Lege .glb- oder .gltf-Dateien in den Modellordner und spiele sie wie jeden Clip, mit Texturen, Animation und Audio-Reaktion.
 - **Clip Creator.** Baue eigene 3D-Szenen aus Formen, Modellen und Lichtern, lass alles zur Musik bewegen und speichere sie als tragbare .nyxclip-Dateien.
 - **Einstellungsfenster.** Ein Ort für Audio, Ausgabe, Spout, Updates, Sprache und Oberflächengröße, dazu eine Statusleiste mit FPS, Tempo, Deck und Audio auf einen Blick.
-- **Englisch und Deutsch.** Englisch ist Standard, umschalten jederzeit unter Einstellungen, Allgemein.
+- **Eigene Shader-Clips.** Lege eine .glsl-, .frag- oder .fs-Datei (selbst geschrieben oder von Shadertoy) in den Shader-Ordner, und sie wird zum Clip. Siehe [docs/SHADERS.md](docs/SHADERS.md).
+- **Englisch, Deutsch, Spanisch und Französisch.** Englisch ist Standard, umschalten jederzeit unter Einstellungen, Allgemein. Eine eigene Sprache kommt über eine kleine .json-Datei dazu, siehe [docs/LANGUAGES.md](docs/LANGUAGES.md).
 - **Willkommensbildschirm.** Beim ersten Start und nach jedem Update, mit allem, was neu ist.
 - **Aktualisiert sich selbst.** Prüft GitHub beim Start, kontrolliert die SHA-256-Summe und zeigt oben rechts eine kleine Karte mit Jetzt neu starten oder Später.
 
@@ -134,6 +135,10 @@ Jede Ebene hat vier Effektplätze, der Master ebenfalls.
 
 Die Effekt-Galerie zeigt jeden Effekt mit Standardwerten auf dem Clip Plasma (Duotone auf Mandelbrot und Line Art auf Crystal Cavern, weil Plasma kaum Helligkeitskontrast hat). Clip- und Effektnamen bleiben englisch, damit sie zu anderen VJ-Programmen passen.
 
+## Eigene Shader-Clips
+
+Jeder Fragment-Shader kann ein Clip werden. Lege eine `.glsl`-, `.frag`- oder `.fs`-Datei in den Shader-Ordner (Bibliothek, Shader-Ordner öffnen, oder ziehe die Datei auf das Fenster), dann erscheint sie in der Bibliothek als `Shader: Dateiname`, Filter Shader. Sie funktioniert wie jeder andere Clip: Geschwindigkeit, Größe, Farben, Effekte, Audio, LFOs und Makros wirken alle. Eine gespeicherte Änderung lädt sie neu, während sie läuft, und ein Kompilierfehler erscheint im Clip-Fenster mit der Zeilennummer deiner Datei. Bibliothek, Beispiel-Shader erstellen schreibt einen kleinen Shader zum Loslegen. NyrexVJ-Stil (`void main()`) und Shadertoy-Stil (`mainImage`) werden automatisch erkannt, die Uniforms, Hilfsfunktionen und Grenzen stehen in [docs/SHADERS.md](docs/SHADERS.md). Zwei Beispiele liegen in `docs/shaders/`.
+
 ## 3D-Modelle
 
 Neben den Shader-Clips gibt es Clips, die echte 3D-Gitter zeichnen: Torus Knot Mesh, Crystal Cluster Mesh, Orbit Rings Mesh, Chrome Orbs Mesh, Neon Cubes Mesh, Gold Knot Mesh und Pulse Columns Mesh. Sie stehen im Bibliothek-Tab wie jeder andere Clip, folgen Farben, Tempo und Größe der Ebene, pulsieren mit Bass und Kick und laufen durch dieselben Effekte.
@@ -212,7 +217,9 @@ Einstellungen, Steuerung, OSC-Ausgabe, OSC-Daten senden anhaken. NyrexVJ sendet 
 
 ## Sprachen
 
-Englisch ist die Standardsprache, Deutsch ist eingebaut. Umschalten unter Einstellungen, Allgemein, unter Hilfe, Sprache oder auf dem Willkommensbildschirm, die Wahl wird gespeichert. Für eine neue Sprache braucht es eine Übersetzungstabelle neben `src/core/i18n_de.cpp` und einen Eintrag in `src/core/i18n.cpp`.
+Englisch ist die Standardsprache, Deutsch, Spanisch und Französisch sind eingebaut. Umschalten unter Einstellungen, Allgemein, unter Hilfe, Sprache oder auf dem Willkommensbildschirm, die Wahl wird gespeichert. Spanisch und Französisch wurden mit maschineller Hilfe übersetzt und noch nicht von Muttersprachlern geprüft, Korrekturen sind willkommen. Clip- und Effektnamen bleiben Englisch, damit sie zu dem passen, was andere VJ-Programme verwenden.
+
+Eine eigene Sprache ist eine `.json`-Datei im Ordner `languages`: Einstellungen, Allgemein, Übersetzungsvorlage exportieren schreibt eine Datei mit allen Texten, du übersetzt, was du willst (weggelassene Texte bleiben Englisch), und drückst Sprachen neu laden. Die Schrift zeigt nur lateinische Buchstaben. Alles steht in [docs/LANGUAGES.md](docs/LANGUAGES.md) (englisch).
 
 ## Auto-Update
 
@@ -277,7 +284,7 @@ python scripts/check_i18n.py
 NyrexVJ --check-shaders
 ```
 
-`check_i18n.py` stellt sicher, dass jeder Oberflächentext eine deutsche Übersetzung hat. `--check-shaders` kompiliert jeden Clip und Effekt und beendet sich bei einem Fehler mit Code 1. Die CI führt alles bei jedem Push aus.
+`check_i18n.py` stellt sicher, dass jeder Oberflächentext eine deutsche Übersetzung hat und dass die spanische und die französische Tabelle zur deutschen passen. `--check-shaders` kompiliert jeden Clip und Effekt und beendet sich bei einem Fehler mit Code 1. Die CI führt alles bei jedem Push aus.
 
 ## Release veröffentlichen
 
@@ -312,7 +319,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--output-pattern` | Testbild auf allen Ausgängen zeigen |
 | `--select-output N` | Mit `--settings` den Reiter von Ausgang N (1 bis 4) zeigen |
 | `--ndi NAME` | NDI-Sender mit diesem Namen starten |
-| `--lang en\|de` | In dieser Sprache starten |
+| `--lang CODE` | In dieser Sprache starten: `en`, `de`, `es`, `fr` oder der Code einer Sprachdatei |
 | `--audio-demo` | Demo-Audiosignal benutzen |
 | `--welcome` / `--no-welcome` | Willkommensbildschirm erzwingen oder überspringen |
 | `--fresh` | Gespeicherte Sitzung ignorieren |
@@ -335,9 +342,7 @@ Absturzschutz: Die Sitzung wird alle 30 Sekunden gespeichert, wenn sie sich geä
 
 ## Fahrplan
 
-- DMX-Strip-Ausgabe für VRSL
-- Eigene Shader-Clips aus Dateien
-- Weitere Sprachen
+Alles, was hier stand, ist umgesetzt. Offene Ideen und ihr Stand stehen in [docs/ROADMAP.md](docs/ROADMAP.md) (englisch) und in den GitHub-Issues.
 
 ## Software von Dritten
 

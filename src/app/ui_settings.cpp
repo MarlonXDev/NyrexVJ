@@ -13,6 +13,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -227,13 +228,43 @@ void App::drawSettingsPage(int page) {
         ImGui::SeparatorText(tr("Language"));
         ImGui::SetNextItemWidth(220.0f);
         if (ImGui::BeginCombo("##language", languageLabel(currentLanguage()))) {
-            for (int i = 0; i < kLanguageCount; ++i) {
+            for (int i = 0; i < languageCount(); ++i) {
                 Language language = static_cast<Language>(i);
                 if (ImGui::Selectable(languageLabel(language), currentLanguage() == language)) {
                     setLanguageAndSave(language);
                 }
             }
             ImGui::EndCombo();
+        }
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped("%s", tr("Spanish and French were translated with machine help and are not reviewed by native speakers yet. Corrections are welcome on GitHub."));
+        ImGui::PopStyleColor();
+        if (ImGui::SmallButton(tr("Open languages folder"))) {
+            std::error_code languageError;
+            std::filesystem::create_directories(userLanguageDirectory(), languageError);
+            platform::openFolder(userLanguageDirectory());
+        }
+        ImGui::SetItemTooltip("%s", tr("Your own languages: put .json files into this folder and press Reload languages. docs/LANGUAGES.md explains the format."));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Export translation template"))) {
+            std::string written;
+            if (writeLanguageTemplate(userLanguageDirectory(), written)) {
+                toast(std::string(tr("Created: ")) + written);
+            } else {
+                toast(tr("The template could not be written"));
+            }
+        }
+        ImGui::SetItemTooltip("%s", tr("Writes template.json into the languages folder. Copy it, set a code and a name, then translate the texts."));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Reload languages"))) {
+            const UserLanguageReport report = loadUserLanguages(userLanguageDirectory());
+            std::string message = std::string(tr("Languages loaded: ")) + std::to_string(report.loaded);
+            if (report.skipped > 0) {
+                message += "  " + std::string(tr("Skipped: ")) + report.firstProblem;
+            } else if (report.skippedTexts > 0) {
+                message += "  " + std::to_string(report.skippedTexts) + " " + tr("texts skipped (characters the font cannot show)");
+            }
+            toast(message);
         }
         ImGui::SeparatorText(tr("Startup"));
         if (ImGui::Checkbox(trId("Restore last session on start", "optRestore"), &settings_.restoreSession)) {

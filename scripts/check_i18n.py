@@ -16,9 +16,44 @@ def unescape(text):
     return text.replace('\\"', '"').replace("\\\\", "\\")
 
 
+ENTRY = re.compile(r'\{"((?:[^"\\]|\\.)*)",\s*"((?:[^"\\]|\\.)*)"\}')
+LANGUAGE_FILES = {"de": "src/core/i18n_de.cpp", "es": "src/core/i18n_es.cpp", "fr": "src/core/i18n_fr.cpp"}
+SPECIFIER = re.compile(r"%[-+ #0]*\d*(?:\.\d+)?[a-zA-Z]")
+
+
+def table(path):
+    text = read(path)
+    return [(unescape(m.group(1)), unescape(m.group(2))) for m in ENTRY.finditer(text)]
+
+
 def german_keys():
-    text = read("src/core/i18n_de.cpp")
-    return {unescape(m.group(1)) for m in re.finditer(r'\{"((?:[^"\\]|\\.)*)",\s*"(?:[^"\\]|\\.)*"\}', text)}
+    return {key for key, _ in table(LANGUAGE_FILES["de"])}
+
+
+def check_languages():
+    problems = []
+    reference = table(LANGUAGE_FILES["de"])
+    reference_keys = [key for key, _ in reference]
+    for code, path in LANGUAGE_FILES.items():
+        entries = table(path)
+        keys = [key for key, _ in entries]
+        if len(set(keys)) != len(keys):
+            problems.append("%s: duplicate keys" % code)
+        if set(keys) != set(reference_keys):
+            for key in sorted(set(reference_keys) - set(keys)):
+                problems.append("%s: missing key %r" % (code, key))
+            for key in sorted(set(keys) - set(reference_keys)):
+                problems.append("%s: extra key %r" % (code, key))
+        for key, value in entries:
+            if not value.strip():
+                problems.append("%s: empty text for %r" % (code, key))
+            if key.endswith(" ") != value.endswith(" ") or key.startswith(" ") != value.startswith(" "):
+                problems.append("%s: edge spaces differ for %r" % (code, key))
+            if code != "de" and any(ord(ch) > 255 for ch in value):
+                problems.append("%s: character outside Latin-1 in %r" % (code, key))
+            if sorted(SPECIFIER.findall(key)) != sorted(SPECIFIER.findall(value)) and key != "Slowest 5%":
+                problems.append("%s: format specifiers differ for %r" % (code, key))
+    return problems
 
 
 def literal_keys():
@@ -73,6 +108,12 @@ def main():
         print("Missing German translations:")
         for key in missing:
             print("  " + key)
+        return 1
+    problems = check_languages()
+    if problems:
+        print("Language table problems:")
+        for problem in problems:
+            print("  " + problem)
         return 1
     print("All %d translation keys are covered" % len(have))
     return 0

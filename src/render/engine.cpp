@@ -435,6 +435,32 @@ std::unique_ptr<ScenePlayer> Engine::makeScene(const ClipDef& def) const {
     return nullptr;
 }
 
+void Engine::reloadShaderClips(const std::vector<size_t>& indices) {
+    for (size_t index : indices) {
+        if (index >= clips_.size()) {
+            continue;
+        }
+        if (clips_[index].id) {
+            glDeleteProgram(clips_[index].id);
+        }
+        clips_[index] = ClipProgram{};
+        if (std::find(reloadThumbs_.begin(), reloadThumbs_.end(), index) == reloadThumbs_.end()) {
+            reloadThumbs_.push_back(index);
+        }
+    }
+}
+
+std::string Engine::clipError(int clip) const {
+    if (clip < 0 || static_cast<size_t>(clip) >= clips_.size()) {
+        return std::string();
+    }
+    const ClipDef& def = clipLibrary()[static_cast<size_t>(clip)];
+    if (!def.error.empty()) {
+        return def.error;
+    }
+    return clips_[static_cast<size_t>(clip)].error;
+}
+
 void Engine::syncLibrary() {
     const std::vector<ClipDef>& library = clipLibrary();
     const size_t before = clips_.size();
@@ -739,11 +765,17 @@ bool Engine::ensureClip(size_t index) {
         return clip.id != 0;
     }
     clip.tried = true;
+    clip.error.clear();
     const ClipDef& def = clipLibrary()[index];
+    if (!def.error.empty()) {
+        clip.error = def.error;
+        return false;
+    }
     std::string error;
     GLuint program = buildProgram(clipVertexSource(), clipFragmentSource(def), &error);
     if (!program) {
         logLine("Clip shader '" + def.name + "' failed: " + error);
+        clip.error = error.size() > 4000 ? error.substr(0, 4000) : error;
         return false;
     }
     clip.id = program;
@@ -1417,7 +1449,7 @@ void Engine::drawClip(const ClipProgram& clip, float time, float beat, float bpm
 }
 
 void Engine::renderClipThumbnails(int maxCount) {
-    if (nextThumb_ >= clips_.size() || maxCount <= 0) {
+    if ((nextThumb_ >= clips_.size() && reloadThumbs_.empty()) || maxCount <= 0) {
         return;
     }
     const Layer defaults;
@@ -1426,6 +1458,19 @@ void Engine::renderClipThumbnails(int maxCount) {
     uploadAudio();
     glDisable(GL_BLEND);
     int done = 0;
+    while (!reloadThumbs_.empty() && done < maxCount) {
+        const size_t i = reloadThumbs_.back();
+        reloadThumbs_.pop_back();
+        ++done;
+        if (i < clips_.size() && i < clipThumbs_.size() && clipThumbs_[i].fbo) {
+            clipThumbs_[i].bind();
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            if (ensureClip(i)) {
+                drawClip(clips_[i], 2.6f, 2.3f, 128.0f, static_cast<float>(kThumbWidth), static_cast<float>(kThumbHeight), defaults.colorA, defaults.colorB, false, 1.0f);
+            }
+        }
+    }
     while (nextThumb_ < clips_.size() && done < maxCount) {
         const size_t i = nextThumb_++;
         ++done;

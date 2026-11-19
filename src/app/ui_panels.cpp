@@ -326,6 +326,8 @@ void App::drawClipPanel() {
         ImGui::TextColored(ui::kAccent, "%s", tr("Video file"));
     } else if (def.kind == ClipKind::ImageFile) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Image file"));
+    } else if (def.isShaderFile()) {
+        ImGui::TextColored(ui::kAccent, "%s", def.shadertoy ? tr("Shader file (Shadertoy style)") : tr("Shader file"));
     } else if (def.is3d) {
         ImGui::TextColored(ui::kAccent, "3D");
     }
@@ -335,6 +337,27 @@ void App::drawClipPanel() {
         media->touch();
         ImGui::Spacing();
         drawMediaControls(*media);
+    }
+
+    if (def.isShaderFile()) {
+        ImGui::Spacing();
+        const std::string shaderError = engine_.clipError(clip);
+        if (!shaderError.empty()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.35f, 1.0f));
+            ImGui::TextWrapped("%s", tr("This shader does not compile. Fix the file and save it, NyrexVJ reloads it."));
+            ImGui::PopStyleColor();
+            ImGui::BeginChild("shaderError", ImVec2(0.0f, 110.0f), ImGuiChildFlags_Borders);
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextUnformatted(trMessage(shaderError).c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::EndChild();
+        } else {
+            ImGui::TextDisabled("%s", tr("Saving the file reloads the shader."));
+        }
+        ImGui::TextDisabled("%s", def.path.c_str());
+        if (ImGui::SmallButton(tr("Open shaders folder"))) {
+            platform::openFolder(shaderDirectory());
+        }
     }
 
     if (def.kind == ClipKind::SpoutSource) {

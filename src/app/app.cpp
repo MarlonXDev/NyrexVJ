@@ -67,6 +67,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     oscOverridePort_ = options.oscPort;
     control_.loadBindings();
     control_.refreshMidiDevices();
+    loadUserLanguages(userLanguageDirectory());
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
 
     {
@@ -350,7 +351,7 @@ void App::serviceImports() {
         int rejected = 0;
         std::string firstName;
         for (const ImportResult& result : results) {
-            if (result.kind == ImportKind::Media || result.kind == ImportKind::Model) {
+            if (result.kind == ImportKind::Media || result.kind == ImportKind::Model || result.kind == ImportKind::Shader) {
                 if (result.added) {
                     ++added;
                     if (firstName.empty()) {
@@ -380,7 +381,7 @@ void App::serviceImports() {
             if (!message.empty()) {
                 message += "  |  ";
             }
-            message += std::to_string(rejected) + " " + tr("files skipped (images, videos and 3D models up to 256 MiB only)");
+            message += std::to_string(rejected) + " " + tr("files skipped (images, videos, 3D models up to 256 MiB and shader files up to 256 KiB only)");
         }
         if (!message.empty()) {
             toast(message);
@@ -532,6 +533,18 @@ void App::frame(double dt) {
         toast(added > 0 ? std::string(tr("New files found: ")) + std::to_string(added) : std::string(tr("No new files found")));
     }
     serviceImports();
+    shaderPoll_ += dt;
+    if (shaderPoll_ >= 1.0) {
+        shaderPoll_ = 0.0;
+        const ShaderScan scan = refreshShaderClips();
+        if (scan.added > 0) {
+            engine_.syncLibrary();
+            assetsDirty_ = true;
+        }
+        if (!scan.changed.empty()) {
+            engine_.reloadShaderClips(scan.changed);
+        }
+    }
 
     drawMenuBar();
     drawStatusBar();
@@ -785,7 +798,7 @@ void App::drawMenuBar() {
         }
         ImGui::Separator();
         if (ImGui::BeginMenu(tr("Language"))) {
-            for (int i = 0; i < kLanguageCount; ++i) {
+            for (int i = 0; i < languageCount(); ++i) {
                 Language language = static_cast<Language>(i);
                 if (ImGui::MenuItem(languageLabel(language), nullptr, currentLanguage() == language)) {
                     setLanguageAndSave(language);

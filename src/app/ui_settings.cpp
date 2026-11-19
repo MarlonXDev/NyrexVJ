@@ -274,6 +274,7 @@ void App::drawSettingsPage(int page) {
         }
         ImGui::SetItemTooltip("%s", tr("Turn this off to let the program render as fast as possible."));
         drawSpoutControls();
+        drawNdiControls();
     } else if (page == SettingsControl) {
         drawControlPage();
     } else if (page == SettingsUpdates) {
@@ -655,11 +656,15 @@ void App::drawStatusBar() {
             ImGui::SameLine();
             ImGui::TextColored(ui::kAccent, "Spout");
         }
-        if (output_.isOpen()) {
+        if (outputs_.anyOpen()) {
             ImGui::SameLine();
             ImGui::TextDisabled("|");
             ImGui::SameLine();
-            ImGui::TextDisabled("%s", output_.isFullscreen() ? tr("Output fullscreen") : tr("Output open"));
+            if (outputs_.openCount() > 1) {
+                ImGui::TextDisabled("%s: %d", tr("Outputs open"), outputs_.openCount());
+            } else {
+                ImGui::TextDisabled("%s", outputs_.anyFullscreen() ? tr("Output fullscreen") : tr("Output open"));
+            }
         }
 
         const UpdateStatus update = updater_.status();

@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.13.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout-Ausgabe und -Eingang, Ausgabefenster, Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264 und HAP, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), Englisch und Deutsch sowie der Auto-Updater funktionieren.
+> Stand: v0.14.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264 und HAP, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), Englisch und Deutsch sowie der Auto-Updater funktionieren.
 
 ## Download
 
@@ -111,6 +111,10 @@ Spout gibt es nur unter Windows. Das Ausgabefenster (F11) mit OBS-Fensteraufnahm
 ### Spout-Eingang
 
 Vier Clips, Spout Input 1 bis 4 (Bibliotheksfilter Spout), zeigen das Bild, das ein anderes Programm per Spout sendet. Lege einen in eine Zelle, wähle ihn aus und such den Sender im Clip-Fenster aus, oder lass ihn auf Automatisch, dann gilt der erste Sender, der nicht NyrexVJs eigene Ausgabe ist. Das Bild wird ohne Verzerrung in die Ebene eingepasst, läuft wie jeder Clip durch die Ebenen-Effekte, verbindet sich wieder, wenn der Sender zurückkommt, und zeigt einen Platzhalter, solange keiner da ist. Kommt das Bild kopfüber an, hake Bild vertikal spiegeln an. Die gewählten Sender stehen in den Programmeinstellungen. Nur Windows, auf anderen Systemen fügt `--spout-test-pattern` einen Test-Sender zum Ausprobieren hinzu. Einzelheiten und die Einrichtung mit Unreal Engine stehen in [docs/UNREAL.md](docs/UNREAL.md) (englisch).
+
+## Ausgänge, Mapping und NDI
+
+Einstellungen, Ausgabe hat für jedes der bis zu vier Ausgabefenster einen Reiter. Jeder Ausgang hat einen eigenen Bildschirm, Bildausschnitt, Eckpunkte und ein Verzerrungsraster (in der Live-Fläche ziehen), Kantenüberblendung, Helligkeit und ein Testbild, und Ausgänge anordnen richtet ein Raster aus überlappenden Projektoren mit einem Klick ein. NDI sendet das Hauptbild über das Netzwerk an OBS, Resolume oder vMix; die NDI-Bibliothek wird nicht mitgeliefert, installiere die kostenlosen NDI Tools. Alles steht in [docs/OUTPUTS.md](docs/OUTPUTS.md) (englisch), auch was getestet ist und was nicht (noch keine echten Projektoren, kein Mehrmonitor-Aufbau und keine echte NDI-Runtime).
 
 ## Clips und Effekte
 
@@ -226,7 +230,7 @@ NyrexVJ/
 │   ├── audio/      WASAPI-Aufnahme und Loopback, FFT-Analyse, Beat- und Tempo-Erkennung
 │   ├── control/    OSC-Parser, UDP-Eingang und -Ausgang, OSC-Sender, MIDI-Eingang, Lern-Zuordnung, Steuerziele
 │   ├── core/       Kompositionsmodell, Presets, Einstellungen, i18n, Log, SHA-256
-│   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, 3D-Szenen-Player, Ausgabefenster, Spout-Ausgabe und -Eingang
+│   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, 3D-Szenen-Player, Ausgabefenster mit Mapping, Spout- und NDI-Ausgabe, Spout-Eingang
 │   ├── scene3d/    glTF/GLB-Lader mit Sicherheitsgrenzen, Szenenmodell, Szenendokumente und .nyxclip-Pakete, eingebaute 3D-Szenen, GLB-Schreiber
 │   ├── update/     Update-Prüfung, Installer, Changelog-Parser
 │   ├── platform/   Windows- und Ersatz-Plattformcode
@@ -301,6 +305,9 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--dump-at FRAME:DATEI.png` | Mit `--frames` die Engine-Ausgabe bei diesem Frame speichern |
 | `--demo-update ZUSTAND` | Update-Karte als `available`, `downloading`, `ready` oder `later` zeigen |
 | `--output` | Ausgabefenster beim Start öffnen |
+| `--output-pattern` | Testbild auf allen Ausgängen zeigen |
+| `--select-output N` | Mit `--settings` den Reiter von Ausgang N (1 bis 4) zeigen |
+| `--ndi NAME` | NDI-Sender mit diesem Namen starten |
 | `--lang en\|de` | In dieser Sprache starten |
 | `--audio-demo` | Demo-Audiosignal benutzen |
 | `--welcome` / `--no-welcome` | Willkommensbildschirm erzwingen oder überspringen |
@@ -316,6 +323,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--frames N` | N Frames mit festen 60 FPS rendern, dann beenden |
 | `--screenshot DATEI.png` | Mit `--frames` das Fenster als PNG speichern |
 | `--dump-output DATEI.png` | Mit `--frames` die Engine-Ausgabe als PNG speichern |
+| `--dump-outputs PRÄFIX` | Mit `--frames` und `--output` jedes geöffnete Ausgabefenster als `PRÄFIX1.png`, `PRÄFIX2.png`, ... speichern |
 
 Nutzerdaten liegen unter Windows in `%APPDATA%\NyrexVJ` und unter Linux in `~/.config/NyrexVJ`: Log, Fensterlayout, Einstellungen, Autosave, `recovery/` und `presets/`. Mit `NYREXVJ_DATA_DIR` lässt sich ein anderer Ordner wählen.
 
@@ -332,6 +340,7 @@ Absturzschutz: Die Sitzung wird alle 30 Sekunden gespeichert, wenn sie sich geä
 - [GLFW](https://www.glfw.org/) (zlib-Lizenz)
 - [Dear ImGui](https://github.com/ocornut/imgui) (MIT)
 - [Spout2](https://github.com/leadedge/Spout2) (BSD 2-Clause), nur Windows
+- NDI (NewTek/Vizrt) wird zur Laufzeit aus der Runtime geladen, die du selbst installierst, und gehört nicht zu NyrexVJ
 - [glad](https://github.com/Dav1dde/glad) generierter OpenGL-Loader (WTFPL oder CC0, dazu Apache-2.0 für die Khronos-Teile)
 - [stb_image_write](https://github.com/nothings/stb) (gemeinfrei oder MIT)
 - [stb_image](https://github.com/nothings/stb) (gemeinfrei oder MIT), liest PNG- und JPEG-Texturen von 3D-Modellen

@@ -26,6 +26,7 @@ struct Options {
     bool checkShaders = false;
     std::string screenshot;
     std::string dumpOutput;
+    std::string dumpOutputs;
     std::string benchScene;
     int benchComp = 0;
     double benchBudget = 0.0;
@@ -50,6 +51,14 @@ Options parseOptions(int argc, char** argv) {
             options.screenshot = argv[++i];
         } else if (arg == "--dump-output" && hasValue) {
             options.dumpOutput = argv[++i];
+        } else if (arg == "--dump-outputs" && hasValue) {
+            options.dumpOutputs = argv[++i];
+        } else if (arg == "--ndi" && hasValue) {
+            options.start.ndiName = argv[++i];
+        } else if (arg == "--output-pattern") {
+            options.start.outputPattern = true;
+        } else if (arg == "--select-output" && hasValue) {
+            options.start.selectOutput = std::atoi(argv[++i]) - 1;
         } else if (arg == "--bench-scene" && hasValue) {
             options.benchScene = argv[++i];
         } else if (arg == "--bench-comp" && hasValue) {
@@ -330,6 +339,10 @@ int main(int argc, char** argv) {
                     nvj::logLine("Screenshot failed");
                     exitCode = 1;
                 }
+            }
+            if (!options.dumpOutputs.empty() && app.dumpOutputs(options.dumpOutputs) == 0) {
+                nvj::logLine("Outputs dump failed");
+                exitCode = 1;
             }
             if (!options.dumpOutput.empty()) {
                 if (saveOutput(options.dumpOutput, app.engine())) {

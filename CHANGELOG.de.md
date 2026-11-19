@@ -1,5 +1,12 @@
 # Änderungsprotokoll
 
+## 0.14.0 - 2026-11-19
+
+- Mehrere Ausgänge: bis zu vier Ausgabefenster, jedes auf einem eigenen Bildschirm, mit eigenem Öffnen, Vollbild und Testbild. Einstellungen, Ausgabe hat für jeden Ausgang einen Reiter. Mit den Standardeinstellungen sieht der erste Ausgang genau so aus wie vorher.
+- Projection Mapping und Verzerrung: Jeder Ausgang zeigt einen frei wählbaren Teil des Bildes (zum Beispiel die linke Hälfte), kann gespiegelt werden, und seine vier Ecken lassen sich in einer Live-Fläche ziehen, damit ein schief stehender Projektor auf eine Wand passt. Ein Verzerrungsraster von 2 x 2 bis 9 x 9 Punkten biegt das Bild über gewölbte oder unebene Flächen.
+- Kantenüberblendung und mehrere Projektoren: weiche Übergänge an den Kanten, wo sich Projektoren überlappen, mit Verlauf, Gamma und Helligkeit. Ausgänge anordnen richtet ein Raster aus bis zu vier Projektoren mit der passenden Überlappung mit einem Klick ein. Das Testbild zeigt Raster, Ecken und Überblendung auf jedem Ausgang.
+- NDI-Ausgabe: Einstellungen, Ausgabe, NDI sendet das Hauptbild über das Netzwerk an OBS, Resolume, vMix und andere Programme. NyrexVJ liefert die NDI-Bibliothek nicht mit, installiere die kostenlosen NDI Tools oder die Runtime. Das Bild wird nur ausgelesen, solange ein Empfänger verbunden ist. Mit einer Ersatz-Bibliothek getestet, noch nicht mit der echten NDI-Runtime, siehe docs/OUTPUTS.md.
+
 ## 0.13.0 - 2026-11-19
 
 - Bild-Clips: Lege .png-, .jpg-, .bmp-, .tga- oder .gif-Dateien in den neuen Medien-Ordner oder ziehe sie auf das NyrexVJ-Fenster, dann erscheinen sie als Clips in der Bibliothek (Filter Medien). PNG und TGA behalten ihre Transparenz, ein Logo mit weichen Kanten liegt also sauber über den Ebenen darunter. Jede Ebene wird jetzt mit Transparenz zusammengesetzt; alle älteren Looks sehen genau so aus wie vorher.

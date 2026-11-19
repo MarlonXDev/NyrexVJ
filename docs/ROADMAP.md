@@ -37,7 +37,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 - Explore a versioned, portable community clip-pack format (working name `.nyxclip`).
 
 ### Professional output (candidate v0.9)
-- Evaluate multi-display output, projection mapping, warping, edge blending, NDI, and stage/VRChat control integration.
+- Multi-display output, projection mapping, warping, edge blending and NDI output landed in v0.14.0, see [OUTPUTS.md](OUTPUTS.md). Real projectors, real multi-monitor fullscreen and the real NDI runtime are untested. Stage/VRChat control integration is still open.
 - Extend Unreal SDK with Blueprint-accessible controls and optional discovery if the prototype succeeds. Not started: no Unreal plugin exists and no public SDK is promised without maintainer approval.
 
 ### Production readiness (candidate v1.0)

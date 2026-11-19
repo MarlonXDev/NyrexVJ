@@ -363,7 +363,7 @@ void testPresetFiles() {
     CHECK(!nvj::loadSettings(settings));
     settings.checkUpdates = false;
     settings.channel = nvj::UpdateChannel::Stable;
-    settings.outputMonitor = 2;
+    settings.outputs[0].monitor = 2;
     settings.autoInstall = false;
     settings.vsync = false;
     settings.openOutputOnStart = true;
@@ -372,7 +372,7 @@ void testPresetFiles() {
     CHECK(nvj::saveSettings(settings));
     nvj::Settings back;
     CHECK(nvj::loadSettings(back));
-    CHECK(!back.checkUpdates && back.channel == nvj::UpdateChannel::Stable && back.outputMonitor == 2);
+    CHECK(!back.checkUpdates && back.channel == nvj::UpdateChannel::Stable && back.outputs[0].monitor == 2);
     CHECK(!back.autoInstall && !back.vsync && back.openOutputOnStart && !back.showStatusBar && back.uiScale == 1.25f);
 
     std::filesystem::remove_all(dir);

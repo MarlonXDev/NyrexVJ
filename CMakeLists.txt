@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.13.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.14.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -128,6 +128,8 @@ set(NYREXVJ_CORE_SOURCES
     src/scene3d/scene_pack.cpp
     src/core/composition.cpp
     src/core/modulation.cpp
+    src/core/output_map.cpp
+    src/core/ndi_sender.cpp
     src/core/edit_history.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
@@ -159,6 +161,9 @@ else()
 endif()
 
 add_library(nvj_core STATIC ${NYREXVJ_CORE_SOURCES})
+if(NOT WIN32)
+    target_link_libraries(nvj_core PUBLIC ${CMAKE_DL_LIBS})
+endif()
 
 option(NYREXVJ_VIDEO "Build video clip support (needs the FFmpeg headers; the FFmpeg libraries are loaded at run time)" ON)
 set(NYREXVJ_FFMPEG_ROOT "" CACHE PATH "Folder with the FFmpeg include directory (headers only are needed)")
@@ -210,6 +215,9 @@ set(NYREXVJ_APP_SOURCES
     src/render/engine.cpp
     src/render/gl_util.cpp
     src/render/output_window.cpp
+    src/render/output_manager.cpp
+    src/render/ndi_output.cpp
+    src/app/ui_outputs.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
     src/render/stb_impl.cpp
@@ -273,6 +281,17 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_media_tests PRIVATE tests)
     target_compile_definitions(nvj_media_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
     add_test(NAME nvj_media_tests COMMAND nvj_media_tests)
+    add_executable(nvj_output_tests tests/test_outputs.cpp)
+    target_link_libraries(nvj_output_tests PRIVATE nvj_core)
+    target_include_directories(nvj_output_tests PRIVATE tests)
+    add_test(NAME nvj_output_tests COMMAND nvj_output_tests)
+    add_library(fake_ndi SHARED tests/fake_ndi.cpp)
+    set_target_properties(fake_ndi PROPERTIES CXX_VISIBILITY_PRESET hidden PREFIX "")
+    add_executable(nvj_ndi_tests tests/test_ndi.cpp)
+    target_link_libraries(nvj_ndi_tests PRIVATE nvj_core fake_ndi)
+    target_include_directories(nvj_ndi_tests PRIVATE tests)
+    target_compile_definitions(nvj_ndi_tests PRIVATE NYREXVJ_FAKE_NDI_PATH="$<TARGET_FILE:fake_ndi>")
+    add_test(NAME nvj_ndi_tests COMMAND nvj_ndi_tests)
     if(WIN32)
         add_executable(nvj_update_tests tests/test_update_replace.cpp)
         target_link_libraries(nvj_update_tests PRIVATE nvj_core)

@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.13.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout output and input, the output window, a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), English and German and the auto-updater work.
+> Status: v0.14.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), English and German and the auto-updater work.
 
 ## Download
 
@@ -111,6 +111,10 @@ Spout is Windows only. The output window (F11) with OBS window capture keeps wor
 ### Spout input
 
 Four clips, Spout Input 1 to 4 (Library filter Spout), show the picture that another program sends through Spout. Put one into a cell, select it and pick the sender in the Clip window, or leave it on Automatic, which takes the first sender that is not NyrexVJ's own output. The picture is fitted into the layer without stretching, goes through the layer effects like any clip, reconnects when the sender comes back and shows a placeholder while there is none. If the image arrives upside down, tick Flip the image vertically. The chosen senders are saved in the program settings. Windows only, on other systems `--spout-test-pattern` adds a test sender for trying it out. Details and the Unreal Engine setup are in [docs/UNREAL.md](docs/UNREAL.md).
+
+## Outputs, mapping and NDI
+
+Settings, Output has a tab for each of up to four output windows. Every output has its own display, picture area, corner handles and warp grid (drag them in the live canvas), edge blending, brightness and a test pattern, and Arrange outputs sets up a grid of overlapping projectors in one click. NDI sends the main picture to OBS, Resolume or vMix over the network; the NDI library is not shipped, install the free NDI Tools. Everything is explained in [docs/OUTPUTS.md](docs/OUTPUTS.md), including what is and is not tested (no real projectors, multi-monitor setup or NDI runtime yet).
 
 ## Clips and effects
 
@@ -226,7 +230,7 @@ NyrexVJ/
 │   ├── audio/      WASAPI capture and loopback, FFT analysis, beat and tempo detection
 │   ├── control/    OSC parser, UDP input and output, OSC sender, MIDI input, learn mapping, control targets
 │   ├── core/       Composition model, presets, settings, i18n, log, SHA-256
-│   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output window, Spout output and input
+│   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output windows with mapping, Spout and NDI output, Spout input
 │   ├── scene3d/    glTF/GLB loader with safety limits, scene model, scene documents and .nyxclip packs, built-in 3D scenes, GLB writer
 │   ├── update/     Update check, installer, changelog parser
 │   ├── platform/   Windows and fallback platform code
@@ -300,7 +304,10 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--switch-deck FRAME:DECK` | With `--frames`, switch to deck DECK (1-based) at that frame |
 | `--dump-at FRAME:FILE.png` | With `--frames`, save the engine output at that frame |
 | `--demo-update STATE` | Show the update card as `available`, `downloading`, `ready` or `later` |
-| `--output` | Open the output window on start |
+| `--output` | Open the output window(s) on start |
+| `--output-pattern` | Show the test pattern on all outputs |
+| `--select-output N` | With `--settings`, show the tab of output N (1 to 4) |
+| `--ndi NAME` | Start the NDI sender with this name |
 | `--lang en\|de` | Start in this language |
 | `--audio-demo` | Use the demo audio signal |
 | `--welcome` / `--no-welcome` | Force or skip the welcome screen |
@@ -316,6 +323,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--frames N` | Run N frames at a fixed 60 FPS step, then exit |
 | `--screenshot FILE.png` | With `--frames`, save the window as PNG |
 | `--dump-output FILE.png` | With `--frames`, save the engine output as PNG |
+| `--dump-outputs PREFIX` | With `--frames` and `--output`, save every open output window as `PREFIX1.png`, `PREFIX2.png`, ... |
 
 User data lives in `%APPDATA%\NyrexVJ` on Windows and `~/.config/NyrexVJ` on Linux: log, window layout, settings, autosave, `recovery/` and `presets/`. Set `NYREXVJ_DATA_DIR` to use another folder.
 
@@ -332,6 +340,7 @@ Crash protection: the session is saved every 30 seconds when it changed, and a r
 - [GLFW](https://www.glfw.org/) (zlib license)
 - [Dear ImGui](https://github.com/ocornut/imgui) (MIT)
 - [Spout2](https://github.com/leadedge/Spout2) (BSD 2-Clause), Windows only
+- NDI (NewTek/Vizrt) is loaded at run time from the runtime you install yourself and is not part of NyrexVJ
 - [glad](https://github.com/Dav1dde/glad) generated OpenGL loader (WTFPL or CC0, plus Apache-2.0 for the Khronos parts)
 - [stb_image_write](https://github.com/nothings/stb) (public domain or MIT)
 - [stb_image](https://github.com/nothings/stb) (public domain or MIT), reads PNG and JPEG textures of 3D models

@@ -1,6 +1,7 @@
 #include "core/settings.hpp"
 
 #include "core/log.hpp"
+#include "core/output_map_json.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -56,9 +57,10 @@ bool loadSettings(Settings& settings) {
     if (channel != doc.end() && channel->is_string()) {
         result.channel = channelFromName(channel->get<std::string>());
     }
+    int legacyMonitor = 0;
     auto monitor = doc.find("outputMonitor");
     if (monitor != doc.end() && monitor->is_number_integer()) {
-        result.outputMonitor = std::max(0, monitor->get<int>());
+        legacyMonitor = std::max(0, monitor->get<int>());
     }
     auto language = doc.find("language");
     if (language != doc.end() && language->is_string()) {
@@ -94,6 +96,11 @@ bool loadSettings(Settings& settings) {
     auto spout = doc.find("spoutEnabled");
     if (spout != doc.end() && spout->is_boolean()) {
         result.spoutEnabled = spout->get<bool>();
+    }
+    result.ndiEnabled = boolean("ndiEnabled", false);
+    auto ndiName = doc.find("ndiName");
+    if (ndiName != doc.end() && ndiName->is_string() && !ndiName->get<std::string>().empty()) {
+        result.ndiName = ndiName->get<std::string>().substr(0, 60);
     }
     auto spoutName = doc.find("spoutName");
     if (spoutName != doc.end() && spoutName->is_string() && !spoutName->get<std::string>().empty()) {
@@ -145,6 +152,15 @@ bool loadSettings(Settings& settings) {
         }
     }
     result.spoutInputFlip = boolean("spoutInputFlip", false);
+    result.outputs = defaultOutputs();
+    result.outputs[0].monitor = legacyMonitor;
+    auto outputs = doc.find("outputs");
+    if (outputs != doc.end() && outputs->is_array()) {
+        for (size_t i = 0; i < outputs->size() && i < result.outputs.size(); ++i) {
+            outputFromJson((*outputs)[i], result.outputs[i]);
+        }
+    }
+    result.outputs[0].enabled = true;
     settings = result;
     return true;
 }
@@ -162,7 +178,7 @@ bool saveSettings(const Settings& settings) {
     doc["uiScale"] = settings.uiScale;
     doc["theme"] = settings.theme;
     doc["channel"] = channelName(settings.channel);
-    doc["outputMonitor"] = settings.outputMonitor;
+    doc["outputMonitor"] = settings.outputs[0].monitor;
     doc["language"] = settings.language;
     doc["lastSeenVersion"] = settings.lastSeenVersion;
     doc["audioDevice"] = settings.audioDevice;
@@ -172,6 +188,8 @@ bool saveSettings(const Settings& settings) {
     doc["audioSyncBpm"] = settings.audioSyncBpm;
     doc["spoutEnabled"] = settings.spoutEnabled;
     doc["spoutName"] = settings.spoutName;
+    doc["ndiEnabled"] = settings.ndiEnabled;
+    doc["ndiName"] = settings.ndiName;
     doc["oscEnabled"] = settings.oscEnabled;
     doc["oscPort"] = settings.oscPort;
     doc["oscAllowRemote"] = settings.oscAllowRemote;
@@ -188,6 +206,11 @@ bool saveSettings(const Settings& settings) {
     doc["oscOutParams"] = params;
     doc["spoutInputs"] = nlohmann::json(settings.spoutInputs);
     doc["spoutInputFlip"] = settings.spoutInputFlip;
+    nlohmann::json outputs = nlohmann::json::array();
+    for (const OutputSpec& spec : settings.outputs) {
+        outputs.push_back(outputToJson(spec));
+    }
+    doc["outputs"] = outputs;
     std::ofstream file(settingsPath(), std::ios::binary | std::ios::trunc);
     if (!file) {
         return false;

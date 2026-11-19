@@ -38,7 +38,7 @@ void App::drawWelcome() {
     ImGui::SameLine(ImGui::GetWindowWidth() - 190.0f);
     ImGui::SetNextItemWidth(160.0f);
     if (ImGui::BeginCombo("##welcomeLanguage", languageLabel(currentLanguage()))) {
-        for (int i = 0; i < kLanguageCount; ++i) {
+        for (int i = 0; i < languageCount(); ++i) {
             Language language = static_cast<Language>(i);
             if (ImGui::Selectable(languageLabel(language), currentLanguage() == language)) {
                 setLanguageAndSave(language);

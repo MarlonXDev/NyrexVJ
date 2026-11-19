@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.15.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), English and German and the auto-updater work.
+> Status: v0.16.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), your own shader clips from files, English, German, Spanish, French and your own languages and the auto-updater work.
 
 ## Download
 
@@ -36,7 +36,8 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 - **Your own 3D models.** Drop .glb or .gltf files into the models folder and play them like any clip, with textures, animation and audio reaction.
 - **Clip Creator.** Build your own 3D scenes from shapes, models and lights, let everything move with the music and save them as portable .nyxclip files.
 - **Settings window.** One place for audio, output, Spout, updates, language and interface size, plus a status bar that shows FPS, tempo, deck and audio at a glance.
-- **English and German.** English is the default, switch any time under Help, Language.
+- **Your own shader clips.** Drop a .glsl, .frag or .fs file (your own or from Shadertoy) into the shaders folder and it becomes a clip. See [docs/SHADERS.md](docs/SHADERS.md).
+- **English, German, Spanish and French.** English is the default, switch any time under Help, Language. You can add your own language with a small .json file, see [docs/LANGUAGES.md](docs/LANGUAGES.md).
 - **Welcome screen.** Shown on the first start and after every update, with everything that is new.
 - **Self-updating.** Checks GitHub on start, verifies the SHA-256 sum and shows a small card at the top right with Restart now or Later.
 
@@ -134,6 +135,10 @@ Every layer has four effect slots, and so does the master.
 
 The effect gallery shows each effect with default settings on the Plasma clip (Duotone on Mandelbrot and Line Art on Crystal Cavern, because Plasma has almost no brightness contrast).
 
+## Your own shader clips
+
+Any fragment shader can become a clip. Put a `.glsl`, `.frag` or `.fs` file into the shaders folder (Library, Open shaders folder, or drag the file onto the window) and it shows up in the Library as `Shader: file name`, filter Shaders. It works like every other clip: Speed, Scale, colours, effects, audio, LFOs and macros all apply. A saved change reloads it while it plays, and a compile error shows in the Clip window with the line number of your file. Library, Create example shader writes a small shader to start from. NyrexVJ style (`void main()`) and Shadertoy style (`mainImage`) are found automatically, the uniforms, helpers and limits are in [docs/SHADERS.md](docs/SHADERS.md). Two examples are in `docs/shaders/`.
+
 ## 3D models
 
 Besides shader clips there are clips that draw real 3D meshes: Torus Knot Mesh, Crystal Cluster Mesh, Orbit Rings Mesh, Chrome Orbs Mesh, Neon Cubes Mesh, Gold Knot Mesh and Pulse Columns Mesh. They sit in the Library tab like every other clip, follow the layer colours, speed and scale, pulse with bass and kick and go through the same effects.
@@ -212,7 +217,9 @@ Settings, Control, OSC output, tick Send OSC data. NyrexVJ then sends to `127.0.
 
 ## Languages
 
-English is the default. German is built in. Change it under Settings, General, under Help, Language or on the welcome screen, the choice is saved. Clip and effect names stay in English so they match what other VJ programs call them. A new language needs a translation table next to `src/core/i18n_de.cpp` and an entry in `src/core/i18n.cpp`.
+English is the default. German, Spanish and French are built in. Change it under Settings, General, under Help, Language or on the welcome screen, the choice is saved. Spanish and French were translated with machine help and are not reviewed by native speakers yet, corrections are welcome. Clip and effect names stay in English so they match what other VJ programs call them.
+
+Your own language is a `.json` file in the `languages` folder: Settings, General, Export translation template writes a file with every text, you translate what you want (texts you leave out stay English) and press Reload languages. The font shows Latin letters only. Everything is explained in [docs/LANGUAGES.md](docs/LANGUAGES.md).
 
 ## Auto-update
 
@@ -277,7 +284,7 @@ python scripts/check_i18n.py
 NyrexVJ --check-shaders
 ```
 
-`check_i18n.py` makes sure every UI string has a German translation. `--check-shaders` compiles every clip and effect and exits with code 1 on any failure. CI runs all of it on every push.
+`check_i18n.py` makes sure every UI string has a German translation and that the Spanish and French tables match the German one. `--check-shaders` compiles every clip and effect and exits with code 1 on any failure. CI runs all of it on every push.
 
 ## Releasing
 
@@ -312,7 +319,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--output-pattern` | Show the test pattern on all outputs |
 | `--select-output N` | With `--settings`, show the tab of output N (1 to 4) |
 | `--ndi NAME` | Start the NDI sender with this name |
-| `--lang en\|de` | Start in this language |
+| `--lang CODE` | Start in this language: `en`, `de`, `es`, `fr` or the code of a language file |
 | `--audio-demo` | Use the demo audio signal |
 | `--welcome` / `--no-welcome` | Force or skip the welcome screen |
 | `--fresh` | Ignore the saved session |
@@ -335,9 +342,7 @@ Crash protection: the session is saved every 30 seconds when it changed, and a r
 
 ## Roadmap
 
-- DMX strip output for VRSL
-- Custom shader clips loaded from files
-- More languages
+Everything that was listed here has shipped. Open ideas and their status are in [docs/ROADMAP.md](docs/ROADMAP.md) and in the GitHub issues.
 
 ## Third-party software
 

@@ -67,6 +67,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     oscOverridePort_ = options.oscPort;
     control_.loadBindings();
     control_.refreshMidiDevices();
+    loadUserLanguages(userLanguageDirectory());
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
 
     {
@@ -797,7 +798,7 @@ void App::drawMenuBar() {
         }
         ImGui::Separator();
         if (ImGui::BeginMenu(tr("Language"))) {
-            for (int i = 0; i < kLanguageCount; ++i) {
+            for (int i = 0; i < languageCount(); ++i) {
                 Language language = static_cast<Language>(i);
                 if (ImGui::MenuItem(languageLabel(language), nullptr, currentLanguage() == language)) {
                     setLanguageAndSave(language);

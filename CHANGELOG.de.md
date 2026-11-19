@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.16.0 - 2026-11-19
+
+- Shader-Clips aus Dateien: Lege .glsl-, .frag- oder .fs-Dateien in den neuen Shader-Ordner (oder ziehe sie auf das Fenster), dann erscheinen sie als Clips in der Bibliothek (Filter Shader). Beide Stile funktionieren und werden automatisch erkannt: der NyrexVJ-Stil mit void main() und der Shadertoy-Stil mit mainImage. Eine gespeicherte Änderung lädt den Shader und sein Vorschaubild neu, während er läuft, ein Kompilierfehler erscheint mit der Zeilennummer deiner Datei im Clip-Fenster, und Beispiel-Shader erstellen schreibt einen funktionierenden Startpunkt. Siehe docs/SHADERS.md.
+- Spanisch und Französisch: Beide sind eingebaut (Einstellungen, Allgemein, Hilfe, Sprache und der Willkommensbildschirm). Sie wurden mit maschineller Hilfe übersetzt und noch nicht von Muttersprachlern geprüft, Korrekturen sind auf GitHub willkommen. Clip- und Effektnamen bleiben Englisch, und das Änderungsprotokoll im Willkommensbildschirm erscheint auf Englisch, außer auf Deutsch.
+- Eigene Sprachen: Lege eine .json-Datei in den neuen Sprachordner und drücke Sprachen neu laden, dann erscheint die Sprache in jeder Sprachliste. Übersetzungsvorlage exportieren schreibt eine Datei mit allen Texten zum Loslegen, und Texte, die du weglässt, bleiben Englisch. Die eingebaute Schrift zeigt nur lateinische Buchstaben, andere Schriften sind deshalb noch nicht möglich. Siehe docs/LANGUAGES.md.
+
 ## 0.15.0 - 2026-11-19
 
 - Bühnensteuerung: Die neue Einstellungsseite Bühne macht aus Reglern DMX. Jeder Kanal (Universum 1 bis 4, Kanal 1 bis 512, wahlweise 16 Bit) folgt einem festen Wert oder einer beliebigen Modulationsquelle: einem Audioband, einem LFO, einem Makro, dem Beat oder dem Takt. Dieselben Quellen, die einen Effekt bewegen, bewegen so auch ein Licht. Testmuster (alles an, Rampe, Lauflicht) prüfen den Aufbau.

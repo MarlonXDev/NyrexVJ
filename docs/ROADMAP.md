@@ -44,10 +44,10 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 - Reliability, performance regression tests, crash recovery, project compatibility, documentation, and release quality. Crash recovery (session marker, rotating autosaves, crash report, recovery dialog) and the performance benchmark landed in v0.11.0.
 
 ## Already listed in the README roadmap
-- Video clips via FFmpeg (H.264/HAP).
-- DMX strip output for VRSL.
-- Custom shader clips loaded from files.
-- More languages.
+- Video clips via FFmpeg (H.264/HAP): landed in v0.13.0, see [MEDIA.md](MEDIA.md).
+- DMX strip output for VRSL: landed in v0.15.0, see [DMX.md](DMX.md).
+- Custom shader clips loaded from files: landed in v0.16.0, see [SHADERS.md](SHADERS.md).
+- More languages: Spanish and French plus your own language files landed in v0.16.0, see [LANGUAGES.md](LANGUAGES.md). The Spanish and French texts are machine assisted and not reviewed by native speakers, and scripts beyond Latin-1 need a font that is not built yet.
 
 These existing commitments/ideas should be reconciled with the proposed milestones by maintainers, not silently replaced.
 

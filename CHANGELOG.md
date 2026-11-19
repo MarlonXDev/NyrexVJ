@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0 - 2026-11-19
+
+- Shader clips from files: put .glsl, .frag or .fs files into the new shaders folder (or drag them onto the window) and they appear in the Library as clips (filter Shaders). Both styles work and are found automatically: NyrexVJ style with void main() and Shadertoy style with mainImage. A saved change reloads the shader and its thumbnail while it plays, a compile error shows with the line number of your file in the Clip window, and Create example shader writes a working starting point. See docs/SHADERS.md.
+- Spanish and French: both are built in (Settings, General, Help, Language and the welcome screen). They were translated with machine help and are not reviewed by native speakers yet, so corrections are welcome on GitHub. Clip and effect names stay in English, and the changelog on the welcome screen is shown in English except for German.
+- Your own languages: put a .json file into the new languages folder, press Reload languages, and the language shows up in every language list. Export translation template writes a file with every text to start from, and texts you leave out stay English. The built-in font only shows Latin letters, so other scripts are not possible yet. See docs/LANGUAGES.md.
+
 ## 0.15.0 - 2026-11-19
 
 - Stage control: the new Settings page Stage turns controls into DMX. Every channel (universe 1 to 4, channel 1 to 512, optional 16 bit) follows a fixed value or any modulation source: an audio band, an LFO, a macro, the beat or the bar, so the same sources that move an effect can move a light. Test patterns (all on, ramp, chase) check the setup.

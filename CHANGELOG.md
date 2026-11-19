@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0 - 2026-11-19
+
+- Stage control: the new Settings page Stage turns controls into DMX. Every channel (universe 1 to 4, channel 1 to 512, optional 16 bit) follows a fixed value or any modulation source: an audio band, an LFO, a macro, the beat or the bar, so the same sources that move an effect can move a light. Test patterns (all on, ramp, chase) check the setup.
+- Art-Net output sends the channels as ArtDmx to HNode, QLC+ or a lighting console, with address, port, net, first universe and a rate of up to 44 packets per second. VRChat avatar parameters send floats, ints and bools to VRChat over OSC as /avatar/parameters/<name>.
+- DMX strip in the video: the channels can also be drawn as a 120 x 13 grid of grey blocks at the top or bottom edge of the output picture (1920 x 208 pixels at 1080p), which Spout, NDI and the output windows carry, so VRSL in VRChat can read them from the stream. The channel to block order is not yet checked against a real VRSL world or HNode, and nothing was tried with a real Art-Net node or VRChat, see docs/DMX.md.
+
 ## 0.14.0 - 2026-11-19
 
 - Several outputs: up to four output windows, each on its own display, with its own Open, Fullscreen and Test pattern. Settings, Output has a tab per output. With the default settings the first output looks exactly as before.

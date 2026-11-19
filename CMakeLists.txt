@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.14.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.15.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -130,6 +130,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/modulation.cpp
     src/core/output_map.cpp
     src/core/ndi_sender.cpp
+    src/core/stage.cpp
+    src/core/stage_json.cpp
     src/core/edit_history.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
@@ -150,6 +152,7 @@ set(NYREXVJ_CORE_SOURCES
     src/control/midi_map.cpp
     src/control/osc.cpp
     src/control/osc_out.cpp
+    src/control/stage_out.cpp
     src/update/update_logic.cpp
     src/update/updater.cpp
 )
@@ -217,7 +220,9 @@ set(NYREXVJ_APP_SOURCES
     src/render/output_window.cpp
     src/render/output_manager.cpp
     src/render/ndi_output.cpp
+    src/render/dmx_strip.cpp
     src/app/ui_outputs.cpp
+    src/app/ui_stage.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
     src/render/stb_impl.cpp
@@ -292,6 +297,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_ndi_tests PRIVATE tests)
     target_compile_definitions(nvj_ndi_tests PRIVATE NYREXVJ_FAKE_NDI_PATH="$<TARGET_FILE:fake_ndi>")
     add_test(NAME nvj_ndi_tests COMMAND nvj_ndi_tests)
+    add_executable(nvj_stage_tests tests/test_stage.cpp)
+    target_link_libraries(nvj_stage_tests PRIVATE nvj_core)
+    target_include_directories(nvj_stage_tests PRIVATE tests)
+    add_test(NAME nvj_stage_tests COMMAND nvj_stage_tests)
     if(WIN32)
         add_executable(nvj_update_tests tests/test_update_replace.cpp)
         target_link_libraries(nvj_update_tests PRIVATE nvj_core)

@@ -77,6 +77,8 @@ bool UdpSocket::connectTo(const std::string& host, int port, std::string& error)
     }
     const int flags = ::fcntl(handle, F_GETFL, 0);
     ::fcntl(handle, F_SETFL, flags | O_NONBLOCK);
+    const int broadcast = 1;
+    ::setsockopt(handle, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
     impl_->handle = handle;
     impl_->target = address;
     impl_->hasTarget = true;

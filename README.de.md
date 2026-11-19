@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.14.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264 und HAP, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), Englisch und Deutsch sowie der Auto-Updater funktionieren.
+> Stand: v0.15.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264 und HAP, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), Englisch und Deutsch sowie der Auto-Updater funktionieren.
 
 ## Download
 
@@ -115,6 +115,10 @@ Vier Clips, Spout Input 1 bis 4 (Bibliotheksfilter Spout), zeigen das Bild, das 
 ## Ausgänge, Mapping und NDI
 
 Einstellungen, Ausgabe hat für jedes der bis zu vier Ausgabefenster einen Reiter. Jeder Ausgang hat einen eigenen Bildschirm, Bildausschnitt, Eckpunkte und ein Verzerrungsraster (in der Live-Fläche ziehen), Kantenüberblendung, Helligkeit und ein Testbild, und Ausgänge anordnen richtet ein Raster aus überlappenden Projektoren mit einem Klick ein. NDI sendet das Hauptbild über das Netzwerk an OBS, Resolume oder vMix; die NDI-Bibliothek wird nicht mitgeliefert, installiere die kostenlosen NDI Tools. Alles steht in [docs/OUTPUTS.md](docs/OUTPUTS.md) (englisch), auch was getestet ist und was nicht (noch keine echten Projektoren, kein Mehrmonitor-Aufbau und keine echte NDI-Runtime).
+
+## Bühnensteuerung: DMX, VRSL-Streifen und VRChat
+
+Einstellungen, Bühne macht aus jedem Regler DMX. Jeder Kanal folgt einem festen Wert oder einer Modulationsquelle (Audioband, LFO, Makro, Beat, Takt). Die Kanäle gehen als Art-Net hinaus (für HNode, QLC+ oder ein Lichtpult), lassen sich für VRSL als Streifen aus 120 x 13 Blöcken ins Ausgabevideo zeichnen, und VRChat-Avatar-Parameter werden per OSC gesendet. Testmuster helfen beim Prüfen des Aufbaus. Die Zuordnung von Kanal zu Block im Streifen folgt der öffentlichen VRSL-Beschreibung, ist aber noch nicht an einer echten VRSL-Welt geprüft, und mit echten Art-Net-Geräten oder VRChat wurde noch nichts ausprobiert, siehe [docs/DMX.md](docs/DMX.md).
 
 ## Clips und Effekte
 
@@ -228,9 +232,9 @@ NyrexVJ/
 ├── src/
 │   ├── app/        Dear-ImGui-Oberfläche: Deck, Panels, Browser, Einstellungsfenster, Statusleiste, Update-Karte, Willkommensbildschirm, Theme
 │   ├── audio/      WASAPI-Aufnahme und Loopback, FFT-Analyse, Beat- und Tempo-Erkennung
-│   ├── control/    OSC-Parser, UDP-Eingang und -Ausgang, OSC-Sender, MIDI-Eingang, Lern-Zuordnung, Steuerziele
+│   ├── control/    OSC-Parser, UDP-Eingang und -Ausgang, OSC-Sender, Art-Net- und VRChat-Sender, MIDI-Eingang, Lern-Zuordnung, Steuerziele
 │   ├── core/       Kompositionsmodell, Presets, Einstellungen, i18n, Log, SHA-256
-│   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, 3D-Szenen-Player, Ausgabefenster mit Mapping, Spout- und NDI-Ausgabe, Spout-Eingang
+│   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, 3D-Szenen-Player, Ausgabefenster mit Mapping, Spout- und NDI-Ausgabe, DMX-Streifen, Spout-Eingang
 │   ├── scene3d/    glTF/GLB-Lader mit Sicherheitsgrenzen, Szenenmodell, Szenendokumente und .nyxclip-Pakete, eingebaute 3D-Szenen, GLB-Schreiber
 │   ├── update/     Update-Prüfung, Installer, Changelog-Parser
 │   ├── platform/   Windows- und Ersatz-Plattformcode
@@ -294,7 +298,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--select-layer N` | Ebene N (ab 1) auswählen |
 | `--resolution IDX` | Index der Ausgabeauflösung |
 | `--tab IDX` | Anzuzeigender Browser-Tab (0 Presets, 1 Bibliothek, 2 Audio) |
-| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 8, 4 ist Steuerung) |
+| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 9, 4 ist Steuerung, 5 ist Stage) |
 | `--osc-port N` | OSC auf Port N empfangen, auch wenn es in den Einstellungen aus ist |
 | `--spout-test-pattern` | Einen falschen Spout-Sender namens Test Pattern anbieten (zum Ausprobieren des Spout-Eingangs ohne Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | Mit `--frames` in diesem Frame eine MIDI-Nachricht an die Zuordnungen schicken |

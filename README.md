@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.14.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), English and German and the auto-updater work.
+> Status: v0.15.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), English and German and the auto-updater work.
 
 ## Download
 
@@ -115,6 +115,10 @@ Four clips, Spout Input 1 to 4 (Library filter Spout), show the picture that ano
 ## Outputs, mapping and NDI
 
 Settings, Output has a tab for each of up to four output windows. Every output has its own display, picture area, corner handles and warp grid (drag them in the live canvas), edge blending, brightness and a test pattern, and Arrange outputs sets up a grid of overlapping projectors in one click. NDI sends the main picture to OBS, Resolume or vMix over the network; the NDI library is not shipped, install the free NDI Tools. Everything is explained in [docs/OUTPUTS.md](docs/OUTPUTS.md), including what is and is not tested (no real projectors, multi-monitor setup or NDI runtime yet).
+
+## Stage control: DMX, VRSL strip and VRChat
+
+Settings, Stage turns any control into DMX. Each channel follows a fixed value or a modulation source (audio band, LFO, macro, beat, bar). The channels go out as Art-Net (for HNode, QLC+ or a lighting console), can be drawn as a 120 x 13 block strip into the output video for VRSL, and VRChat avatar parameters are sent over OSC. Test patterns help to check the setup. The channel to block order of the strip follows the public VRSL description but is not yet verified against a real VRSL world, and nothing was tried with real Art-Net nodes or VRChat yet, see [docs/DMX.md](docs/DMX.md).
 
 ## Clips and effects
 
@@ -228,9 +232,9 @@ NyrexVJ/
 ├── src/
 │   ├── app/        Dear ImGui interface: deck, panels, browser, settings window, status bar, update card, welcome screen, theme
 │   ├── audio/      WASAPI capture and loopback, FFT analysis, beat and tempo detection
-│   ├── control/    OSC parser, UDP input and output, OSC sender, MIDI input, learn mapping, control targets
+│   ├── control/    OSC parser, UDP input and output, OSC sender, Art-Net and VRChat sender, MIDI input, learn mapping, control targets
 │   ├── core/       Composition model, presets, settings, i18n, log, SHA-256
-│   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output windows with mapping, Spout and NDI output, Spout input
+│   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output windows with mapping, Spout and NDI output, DMX strip, Spout input
 │   ├── scene3d/    glTF/GLB loader with safety limits, scene model, scene documents and .nyxclip packs, built-in 3D scenes, GLB writer
 │   ├── update/     Update check, installer, changelog parser
 │   ├── platform/   Windows and fallback platform code
@@ -294,7 +298,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--select-layer N` | Select layer N (1-based) |
 | `--resolution IDX` | Output resolution index |
 | `--tab IDX` | Browser tab to show (0 Presets, 1 Library, 2 Audio) |
-| `--settings IDX` | Open the settings window on page IDX (0 to 8, 4 is Control) |
+| `--settings IDX` | Open the settings window on page IDX (0 to 9, 4 is Control, 5 is Stage) |
 | `--osc-port N` | Listen for OSC on port N even if it is switched off in the settings |
 | `--spout-test-pattern` | Offer a fake Spout sender called Test Pattern (for trying the Spout input without Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | With `--frames`, feed a MIDI message to the mappings at that frame |

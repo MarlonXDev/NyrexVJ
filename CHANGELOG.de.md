@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.15.0 - 2026-11-19
+
+- Bühnensteuerung: Die neue Einstellungsseite Bühne macht aus Reglern DMX. Jeder Kanal (Universum 1 bis 4, Kanal 1 bis 512, wahlweise 16 Bit) folgt einem festen Wert oder einer beliebigen Modulationsquelle: einem Audioband, einem LFO, einem Makro, dem Beat oder dem Takt. Dieselben Quellen, die einen Effekt bewegen, bewegen so auch ein Licht. Testmuster (alles an, Rampe, Lauflicht) prüfen den Aufbau.
+- Die Art-Net-Ausgabe sendet die Kanäle als ArtDmx an HNode, QLC+ oder ein Lichtpult, mit Adresse, Port, Net, erstem Universum und bis zu 44 Paketen pro Sekunde. Die VRChat-Avatar-Parameter schicken Float-, Int- und Bool-Werte per OSC als /avatar/parameters/<name> an VRChat.
+- DMX-Streifen im Video: Die Kanäle lassen sich auch als Raster aus 120 x 13 grauen Blöcken am oberen oder unteren Rand des Ausgabebildes zeichnen (bei 1080p 1920 x 208 Pixel). Spout, NDI und die Ausgabefenster tragen ihn mit, damit VRSL in VRChat ihn aus dem Stream lesen kann. Die Zuordnung von Kanal zu Block ist noch nicht an einer echten VRSL-Welt oder an HNode geprüft, und mit einem echten Art-Net-Gerät oder VRChat wurde nichts ausprobiert, siehe docs/DMX.md.
+
 ## 0.14.0 - 2026-11-19
 
 - Mehrere Ausgänge: bis zu vier Ausgabefenster, jedes auf einem eigenen Bildschirm, mit eigenem Öffnen, Vollbild und Testbild. Einstellungen, Ausgabe hat für jeden Ausgang einen Reiter. Mit den Standardeinstellungen sieht der erste Ausgang genau so aus wie vorher.

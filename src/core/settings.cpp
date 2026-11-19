@@ -2,6 +2,7 @@
 
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
+#include "core/stage_json.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -161,6 +162,14 @@ bool loadSettings(Settings& settings) {
         }
     }
     result.outputs[0].enabled = true;
+    auto dmx = doc.find("dmx");
+    if (dmx != doc.end()) {
+        dmxFromJson(*dmx, result.dmx);
+    }
+    auto vrchat = doc.find("vrchat");
+    if (vrchat != doc.end()) {
+        vrchatFromJson(*vrchat, result.vrchat);
+    }
     settings = result;
     return true;
 }
@@ -211,6 +220,8 @@ bool saveSettings(const Settings& settings) {
         outputs.push_back(outputToJson(spec));
     }
     doc["outputs"] = outputs;
+    doc["dmx"] = dmxToJson(settings.dmx);
+    doc["vrchat"] = vrchatToJson(settings.vrchat);
     std::ofstream file(settingsPath(), std::ios::binary | std::ios::trunc);
     if (!file) {
         return false;

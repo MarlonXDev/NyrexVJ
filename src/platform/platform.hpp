@@ -30,6 +30,8 @@ bool openUrl(const std::string& url);
 bool openFolder(const std::string& path);
 size_t processMemoryBytes();
 double processCpuSeconds();
+void sleepPrecise(double seconds);
+void setCurrentThreadBackground(bool background);
 unsigned long currentProcessId();
 bool processAlive(unsigned long pid);
 

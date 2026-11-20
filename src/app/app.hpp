@@ -87,6 +87,7 @@ public:
     bool wantsRestart() const { return restart_; }
     int dumpOutputs(const std::string& prefix);
     bool wantsVsync() const { return settings_.vsync; }
+    int fpsLimit() const { return settings_.fpsLimit; }
 
 private:
     void buildLayout(ImGuiID dock);
@@ -117,6 +118,7 @@ private:
     bool creatorSave(bool copy, bool useAsClip);
     void undoEdit();
     void drawPerformancePage();
+    void drawFrameRateLimit();
     void redoEdit();
     void drawCreator();
     void shutdownCreator();

@@ -945,6 +945,9 @@ const Translation kSpanish[] = {
     {"Languages loaded: ", "Idiomas cargados: "},
     {"Skipped: ", "Omitido: "},
     {"texts skipped (characters the font cannot show)", "textos omitidos (caracteres que la fuente no puede mostrar)"},
+    {"Frame rate limit", "Límite de fotogramas"},
+    {"Unlimited", "Sin límite"},
+    {"Caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat.", "Limita cuántas veces dibuja el programa un fotograma, con o sin VSync. Un límite más bajo deja más tiempo de gráficos y de procesador a VRChat."},
 };
 
 }

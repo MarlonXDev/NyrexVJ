@@ -136,6 +136,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/stage.cpp
     src/core/stage_json.cpp
     src/core/edit_history.cpp
+    src/core/frame_pacer.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
     src/media/media_image.cpp

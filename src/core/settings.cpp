@@ -1,5 +1,6 @@
 #include "core/settings.hpp"
 
+#include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
 #include "core/stage_json.hpp"
@@ -47,6 +48,10 @@ bool loadSettings(Settings& settings) {
     };
     result.autoInstall = boolean("autoInstall", true);
     result.vsync = boolean("vsync", true);
+    auto fpsLimit = doc.find("fpsLimit");
+    if (fpsLimit != doc.end() && fpsLimit->is_number_integer()) {
+        result.fpsLimit = clampFpsLimit(fpsLimit->get<int>());
+    }
     result.openOutputOnStart = boolean("openOutputOnStart", false);
     result.showStatusBar = boolean("showStatusBar", true);
     result.showTimings = boolean("showTimings", true);
@@ -180,6 +185,7 @@ bool saveSettings(const Settings& settings) {
     doc["restoreSession"] = settings.restoreSession;
     doc["autoInstall"] = settings.autoInstall;
     doc["vsync"] = settings.vsync;
+    doc["fpsLimit"] = settings.fpsLimit;
     doc["openOutputOnStart"] = settings.openOutputOnStart;
     doc["showStatusBar"] = settings.showStatusBar;
     doc["showTimings"] = settings.showTimings;

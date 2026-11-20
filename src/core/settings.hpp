@@ -22,6 +22,7 @@ struct Settings {
     bool restoreSession = true;
     bool autoInstall = true;
     bool vsync = true;
+    int fpsLimit = 60;
     bool openOutputOnStart = false;
     bool showStatusBar = true;
     int perfBudgetFps = 60;

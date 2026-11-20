@@ -945,6 +945,9 @@ const Translation kGerman[] = {
     {"Languages loaded: ", "Sprachen geladen: "},
     {"Skipped: ", "Übersprungen: "},
     {"texts skipped (characters the font cannot show)", "Texte übersprungen (Zeichen, die die Schrift nicht darstellen kann)"},
+    {"Frame rate limit", "Bildratenbegrenzung"},
+    {"Unlimited", "Unbegrenzt"},
+    {"Caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat.", "Begrenzt, wie oft das Programm ein Bild zeichnet, mit oder ohne VSync. Eine niedrigere Grenze lässt VRChat mehr Grafik- und Prozessorzeit."},
 };
 
 }

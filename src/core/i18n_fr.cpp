@@ -945,6 +945,9 @@ const Translation kFrench[] = {
     {"Languages loaded: ", "Langues chargées : "},
     {"Skipped: ", "Ignoré : "},
     {"texts skipped (characters the font cannot show)", "textes ignorés (caractères que la police ne peut pas afficher)"},
+    {"Frame rate limit", "Limite d'images"},
+    {"Unlimited", "Illimité"},
+    {"Caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat.", "Limite le nombre d'images dessinées par le programme, avec ou sans VSync. Une limite plus basse laisse plus de temps graphique et processeur à VRChat."},
 };
 
 }

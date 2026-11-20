@@ -2,6 +2,8 @@
 #include "render/clip_library.hpp"
 #include "core/composition.hpp"
 #include "core/edit_history.hpp"
+#include "core/frame_pacer.hpp"
+#include "platform/platform.hpp"
 #include "core/frame_stats.hpp"
 #include "core/modulation.hpp"
 #include "core/novelty.hpp"
@@ -715,6 +717,73 @@ void testBlendModes() {
     }
 }
 
+void testFramePacer() {
+    CHECK(nvj::clampFpsLimit(0) == 0);
+    CHECK(nvj::clampFpsLimit(-5) == 0);
+    CHECK(nvj::clampFpsLimit(30) == 30);
+    CHECK(nvj::clampFpsLimit(59) == 60);
+    CHECK(nvj::clampFpsLimit(100) == 90);
+    CHECK(nvj::clampFpsLimit(500) == 144);
+    CHECK(nvj::clampFpsLimit(1) == 30);
+    CHECK(nvj::fpsLimitIndex(0) == 5);
+    CHECK(nvj::fpsLimitIndex(144) == 4);
+    CHECK(nvj::fpsLimitIndex(60) == 1);
+
+    nvj::FramePacer unlimited;
+    CHECK(!unlimited.limited());
+    CHECK(unlimited.nextDeadline(5.0) == 5.0);
+    CHECK(unlimited.nextDeadline(5.5) == 5.5);
+
+    nvj::FramePacer pacer;
+    pacer.setTargetFps(60);
+    CHECK(pacer.limited() && pacer.targetFps() == 60);
+    CHECK(std::fabs(pacer.period() - 1.0 / 60.0) < 1e-12);
+    double previous = pacer.nextDeadline(10.0);
+    CHECK(std::fabs(previous - (10.0 + 1.0 / 60.0)) < 1e-9);
+    for (int i = 0; i < 200; ++i) {
+        const double next = pacer.nextDeadline(previous - 0.004 + 0.0007 * static_cast<double>(i % 3));
+        CHECK(std::fabs((next - previous) - 1.0 / 60.0) < 1e-9);
+        previous = next;
+    }
+
+    nvj::FramePacer late;
+    late.setTargetFps(120);
+    const double first = late.nextDeadline(1.0);
+    const double slow = late.nextDeadline(first + 0.080);
+    CHECK(slow == first + 0.080);
+    const double after = late.nextDeadline(slow + 0.001);
+    CHECK(std::fabs(after - (slow + 1.0 / 120.0)) < 1e-9);
+    for (int i = 0; i < 20; ++i) {
+        CHECK(late.nextDeadline(after) >= after);
+    }
+
+    nvj::FramePacer change;
+    change.setTargetFps(30);
+    const double start = change.nextDeadline(2.0);
+    change.setTargetFps(30);
+    CHECK(std::fabs(change.nextDeadline(start - 0.01) - (start + 1.0 / 30.0)) < 1e-9);
+    change.setTargetFps(144);
+    CHECK(std::fabs(change.nextDeadline(7.0) - (7.0 + 1.0 / 144.0)) < 1e-9);
+    change.setTargetFps(0);
+    CHECK(!change.limited());
+    CHECK(change.nextDeadline(9.0) == 9.0);
+
+    nvj::FramePacer live;
+    live.setTargetFps(120);
+    const auto begin = std::chrono::steady_clock::now();
+    constexpr int kFrames = 60;
+    for (int i = 0; i < kFrames; ++i) {
+        const double current = std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count();
+        const double deadline = live.nextDeadline(current);
+        if (deadline > current) {
+            nvj::platform::sleepPrecise(deadline - current);
+        }
+    }
+    const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count();
+    CHECK(elapsed >= static_cast<double>(kFrames) / 120.0 * 0.999);
+    CHECK(elapsed <= static_cast<double>(kFrames) / 120.0 * 1.4);
+}
+
 void testFrameStats() {
     nvj::FrameStats empty(8);
     CHECK(empty.size() == 0);
@@ -1057,6 +1126,7 @@ int main() {
     testPresets();
     testBlendModes();
     testFrameStats();
+    testFramePacer();
     testRenderCost();
     testEditHistory();
     testModulation();

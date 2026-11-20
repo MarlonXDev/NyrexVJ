@@ -2,6 +2,7 @@
 
 #include "app/theme.hpp"
 #include "app/ui_common.hpp"
+#include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 #include "update/update_logic.hpp"
@@ -308,6 +309,7 @@ void App::drawSettingsPage(int page) {
             persist();
         }
         ImGui::SetItemTooltip("%s", tr("Turn this off to let the program render as fast as possible."));
+        drawFrameRateLimit();
         drawSpoutControls();
         drawNdiControls();
     } else if (page == SettingsControl) {
@@ -539,9 +541,41 @@ void App::drawUpdateCard() {
     }
 }
 
+void App::drawFrameRateLimit() {
+    char current[32];
+    if (settings_.fpsLimit > 0) {
+        std::snprintf(current, sizeof(current), "%d FPS", settings_.fpsLimit);
+    } else {
+        std::snprintf(current, sizeof(current), "%s", tr("Unlimited"));
+    }
+    ImGui::SetNextItemWidth(220.0f);
+    if (ImGui::BeginCombo(trId("Frame rate limit", "optFpsLimit"), current)) {
+        for (const int fps : kFpsLimits) {
+            char label[32];
+            if (fps > 0) {
+                std::snprintf(label, sizeof(label), "%d FPS", fps);
+            } else {
+                std::snprintf(label, sizeof(label), "%s", tr("Unlimited"));
+            }
+            if (ImGui::Selectable(label, settings_.fpsLimit == fps)) {
+                settings_.fpsLimit = fps;
+                saveSettings(settings_);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("Caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat."));
+}
+
 void App::drawPerformancePage() {
     auto persist = [this]() { saveSettings(settings_); };
     const double budget = budgetMilliseconds(settings_.perfBudgetFps);
+
+    ImGui::SeparatorText(tr("Frame rate"));
+    drawFrameRateLimit();
+    if (ImGui::Checkbox(trId("Sync to display refresh (VSync)", "optVsync"), &settings_.vsync)) {
+        persist();
+    }
 
     ImGui::SeparatorText(tr("Frame budget"));
     static const int kBudgets[] = {30, 45, 60, 90, 120, 144};

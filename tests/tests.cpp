@@ -28,6 +28,12 @@
 #include <thread>
 #include <vector>
 
+#ifdef _WIN32
+#define NVJ_TEST_ASSET "NyrexVJ.exe"
+#else
+#define NVJ_TEST_ASSET "NyrexVJ-linux-x64"
+#endif
+
 namespace {
 
 int gFailures = 0;
@@ -77,6 +83,34 @@ void testVersions() {
     CHECK(nvj::parseBuildNumber("no number here") == 0);
 }
 
+void testProgramDetection() {
+    std::vector<unsigned char> data(1024, 0);
+    CHECK(!nvj::looksLikeProgram(data));
+    CHECK(!nvj::looksLikeProgram({}));
+#ifdef _WIN32
+    data[0] = 'M';
+    data[1] = 'Z';
+    CHECK(nvj::looksLikeProgram(data));
+    data[0] = 0x7F;
+    data[1] = 'E';
+    data[2] = 'L';
+    data[3] = 'F';
+    CHECK(!nvj::looksLikeProgram(data));
+#else
+    data[0] = 0x7F;
+    data[1] = 'E';
+    data[2] = 'L';
+    data[3] = 'F';
+    CHECK(nvj::looksLikeProgram(data));
+    data[0] = 'M';
+    data[1] = 'Z';
+    CHECK(!nvj::looksLikeProgram(data));
+    CHECK(!nvj::looksLikeProgram(std::vector<unsigned char>{0x7F, 'E', 'L'}));
+#endif
+    CHECK(std::string(nvj::kWindowsAssetName) == "NyrexVJ.exe");
+    CHECK(std::string(nvj::kLinuxAssetName) == "NyrexVJ-linux-x64");
+}
+
 void testReleaseParsing() {
     const char* json = R"({
         "tag_name": "v0.3.0",
@@ -86,7 +120,7 @@ void testReleaseParsing() {
         "draft": false,
         "prerelease": false,
         "assets": [
-            {"name": "NyrexVJ.exe", "browser_download_url": "https://example.test/NyrexVJ.exe"},
+            {"name": ")" NVJ_TEST_ASSET R"(", "browser_download_url": "https://example.test/)" NVJ_TEST_ASSET R"("},
             {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.test/SHA256SUMS.txt"},
             {"name": "other.zip", "browser_download_url": "https://example.test/other.zip"}
         ]
@@ -95,7 +129,7 @@ void testReleaseParsing() {
     std::string error;
     CHECK(nvj::parseRelease(json, release, error));
     CHECK(release.tag == "v0.3.0");
-    CHECK(release.exeUrl == "https://example.test/NyrexVJ.exe");
+    CHECK(release.exeUrl == "https://example.test/" NVJ_TEST_ASSET);
     CHECK(release.sumsUrl == "https://example.test/SHA256SUMS.txt");
     CHECK(release.version.valid && release.version.minor == 3);
 
@@ -108,7 +142,7 @@ void testReleaseParsing() {
     CHECK(nvj::isUpdateAvailable(release, nvj::UpdateChannel::Stable, current));
 
     const char* nightly = R"json({"tag_name":"nightly","name":"Nightly build 58 (abc1234)","prerelease":true,
-        "assets":[{"name":"NyrexVJ.exe","browser_download_url":"https://example.test/n.exe"}]})json";
+        "assets":[{"name":")json" NVJ_TEST_ASSET R"json(","browser_download_url":"https://example.test/n.exe"}]})json";
     nvj::ReleaseInfo night;
     CHECK(nvj::parseRelease(nightly, night, error));
     CHECK(night.buildNumber == 58);
@@ -131,15 +165,15 @@ void testReleaseParsing() {
 void testHashFile() {
     const std::string hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
     std::string found;
-    CHECK(nvj::findHash(hash + "  NyrexVJ.exe\r\n", "NyrexVJ.exe", found) && found == hash);
-    CHECK(nvj::findHash("deadbeef  nope.txt\n" + hash + " *NyrexVJ.exe\n", "NyrexVJ.exe", found) && found == hash);
+    CHECK(nvj::findHash(hash + "  " NVJ_TEST_ASSET "\r\n", NVJ_TEST_ASSET, found) && found == hash);
+    CHECK(nvj::findHash("deadbeef  nope.txt\n" + hash + " *" NVJ_TEST_ASSET "\n", NVJ_TEST_ASSET, found) && found == hash);
     std::string upper;
     for (char c : hash) {
         upper.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
     }
-    CHECK(nvj::findHash(upper + "  NyrexVJ.exe", "NyrexVJ.exe", found) && found == hash);
-    CHECK(!nvj::findHash(hash + "  other.exe\n", "NyrexVJ.exe", found));
-    CHECK(!nvj::findHash("", "NyrexVJ.exe", found));
+    CHECK(nvj::findHash(upper + "  " NVJ_TEST_ASSET, NVJ_TEST_ASSET, found) && found == hash);
+    CHECK(!nvj::findHash(hash + "  other.exe\n", NVJ_TEST_ASSET, found));
+    CHECK(!nvj::findHash("", NVJ_TEST_ASSET, found));
 }
 
 void testLibraries() {
@@ -408,8 +442,15 @@ bool waitIdle(nvj::Updater& updater) {
 
 std::vector<unsigned char> fakeBinary(size_t size, unsigned char fill) {
     std::vector<unsigned char> data(size, fill);
+#ifdef _WIN32
     data[0] = 'M';
     data[1] = 'Z';
+#else
+    data[0] = 0x7F;
+    data[1] = 'E';
+    data[2] = 'L';
+    data[3] = 'F';
+#endif
     return data;
 }
 
@@ -435,7 +476,7 @@ nvj::UpdaterBackend makeBackend(FakeServer* server) {
             result.body.assign(server->releaseJson.begin(), server->releaseJson.end());
         } else if (url == "https://example.test/SHA256SUMS.txt") {
             result.body.assign(server->sums.begin(), server->sums.end());
-        } else if (url == "https://example.test/NyrexVJ.exe") {
+        } else if (url == "https://example.test/" NVJ_TEST_ASSET) {
             if (progress) {
                 progress(server->exe.size() / 2, server->exe.size());
             }
@@ -457,7 +498,7 @@ nvj::UpdaterBackend makeBackend(FakeServer* server) {
 }
 
 std::string releaseJsonWithAssets(const std::string& tag, bool withSums) {
-    std::string json = "{\"tag_name\":\"" + tag + "\",\"name\":\"Release\",\"assets\":[{\"name\":\"NyrexVJ.exe\",\"browser_download_url\":\"https://example.test/NyrexVJ.exe\"}";
+    std::string json = "{\"tag_name\":\"" + tag + "\",\"name\":\"Release\",\"assets\":[{\"name\":\"" NVJ_TEST_ASSET "\",\"browser_download_url\":\"https://example.test/" NVJ_TEST_ASSET "\"}";
     if (withSums) {
         json += ",{\"name\":\"SHA256SUMS.txt\",\"browser_download_url\":\"https://example.test/SHA256SUMS.txt\"}";
     }
@@ -480,7 +521,7 @@ void testUpdater() {
         FakeServer server;
         server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
         server.exe = fakeBinary(700 * 1024, 7);
-        server.sums = nvj::sha256Hex(server.exe) + "  NyrexVJ.exe\n";
+        server.sums = nvj::sha256Hex(server.exe) + "  " NVJ_TEST_ASSET "\n";
         nvj::Updater updater;
         updater.setBackend(makeBackend(&server));
         updater.setChannel(nvj::UpdateChannel::Stable);
@@ -498,7 +539,7 @@ void testUpdater() {
         FakeServer server;
         server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
         server.exe = fakeBinary(700 * 1024, 7);
-        server.sums = nvj::sha256Hex(fakeBinary(700 * 1024, 8)) + "  NyrexVJ.exe\n";
+        server.sums = nvj::sha256Hex(fakeBinary(700 * 1024, 8)) + "  " NVJ_TEST_ASSET "\n";
         nvj::Updater updater;
         updater.setBackend(makeBackend(&server));
         updater.setChannel(nvj::UpdateChannel::Stable);
@@ -528,7 +569,7 @@ void testUpdater() {
         server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
         server.exe = fakeBinary(700 * 1024, 7);
         server.exe[0] = 'X';
-        server.sums = nvj::sha256Hex(server.exe) + "  NyrexVJ.exe\n";
+        server.sums = nvj::sha256Hex(server.exe) + "  " NVJ_TEST_ASSET "\n";
         nvj::Updater updater;
         updater.setBackend(makeBackend(&server));
         updater.setChannel(nvj::UpdateChannel::Stable);
@@ -543,7 +584,7 @@ void testUpdater() {
         FakeServer server;
         server.releaseJson = releaseJsonWithAssets("v9.0.0", true);
         server.exe = fakeBinary(1000, 7);
-        server.sums = nvj::sha256Hex(server.exe) + "  NyrexVJ.exe\n";
+        server.sums = nvj::sha256Hex(server.exe) + "  " NVJ_TEST_ASSET "\n";
         nvj::Updater updater;
         updater.setBackend(makeBackend(&server));
         updater.setChannel(nvj::UpdateChannel::Stable);
@@ -638,6 +679,8 @@ void testRecovery() {
     entries = nvj::listAutosaves(dir);
     CHECK(entries.size() == 11);
     CHECK(entries.front().latest && entries.front().bytes == 2);
+    const long long nowSeconds = static_cast<long long>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    CHECK(entries.front().timestamp >= nowSeconds - 120 && entries.front().timestamp <= nowSeconds + 120);
     CHECK(nvj::writeRotatingAutosave(dir, "x", 1700099999, 3));
     CHECK(nvj::listAutosaves(dir).size() == 4);
 
@@ -1297,6 +1340,7 @@ void testModulation() {
 int main() {
     testSha256();
     testVersions();
+    testProgramDetection();
     testReleaseParsing();
     testHashFile();
     testLibraries();

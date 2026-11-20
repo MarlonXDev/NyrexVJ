@@ -158,6 +158,14 @@ bool parseRelease(const std::string& json, ReleaseInfo& release, std::string& er
     return true;
 }
 
+bool looksLikeProgram(const std::vector<unsigned char>& data) {
+#ifdef _WIN32
+    return data.size() >= 2 && data[0] == 'M' && data[1] == 'Z';
+#else
+    return data.size() >= 4 && data[0] == 0x7F && data[1] == 'E' && data[2] == 'L' && data[3] == 'F';
+#endif
+}
+
 bool findHash(const std::string& sumsText, const std::string& fileName, std::string& hashHex) {
     size_t pos = 0;
     while (pos < sumsText.size()) {

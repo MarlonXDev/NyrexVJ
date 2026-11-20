@@ -5,7 +5,7 @@
 <h1 align="center">NyrexVJ</h1>
 
 <p align="center">
-  Live visuals for VRChat events and parties. Native C++ and OpenGL, no game engine, one Windows executable.<br>
+  Live visuals for VRChat events and parties. Native C++ and OpenGL, no game engine, one executable for Windows and one for Linux.<br>
   <a href="README.de.md">Deutsch</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="https://github.com/MarlonXDev/NyrexVJ/releases">Releases</a>
 </p>
 
@@ -15,13 +15,15 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.19.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), a render pass profiler, hidden layers that cost nothing and an optional reduced layer resolution (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
+> Status: v0.20.0. Windows and Linux builds, clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), a render pass profiler, hidden layers that cost nothing and an optional reduced layer resolution (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
 
 ## Download
 
 Get `NyrexVJ.exe` from the [Releases page](https://github.com/MarlonXDev/NyrexVJ/releases). It is a single file, no installer needed. Windows SmartScreen may warn because the executable is not code-signed: choose "More info" and "Run anyway".
 
 The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) and `SHA256SUMS.txt`.
+
+**Linux:** get `NyrexVJ-linux-x64` (a single file, run `chmod +x NyrexVJ-linux-x64`) or `NyrexVJ-linux-x64.tar.gz` (the program with licenses, changelogs and a list of its libraries) from the same page. It needs glibc 2.35 or newer (Ubuntu 22.04 or newer, Debian 12 or newer, Fedora, Arch), an X11 or XWayland session and a graphics driver with OpenGL 3.3. Audio capture works through PulseAudio or PipeWire, MIDI through ALSA, video clips need the FFmpeg libraries. Nothing has to be installed to start the program, see [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) for every optional library and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the licenses. Verify the download with `SHA256SUMS.txt`.
 
 ## Highlights
 
@@ -74,8 +76,8 @@ Open the Audio tab in the Browser panel, or Settings, Audio.
 
 | Source | What it listens to |
 | --- | --- |
-| Output devices (loopback) | Whatever your PC plays, for example Rekordbox, Serato, Spotify or a browser |
-| Input devices | Microphone or line-in |
+| Output devices (loopback) | Whatever your PC plays, for example Rekordbox, Serato, Spotify or a browser. On Linux this is "System audio (default output)" and every monitor source of PulseAudio or PipeWire |
+| Input devices | Microphone or line-in. On Linux "Default input" and every other PulseAudio or PipeWire source |
 | Demo signal | A built-in beat so you can build looks without music |
 
 The tab shows the live spectrum, Bass, Mid, High and Level meters, beat detection and a tempo estimate. Gain, smoothing and beat threshold are adjustable in Settings, Audio, and "Sync BPM to audio" locks the tempo to the detected beat. If the chosen device delivers no sound for a few seconds the tab and the status bar say so.
@@ -185,7 +187,7 @@ Everything lives under Settings, Control. Mappings and addresses refer to the wo
 
 ### MIDI
 
-Windows only. Pick your controller under Device, press Add mapping, choose what it should control and then move a knob or press a key on the controller. The two are linked from that moment on. Knobs and faders (CC) set values, keys (notes) fire triggers or switch things on while held. Tick Invert to flip a fader, press Learn to give a row a new knob and Remove to delete it. Mappings are saved in `controls.json` in the user data folder. Controllers that another program has opened exclusively cannot be used by two programs at once.
+Windows and Linux (on Linux the controller must show up as an ALSA sequencer port, `aconnect -l` lists them). Pick your controller under Device, press Add mapping, choose what it should control and then move a knob or press a key on the controller. The two are linked from that moment on. Knobs and faders (CC) set values, keys (notes) fire triggers or switch things on while held. Tick Invert to flip a fader, press Learn to give a row a new knob and Remove to delete it. Mappings are saved in `controls.json` in the user data folder. Controllers that another program has opened exclusively cannot be used by two programs at once.
 
 ### OSC
 
@@ -231,7 +233,7 @@ NyrexVJ checks GitHub on start (Settings, Updates). When a newer build exists it
 | Latest build (default) | rolling `nightly` pre-release | every commit on `main` |
 | Stable | latest GitHub Release | a new version tag is published |
 
-The updater only works while the repository is public.
+The updater only works while the repository is public. On Windows it replaces `NyrexVJ.exe`, on Linux it replaces the running `NyrexVJ-linux-x64` file in place and needs libcurl (`libcurl.so.4`, installed on almost every system). Both download the file that belongs to the platform and install it only when its SHA-256 matches `SHA256SUMS.txt` and it really is a program for that system.
 
 ## Project layout
 
@@ -239,13 +241,13 @@ The updater only works while the repository is public.
 NyrexVJ/
 ├── src/
 │   ├── app/        Dear ImGui interface: deck, panels, browser, settings window, status bar, update card, welcome screen, theme
-│   ├── audio/      WASAPI capture and loopback, FFT analysis, beat and tempo detection
-│   ├── control/    OSC parser, UDP input and output, OSC sender, Art-Net and VRChat sender, MIDI input, learn mapping, control targets
+│   ├── audio/      WASAPI and PulseAudio capture and loopback, FFT analysis, beat and tempo detection
+│   ├── control/    OSC parser, UDP input and output, OSC sender, Art-Net and VRChat sender, MIDI input (WinMM, ALSA), learn mapping, control targets
 │   ├── core/       Composition model, presets, settings, i18n, log, SHA-256
 │   ├── render/     OpenGL engine, clip and effect libraries, 3D scene player, output windows with mapping, Spout and NDI output, DMX strip, Spout input
 │   ├── scene3d/    glTF/GLB loader with safety limits, scene model, scene documents and .nyxclip packs, built-in 3D scenes, GLB writer
 │   ├── update/     Update check, installer, changelog parser
-│   ├── platform/   Windows and fallback platform code
+│   ├── platform/   Windows code, Linux updater, fallback platform code (everything that depends on the operating system lives in `*_win.cpp`, `*_linux.cpp` and `*_other.cpp` files)
 │   └── main.cpp
 ├── tests/          Unit tests for core, audio, control, i18n and update logic
 ├── scripts/        Repository checks (translation coverage), video and render benchmark helpers
@@ -268,7 +270,7 @@ cmake --build build --config Release
 ctest --test-dir build -C Release
 ```
 
-Linux needs the X11 development packages that GLFW requires (Xrandr, Xinerama, Xcursor, Xi):
+Linux needs the X11 development packages that GLFW requires and an OpenGL development package (on Debian and Ubuntu `sudo apt install ninja-build libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev`):
 
 ```
 cmake -S . -B build -G Ninja
@@ -276,7 +278,7 @@ cmake --build build
 ctest --test-dir build
 ```
 
-GLFW, Dear ImGui and Spout2 (Windows) are downloaded by CMake during configuration. Audio capture and Spout are Windows only, on other systems the audio demo signal is used.
+GLFW, Dear ImGui and Spout2 (Windows) are downloaded by CMake during configuration. Spout is Windows only. Audio capture, MIDI and the updater work on Linux through PulseAudio (or PipeWire), ALSA and libcurl, which are opened at run time, so nothing else is needed to build. Without a capture device the audio demo signal is used. Add `-DGLFW_BUILD_WAYLAND=OFF` to build for X11 and XWayland only, which is what the Linux release does. The list of everything the program needs is in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 ## Tests
 
@@ -286,15 +288,15 @@ python scripts/check_i18n.py
 NyrexVJ --check-shaders
 ```
 
-`check_i18n.py` makes sure every UI string has a German translation and that the Spanish and French tables match the German one. `--check-shaders` compiles every clip and effect and exits with code 1 on any failure. CI runs all of it on every push.
+`check_i18n.py` makes sure every UI string has a German translation and that the Spanish and French tables match the German one. `--check-shaders` compiles every clip and effect and exits with code 1 on any failure. CI runs all of it on Windows and on Linux (Ubuntu 22.04, with a short start of the program on a virtual display) for every push and pull request.
 
 ## Releasing
 
 1. Bump the version in `CMakeLists.txt` (`project(NyrexVJ VERSION x.y.z)`) and add a section to `CHANGELOG.md` and `CHANGELOG.de.md`.
 2. Commit, then tag and push: `git tag vx.y.z && git push origin vx.y.z`.
-3. GitHub Actions builds, tests and publishes the Release with `NyrexVJ.exe`, the zip and `SHA256SUMS.txt`. The release text comes from the matching `CHANGELOG.md` section.
+3. GitHub Actions builds and tests on Windows and Linux and publishes the Release with `NyrexVJ.exe`, the zip, `NyrexVJ-linux-x64`, the tar.gz and `SHA256SUMS.txt` (one line per program). A release is only published when both builds succeed. The release text comes from the matching `CHANGELOG.md` section.
 
-Every push to `main` also refreshes the `nightly` pre-release that the default update channel follows.
+Every push to `main` also refreshes the `nightly` pre-release that the default update channel follows. When the Linux build fails, the nightly still gets the Windows files.
 
 ## Command line
 
@@ -356,6 +358,8 @@ Crash protection: the session is saved every 30 seconds when it changed, and a r
 Everything that was listed here has shipped. Open ideas and their status are in [docs/ROADMAP.md](docs/ROADMAP.md) and in the GitHub issues.
 
 ## Third-party software
+
+The license texts are in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md), the libraries that are opened at run time are in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 - [GLFW](https://www.glfw.org/) (zlib license)
 - [Dear ImGui](https://github.com/ocornut/imgui) (MIT)

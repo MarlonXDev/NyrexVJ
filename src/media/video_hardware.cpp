@@ -5,6 +5,10 @@
 #include "media/video_hardware_internal.hpp"
 #include "media/video_probe_data.hpp"
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 namespace nvj {
 
 const char* probeCodecLabel(size_t index) {
@@ -18,6 +22,54 @@ std::vector<std::string> hardwareBackendOrder() {
 #else
     return {"cuda", "vaapi", "qsv", "vdpau"};
 #endif
+}
+
+std::vector<std::string> hardwareBackendLibraries(const std::string& backend) {
+#ifdef _WIN32
+    (void)backend;
+    return {};
+#else
+    if (backend == "vaapi") {
+        return {"libva.so.2", "libva-drm.so.2", "libva-x11.so.2"};
+    }
+    if (backend == "qsv") {
+        return {"libva.so.2", "libva-drm.so.2", "libvpl.so.2"};
+    }
+    if (backend == "vdpau") {
+        return {"libvdpau.so.1"};
+    }
+    return {};
+#endif
+}
+
+namespace {
+
+bool systemCanLoad(const char* file) {
+#ifdef _WIN32
+    (void)file;
+    return true;
+#else
+    void* handle = dlopen(file, RTLD_LAZY | RTLD_LOCAL);
+    if (handle == nullptr) {
+        return false;
+    }
+    dlclose(handle);
+    return true;
+#endif
+}
+
+}
+
+std::string missingHardwareLibrary(const std::string& backend, bool (*canLoad)(const char*)) {
+    if (canLoad == nullptr) {
+        canLoad = systemCanLoad;
+    }
+    for (const std::string& file : hardwareBackendLibraries(backend)) {
+        if (!canLoad(file.c_str())) {
+            return file;
+        }
+    }
+    return std::string();
 }
 
 std::string hardwareBackendLabel(const std::string& backend) {
@@ -130,6 +182,11 @@ bool prepareHardware(const FfmpegApi& api, AVCodecID codec, const std::string& b
     }
     if (format == AV_PIX_FMT_NONE) {
         reason = std::string(api.avcodec_get_name(codec)) + " is not supported by " + hardwareBackendLabel(backend) + " in this FFmpeg";
+        return false;
+    }
+    const std::string missing = missingHardwareLibrary(backend);
+    if (!missing.empty()) {
+        reason = hardwareBackendLabel(backend) + " is not available on this computer (" + missing + " is not installed)";
         return false;
     }
     AVBufferRef* device = nullptr;
@@ -283,8 +340,11 @@ HardwareProbeReport probeHardwareDecoding() {
         row.deviceFound = backend == "software";
         if (backend != "software") {
             const AVHWDeviceType type = api->av_hwdevice_find_type_by_name(backend.c_str());
+            const std::string missing = missingHardwareLibrary(backend);
             if (type == AV_HWDEVICE_TYPE_NONE) {
                 row.detail = "not part of this FFmpeg";
+            } else if (!missing.empty()) {
+                row.detail = "no device (" + missing + " is not installed)";
             } else {
                 AVBufferRef* device = nullptr;
                 const int created = api->av_hwdevice_ctx_create(&device, type, nullptr, nullptr, 0);

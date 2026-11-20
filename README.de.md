@@ -5,7 +5,7 @@
 <h1 align="center">NyrexVJ</h1>
 
 <p align="center">
-  Live-Visuals für VRChat-Events und Partys. Natives C++ und OpenGL, keine Game-Engine, eine einzige Windows-Exe.<br>
+  Live-Visuals für VRChat-Events und Partys. Natives C++ und OpenGL, keine Game-Engine, je eine Programmdatei für Windows und für Linux.<br>
   <a href="README.md">English</a> · <a href="CHANGELOG.de.md">Änderungsprotokoll</a> · <a href="https://github.com/MarlonXDev/NyrexVJ/releases">Releases</a>
 </p>
 
@@ -15,13 +15,15 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.19.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264, HEVC, AV1, HAP, mit Hardware-Decodierung, Farbumrechnung auf der Grafikkarte, Bildratenbegrenzung und Video-Monitor, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), ein Profiler für Render-Durchläufe, versteckte Ebenen, die nichts kosten, und eine optionale verkleinerte Ebenen-Auflösung (siehe [docs/PERFORMANCE.md](docs/PERFORMANCE.md), englisch), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
+> Stand: v0.20.0. Windows- und Linux-Builds, Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264, HEVC, AV1, HAP, mit Hardware-Decodierung, Farbumrechnung auf der Grafikkarte, Bildratenbegrenzung und Video-Monitor, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), ein Profiler für Render-Durchläufe, versteckte Ebenen, die nichts kosten, und eine optionale verkleinerte Ebenen-Auflösung (siehe [docs/PERFORMANCE.md](docs/PERFORMANCE.md), englisch), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
 
 ## Download
 
 Lade `NyrexVJ.exe` von der [Release-Seite](https://github.com/MarlonXDev/NyrexVJ/releases) herunter. Es ist eine einzelne Datei, eine Installation ist nicht nötig. Windows SmartScreen kann warnen, weil die Exe nicht signiert ist: "Weitere Informationen" und "Trotzdem ausführen" wählen.
 
 Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes) und `SHA256SUMS.txt`.
+
+**Linux:** Lade `NyrexVJ-linux-x64` (eine einzelne Datei, mit `chmod +x NyrexVJ-linux-x64` ausführbar machen) oder `NyrexVJ-linux-x64.tar.gz` (das Programm mit Lizenzen, Changelogs und einer Liste seiner Bibliotheken) von derselben Seite. Es braucht glibc 2.35 oder neuer (Ubuntu 22.04 oder neuer, Debian 12 oder neuer, Fedora, Arch), eine X11- oder XWayland-Sitzung und einen Grafiktreiber mit OpenGL 3.3. Audioaufnahme läuft über PulseAudio oder PipeWire, MIDI über ALSA, Videoclips brauchen die FFmpeg-Bibliotheken. Zum Starten muss nichts installiert werden, jede optionale Bibliothek steht in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) (englisch) und die Lizenzen in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Prüfe den Download mit `SHA256SUMS.txt`.
 
 ## Highlights
 
@@ -74,8 +76,8 @@ Rechtsklick auf einen Deck-Knopf: umbenennen, aktuelles Deck hierher kopieren, m
 
 | Quelle | Worauf gehört wird |
 | --- | --- |
-| Ausgabegeräte (Loopback) | Alles, was dein PC abspielt, zum Beispiel Rekordbox, Serato, Spotify oder ein Browser |
-| Eingabegeräte | Mikrofon oder Line-In |
+| Ausgabegeräte (Loopback) | Alles, was dein PC abspielt, zum Beispiel Rekordbox, Serato, Spotify oder ein Browser. Unter Linux ist das "System audio (default output)" und jede Monitor-Quelle von PulseAudio oder PipeWire |
+| Eingabegeräte | Mikrofon oder Line-In. Unter Linux "Default input" und jede andere Quelle von PulseAudio oder PipeWire |
 | Demo-Signal | Ein eingebauter Beat, damit du ohne Musik Looks bauen kannst |
 
 Der Tab zeigt das Live-Spektrum, Bass-, Mitten-, Höhen- und Pegelanzeigen, Beat-Erkennung und eine Tempo-Schätzung. Verstärkung, Glättung und Beat-Schwelle sind in Einstellungen, Audio einstellbar, und "BPM mit Audio synchronisieren" koppelt das Tempo an den erkannten Beat. Liefert das gewählte Gerät mehrere Sekunden lang keinen Ton, weisen der Tab und die Statusleiste darauf hin.
@@ -185,7 +187,7 @@ Alles liegt unter Einstellungen, Steuerung. Zuordnungen und Adressen beziehen si
 
 ### MIDI
 
-Nur unter Windows. Wähle deinen Controller unter Gerät, drücke Zuordnung hinzufügen, wähle was gesteuert werden soll und bewege dann einen Regler oder drücke eine Taste am Controller. Ab dann sind beide verbunden. Regler und Fader (CC) setzen Werte, Tasten (Noten) lösen Auslöser aus oder schalten Dinge ein, solange sie gehalten werden. Mit Invertieren drehst du einen Fader um, mit Lernen bekommt eine Zeile einen neuen Regler und mit Entfernen löschst du sie. Die Zuordnungen stehen in `controls.json` im Datenordner. Ein Controller, den ein anderes Programm exklusiv geöffnet hat, lässt sich nicht von zwei Programmen gleichzeitig nutzen.
+Unter Windows und Linux (unter Linux muss der Controller als ALSA-Sequencer-Port erscheinen, `aconnect -l` listet sie auf). Wähle deinen Controller unter Gerät, drücke Zuordnung hinzufügen, wähle was gesteuert werden soll und bewege dann einen Regler oder drücke eine Taste am Controller. Ab dann sind beide verbunden. Regler und Fader (CC) setzen Werte, Tasten (Noten) lösen Auslöser aus oder schalten Dinge ein, solange sie gehalten werden. Mit Invertieren drehst du einen Fader um, mit Lernen bekommt eine Zeile einen neuen Regler und mit Entfernen löschst du sie. Die Zuordnungen stehen in `controls.json` im Datenordner. Ein Controller, den ein anderes Programm exklusiv geöffnet hat, lässt sich nicht von zwei Programmen gleichzeitig nutzen.
 
 ### OSC
 
@@ -231,7 +233,7 @@ NyrexVJ prüft beim Start GitHub (Einstellungen, Updates). Gibt es einen neueren
 | Neuester Build (Standard) | rollender `nightly`-Prerelease | jeder Commit auf `main` |
 | Stabil | neuestes GitHub-Release | ein neuer Versions-Tag veröffentlicht wird |
 
-Der Updater funktioniert nur, solange das Repository öffentlich ist.
+Der Updater funktioniert nur, solange das Repository öffentlich ist. Unter Windows ersetzt er `NyrexVJ.exe`, unter Linux ersetzt er die laufende Datei `NyrexVJ-linux-x64` an Ort und Stelle und braucht libcurl (`libcurl.so.4`, auf fast jedem System vorhanden). Beide laden die Datei, die zur Plattform gehört, und installieren sie nur, wenn ihre SHA-256 zu `SHA256SUMS.txt` passt und sie wirklich ein Programm für dieses System ist.
 
 ## Projektstruktur
 
@@ -239,13 +241,13 @@ Der Updater funktioniert nur, solange das Repository öffentlich ist.
 NyrexVJ/
 ├── src/
 │   ├── app/        Dear-ImGui-Oberfläche: Deck, Panels, Browser, Einstellungsfenster, Statusleiste, Update-Karte, Willkommensbildschirm, Theme
-│   ├── audio/      WASAPI-Aufnahme und Loopback, FFT-Analyse, Beat- und Tempo-Erkennung
-│   ├── control/    OSC-Parser, UDP-Eingang und -Ausgang, OSC-Sender, Art-Net- und VRChat-Sender, MIDI-Eingang, Lern-Zuordnung, Steuerziele
+│   ├── audio/      WASAPI- und PulseAudio-Aufnahme und Loopback, FFT-Analyse, Beat- und Tempo-Erkennung
+│   ├── control/    OSC-Parser, UDP-Eingang und -Ausgang, OSC-Sender, Art-Net- und VRChat-Sender, MIDI-Eingang (WinMM, ALSA), Lern-Zuordnung, Steuerziele
 │   ├── core/       Kompositionsmodell, Presets, Einstellungen, i18n, Log, SHA-256
 │   ├── render/     OpenGL-Engine, Clip- und Effektbibliothek, 3D-Szenen-Player, Ausgabefenster mit Mapping, Spout- und NDI-Ausgabe, DMX-Streifen, Spout-Eingang
 │   ├── scene3d/    glTF/GLB-Lader mit Sicherheitsgrenzen, Szenenmodell, Szenendokumente und .nyxclip-Pakete, eingebaute 3D-Szenen, GLB-Schreiber
 │   ├── update/     Update-Prüfung, Installer, Changelog-Parser
-│   ├── platform/   Windows- und Ersatz-Plattformcode
+│   ├── platform/   Windows-Code, Linux-Updater, Ersatz-Plattformcode (alles, was vom Betriebssystem abhängt, liegt in `*_win.cpp`, `*_linux.cpp` und `*_other.cpp`)
 │   └── main.cpp
 ├── tests/          Unit-Tests für Core, Audio, Steuerung, i18n und Update-Logik
 ├── scripts/        Repository-Prüfungen (Übersetzungsabdeckung), Hilfen für Video- und Render-Benchmarks
@@ -268,7 +270,7 @@ cmake --build build --config Release
 ctest --test-dir build -C Release
 ```
 
-Unter Linux werden die X11-Entwicklungspakete gebraucht, die GLFW verlangt (Xrandr, Xinerama, Xcursor, Xi):
+Unter Linux werden die X11-Entwicklungspakete gebraucht, die GLFW verlangt, und ein OpenGL-Entwicklungspaket (unter Debian und Ubuntu `sudo apt install ninja-build libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev`):
 
 ```
 cmake -S . -B build -G Ninja
@@ -276,7 +278,7 @@ cmake --build build
 ctest --test-dir build
 ```
 
-GLFW, Dear ImGui und Spout2 (Windows) lädt CMake beim Konfigurieren herunter. Audioaufnahme und Spout gibt es nur unter Windows, auf anderen Systemen wird das Demo-Signal benutzt.
+GLFW, Dear ImGui und Spout2 (Windows) lädt CMake beim Konfigurieren herunter. Spout gibt es nur unter Windows. Audioaufnahme, MIDI und der Updater laufen unter Linux über PulseAudio (oder PipeWire), ALSA und libcurl, die zur Laufzeit geöffnet werden, zum Bauen wird also nichts weiter gebraucht. Ohne Aufnahmegerät wird das Demo-Signal benutzt. Mit `-DGLFW_BUILD_WAYLAND=OFF` baust du nur für X11 und XWayland, so wie das Linux-Release. Die Liste von allem, was das Programm braucht, steht in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) (englisch).
 
 ## Tests
 
@@ -286,15 +288,15 @@ python scripts/check_i18n.py
 NyrexVJ --check-shaders
 ```
 
-`check_i18n.py` stellt sicher, dass jeder Oberflächentext eine deutsche Übersetzung hat und dass die spanische und die französische Tabelle zur deutschen passen. `--check-shaders` kompiliert jeden Clip und Effekt und beendet sich bei einem Fehler mit Code 1. Die CI führt alles bei jedem Push aus.
+`check_i18n.py` stellt sicher, dass jeder Oberflächentext eine deutsche Übersetzung hat und dass die spanische und die französische Tabelle zur deutschen passen. `--check-shaders` kompiliert jeden Clip und Effekt und beendet sich bei einem Fehler mit Code 1. Die CI führt alles bei jedem Push und jedem Pull Request unter Windows und unter Linux (Ubuntu 22.04, mit einem kurzen Programmstart auf einem virtuellen Display) aus.
 
 ## Release veröffentlichen
 
 1. Version in `CMakeLists.txt` erhöhen (`project(NyrexVJ VERSION x.y.z)`) und einen Abschnitt in `CHANGELOG.md` und `CHANGELOG.de.md` ergänzen.
 2. Committen, dann taggen und pushen: `git tag vx.y.z && git push origin vx.y.z`.
-3. GitHub Actions baut, testet und veröffentlicht das Release mit `NyrexVJ.exe`, dem Zip und `SHA256SUMS.txt`. Der Release-Text stammt aus dem passenden Abschnitt von `CHANGELOG.md`.
+3. GitHub Actions baut und testet unter Windows und Linux und veröffentlicht das Release mit `NyrexVJ.exe`, dem Zip, `NyrexVJ-linux-x64`, dem tar.gz und `SHA256SUMS.txt` (eine Zeile pro Programm). Ein Release wird nur veröffentlicht, wenn beide Builds gelingen. Der Release-Text stammt aus dem passenden Abschnitt von `CHANGELOG.md`.
 
-Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der Standard-Updatekanal folgt.
+Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der Standard-Updatekanal folgt. Schlägt der Linux-Build fehl, bekommt der Nightly trotzdem die Windows-Dateien.
 
 ## Kommandozeile
 
@@ -356,6 +358,8 @@ Absturzschutz: Die Sitzung wird alle 30 Sekunden gespeichert, wenn sie sich geä
 Alles, was hier stand, ist umgesetzt. Offene Ideen und ihr Stand stehen in [docs/ROADMAP.md](docs/ROADMAP.md) (englisch) und in den GitHub-Issues.
 
 ## Software von Dritten
+
+Die Lizenztexte stehen in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md), die Bibliotheken, die zur Laufzeit geöffnet werden, in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) (englisch).
 
 - [GLFW](https://www.glfw.org/) (zlib-Lizenz)
 - [Dear ImGui](https://github.com/ocornut/imgui) (MIT)

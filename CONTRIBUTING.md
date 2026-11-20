@@ -19,7 +19,7 @@ Before opening a pull request run `build/NyrexVJ --check-shaders`. It must exit 
 - Every UI text goes through `tr()` and needs a German entry in `src/core/i18n_de.cpp`. `scripts/check_i18n.py` fails otherwise.
 - New clips and effects live in `src/render/clips_extra.cpp` and `src/render/effects_extra.cpp` (or the matching library file). Use the helpers in the shader headers and keep names in English.
 - Add a line to `CHANGELOG.md` and `CHANGELOG.de.md` for every user-visible change. Both files must have the same number of items per version, the tests check it.
-- Windows-only code stays in `*_win.cpp` files with a fallback next to it.
+- Code that depends on the operating system stays in `*_win.cpp` and `*_linux.cpp` files with a fallback (`*_other.cpp`) next to it. New optional libraries are opened at run time, see [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 ## Issues
 

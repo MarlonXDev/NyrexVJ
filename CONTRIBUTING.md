@@ -21,6 +21,10 @@ Before opening a pull request run `build/NyrexVJ --check-shaders`. It must exit 
 - Add a line to `CHANGELOG.md` and `CHANGELOG.de.md` for every user-visible change. Both files must have the same number of items per version, the tests check it.
 - Windows-only code stays in `*_win.cpp` files with a fallback next to it.
 
+## AI-assisted contributions
+
+Changes written with an AI assistant follow [AGENTS.md](AGENTS.md) on top of these rules: one issue and one branch per task, the `ai-authored` label, and human review before merging.
+
 ## Issues
 
 Use the bug report or feature request form. For bugs include the version and the end of the log file.

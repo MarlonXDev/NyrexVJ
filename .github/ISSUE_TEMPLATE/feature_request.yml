@@ -1,6 +1,6 @@
 name: Feature request
 description: An idea for a clip, effect or feature
-labels: [enhancement]
+labels: [enhancement, proposal]
 body:
   - type: textarea
     id: idea
@@ -14,3 +14,13 @@ body:
     attributes:
       label: Reference
       description: Links or screenshots of something similar, for example from another VJ program
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How do we know it is done
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Other issues, libraries or decisions this needs

@@ -52,6 +52,7 @@ struct VideoOptions {
     bool gpuConversion = true;
     bool hapDirect = true;
     bool compressedTextures = true;
+    std::string hardwareFailure;
 };
 
 struct VideoStatus {

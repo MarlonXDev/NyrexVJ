@@ -1015,6 +1015,7 @@ const Translation kSpanish[] = {
     {"not part of this FFmpeg", "no forma parte de este FFmpeg"},
     {"GPU upload failed, using the CPU path", "La subida a la GPU falló, se usa la vía del procesador"},
     {"no hardware decoder worked on this computer", "ningún decodificador por hardware funcionó en este equipo"},
+    {"the hardware decoder stopped working during playback", "el decodificador por hardware dejó de funcionar durante la reproducción"},
 };
 
 }

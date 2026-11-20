@@ -1015,6 +1015,7 @@ const Translation kFrench[] = {
     {"not part of this FFmpeg", "ne fait pas partie de ce FFmpeg"},
     {"GPU upload failed, using the CPU path", "L'envoi vers le GPU a échoué, la voie du processeur est utilisée"},
     {"no hardware decoder worked on this computer", "aucun décodeur matériel n'a fonctionné sur cet ordinateur"},
+    {"the hardware decoder stopped working during playback", "le décodeur matériel s'est arrêté pendant la lecture"},
 };
 
 }

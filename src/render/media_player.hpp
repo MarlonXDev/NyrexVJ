@@ -82,6 +82,8 @@ private:
     bool mipmaps_ = false;
     bool hasPicture_ = false;
     bool safeUpload_ = false;
+    bool hardwareRetired_ = false;
+    std::string hardwareFailure_;
     VideoGpu* gpu_ = nullptr;
     VideoOptions options_;
     std::unique_ptr<VideoUploader> uploader_;

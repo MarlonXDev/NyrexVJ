@@ -75,6 +75,7 @@ constexpr size_t kQueueLimit = 5;
 constexpr double kSeekBehind = 0.35;
 constexpr double kSeekAhead = 1.5;
 constexpr int kMaxFailures = 200;
+constexpr int kMaxHardwareFailures = 24;
 constexpr int kProbePackets = 160;
 
 using Buffer = std::vector<uint8_t>;
@@ -253,6 +254,10 @@ struct VideoDecoder::Impl {
 
     ~Impl() { shutdown(); }
 
+    int failureLimit() const {
+        return hardwareActive ? kMaxHardwareFailures : kMaxFailures;
+    }
+
     void fail(const std::string& text) {
         std::lock_guard<std::mutex> lock(mutex);
         if (!broken.load()) {
@@ -414,7 +419,7 @@ struct VideoDecoder::Impl {
             const int moved = api->av_hwframe_transfer_data(download, frame, 0);
             if (moved < 0) {
                 api->av_frame_free(&download);
-                if (++failures > kMaxFailures) {
+                if (++failures > failureLimit()) {
                     fail("the picture could not be read back from the graphics card");
                 }
                 return;
@@ -470,7 +475,7 @@ struct VideoDecoder::Impl {
         std::string problem;
         const HapResult result = hapDecode(input.data, static_cast<size_t>(input.size), sourceWidth, sourceHeight, buffer->data(), buffer->size(), frameInfo, &problem);
         if (result != HapResult::Ok || frameInfo.format != hapFormat) {
-            if (++failures > kMaxFailures) {
+            if (++failures > failureLimit()) {
                 fail(problem.empty() ? "the HAP video could not be read" : problem);
             }
             return;
@@ -527,7 +532,7 @@ struct VideoDecoder::Impl {
             return;
         }
         if (result != AVERROR(EAGAIN)) {
-            if (++failures > kMaxFailures) {
+            if (++failures > failureLimit()) {
                 fail("the video could not be decoded");
             }
             return;
@@ -544,7 +549,7 @@ struct VideoDecoder::Impl {
         }
         if (packet->stream_index == stream) {
             const int sent = api->avcodec_send_packet(codec, packet);
-            if (sent < 0 && sent != AVERROR(EAGAIN) && ++failures > kMaxFailures) {
+            if (sent < 0 && sent != AVERROR(EAGAIN) && ++failures > failureLimit()) {
                 fail("the video could not be decoded");
             }
         }
@@ -863,7 +868,10 @@ bool VideoDecoder::open(const std::string& path, std::string& error, const Video
             d.status.backend = "software";
             d.status.decoder = decoder->name;
             d.status.threads = threads;
-            if (!failures.empty()) {
+            if (!options.hardwareFailure.empty()) {
+                d.status.fallbackReason = "the hardware decoder stopped working during playback";
+                d.status.fallbackDetail = options.hardwareFailure;
+            } else if (!failures.empty()) {
                 d.status.fallbackReason = "no hardware decoder worked on this computer";
                 d.status.fallbackDetail = failures;
             }

@@ -46,6 +46,8 @@ int MediaPlayer::height() const {
 
 void MediaPlayer::setVideoOptions(const VideoOptions& options) {
     options_ = options;
+    hardwareRetired_ = false;
+    hardwareFailure_.clear();
 }
 
 void MediaPlayer::destroyTexture() {
@@ -88,6 +90,10 @@ void MediaPlayer::start() {
             return;
         }
         VideoOptions options = options_;
+        if (hardwareRetired_) {
+            options.mode = VideoDecodeMode::ForceSoftware;
+            options.hardwareFailure = hardwareFailure_;
+        }
         if (safeUpload_ || gpu_ == nullptr || !gpu_->caps().conversion) {
             options.gpuConversion = false;
         }
@@ -159,6 +165,16 @@ bool MediaPlayer::update(double clock) {
         return true;
     }
     if (decoder_->failed()) {
+        if (!hardwareRetired_ && decoder_->status().path == DecodePath::Hardware) {
+            hardwareRetired_ = true;
+            hardwareFailure_ = decoder_->failure();
+            logLine("Video clip '" + label_ + "': the hardware decoder stopped (" + hardwareFailure_ + "), switching to the CPU decoder");
+            uploader_->release();
+            decoder_.reset();
+            state_ = MediaState::Idle;
+            lastFrame_ = 0;
+            return false;
+        }
         error_ = decoder_->failure();
         state_ = MediaState::Failed;
         logLine("Video clip '" + label_ + "' stopped: " + error_);

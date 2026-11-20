@@ -1015,6 +1015,7 @@ const Translation kGerman[] = {
     {"not part of this FFmpeg", "nicht Teil dieses FFmpeg"},
     {"GPU upload failed, using the CPU path", "GPU-Upload fehlgeschlagen, der Prozessor-Weg wird genutzt"},
     {"no hardware decoder worked on this computer", "auf diesem Computer hat kein Hardware-Decoder funktioniert"},
+    {"the hardware decoder stopped working during playback", "der Hardware-Decoder ist während der Wiedergabe ausgefallen"},
 };
 
 }

@@ -25,6 +25,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0009](adr/0009-unreal-plugin.md) | Experimental Unreal Engine plugin with Blueprint access | Accepted as experimental (2026-11-20) |
 | [0010](adr/0010-video-decode-pipeline.md) | Video decode pipeline: hardware decoding, HAP direct upload, GPU colour conversion, frame rate limit | Accepted (2026-11-20), implemented in v0.18.0 |
 | [0011](adr/0011-render-pipeline-optimisation.md) | Render pipeline optimisation: hidden layers, layer resolution, freed pictures, pass profiler | Accepted (2026-11-20), implemented in v0.19.0 |
+| [0012](adr/0012-open-source-vj-platform-plan.md) | Plan towards a full open source VJ platform: platforms, media control, live sources, outputs, show sync, node editor, plugins | Accepted (2026-11-20), milestones v0.20.0 to v0.26.0 |
 
 ## New ADR template
 

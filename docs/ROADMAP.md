@@ -43,6 +43,19 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 ### Production readiness (candidate v1.0)
 - Reliability, performance regression tests, crash recovery, project compatibility, documentation, and release quality. Crash recovery (session marker, rotating autosaves, crash report, recovery dialog) and the performance benchmark landed in v0.11.0.
 
+## Plan towards a full open source VJ platform (ADR 0012, approved 2026-11-20)
+Seven milestones, one issue and one pull request each, in this order. Status is tracked in the issues, not here.
+
+| Version | Milestone | Content |
+| --- | --- | --- |
+| 0.20.0 | Platforms and releases | Linux CI, portable Linux archive, Linux audio capture and MIDI, Linux updater, dependency and licence list |
+| 0.21.0 | Media control | Reverse playback, scrubbing, exact seek, in and out points, loop modes, speed, beat sync, switching without drops |
+| 0.22.0 | Live sources | NDI input with discovery, webcams and capture cards, reconnect, low latency upload |
+| 0.23.0 | Advanced output | Several slices and masks per output, colour correction per output, venue setups, smoother warp, black level in blends |
+| 0.24.0 | Show sync | One beat clock, SMPTE (LTC, MTC), Pro DJ Link, StageLinq evaluation, output frame lock |
+| 0.25.0 | Node effect editor | Graph document, graph to GLSL compiler, node editor, shareable effect files |
+| 0.26.0 | Plugin system and API | C ABI header, versioning, compatibility check, isolation of faulty plugins |
+
 ## Already listed in the README roadmap
 - Video clips via FFmpeg (H.264/HAP): landed in v0.13.0, see [MEDIA.md](MEDIA.md).
 - DMX strip output for VRSL: landed in v0.15.0, see [DMX.md](DMX.md).

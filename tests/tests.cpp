@@ -10,6 +10,7 @@
 #include "render/effect_library.hpp"
 #include "core/preset.hpp"
 #include "core/recovery.hpp"
+#include "core/render_policy.hpp"
 #include "core/settings.hpp"
 #include "core/sha256.hpp"
 #include "update/update_logic.hpp"
@@ -20,6 +21,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <chrono>
 #include <set>
 #include <string>
@@ -848,6 +850,167 @@ void testFrameStats() {
     CHECK(std::fabs(nvj::budgetMilliseconds(0) - 1000.0 / nvj::kMinBudgetFps) < 1e-9);
 }
 
+void testRenderPolicy() {
+    CHECK(!nvj::layerVisible(0.0f));
+    CHECK(!nvj::layerVisible(nvj::kHiddenOpacity));
+    CHECK(nvj::layerVisible(nvj::kHiddenOpacity + 0.0005f));
+    CHECK(nvj::layerVisible(1.0f));
+
+    CHECK(nvj::clampQualityMode(-4) == nvj::QualityFull);
+    CHECK(nvj::clampQualityMode(99) == nvj::QualityAuto);
+    CHECK(nvj::fixedQualityScale(nvj::QualityFull) == 1.0f);
+    CHECK(nvj::fixedQualityScale(nvj::QualityBalanced) == 0.75f);
+    CHECK(nvj::fixedQualityScale(nvj::QualityPerformance) == 0.5f);
+    CHECK(nvj::fixedQualityScale(nvj::QualityAuto) == 1.0f);
+
+    CHECK(nvj::scaledDimension(1920, 1.0f) == 1920);
+    CHECK(nvj::scaledDimension(1920, 0.75f) == 1440);
+    CHECK(nvj::scaledDimension(1080, 0.75f) == 810);
+    CHECK(nvj::scaledDimension(1080, 0.5f) == 540);
+    CHECK(nvj::scaledDimension(1080, 0.875f) % 2 == 0);
+    CHECK(nvj::scaledDimension(0, 0.5f) == 0);
+    CHECK(nvj::scaledDimension(50, 0.5f) == 50);
+    CHECK(nvj::scaledDimension(4000, 0.01f) == 64);
+
+    nvj::QualityController controller;
+    const double budget = 16.0;
+    CHECK(controller.scale() == 1.0f && controller.steps() == 0);
+    CHECK(controller.update(0.0, budget) == 1.0f);
+    CHECK(controller.update(30.0, 0.0) == 1.0f);
+    for (int i = 0; i < 10; ++i) {
+        controller.update(budget * 0.5, budget);
+    }
+    CHECK(controller.steps() == 0);
+    int guard = 0;
+    while (controller.steps() < 1 && guard++ < 100) {
+        controller.update(budget * 2.0, budget);
+    }
+    CHECK(controller.steps() == 1);
+    CHECK(controller.scale() == 0.875f);
+    CHECK(guard >= 20);
+    const int stepAfterFirst = controller.steps();
+    for (int i = 0; i < 30; ++i) {
+        controller.update(budget * 2.0, budget);
+    }
+    CHECK(controller.steps() == stepAfterFirst);
+    for (int i = 0; i < 2000; ++i) {
+        controller.update(budget * 3.0, budget);
+    }
+    CHECK(controller.steps() == 4);
+    CHECK(controller.scale() == 0.5f);
+    for (int i = 0; i < 4000; ++i) {
+        controller.update(budget * 0.05, budget);
+    }
+    CHECK(controller.steps() == 0);
+    CHECK(controller.scale() == 1.0f);
+    controller.update(budget * 3.0, budget);
+    controller.reset();
+    CHECK(controller.steps() == 0 && controller.scale() == 1.0f);
+
+    nvj::QualityController steady;
+    for (int i = 0; i < 1000; ++i) {
+        steady.update(budget * 0.75, budget);
+    }
+    CHECK(steady.steps() == 0);
+
+    nvj::IdleRelease idle(5);
+    bool released = false;
+    for (int i = 0; i < 4; ++i) {
+        released = released || idle.update(false);
+    }
+    CHECK(!released);
+    CHECK(idle.update(false));
+    CHECK(idle.update(false));
+    CHECK(!idle.update(true));
+    CHECK(idle.idleFrames() == 0);
+    idle.update(false);
+    idle.reset();
+    CHECK(idle.idleFrames() == 0);
+
+    nvj::ProfileTable table;
+    const auto frame = [&](double a, double b, bool withB) {
+        table.beginFrame();
+        nvj::ProfileSample first;
+        first.kind = nvj::PassKind::Effect;
+        first.layer = 1;
+        first.slot = 1;
+        first.name = "Glow";
+        first.ms = a;
+        table.add(first);
+        if (withB) {
+            nvj::ProfileSample second;
+            second.kind = nvj::PassKind::Composite;
+            second.layer = 1;
+            second.ms = b;
+            table.add(second);
+        }
+        table.endFrame();
+    };
+    frame(4.0, 1.0, true);
+    CHECK(table.rows().size() == 2);
+    CHECK(table.frames() == 1);
+    CHECK(std::fabs(table.lastTotalMs() - 5.0) < 1e-9);
+    CHECK(std::fabs(table.averageTotalMs() - 5.0) < 1e-9);
+    for (int i = 0; i < 40; ++i) {
+        frame(4.0, 1.0, true);
+    }
+    const std::vector<nvj::ProfileRow> sorted = table.sorted();
+    CHECK(sorted.size() == 2);
+    CHECK(sorted[0].name == "Glow");
+    CHECK(sorted[0].averageMs > sorted[1].averageMs);
+    CHECK(std::fabs(sorted[0].share + sorted[1].share - 1.0) < 1e-9);
+    CHECK(std::fabs(sorted[0].share - 0.8) < 1e-6);
+    frame(8.0, 0.0, false);
+    CHECK(table.rows().size() == 2);
+    CHECK(table.rows()[1].missing == 1);
+    CHECK(table.rows()[1].lastMs == 0.0);
+    for (int i = 0; i < 100; ++i) {
+        frame(4.0, 0.0, false);
+    }
+    CHECK(table.rows().size() == 1);
+    table.clear();
+    CHECK(table.rows().empty() && table.frames() == 0);
+}
+
+void testRenderQualitySetting() {
+    nvj::Settings defaults;
+    CHECK(defaults.renderQuality == nvj::QualityFull);
+
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "nyrexvj_quality_test";
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+    std::filesystem::create_directories(dir, ec);
+#ifdef _WIN32
+    _putenv_s("NYREXVJ_DATA_DIR", dir.string().c_str());
+#else
+    setenv("NYREXVJ_DATA_DIR", dir.string().c_str(), 1);
+#endif
+    nvj::Settings settings;
+    settings.renderQuality = nvj::QualityAuto;
+    CHECK(nvj::saveSettings(settings));
+    nvj::Settings loaded;
+    CHECK(nvj::loadSettings(loaded));
+    CHECK(loaded.renderQuality == nvj::QualityAuto);
+
+    const auto rewrite = [&](const std::string& value) {
+        std::ofstream out(dir / "settings.json", std::ios::trunc);
+        out << "{\"renderQuality\": " << value << "}";
+    };
+    rewrite("42");
+    nvj::Settings high;
+    CHECK(nvj::loadSettings(high));
+    CHECK(high.renderQuality == nvj::QualityAuto);
+    rewrite("-3");
+    nvj::Settings low;
+    CHECK(nvj::loadSettings(low));
+    CHECK(low.renderQuality == nvj::QualityFull);
+    rewrite("\"fast\"");
+    nvj::Settings wrong;
+    CHECK(nvj::loadSettings(wrong));
+    CHECK(wrong.renderQuality == nvj::QualityFull);
+    std::filesystem::remove_all(dir, ec);
+}
+
 void testRenderCost() {
     nvj::Composition empty;
     for (nvj::Layer& layer : empty.layers) {
@@ -1142,6 +1305,8 @@ int main() {
     testFrameStats();
     testFramePacer();
     testRenderCost();
+    testRenderPolicy();
+    testRenderQualitySetting();
     testEditHistory();
     testModulation();
     testDecks();

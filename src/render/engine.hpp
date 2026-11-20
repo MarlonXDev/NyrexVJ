@@ -6,6 +6,7 @@
 #include "render/clip_library.hpp"
 #include "render/dmx_strip.hpp"
 #include "render/gl_util.hpp"
+#include "render/gpu_profiler.hpp"
 #include "render/media_player.hpp"
 #include "render/scene_player.hpp"
 #include "render/spout_input.hpp"
@@ -88,8 +89,17 @@ public:
     VideoOptions videoOptions() const;
     std::vector<const MediaPlayer*> activeVideos() const;
     void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
+    void setQuality(int mode, double budgetMs);
+    int qualityMode() const { return qualityMode_; }
+    float layerScale() const { return layerScale_; }
+    int layerWidth() const { return layerScale_ < 0.999f && layerLoA_.fbo ? layerLoA_.width : out_.width; }
+    int layerHeight() const { return layerScale_ < 0.999f && layerLoA_.fbo ? layerLoA_.height : out_.height; }
     bool gpuTimingAvailable() const { return gpuQueries_[0] != 0; }
     double gpuFrameMs() const { return gpuMs_; }
+    void setProfiling(bool enabled) { profiler_.setEnabled(enabled); }
+    bool profiling() const { return profiler_.enabled(); }
+    const GpuProfiler& profiler() const { return profiler_; }
+    void profileFlush() { profiler_.flushNow(); }
     GLuint layerPreview(int layer) const;
     void requestPreview(int layer, int column);
     GLuint previewTexture() const { return previewResult_ ? previewResult_->texture : 0; }
@@ -232,6 +242,7 @@ private:
     void computeEffective();
     void computeEffectiveFor(const std::array<Layer, kLayerCount>& layers, const Master& master, std::array<Effective, kLayerCount>& effective, float& level, ColorGrade& grade) const;
     bool ensureTransitionTargets();
+    void updateQuality();
     void destroyTransitionTargets();
     void endTransition();
     RenderTarget* renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews);
@@ -239,7 +250,7 @@ private:
     void transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination);
     void setAudioUniforms(GLint audio, GLint kick, GLint audioTex);
     void drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale);
-    RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch);
+    RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner);
     RenderTarget* chainFeedback(int chain) { return &feedback_[static_cast<size_t>(chain * kEffectSlots)]; }
     bool* chainUsed(int chain) { return &feedbackUsed_[static_cast<size_t>(chain * kEffectSlots)]; }
     void drawLayerSource(int clipIndex, const Layer& layer, float scale, double clock, const RenderTarget& target);
@@ -282,8 +293,15 @@ private:
     RenderTarget compB_;
     RenderTarget out_;
     std::array<RenderTarget, 2> deckTex_;
-    RenderTarget transTex_;
     bool transitionTargetsReady_ = false;
+    IdleRelease transitionIdle_{300};
+    int qualityMode_ = QualityFull;
+    double qualityBudgetMs_ = 1000.0 / 60.0;
+    QualityController qualityController_;
+    float layerScale_ = 1.0f;
+    RenderTarget layerLoA_;
+    RenderTarget layerLoB_;
+    std::array<unsigned long long, kLayerCount> hiddenPreviewFrame_{};
     Transition transition_;
     std::array<Layer, kLayerCount> outLayers_;
     Master outMaster_;
@@ -306,6 +324,7 @@ private:
     int gpuSlot_ = 0;
     bool gpuTiming_ = true;
     bool gpuActive_ = false;
+    GpuProfiler profiler_;
     double gpuMs_ = 0.0;
     RenderTarget previewA_;
     RenderTarget previewB_;

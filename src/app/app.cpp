@@ -88,6 +88,11 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         return false;
     }
 
+    if (options.quality >= 0) {
+        settings_.renderQuality = clampQualityMode(options.quality);
+    }
+    engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
+
     Composition start = defaultComposition();
     bool chosen = false;
     if (!options.preset.empty()) {
@@ -497,6 +502,7 @@ void App::frame(double dt) {
     control_.update(dt);
     updateAudio(dt);
     engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);
+    engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
     engine_.update(dt);
     engine_.configureSpout(settings_.spoutInputs, spout_.active() ? std::string(spoutName_) : std::string(), settings_.spoutInputFlip);
     OscOutConfig oscOut;

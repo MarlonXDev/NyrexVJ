@@ -29,6 +29,7 @@ struct Settings {
     bool openOutputOnStart = false;
     bool showStatusBar = true;
     int perfBudgetFps = 60;
+    int renderQuality = 0;
     bool showTimings = true;
     float uiScale = 1.0f;
     UpdateChannel channel = UpdateChannel::Nightly;

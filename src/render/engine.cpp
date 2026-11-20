@@ -300,6 +300,18 @@ void applyBlend(int mode) {
     }
 }
 
+constexpr unsigned long long kHiddenPreviewInterval = 8;
+
+bool chainHasFeedback(const std::array<EffectSlot, kEffectSlots>& slots) {
+    const std::vector<EffectDef>& library = effectLibrary();
+    for (const EffectSlot& slot : slots) {
+        if (slot.enabled && slot.effect >= 0 && slot.effect < static_cast<int>(library.size()) && library[static_cast<size_t>(slot.effect)].usesPrevious) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void clearTarget(const RenderTarget& target) {
     target.bind();
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -768,7 +780,7 @@ GpuMemory Engine::gpuMemory() const {
         return target.fbo ? static_cast<size_t>(target.width) * static_cast<size_t>(target.height) * 4 : static_cast<size_t>(0);
     };
     GpuMemory memory;
-    for (const RenderTarget* target : {&layerA_, &layerB_, &compA_, &compB_, &out_, &deckTex_[0], &deckTex_[1], &transTex_}) {
+    for (const RenderTarget* target : {&layerA_, &layerB_, &compA_, &compB_, &out_, &deckTex_[0], &deckTex_[1], &layerLoA_, &layerLoB_}) {
         memory.targets += bytes(*target);
     }
     for (const RenderTarget& target : feedback_) {
@@ -908,6 +920,7 @@ int Engine::prepareAll(std::string& report) {
 }
 
 void Engine::shutdown() {
+    profiler_.destroy();
     if (gpuQueries_[0]) {
         glDeleteQueries(kGpuQueries, gpuQueries_.data());
         gpuQueries_.fill(0);
@@ -983,7 +996,6 @@ void Engine::destroyTransitionTargets() {
     for (RenderTarget& target : deckTex_) {
         target.destroy();
     }
-    transTex_.destroy();
     transitionTargetsReady_ = false;
     transition_ = Transition{};
 }
@@ -995,24 +1007,77 @@ bool Engine::ensureTransitionTargets() {
     if (!out_.fbo) {
         return false;
     }
-    if (deckTex_[0].create(out_.width, out_.height) && deckTex_[1].create(out_.width, out_.height) && transTex_.create(out_.width, out_.height)) {
+    if (deckTex_[0].create(out_.width, out_.height) && deckTex_[1].create(out_.width, out_.height)) {
         transitionTargetsReady_ = true;
+        transitionIdle_.reset();
         return true;
     }
     for (RenderTarget& target : deckTex_) {
         target.destroy();
     }
-    transTex_.destroy();
     return false;
 }
 
 void Engine::destroyTargets() {
     destroyTransitionTargets();
+    layerLoA_.destroy();
+    layerLoB_.destroy();
     layerA_.destroy();
     layerB_.destroy();
     compA_.destroy();
     compB_.destroy();
     out_.destroy();
+}
+
+void Engine::setQuality(int mode, double budgetMs) {
+    const int clamped = clampQualityMode(mode);
+    if (clamped != qualityMode_) {
+        qualityMode_ = clamped;
+        qualityController_.reset();
+    }
+    if (budgetMs > 0.0) {
+        qualityBudgetMs_ = budgetMs;
+    }
+}
+
+void Engine::updateQuality() {
+    float scale = fixedQualityScale(qualityMode_);
+    if (qualityMode_ == QualityAuto) {
+        scale = qualityController_.update(gpuMs_, qualityBudgetMs_);
+    }
+    if (!out_.fbo) {
+        return;
+    }
+    const bool wantScaled = scale >= 0.001f && scale < 0.999f;
+    if (!wantScaled) {
+        const bool fullReady = layerA_.fbo && layerB_.fbo && layerA_.width == out_.width && layerA_.height == out_.height;
+        if (!fullReady && !(layerA_.create(out_.width, out_.height) && layerB_.create(out_.width, out_.height))) {
+            layerA_.destroy();
+            layerB_.destroy();
+            return;
+        }
+        layerLoA_.destroy();
+        layerLoB_.destroy();
+        if (layerScale_ < 0.999f) {
+            logLine("Layer resolution 100 %");
+        }
+        layerScale_ = 1.0f;
+        return;
+    }
+    const int width = scaledDimension(out_.width, scale);
+    const int height = scaledDimension(out_.height, scale);
+    const bool loReady = layerLoA_.fbo && layerLoB_.fbo && layerLoA_.width == width && layerLoA_.height == height;
+    if (!loReady && !(layerLoA_.create(width, height) && layerLoB_.create(width, height))) {
+        layerLoA_.destroy();
+        layerLoB_.destroy();
+        return;
+    }
+    layerA_.destroy();
+    layerB_.destroy();
+    if (std::fabs(scale - layerScale_) > 0.001f) {
+        logLine("Layer resolution " + std::to_string(static_cast<int>(scale * 100.0f + 0.5f)) + " %");
+    }
+    layerScale_ = scale;
 }
 
 void Engine::destroyFeedback() {
@@ -1647,8 +1712,11 @@ void Engine::renderPreview() {
     previewClock_ += delta * static_cast<double>(effective_[layerIndex].speed);
 
     previewFeedbackUsed_.fill(false);
+    if (profiler_.enabled()) {
+        profiler_.mark(PassKind::Preview, 0, -1, 0, clipLibrary()[static_cast<size_t>(clipIndex)].name);
+    }
     drawLayerSource(clipIndex, layer, effective_[layerIndex].scale, previewClock_, previewA_);
-    previewResult_ = runChain(layer.fx, previewFeedback_.data(), previewFeedbackUsed_.data(), &previewA_, &previewB_);
+    previewResult_ = runChain(layer.fx, previewFeedback_.data(), previewFeedbackUsed_.data(), &previewA_, &previewB_, 0, -1);
     for (size_t k = 0; k < previewFeedback_.size(); ++k) {
         if (previewFeedback_[k].fbo && !previewFeedbackUsed_[k]) {
             previewFeedback_[k].destroy();
@@ -1656,7 +1724,7 @@ void Engine::renderPreview() {
     }
 }
 
-RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch) {
+RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner) {
     RenderTarget* in = source;
     RenderTarget* out = scratch;
     const float width = static_cast<float>(source->width);
@@ -1671,6 +1739,12 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
             continue;
         }
         const EffectProgram& effect = effects_[static_cast<size_t>(slot.effect)];
+        if (profiler_.enabled()) {
+            profiler_.mark(PassKind::Effect, deck, owner, s + 1, effectLibrary()[static_cast<size_t>(slot.effect)].name);
+        }
+        if (effect.usesPrevious && feedback[s].fbo && (feedback[s].width != source->width || feedback[s].height != source->height)) {
+            feedback[s].destroy();
+        }
 
         std::array<float, kParamCount> params = slot.params;
         float mixAmount = 1.0f;
@@ -1733,9 +1807,13 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
 
 RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews) {
     const int chainBase = feedbackSet * kChainsPerSet;
+    const int deck = updatePreviews ? 0 : 1;
 
     RenderTarget* accum = &compA_;
     RenderTarget* spare = &compB_;
+    const bool scaledChains = layerScale_ < 0.999f && layerLoA_.fbo && layerLoB_.fbo;
+    RenderTarget* chainSource = scaledChains ? &layerLoA_ : &layerA_;
+    RenderTarget* chainScratch = scaledChains ? &layerLoB_ : &layerB_;
     accum->bind();
     glDisable(GL_BLEND);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -1766,12 +1844,26 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
             live_[li] = true;
         }
 
-        drawLayerSource(clipIndex, layer, effective[li].scale, clocks[li], layerA_);
-
-        RenderTarget* result = runChain(layer.fx, chainFeedback(chainBase + l), chainUsed(chainBase + l), &layerA_, &layerB_);
-        if (updatePreviews) {
-            downsample(*result, previews_[li]);
+        const bool hidden = !layerVisible(effective[li].opacity) && !chainHasFeedback(layer.fx);
+        if (hidden && (!updatePreviews || frameId_ - hiddenPreviewFrame_[li] < kHiddenPreviewInterval)) {
+            continue;
         }
+
+        if (profiler_.enabled()) {
+            profiler_.mark(PassKind::Source, deck, l + 1, 0, clipLibrary()[static_cast<size_t>(clipIndex)].name);
+        }
+        drawLayerSource(clipIndex, layer, effective[li].scale, clocks[li], *chainSource);
+
+        RenderTarget* result = runChain(layer.fx, chainFeedback(chainBase + l), chainUsed(chainBase + l), chainSource, chainScratch, deck, l + 1);
+        if (updatePreviews) {
+            profiler_.mark(PassKind::Preview, deck, l + 1, 0, "");
+            downsample(*result, previews_[li]);
+            hiddenPreviewFrame_[li] = frameId_;
+        }
+        if (hidden) {
+            continue;
+        }
+        profiler_.mark(PassKind::Composite, deck, l + 1, 0, "");
 
         const ColorGrade& layerGrade = effective[li].grade;
         if (layer.blend >= BlendSubtract) {
@@ -1808,10 +1900,11 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
     }
 
     glDisable(GL_BLEND);
-    return runChain(master.fx, chainFeedback(chainBase + kLayerCount), chainUsed(chainBase + kLayerCount), accum, spare);
+    return runChain(master.fx, chainFeedback(chainBase + kLayerCount), chainUsed(chainBase + kLayerCount), accum, spare, deck, 0);
 }
 
 void Engine::finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination) {
+    profiler_.mark(PassKind::Final, 0, 0, 0, "");
     destination.bind();
     glDisable(GL_BLEND);
     glUseProgram(final_.id);
@@ -1824,6 +1917,7 @@ void Engine::finalPass(const RenderTarget& source, const ColorGrade& grade, floa
 }
 
 void Engine::transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination) {
+    profiler_.mark(PassKind::Transition, 0, 0, 0, "");
     destination.bind();
     glDisable(GL_BLEND);
     glUseProgram(transition_program_.id);
@@ -1849,10 +1943,14 @@ void Engine::render() {
     }
 
     ++frameId_;
+    updateQuality();
+    const bool profiling = profiler_.enabled();
+    profiler_.beginFrame();
+    profiler_.mark(PassKind::Housekeeping, 0, 0, 0, "");
     pollGpuQueries();
     gpuActive_ = false;
     const size_t slot = static_cast<size_t>(gpuSlot_);
-    if (gpuTiming_ && gpuQueries_[slot] && !gpuPending_[slot]) {
+    if (!profiling && gpuTiming_ && gpuQueries_[slot] && !gpuPending_[slot]) {
         glBeginQuery(GL_TIME_ELAPSED, gpuQueries_[slot]);
         gpuActive_ = true;
     }
@@ -1863,6 +1961,10 @@ void Engine::render() {
 
     feedbackUsed_.fill(false);
     uploadAudio();
+
+    if (transitionTargetsReady_ && transitionIdle_.update(transition_.active)) {
+        destroyTransitionTargets();
+    }
 
     if (!transition_.active) {
         RenderTarget* master = renderDeck(comp.layers, comp.master, effective_, layerClock_, feedbackSet_, true);
@@ -1884,11 +1986,18 @@ void Engine::render() {
     }
 
     if (stripEnabled_) {
+        profiler_.mark(PassKind::Other, 0, 0, 0, "strip");
         strip_.draw(out_, stripAtTop_, triangle_);
     }
 
     renderPreview();
 
+    if (profiling) {
+        profiler_.endFrame();
+        if (profiler_.lastFrameMs() > 0.0) {
+            gpuMs_ = profiler_.lastFrameMs();
+        }
+    }
     if (gpuActive_) {
         glEndQuery(GL_TIME_ELAPSED);
         gpuPending_[slot] = true;

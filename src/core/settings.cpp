@@ -3,6 +3,7 @@
 #include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
+#include "core/render_policy.hpp"
 #include "core/stage_json.hpp"
 #include "media/video_types.hpp"
 
@@ -65,6 +66,10 @@ bool loadSettings(Settings& settings) {
     auto perfBudget = doc.find("perfBudgetFps");
     if (perfBudget != doc.end() && perfBudget->is_number_integer()) {
         result.perfBudgetFps = std::clamp(perfBudget->get<int>(), 24, 360);
+    }
+    auto renderQuality = doc.find("renderQuality");
+    if (renderQuality != doc.end() && renderQuality->is_number_integer()) {
+        result.renderQuality = clampQualityMode(renderQuality->get<int>());
     }
     auto channel = doc.find("channel");
     if (channel != doc.end() && channel->is_string()) {
@@ -200,6 +205,7 @@ bool saveSettings(const Settings& settings) {
     doc["showStatusBar"] = settings.showStatusBar;
     doc["showTimings"] = settings.showTimings;
     doc["perfBudgetFps"] = settings.perfBudgetFps;
+    doc["renderQuality"] = settings.renderQuality;
     doc["uiScale"] = settings.uiScale;
     doc["theme"] = settings.theme;
     doc["channel"] = channelName(settings.channel);

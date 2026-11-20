@@ -24,6 +24,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0008](adr/0008-osc-output-protocol.md) | OSC output and the versioned protocol (schema 1) | Accepted (2026-11-18) |
 | [0009](adr/0009-unreal-plugin.md) | Experimental Unreal Engine plugin with Blueprint access | Accepted as experimental (2026-11-20) |
 | [0010](adr/0010-video-decode-pipeline.md) | Video decode pipeline: hardware decoding, HAP direct upload, GPU colour conversion, frame rate limit | Accepted (2026-11-20), implemented in v0.18.0 |
+| [0011](adr/0011-render-pipeline-optimisation.md) | Render pipeline optimisation: hidden layers, layer resolution, freed pictures, pass profiler | Accepted (2026-11-20), implemented in v0.19.0 |
 
 ## New ADR template
 

@@ -40,6 +40,9 @@ struct Options {
     int benchComp = 0;
     double benchBudget = 0.0;
     bool benchAll = false;
+    bool profile = false;
+    bool benchMemory = false;
+    int benchShaders = 0;
     std::string benchOut;
     std::vector<std::pair<int, int>> switches;
     std::vector<std::pair<int, std::string>> dumps;
@@ -86,6 +89,14 @@ Options parseOptions(int argc, char** argv) {
             options.benchComp = std::atoi(argv[++i]);
         } else if (arg == "--bench-budget" && hasValue) {
             options.benchBudget = std::atof(argv[++i]);
+        } else if (arg == "--bench-shaders" && hasValue) {
+            options.benchShaders = std::atoi(argv[++i]);
+        } else if (arg == "--bench-memory") {
+            options.benchMemory = true;
+        } else if (arg == "--quality" && hasValue) {
+            options.start.quality = std::atoi(argv[++i]);
+        } else if (arg == "--profile") {
+            options.profile = true;
         } else if (arg == "--bench-all") {
             options.benchAll = true;
         } else if (arg == "--bench-out" && hasValue) {
@@ -269,6 +280,9 @@ int main(int argc, char** argv) {
         glfwTerminate();
         return 1;
     }
+    if (options.profile) {
+        app.engine().setProfiling(true);
+    }
     if (options.frames <= 0) {
         glfwSwapInterval(app.wantsVsync() ? 1 : 0);
     }
@@ -277,17 +291,22 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.videoSelfTest.empty() || options.benchComp > 0) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchMemory) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
         if (!options.videoSelfTest.empty()) {
             benchExit = nvj::runVideoSelfTest(app.engine(), options.videoSelfTest, options.benchOut);
+        } else if (options.benchMemory) {
+            benchExit = nvj::runMemoryBenchmark(app.engine(), options.benchOut);
+        } else if (options.benchShaders > 0) {
+            benchExit = nvj::runShaderBenchmark(app.engine(), options.benchShaders, options.benchOut);
         } else if (!options.benchScene.empty()) {
             benchExit = nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut);
         } else if (!options.benchVideo.empty()) {
             benchExit = nvj::runVideoBenchmark(app.engine(), options.benchVideo, options.benchOut);
         } else {
+            app.engine().setProfiling(options.profile);
             benchExit = nvj::runCompositionBenchmark(app.engine(), options.benchComp, options.benchBudget, options.benchAll, options.benchOut);
         }
         app.shutdown();

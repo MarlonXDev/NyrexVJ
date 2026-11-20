@@ -59,6 +59,7 @@ struct StartOptions {
     float transitionSeconds = -1.0f;
     int column = -1;
     int resolution = -1;
+    int quality = -1;
     int selectLayer = -1;
     int tab = -1;
     int settingsPage = -1;
@@ -122,6 +123,7 @@ private:
     void drawFrameRateLimit();
     void drawVideoSettings();
     void drawVideoMonitor();
+    void drawPassProfiler();
     void redoEdit();
     void drawCreator();
     void shutdownCreator();

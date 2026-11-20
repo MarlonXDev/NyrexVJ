@@ -16,7 +16,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 ### Foundation (candidate v0.5)
 - Unified parameter and modulation model: every audio band, LFO, macro and beat ramp is one numbered source with one lookup (`modulationSource`), see [MODULATION.md](MODULATION.md). It landed in v0.12.0; parameters themselves are still addressed by the string ids of the control targets.
 - Blend modes (14), undo/redo in the main window and a separate preview channel landed in v0.11.0. Eight macros landed in v0.12.0.
-- Render performance budgets and profiling: frame time budget, CPU/GPU timings, `--bench-comp` and tests landed in v0.11.0; a run on a real GPU is still open.
+- Render performance budgets and profiling: frame time budget, CPU/GPU timings, `--bench-comp` and tests landed in v0.11.0. A per-pass GPU profiler, hidden-layer skipping, an optional reduced layer resolution and freeing of unused render targets landed in v0.19.0 ([ADR 0011](adr/0011-render-pipeline-optimisation.md), [PERFORMANCE.md](PERFORMANCE.md)). A run on a real GPU, next to VRChat, is still open.
 - Define stable clip/source/effect/output interfaces.
 
 ### Media and 3D runtime (candidate v0.6)

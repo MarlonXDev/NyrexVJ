@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.18.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264, HEVC, AV1, HAP, mit Hardware-Decodierung, Farbumrechnung auf der Grafikkarte, Bildratenbegrenzung und Video-Monitor, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
+> Stand: v0.19.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264, HEVC, AV1, HAP, mit Hardware-Decodierung, Farbumrechnung auf der Grafikkarte, Bildratenbegrenzung und Video-Monitor, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), ein Profiler für Render-Durchläufe, versteckte Ebenen, die nichts kosten, und eine optionale verkleinerte Ebenen-Auflösung (siehe [docs/PERFORMANCE.md](docs/PERFORMANCE.md), englisch), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
 
 ## Download
 
@@ -38,6 +38,7 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 - **Einstellungsfenster.** Ein Ort für Audio, Ausgabe, Spout, Updates, Sprache und Oberflächengröße, dazu eine Statusleiste mit FPS, Tempo, Deck und Audio auf einen Blick.
 - **Eigene Shader-Clips.** Lege eine .glsl-, .frag- oder .fs-Datei (selbst geschrieben oder von Shadertoy) in den Shader-Ordner, und sie wird zum Clip. Siehe [docs/SHADERS.md](docs/SHADERS.md).
 - **Englisch, Deutsch, Spanisch und Französisch.** Englisch ist Standard, umschalten jederzeit unter Einstellungen, Allgemein. Eine eigene Sprache kommt über eine kleine .json-Datei dazu, siehe [docs/LANGUAGES.md](docs/LANGUAGES.md).
+- **Schonend für die Grafikkarte.** Ebenen mit Deckkraft null werden nicht gezeichnet, eine optionale Ebenen-Auflösung (Voll, Ausgewogen, Leistung oder Automatisch) tauscht Pixel gegen Bildzeit, ungenutzte Bilder werden freigegeben, und Einstellungen, Leistung zeigt, welcher Clip oder Effekt die Zeit braucht. Gemessene Zahlen und Grenzen stehen in [docs/PERFORMANCE.md](docs/PERFORMANCE.md) (englisch).
 - **Willkommensbildschirm.** Beim ersten Start und nach jedem Update, mit allem, was neu ist.
 - **Aktualisiert sich selbst.** Prüft GitHub beim Start, kontrolliert die SHA-256-Summe und zeigt oben rechts eine kleine Karte mit Jetzt neu starten oder Später.
 
@@ -247,7 +248,7 @@ NyrexVJ/
 │   ├── platform/   Windows- und Ersatz-Plattformcode
 │   └── main.cpp
 ├── tests/          Unit-Tests für Core, Audio, Steuerung, i18n und Update-Logik
-├── scripts/        Repository-Prüfungen (Übersetzungsabdeckung)
+├── scripts/        Repository-Prüfungen (Übersetzungsabdeckung), Hilfen für Video- und Render-Benchmarks
 ├── integrations/   Experimentelles Unreal-Engine-Plugin (nur Quellcode)
 ├── resources/      Windows-Icon und Ressourcenvorlage
 ├── docs/           Anleitungen, Entscheidungen (ADRs), die Schnittstellenliste und Bilder für die Readme
@@ -332,6 +333,10 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--bench-budget MS` | Mit `--bench-comp` mit Code 2 beenden, wenn die mittlere Bildzeit über MS liegt |
 | `--bench-all` | Mit `--bench-comp` alle Werks-Looks nacheinander messen |
 | `--bench-out DATEI.json` | Mit `--bench-scene` oder `--bench-comp` das Ergebnis zusätzlich als JSON schreiben |
+| `--profile` | Mit `--bench-comp` jeden Render-Durchlauf einzeln messen und die Tabelle ins JSON-Ergebnis schreiben |
+| `--bench-shaders FRAMES` | Die GPU-Zeit jedes Clips allein und jedes Effekts allein über FRAMES Bilder messen und die teuersten ausgeben (`--bench-out` schreibt JSON), dann beenden |
+| `--bench-memory` | Die Größe der Render-Ziele im Leerlauf, während und nach einem Deck-Übergang und für jede Render-Qualität ausgeben, dann beenden |
+| `--quality 0\|1\|2\|3` | Ebenen-Auflösung für diesen Lauf: 0 Voll, 1 Ausgewogen, 2 Leistung, 3 Automatisch |
 | `--bench-video SEKUNDEN:CLIP1,CLIP2` | Prozessorzeit, Decodierzeit, Upload-Zeit und Videospeicher der genannten Video-Clips messen, SEKUNDEN lang, dann beenden (`--bench-out` schreibt JSON) |
 | `--video-selftest ORDNER` | Jedes Video aus ORDNER über den Grafikkartenweg und den Prozessorweg abspielen und die Bilder vergleichen, Exit-Code 1 bei einem Unterschied |
 | `--video-mode auto\|hardware\|software` | Den Video-Decoder für diesen Lauf wählen |

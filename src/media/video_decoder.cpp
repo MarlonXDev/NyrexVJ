@@ -77,6 +77,9 @@ constexpr double kSeekAhead = 1.5;
 constexpr int kMaxFailures = 200;
 constexpr int kMaxHardwareFailures = 24;
 constexpr int kProbePackets = 160;
+constexpr unsigned long long kReverseBudget = 96ull * 1024ull * 1024ull;
+constexpr int kMinReverseFrames = 6;
+constexpr int kMaxReverseFrames = 16;
 
 using Buffer = std::vector<uint8_t>;
 
@@ -241,6 +244,30 @@ struct VideoDecoder::Impl {
     std::string pixelFormat;
     unsigned long long nextId = 1;
 
+    double rangeIn = 0.0;
+    double rangeLen = 0.0;
+    bool rangeCustom = false;
+    double pendingIn = 0.0;
+    double pendingLen = 0.0;
+    bool pendingCustom = false;
+    bool configDirty = false;
+    bool jumpPending = false;
+    bool seekPending = false;
+    bool fallbackShown = false;
+    bool reverseMode = false;
+    bool collecting = false;
+    bool segmentDone = false;
+    double reverseLimit = 0.0;
+    double skipTolerance = 0.5;
+    int stepEpoch = 0;
+    size_t frameBytes = 0;
+    size_t poolLimit = kQueueLimit + 4;
+    std::vector<std::shared_ptr<VideoFrame>> collected;
+    std::atomic<int> epoch{0};
+    std::atomic<bool> reverseWanted{false};
+    std::atomic<int> reverseWindow{8};
+    std::atomic<unsigned long long> seeks{0};
+
     long long loops = 0;
     double windowStart = 0.0;
     double decodedUntil = 0.0;
@@ -303,7 +330,7 @@ struct VideoDecoder::Impl {
                 return candidate;
             }
         }
-        if (pool.size() >= kQueueLimit + 4) {
+        if (pool.size() >= poolLimit) {
             return nullptr;
         }
         std::shared_ptr<Buffer> created = std::make_shared<Buffer>(size, 0);
@@ -311,18 +338,24 @@ struct VideoDecoder::Impl {
         return created;
     }
 
-    void seekTo(long long wraps, double inside, bool keepQueue = false) {
-        loops = wraps;
-        const double absolute = static_cast<double>(wraps) * duration + inside;
-        const double target = (inside + startTime) / timeBase;
+    void rewindTo(double inside) {
+        const double target = (inside + rangeIn + startTime) / timeBase;
         api->av_seek_frame(format, stream, static_cast<int64_t>(target), AVSEEK_FLAG_BACKWARD);
         if (codec != nullptr) {
             api->avcodec_flush_buffers(codec);
         }
         draining = false;
         ended = false;
-        skipUntil = absolute;
         workSeconds = 0.0;
+        seeks.fetch_add(1);
+    }
+
+    void seekTo(long long wraps, double inside, bool keepQueue = false) {
+        loops = wraps;
+        const double absolute = static_cast<double>(wraps) * rangeLen + inside;
+        rewindTo(inside);
+        skipTolerance = keepQueue ? 0.5 : 1.001;
+        skipUntil = absolute;
         std::lock_guard<std::mutex> lock(mutex);
         decodedUntil = absolute;
         if (!keepQueue) {
@@ -333,12 +366,27 @@ struct VideoDecoder::Impl {
 
     void seekAbsolute(double absolute) {
         absolute = std::max(absolute, 0.0);
-        if (duration <= 0.0) {
+        if (rangeLen <= 0.0) {
             seekTo(0, absolute);
             return;
         }
-        const long long wraps = static_cast<long long>(std::floor(absolute / duration));
-        seekTo(wraps, std::clamp(absolute - static_cast<double>(wraps) * duration, 0.0, duration));
+        const long long wraps = static_cast<long long>(std::floor(absolute / rangeLen));
+        seekTo(wraps, std::clamp(absolute - static_cast<double>(wraps) * rangeLen, 0.0, rangeLen));
+    }
+
+    void measureFrame(const VideoFrame& out) {
+        size_t total = 0;
+        if (hapDirect) {
+            total = hapBytes;
+        } else {
+            for (int i = 0; i < out.planeCount; ++i) {
+                total += out.planes[static_cast<size_t>(i)].size();
+            }
+        }
+        frameBytes = std::max<size_t>(total, 1);
+        const unsigned long long fit = kReverseBudget / (static_cast<unsigned long long>(frameBytes) * 3ull);
+        reverseWindow.store(static_cast<int>(std::clamp<unsigned long long>(fit, static_cast<unsigned long long>(kMinReverseFrames), static_cast<unsigned long long>(kMaxReverseFrames))));
+        poolLimit = std::max<size_t>(kQueueLimit + 4, static_cast<size_t>(reverseWindow.load()) * 3 + 4);
     }
 
     void recordWork(double seconds) {
@@ -346,15 +394,28 @@ struct VideoDecoder::Impl {
     }
 
     void push(std::shared_ptr<VideoFrame> out, double absolute) {
+        out->time = absolute;
+        out->outWidth = outWidth;
+        out->outHeight = outHeight;
+        if (frameBytes == 0) {
+            measureFrame(*out);
+        }
+        if (collecting) {
+            collected.push_back(std::move(out));
+            if (collected.size() > static_cast<size_t>(reverseWindow.load())) {
+                collected.erase(collected.begin());
+            }
+            return;
+        }
         const double ms = workSeconds * 1000.0;
         workSeconds = 0.0;
         const double previous = decodeMs.load();
         decodeMs.store(previous <= 0.0 ? ms : previous * 0.9 + ms * 0.1);
-        decoded.fetch_add(1);
-        out->time = absolute;
-        out->outWidth = outWidth;
-        out->outHeight = outHeight;
         std::lock_guard<std::mutex> lock(mutex);
+        if (epoch.load() != stepEpoch) {
+            return;
+        }
+        decoded.fetch_add(1);
         out->id = nextId++;
         queue.push_back(std::move(out));
         decodedUntil = absolute;
@@ -498,8 +559,20 @@ struct VideoDecoder::Impl {
     }
 
     double timestampOf(int64_t stamp) const {
-        const double inside = static_cast<double>(stamp) * timeBase - startTime;
-        return static_cast<double>(loops) * duration + std::max(inside, 0.0);
+        const double inside = static_cast<double>(stamp) * timeBase - startTime - rangeIn;
+        return static_cast<double>(loops) * rangeLen + (rangeIn > 0.0 ? inside : std::max(inside, 0.0));
+    }
+
+    bool admit(double absolute) {
+        if (collecting && absolute >= reverseLimit) {
+            segmentDone = true;
+            return false;
+        }
+        if (rangeCustom && absolute - static_cast<double>(loops) * rangeLen >= rangeLen - framePeriod * 0.05) {
+            onEnd();
+            return false;
+        }
+        return absolute >= skipUntil - framePeriod * skipTolerance;
     }
 
     void step() {
@@ -520,7 +593,7 @@ struct VideoDecoder::Impl {
                 stamp = frame->pts;
             }
             const double absolute = stamp == AV_NOPTS_VALUE ? decodedUntil + framePeriod : timestampOf(stamp);
-            if (absolute >= skipUntil - framePeriod * 0.5) {
+            if (admit(absolute)) {
                 produce(absolute);
             }
             api->av_frame_unref(frame);
@@ -568,7 +641,7 @@ struct VideoDecoder::Impl {
                 stamp = packet->dts;
             }
             const double absolute = stamp == AV_NOPTS_VALUE ? decodedUntil + framePeriod : timestampOf(stamp);
-            if (absolute >= skipUntil - framePeriod * 0.5) {
+            if (admit(absolute)) {
                 produceHap(*packet, absolute);
             }
         }
@@ -576,16 +649,130 @@ struct VideoDecoder::Impl {
     }
 
     void onEnd() {
-        if (duration > 0.0) {
+        if (collecting) {
+            segmentDone = true;
+        } else if (rangeLen > 0.0) {
             seekTo(loops + 1, 0.0, true);
         } else {
             ended = true;
         }
     }
 
+    bool syncConfig() {
+        bool changed = false;
+        std::lock_guard<std::mutex> lock(mutex);
+        stepEpoch = epoch.load();
+        if (configDirty) {
+            configDirty = false;
+            rangeIn = pendingIn;
+            rangeLen = pendingLen;
+            rangeCustom = pendingCustom;
+            changed = true;
+        }
+        if (reverseWanted.load() != reverseMode) {
+            reverseMode = reverseWanted.load();
+            changed = true;
+        }
+        if (jumpPending) {
+            jumpPending = false;
+            changed = true;
+        }
+        return changed;
+    }
+
+    void pause() {
+        std::unique_lock<std::mutex> lock(mutex);
+        wake.wait_for(lock, std::chrono::milliseconds(4));
+    }
+
+    void decodeSegment(double limit) {
+        const double lowest = std::max(limit - framePeriod * static_cast<double>(reverseWindow.load()), 0.0);
+        const auto begin = std::chrono::steady_clock::now();
+        loops = 0;
+        reverseLimit = limit;
+        segmentDone = false;
+        collected.clear();
+        collecting = true;
+        rewindTo(lowest);
+        skipTolerance = 1.001;
+        skipUntil = lowest;
+        while (!stop.load() && !broken.load() && !segmentDone && epoch.load() == stepEpoch) {
+            step();
+        }
+        collecting = false;
+        size_t inserted = 0;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            if (epoch.load() == stepEpoch) {
+                for (auto it = collected.rbegin(); it != collected.rend(); ++it) {
+                    if (!queue.empty() && (*it)->time >= queue.back()->time - 1.0e-9) {
+                        continue;
+                    }
+                    (*it)->id = nextId++;
+                    queue.push_back(*it);
+                    ++inserted;
+                }
+            }
+        }
+        collected.clear();
+        workSeconds = 0.0;
+        if (inserted > 0) {
+            decoded.fetch_add(inserted);
+            const double ms = std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count() * 1000.0 / static_cast<double>(inserted);
+            const double previous = decodeMs.load();
+            decodeMs.store(previous <= 0.0 ? ms : previous * 0.9 + ms * 0.1);
+        } else {
+            pause();
+        }
+    }
+
+    void reverseStep() {
+        if (rangeLen <= 0.0) {
+            pause();
+            return;
+        }
+        const double target = std::clamp(want.load(), 0.0, rangeLen);
+        size_t count = 0;
+        double high = 0.0;
+        double low = 0.0;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            count = queue.size();
+            if (count > 0) {
+                high = queue.front()->time;
+                low = queue.back()->time;
+            }
+        }
+        const bool restart = count == 0 || target > high + framePeriod * 1.5 || low > target + framePeriod * 0.75;
+        double limit = 0.0;
+        if (restart) {
+            limit = std::min(target + framePeriod * 0.5, rangeLen);
+            std::lock_guard<std::mutex> lock(mutex);
+            queue.clear();
+        } else {
+            const double lookahead = framePeriod * static_cast<double>(std::max(1, reverseWindow.load() / 2));
+            if (low <= framePeriod * 0.5 || target - low >= lookahead) {
+                pause();
+                return;
+            }
+            limit = low - framePeriod * 0.5;
+        }
+        decodeSegment(limit);
+    }
+
     void run() {
         platform::setCurrentThreadBackground(true);
         while (!stop.load() && !broken.load()) {
+            if (syncConfig()) {
+                if (!reverseMode) {
+                    seekAbsolute(want.load());
+                }
+                continue;
+            }
+            if (reverseMode) {
+                reverseStep();
+                continue;
+            }
             const double target = want.load();
             bool seek = false;
             bool full = false;
@@ -669,6 +856,70 @@ struct VideoDecoder::Impl {
         return success;
     }
 
+    std::shared_ptr<const VideoFrame> pickForward(double seconds, bool& wake) {
+        if (shown && !seekPending && !fallbackShown && seconds < shown->time - framePeriod * 0.001) {
+            seekPending = true;
+            jumpPending = true;
+            epoch.fetch_add(1);
+            queue.clear();
+            wake = true;
+            return shown;
+        }
+        int popped = 0;
+        const double tolerance = framePeriod * 0.001;
+        while (!queue.empty() && queue.front()->time <= seconds + tolerance) {
+            shown = queue.front();
+            queue.pop_front();
+            ++popped;
+            fallbackShown = false;
+        }
+        const bool resumed = seekPending;
+        if ((!shown || seekPending) && popped == 0 && !queue.empty()) {
+            shown = queue.front();
+            queue.pop_front();
+            popped = 1;
+            fallbackShown = true;
+        }
+        if (popped > 0) {
+            seekPending = false;
+        }
+        if (popped > 1 && !resumed) {
+            dropped.fetch_add(static_cast<unsigned long long>(popped - 1));
+        }
+        if (shown) {
+            const bool late = queue.empty() && seconds - shown->time > framePeriod * 2.0;
+            if (late && !starving) {
+                underruns.fetch_add(1);
+            }
+            starving = late;
+        }
+        return shown;
+    }
+
+    std::shared_ptr<const VideoFrame> pickReverse(double seconds) {
+        const double tolerance = framePeriod * 0.001;
+        while (queue.size() > 1 && queue.front()->time > seconds + tolerance) {
+            if (queue.front() != shown) {
+                dropped.fetch_add(1);
+            }
+            queue.pop_front();
+        }
+        bool covered = false;
+        if (!queue.empty()) {
+            if (queue.front()->time <= seconds + tolerance) {
+                shown = queue.front();
+                covered = true;
+            } else if (!shown) {
+                shown = queue.front();
+            }
+        }
+        if (!covered && !starving) {
+            underruns.fetch_add(1);
+        }
+        starving = !covered;
+        return shown;
+    }
+
     void rewind() {
         api->av_seek_frame(format, stream, static_cast<int64_t>(startTime / timeBase), AVSEEK_FLAG_BACKWARD);
     }
@@ -748,6 +999,8 @@ bool VideoDecoder::open(const std::string& path, std::string& error, const Video
         length = static_cast<double>(stream->duration) * d.timeBase;
     }
     d.duration = length;
+    d.rangeLen = length;
+    d.pendingLen = length;
     d.info.width = width;
     d.info.height = height;
     d.info.decodedWidth = d.outWidth;
@@ -928,6 +1181,14 @@ VideoStatus VideoDecoder::status() const {
     result.decoded = d.decoded.load();
     result.dropped = d.dropped.load();
     result.underruns = d.underruns.load();
+    result.seeks = d.seeks.load();
+    result.reverse = d.reverseWanted.load();
+    result.reverseFrames = d.reverseWindow.load();
+    {
+        std::lock_guard<std::mutex> lock(d.mutex);
+        result.rangeIn = d.pendingIn;
+        result.rangeOut = d.pendingIn + d.pendingLen;
+    }
     return result;
 }
 
@@ -936,30 +1197,84 @@ std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double seconds) {
         return nullptr;
     }
     Impl& d = *impl_;
-    d.want.store(std::max(seconds, 0.0));
-    std::lock_guard<std::mutex> lock(d.mutex);
-    int popped = 0;
-    while (!d.queue.empty() && d.queue.front()->time <= seconds) {
-        d.shown = d.queue.front();
-        d.queue.pop_front();
-        ++popped;
-    }
-    if (!d.shown && !d.queue.empty()) {
-        d.shown = d.queue.front();
-        d.queue.pop_front();
-        popped = 1;
-    }
-    if (popped > 1) {
-        d.dropped.fetch_add(static_cast<unsigned long long>(popped - 1));
-    }
-    if (d.shown) {
-        const bool late = d.queue.empty() && seconds - d.shown->time > d.framePeriod * 2.0;
-        if (late && !d.starving) {
-            d.underruns.fetch_add(1);
+    seconds = std::max(seconds, 0.0);
+    d.want.store(seconds);
+    bool wake = false;
+    std::shared_ptr<const VideoFrame> result;
+    {
+        std::lock_guard<std::mutex> lock(d.mutex);
+        if (d.reverseWanted.load()) {
+            result = d.pickReverse(seconds);
+        } else {
+            result = d.pickForward(seconds, wake);
         }
-        d.starving = late;
     }
-    return d.shown;
+    if (wake) {
+        d.wake.notify_all();
+    }
+    return result;
+}
+
+void VideoDecoder::setRange(double in, double out) {
+    if (!impl_ || !impl_->opened || impl_->duration <= 0.0) {
+        return;
+    }
+    Impl& d = *impl_;
+    double low = std::clamp(in, 0.0, d.duration);
+    double high = out > 0.0 ? std::min(out, d.duration) : d.duration;
+    if (high < low + d.framePeriod) {
+        high = std::min(low + d.framePeriod, d.duration);
+        low = std::max(high - d.framePeriod, 0.0);
+    }
+    bool custom = low > d.framePeriod * 0.01 || high < d.duration - d.framePeriod * 0.01;
+    if (!custom) {
+        low = 0.0;
+        high = d.duration;
+    }
+    {
+        std::lock_guard<std::mutex> lock(d.mutex);
+        if (d.pendingIn == low && d.pendingLen == high - low && d.pendingCustom == custom) {
+            return;
+        }
+        d.pendingIn = low;
+        d.pendingLen = high - low;
+        d.pendingCustom = custom;
+        d.configDirty = true;
+        d.epoch.fetch_add(1);
+        d.queue.clear();
+        d.shown.reset();
+        d.seekPending = false;
+        d.fallbackShown = false;
+    }
+    d.wake.notify_all();
+}
+
+void VideoDecoder::setDirection(bool reverse) {
+    if (!impl_ || !impl_->opened) {
+        return;
+    }
+    Impl& d = *impl_;
+    if (d.reverseWanted.load() == reverse || (reverse && d.duration <= 0.0)) {
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(d.mutex);
+        d.reverseWanted.store(reverse);
+        d.epoch.fetch_add(1);
+        d.queue.clear();
+        d.shown.reset();
+        d.seekPending = false;
+        d.fallbackShown = false;
+    }
+    d.wake.notify_all();
+}
+
+bool VideoDecoder::reversing() const {
+    return impl_ && impl_->reverseWanted.load();
+}
+
+double VideoDecoder::framePeriod() const {
+    return impl_ ? impl_->framePeriod : 1.0 / 30.0;
 }
 
 }
@@ -1013,6 +1328,18 @@ VideoStatus VideoDecoder::status() const {
 
 std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double) {
     return nullptr;
+}
+
+void VideoDecoder::setRange(double, double) {}
+
+void VideoDecoder::setDirection(bool) {}
+
+bool VideoDecoder::reversing() const {
+    return false;
+}
+
+double VideoDecoder::framePeriod() const {
+    return 1.0 / 30.0;
 }
 
 }

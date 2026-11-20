@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/playhead.hpp"
+
 #include <array>
 #include <string>
 #include <vector>
@@ -173,6 +175,7 @@ struct EffectSlot {
 
 struct Layer {
     std::array<int, kColumnCount> cells;
+    std::array<ClipPlayback, kColumnCount> playback;
     int activeColumn = -1;
     float opacity = 1.0f;
     int blend = BlendNormal;
@@ -188,6 +191,12 @@ struct Layer {
     std::array<EffectSlot, kEffectSlots> fx;
 
     Layer() { cells.fill(-1); }
+    void setCell(size_t column, int clip) {
+        if (cells[column] != clip) {
+            playback[column] = ClipPlayback{};
+        }
+        cells[column] = clip;
+    }
     bool operator==(const Layer&) const = default;
 };
 

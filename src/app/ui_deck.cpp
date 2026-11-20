@@ -434,7 +434,7 @@ void App::drawDeck() {
                 }
                 if (ImGui::BeginDragDropTarget()) {
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("NVJ_CLIP")) {
-                        layer.cells[static_cast<size_t>(c)] = *static_cast<const int*>(payload->Data);
+                        layer.setCell(static_cast<size_t>(c), *static_cast<const int*>(payload->Data));
                         selectedLayer_ = row;
                         selectedColumn_ = c;
                     }
@@ -447,7 +447,7 @@ void App::drawDeck() {
                         selectedColumn_ = c;
                     }
                     if (ImGui::MenuItem(tr("Clear cell"), nullptr, false, clip >= 0)) {
-                        layer.cells[static_cast<size_t>(c)] = -1;
+                        layer.setCell(static_cast<size_t>(c), -1);
                         if (active) {
                             layer.activeColumn = -1;
                         }
@@ -455,7 +455,7 @@ void App::drawDeck() {
                     if (ImGui::BeginMenu(tr("Assign clip"))) {
                         for (int i = 0; i < static_cast<int>(library.size()); ++i) {
                             if (ImGui::MenuItem(library[static_cast<size_t>(i)].name.c_str(), nullptr, clip == i)) {
-                                layer.cells[static_cast<size_t>(c)] = i;
+                                layer.setCell(static_cast<size_t>(c), i);
                             }
                         }
                         ImGui::EndMenu();

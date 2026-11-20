@@ -70,6 +70,11 @@ struct VideoStatus {
     unsigned long long decoded = 0;
     unsigned long long dropped = 0;
     unsigned long long underruns = 0;
+    unsigned long long seeks = 0;
+    bool reverse = false;
+    int reverseFrames = 0;
+    double rangeIn = 0.0;
+    double rangeOut = 0.0;
 };
 
 const char* decodePathName(DecodePath path);

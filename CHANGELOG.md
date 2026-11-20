@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.0 - 2026-11-20
+
+- Media control for video clips: the Clip panel of a video now has a Playback section with time and frame display, a scrub bar that jumps to the exact picture, single frame steps, Play and Pause, In and Out points (with Set here), a loop mode (Loop, Ping-pong, Once and hold the last frame, Once and then disappear), a clip speed from -4x to +4x with a Reverse button, and a clip length in beats that keeps the clip on the tempo of the deck. The settings belong to the cell and are saved in the preset; presets from older versions play as before.
+- Reverse playback: HAP and other formats with a key frame at every picture go backwards picture by picture. Other codecs decode a short piece forward into a ring of 6 to 16 pictures (about 96 MiB at most for 1080p) and hand it out backwards. The video monitor shows when a clip plays backwards, how many pictures are buffered and how many seeks happened. Videos with long key frame intervals cost much more processor time in reverse, `docs/MEDIA.md` says what to do about it (HAP, or a short key frame interval).
+- Exact seeking: the decoder seeks to the key frame before the wanted picture and decodes up to it, so scrubbing and the In point show the right picture, not the nearest key frame.
+- Switching without empty frames: the next filled column of every layer is opened and decoded up to its first picture in the background. Measured with eight 1080p H.264 clips and 16 switches: without it 11 of 16 switches showed an empty frame (47.9 ms on average, 111.2 ms at most until the first picture), with it none and the picture was there in the first frame. It costs about 14.5 MB of video memory per prepared 1080p clip and one decoder per layer. Settings, Performance, Prepare the next clip of every layer turns it off, `--no-prewarm` does it for one run.
+- New command line option `--bench-switch SECONDS:CLIP1,CLIP2,...` to measure clip switches.
+- New files: the play head as its own piece of code without FFmpeg or OpenGL (`src/core/playhead.*`, 101 unit checks), the driver between layer clock and decoder (`src/media/playback_driver.*`), two index test videos where every picture carries its number, and ADR 0013.
+- Fixed: two checks of the test suite failed when the user data folder contained images or videos, because they expected shader code in every clip. Image and video clips are now excluded from that check.
+- Known limits: a clip that runs in several layers at once shares one decoder, so different positions or directions of the same file in two layers are not possible (use a copy of the file). Ping-pong and backwards loops restart the reverse piece at the turning point, which can stutter on a slow decoder. Everything was tested with software decoding and software OpenGL; hardware decoding in reverse, real graphics cards, VRChat and Windows at run time were not available for the test.
+
 ## 0.20.0 - 2026-11-20
 
 - Linux release: every build now also produces `NyrexVJ-linux-x64` (one file) and `NyrexVJ-linux-x64.tar.gz` (with licenses, changelogs and the list of libraries). The program is built on Ubuntu 22.04 with libstdc++ linked in, needs only libc and libm, runs on glibc 2.35 or newer and uses X11 or XWayland. CI checks the library list and the glibc version of every build, so a new dependency cannot slip in unnoticed.

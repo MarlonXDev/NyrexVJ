@@ -137,6 +137,7 @@ MediaState MediaPlayer::poll() {
         decoder_ = std::move(load.decoder);
         info_ = decoder_->info();
         lastFrame_ = 0;
+        driver_.reset();
         state_ = MediaState::Ready;
         return state_;
     }
@@ -157,7 +158,68 @@ MediaState MediaPlayer::poll() {
 }
 
 bool MediaPlayer::update(double clock) {
+    return update(clock, lastBeat_);
+}
+
+double MediaPlayer::framePeriod() const {
+    return PlaybackDriver::periodOf(info_);
+}
+
+double MediaPlayer::position() const {
+    return driver_.position();
+}
+
+void MediaPlayer::setPlayback(const ClipPlayback& playback) {
+    driver_.setPlayback(playback);
+}
+
+void MediaPlayer::scrubTo(double position) {
+    driver_.scrubTo(position);
+}
+
+void MediaPlayer::stepFrames(int frames) {
+    driver_.stepFrames(frames);
+}
+
+bool MediaPlayer::present(double seconds) {
+    const std::shared_ptr<const VideoFrame> frame = decoder_->frameAt(seconds);
+    if (frame && frame->id != lastFrame_) {
+        if (uploader_->present(*frame)) {
+            lastFrame_ = frame->id;
+        } else if (!safeUpload_) {
+            logLine("Video clip '" + label_ + "': the GPU upload failed, switching to the safe CPU path");
+            safeUpload_ = true;
+            uploader_->release();
+            decoder_.reset();
+            driver_.reset();
+            state_ = MediaState::Idle;
+            lastFrame_ = 0;
+            return false;
+        } else {
+            error_ = "The picture could not be uploaded to the graphics card";
+            state_ = MediaState::Failed;
+            logLine("Video clip '" + label_ + "' stopped: " + error_);
+            return false;
+        }
+    }
+    return uploader_->hasPicture();
+}
+
+bool MediaPlayer::prepare(const ClipPlayback& playback) {
+    if (state_ != MediaState::Ready || !video_ || !decoder_ || decoder_->failed() || info_.duration <= 0.0) {
+        return false;
+    }
+    if (!(driver_.playback() == clampedPlayback(playback))) {
+        driver_.setPlayback(playback);
+        driver_.reset();
+    }
+    double seconds = 0.0;
+    return driver_.prepare(*decoder_, info_, seconds) && present(seconds);
+}
+
+bool MediaPlayer::update(double clock, double beat) {
     clock_ = clock;
+    lastBeat_ = beat;
     if (state_ != MediaState::Ready) {
         return false;
     }
@@ -171,6 +233,7 @@ bool MediaPlayer::update(double clock) {
             logLine("Video clip '" + label_ + "': the hardware decoder stopped (" + hardwareFailure_ + "), switching to the CPU decoder");
             uploader_->release();
             decoder_.reset();
+            driver_.reset();
             state_ = MediaState::Idle;
             lastFrame_ = 0;
             return false;
@@ -180,26 +243,11 @@ bool MediaPlayer::update(double clock) {
         logLine("Video clip '" + label_ + "' stopped: " + error_);
         return false;
     }
-    const std::shared_ptr<const VideoFrame> frame = decoder_->frameAt(clock);
-    if (frame && frame->id != lastFrame_) {
-        if (uploader_->present(*frame)) {
-            lastFrame_ = frame->id;
-        } else if (!safeUpload_) {
-            logLine("Video clip '" + label_ + "': the GPU upload failed, switching to the safe CPU path");
-            safeUpload_ = true;
-            uploader_->release();
-            decoder_.reset();
-            state_ = MediaState::Idle;
-            lastFrame_ = 0;
-            return false;
-        } else {
-            error_ = "The picture could not be uploaded to the graphics card";
-            state_ = MediaState::Failed;
-            logLine("Video clip '" + label_ + "' stopped: " + error_);
-            return false;
-        }
+    double seconds = clock;
+    if (!driver_.drive(*decoder_, info_, clock, beat, seconds)) {
+        return false;
     }
-    return uploader_->hasPicture();
+    return present(seconds);
 }
 
 void MediaPlayer::touch() {
@@ -226,6 +274,7 @@ void MediaPlayer::release() {
     destroyTexture();
     state_ = MediaState::Idle;
     lastFrame_ = 0;
+    driver_.reset();
 }
 
 void MediaPlayer::retry() {

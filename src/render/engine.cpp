@@ -592,10 +592,13 @@ void Engine::renderMediaThumbnail(size_t index) {
     drawMedia(player, 1.0f, true, player.lastClock());
 }
 
-bool Engine::drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock) {
+bool Engine::drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock, const ClipPlayback* playback) {
     glClearColor(0.0f, 0.0f, 0.0f, backdrop ? 1.0f : 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    if (!player.update(clock) || player.texture() == 0 || player.width() <= 0 || player.height() <= 0) {
+    if (playback != nullptr) {
+        player.setPlayback(*playback);
+    }
+    if (!player.update(clock, beat_) || player.texture() == 0 || player.width() <= 0 || player.height() <= 0) {
         return false;
     }
     const float source = static_cast<float>(player.width()) / static_cast<float>(player.height());
@@ -645,6 +648,41 @@ void Engine::serviceMedia() {
             if (!player->isVideo()) {
                 logLine("Image '" + player->label() + "' was unloaded because it was not used for two minutes");
             }
+        }
+    }
+}
+
+void Engine::prewarmMedia() {
+    if (!prewarmNext) {
+        return;
+    }
+    std::array<int, kLayerCount> prepared{};
+    prepared.fill(-1);
+    for (int l = 0; l < kLayerCount; ++l) {
+        const Layer& layer = comp.layers[static_cast<size_t>(l)];
+        if (layer.activeColumn < 0) {
+            continue;
+        }
+        for (int step = 1; step < kColumnCount; ++step) {
+            const int column = (layer.activeColumn + step) % kColumnCount;
+            const int clip = layer.cells[static_cast<size_t>(column)];
+            if (clip < 0) {
+                continue;
+            }
+            bool playing = false;
+            for (const Layer& other : comp.layers) {
+                playing = playing || (other.activeColumn >= 0 && other.cells[static_cast<size_t>(other.activeColumn)] == clip);
+            }
+            const bool taken = std::find(prepared.begin(), prepared.end(), clip) != prepared.end();
+            if (!playing && !taken && isMediaClip(clip) && media_[static_cast<size_t>(clip)]->isVideo()) {
+                prepared[static_cast<size_t>(l)] = clip;
+                MediaPlayer& player = *media_[static_cast<size_t>(clip)];
+                player.touch();
+                if (player.poll() == MediaState::Ready) {
+                    player.prepare(layer.playback[static_cast<size_t>(column)]);
+                }
+            }
+            break;
         }
     }
 }
@@ -1639,7 +1677,7 @@ void Engine::blit(const RenderTarget& source, const RenderTarget& target) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Engine::drawLayerSource(int clipIndex, const Layer& layer, float scale, double clock, const RenderTarget& target) {
+void Engine::drawLayerSource(int clipIndex, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target) {
     const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
     const bool spoutClip = clipDef.kind == ClipKind::SpoutSource;
     if (spoutClip) {
@@ -1662,7 +1700,7 @@ void Engine::drawLayerSource(int clipIndex, const Layer& layer, float scale, dou
         frame.rainbow = layer.rainbow;
         sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, target);
     } else if (media_[static_cast<size_t>(clipIndex)]) {
-        drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock);
+        drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock, &playback);
     } else if (!spoutClip || !drawSpout(clipDef.sceneIndex, scale)) {
         drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clock), static_cast<float>(beat_), comp.bpm, static_cast<float>(target.width), static_cast<float>(target.height), layer.colorA, layer.colorB, layer.rainbow, scale);
     }
@@ -1715,7 +1753,7 @@ void Engine::renderPreview() {
     if (profiler_.enabled()) {
         profiler_.mark(PassKind::Preview, 0, -1, 0, clipLibrary()[static_cast<size_t>(clipIndex)].name);
     }
-    drawLayerSource(clipIndex, layer, effective_[layerIndex].scale, previewClock_, previewA_);
+    drawLayerSource(clipIndex, layer, layer.playback[static_cast<size_t>(previewColumn_)], effective_[layerIndex].scale, previewClock_, previewA_);
     previewResult_ = runChain(layer.fx, previewFeedback_.data(), previewFeedbackUsed_.data(), &previewA_, &previewB_, 0, -1);
     for (size_t k = 0; k < previewFeedback_.size(); ++k) {
         if (previewFeedback_[k].fbo && !previewFeedbackUsed_[k]) {
@@ -1852,7 +1890,7 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         if (profiler_.enabled()) {
             profiler_.mark(PassKind::Source, deck, l + 1, 0, clipLibrary()[static_cast<size_t>(clipIndex)].name);
         }
-        drawLayerSource(clipIndex, layer, effective[li].scale, clocks[li], *chainSource);
+        drawLayerSource(clipIndex, layer, layer.playback[static_cast<size_t>(layer.activeColumn)], effective[li].scale, clocks[li], *chainSource);
 
         RenderTarget* result = runChain(layer.fx, chainFeedback(chainBase + l), chainUsed(chainBase + l), chainSource, chainScratch, deck, l + 1);
         if (updatePreviews) {
@@ -1957,6 +1995,7 @@ void Engine::render() {
     renderClipThumbnails(2);
     serviceScenes();
     serviceMedia();
+    prewarmMedia();
     serviceSpout();
 
     feedbackUsed_.fill(false);

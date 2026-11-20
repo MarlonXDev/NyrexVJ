@@ -60,6 +60,7 @@ bool loadSettings(Settings& settings) {
     }
     result.hapDirect = boolean("hapDirect", true);
     result.videoGpuConvert = boolean("videoGpuConvert", true);
+    result.prewarmNext = boolean("prewarmNext", true);
     result.openOutputOnStart = boolean("openOutputOnStart", false);
     result.showStatusBar = boolean("showStatusBar", true);
     result.showTimings = boolean("showTimings", true);
@@ -201,6 +202,7 @@ bool saveSettings(const Settings& settings) {
     doc["videoDecoder"] = settings.videoDecoder;
     doc["hapDirect"] = settings.hapDirect;
     doc["videoGpuConvert"] = settings.videoGpuConvert;
+    doc["prewarmNext"] = settings.prewarmNext;
     doc["openOutputOnStart"] = settings.openOutputOnStart;
     doc["showStatusBar"] = settings.showStatusBar;
     doc["showTimings"] = settings.showTimings;

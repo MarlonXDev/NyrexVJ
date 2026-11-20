@@ -75,6 +75,38 @@ Video memory is an estimate computed from the texture sizes NyrexVJ creates. It 
 
 Settings, Performance, Frame rate limit: 30, 60, 90, 120, 144 or Unlimited, independent of VSync. The default is 60. After each frame the limiter sleeps until shortly before the next deadline and finishes with a very short precise wait, so the processor is idle in between and the frame times stay even. A frame that took too long does not make the next ones shorter. It is the biggest saving next to VRChat: a limit of 60 on a 144 Hz monitor stops NyrexVJ from drawing 144 frames a second that nobody needs. With VSync on, the limiter only acts when the monitor is faster than the limit.
 
+### Playback control
+
+The Clip panel of a video clip has a Playback section. The settings belong to the cell (the clip in one column of one layer) and are saved in the preset, so the same video can run forwards in one column and backwards in another. A preset without playback settings plays as before: forward, the whole video, loop.
+
+| Control | What it does |
+| --- | --- |
+| Time and frame, scrub bar | Shows the position as time and frame number. Dragging the bar jumps to that picture exactly (the decoder seeks to the key frame before it and decodes up to it, so the picture is the right one, not the nearest key frame). |
+| Step buttons | One picture back or forward. |
+| Play, Pause | Pause sets the speed to 0 and keeps the picture, Play sets it to 1. |
+| In point, Out point, Set here | The part of the video that plays. Drag the values or take the current position. An Out point at the end of the video means "to the end". |
+| Loop mode | Loop, Ping-pong (forwards, then backwards), Once and hold the last frame, Once and then disappear (the layer shows nothing after the end). |
+| Clip speed, Reverse | From -4x to +4x. Negative speeds play backwards, Reverse flips the sign. |
+| Clip length in beats | Off, or 0.25 to 128 beats. The range from In to Out then plays in exactly this many beats and follows the tempo of the deck, so the video stays on the beat when you change the BPM, tap or nudge. |
+| Reset playback | Back to the defaults. Only shown when something was changed. |
+
+The layer clock still decides when a clip starts (a clip restarts at the In point when it is triggered) and the layer Speed, Tap and Pause still move it. The clip speed is multiplied with the layer speed.
+
+**Reverse playback.** HAP and other formats with a key frame at every picture go backwards one picture at a time. Other codecs (H.264, HEVC, AV1, VP9) only store a full picture at their key frames, so for reverse the decoder seeks to a key frame before the wanted time, decodes forward into a ring of 6 to 16 pictures (sized so that the ring and its picture pool stay near 96 MiB, 4K videos keep the minimum of 6) and hands the pictures out in descending order. The video monitor shows when a clip plays backwards and how many pictures are buffered, and counts the seeks. The cost is real: for a video with a key frame every 10 seconds, up to 10 seconds of pictures have to be decoded again for every segment of 6 to 16 pictures, so it only keeps up when your computer decodes much faster than real time. If it cannot keep up, the nearest picture that is not newer than the wanted time stays on screen, the render loop never waits. For heavy use of backwards playback and scrubbing, use HAP, or encode with a short key frame interval (for example `ffmpeg -i in.mp4 -c:v libx264 -g 12 out.mp4`, a little bigger file, a much cheaper reverse).
+
+**Switching without empty frames.** A video is opened and decoded up to its first picture before it is needed: the next filled column of every layer is prepared in the background while nothing is changing (the first picture at the In point, or at the Out point when the clip plays backwards). When you trigger it, the first picture is already there. Settings, Performance, Video playback, Prepare the next clip of every layer turns this on or off (on by default, `--no-prewarm` turns it off for one run). It costs one extra decoder and about 14.5 MB of video memory per prepared 1080p clip, at most one per layer. Measured with eight 1080p H.264 clips and 16 switches (`NyrexVJ --bench-switch 1:big1,big2,...`, software decoding, llvmpipe):
+
+| | Switches with an empty frame | Time to the first picture (average, maximum) | Estimated video memory |
+| --- | ---: | ---: | ---: |
+| Prepare next clip off | 11 of 16 | 47.9 ms, 111.2 ms | 103.8 MB |
+| Prepare next clip on | 0 of 16 | in the first frame | 118.3 MB |
+
+**Limits.**
+- A clip that runs in several layers at the same time shares one decoder. Each layer asks it in turn with its own clock and its own playback settings. With the same settings and the same trigger time that is harmless, with different positions or directions the picture of the layers can jump, because there is only one decoder. For two different positions of the same video at once, put two copies of the file (with different names) into the library.
+- Ping-pong and backwards loops restart the reverse segment at the turning point. A slow decoder can show a short stutter there.
+- Timecode locked playback comes with the show sync milestone.
+- Only video clips have these controls. Images, shader clips and 3D scenes have no play head.
+
 ## Measured effect
 
 Measured in the test environment: Linux, Xvfb with the software rasteriser (llvmpipe) and two processor cores, FFmpeg 6.1, 1920 x 1080 output, eight seconds per scenario, no graphics card. Because the rasteriser runs on the processor too, the column "without rasteriser" is the one that shows what NyrexVJ's own video work costs: it is the processor time of everything except the software OpenGL driver, in percent of one core.
@@ -124,11 +156,15 @@ Whoever distributes NyrexVJ together with the FFmpeg libraries has to follow the
 - `src/media/ffmpeg_api.hpp` lists the 40 FFmpeg functions that are used (the hardware decoding ones included). `src/media/ffmpeg_dyn.cpp` loads them (`dlopen` / `LoadLibraryExW`) and refuses to run when one is missing.
 - `NYREXVJ_NO_FFMPEG=1` makes the libraries count as missing (to try the error path). `NYREXVJ_REQUIRE_VIDEO=1` makes `nvj_media_tests` fail instead of skipping when video decoding is unavailable.
 - Pipeline code: `src/media/video_decoder.cpp` (decoder thread, hardware probe and fallback), `src/media/video_hardware.cpp` (probe of the hardware interfaces), `src/media/hap.cpp` (HAP container parser), `src/render/video_gpu.cpp` (upload and colour conversion on the graphics card), `src/core/frame_pacer.cpp` (frame rate limit), `src/app/ui_video.cpp` (settings and monitor).
-- Command line for tests and measurements: `--bench-video SECONDS:clip1,clip2` measures the processor cost of videos in real time, `--video-selftest DIR` uploads every clip of a folder through the graphics card path and compares it with the processor path (exit code 1 on a difference), `--video-mode auto|hardware|software`, `--no-hap-direct`, `--no-gpu-convert` and `--frame-report SECONDS` (frame time and sleep time statistics with the limiter).
+- Playback control: `src/core/playhead.{hpp,cpp}` (pure play head, no FFmpeg or OpenGL), `src/media/playback_driver.{hpp,cpp}` (clock to decoder), the range, direction and exact seek parts of `src/media/video_decoder.cpp`, `src/render/media_player.cpp` (forwarding, scrub, step), `Engine::prewarmMedia` (next clip) and `drawPlaybackControls` in `src/app/ui_browser.cpp`.
+- Command line for tests and measurements: `--bench-switch SECONDS:clip1,clip2,...` (at least two clips, counts empty frames and the time to the first picture over repeated switches in real time, `--bench-out` writes JSON), `--no-prewarm`, `--bench-video SECONDS:clip1,clip2` measures the processor cost of videos in real time, `--video-selftest DIR` uploads every clip of a folder through the graphics card path and compares it with the processor path (exit code 1 on a difference), `--video-mode auto|hardware|software`, `--no-hap-direct`, `--no-gpu-convert` and `--frame-report SECONDS` (frame time and sleep time statistics with the limiter).
+- `tests/test_playhead.cpp` (target `nvj_playhead_tests`) tests the play head alone: every loop mode in both directions, ranges, speed, beat sync and invalid values. `tests/test_media.cpp` also uses two index videos (`tests/data/test_index_h264.mp4` and `tests/data/test_index_mjpeg.avi`, every picture carries its number in its brightness) to check exactly which picture is shown after forward play, reverse play, exact seeks, ranges, ping-pong, once and hold, once and stop and a prepared clip.
 - `tests/test_media.cpp` covers the file name rules, premultiplication, image loading with alpha, errors, the library scan, the import of dropped files and, when the libraries are present, H.264 and HAP decoding, seeking, looping without lost frames, alpha, opening and closing many decoders, the HAP parser (Snappy, chunks, uncompressed, HAP Q, damaged files), the choice of decoder and the fallback reasons.
 
 ## What was and was not tested
 
 Tested on Linux with FFmpeg 6.1 and software OpenGL (llvmpipe): everything above except hardware decoding, including the thumbnails, the transparency over other layers, the real OpenGL upload of every test clip (HAP, HAP Alpha, HAP Q, chunked and uncompressed HAP, 8 bit and 10 bit H.264 and HEVC, ProRes with alpha) compared with the processor path (`NyrexVJ --video-selftest tests/data`), looping and seeking, and several videos at once in 1080p and 4K. On Windows (MSVC, the build workflow) with the FFmpeg 8.1 headers and DLLs: the build and the decode tests. The Windows-only code was also compiled with MinGW as a check.
+
+The playback control (play head, reverse, exact seek, range, loop modes, beat sync, prepared clips) was tested with the unit tests, the index videos, an end to end run with software OpenGL on a virtual display and the switching benchmark above, all with software decoding. Not tested: backwards playback with hardware decoding, long videos with long key frame intervals in reverse for minutes, and everything on Windows at run time.
 
 Not tested, because it needs hardware that was not available: hardware decoding on a real graphics card (D3D11VA, DXVA2, NVDEC/CUDA, VA-API, QSV), real graphics card frame times, starting NyrexVJ itself on Windows with video clips, and anything in VR or next to VRChat. The code for these paths is written against the FFmpeg interfaces and falls back to the processor when something fails, but expect to need corrections after the first run on real hardware, and please report them.

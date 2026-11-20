@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-11-18
 - **Owners:** Maintainers (pending assignment)
-- **Related:** [Architecture](../ARCHITECTURE.md), [Roadmap](../ROADMAP.md)
+- **Related:** [Architecture](../ARCHITECTURE.md), [Roadmap](../ROADMAP.md), [ADR 0008](0008-osc-output-protocol.md), [ADR 0009](0009-unreal-plugin.md)
 
 ## Context
 Creators may want Unreal Engine visuals inside NyrexVJ while retaining the application's low-latency live workflow. NyrexVJ currently documents Spout **output**; receiving external Spout sources is a proposed addition. Unreal typically uses a different rendering backend, so GPU interop and synchronization must be proven.

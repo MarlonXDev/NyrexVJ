@@ -9,7 +9,7 @@ The other direction already existed: any program can control NyrexVJ through OSC
 
 ## What exists and what does not
 - Exists: the Spout receiver (four input slots) and the OSC output with the protocol below, both built for this document.
-- Does not exist: an Unreal plugin or SDK for NyrexVJ. [ADR 0002](adr/0002-unreal-integration.md) keeps it as an open idea. Nothing here needs it, because Unreal ships an OSC plugin and the Spout side is a community plugin.
+- Exists as source code only: an experimental Unreal plugin with Blueprint nodes in `integrations/unreal/NyrexVJ` ([ADR 0009](adr/0009-unreal-plugin.md)). It is optional, because Unreal also ships an OSC plugin, and it is **not built or released by NyrexVJ**: you copy the folder into your project. It has never been compiled with Unreal Engine, see below.
 - Not tested: the author of these features had no Unreal Engine and no Windows GPU. The Spout receiver and the OSC output are covered by unit tests, by headless runs on Linux with a test pattern and by a compile check for Windows. A real Unreal to NyrexVJ run, latency and frame pacing are still to be measured on a Windows machine. Treat this guide as a starting point and report what you find.
 
 ## Picture: Unreal to NyrexVJ through Spout (Windows)
@@ -34,6 +34,18 @@ How it behaves:
 4. Use the values: drive a material parameter with the bass value, trigger something on every `/nyrex/out/beat`, scale an actor with a band of `/nyrex/out/spectrum`.
 
 For your own named values open **Parameters to send**, press Add parameter, choose a name (letters, digits, `_` and `-`, up to 32 characters) and the control it follows, for example `layer/1/opacity` or `master/level`. It is sent as `/nyrex/out/param/<name>` with a value from 0 to 1, the same number the input side of that control would accept. Up to 16 parameters. Triggers cannot be used.
+
+## Blueprint plugin (experimental)
+The folder `integrations/unreal/NyrexVJ` of this repository is an Unreal Engine plugin. It listens on the OSC output of NyrexVJ and gives Blueprints and C++ typed access to it: audio levels, the 32 spectrum bands, BPM, beat number and phase, your named parameters, and the events On Beat, On Onset, On Connected and On Disconnected. It also sends controls back (master level, layer opacity, column, deck, tap, or any `/nyrex/...` address). It does the connection handling of the protocol for you: the five second heartbeat, `bye` and the schema check.
+
+Install and use: copy the folder to `<YourProject>/Plugins/NyrexVJ`, rebuild the project, tick Send OSC data in NyrexVJ and run the game. The plugin README lists every node and all rules: [integrations/unreal/NyrexVJ/README.md](../integrations/unreal/NyrexVJ/README.md).
+
+What is verified and what is not:
+- Verified on every build: the protocol part of the plugin is plain C++ and is tested against NyrexVJ's real OSC sender and parser, with damaged and cut-off packets, size limits, value clamping and the schema rules (`nvj_unreal_core_tests`, also built with MSVC in CI).
+- Not verified: everything that uses Unreal types (subsystem, sockets, ticker, settings, Blueprint library, Build.cs). It was written without an Unreal Engine installation and has never been compiled. Expect compile errors to fix, especially before Unreal Engine 5.3. Nothing is known about latency or frame pacing.
+- If you have Unreal installed, your report or pull request with fixes is the missing test.
+
+Use the built-in OSC plugin instead if you only need one or two values, or if you want to run on an engine version where the plugin does not compile yet.
 
 Sending from Unreal to NyrexVJ works the other way round: in NyrexVJ tick Receive OSC messages (port 9010), in Unreal create an OSC client for `127.0.0.1:9010` and send messages to the `/nyrex/...` addresses listed in Settings, Control.
 
@@ -68,5 +80,6 @@ Rules a receiver can rely on:
 
 ## Open points
 - A test with a real Unreal sender on Windows, including DirectX 12 projects, and measured latency and frame pacing.
-- Which Unreal Engine versions to support officially, and what a plugin or SDK would add over the built-in OSC plugin. See [ADR 0002](adr/0002-unreal-integration.md). A public SDK needs the maintainers' approval first.
+- A first compile and run of the plugin with Unreal Engine, then the list of supported engine versions. Packaged builds and mobile or console targets are not considered. See [ADR 0009](adr/0009-unreal-plugin.md).
+- Discovery of NyrexVJ on the network and a live parameter list that changes while running are not part of schema 1.
 - Sender alpha, NDI as a network alternative and a choice of the graphics adapter are not part of this version.

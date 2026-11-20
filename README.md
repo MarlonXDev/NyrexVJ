@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.16.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), your own shader clips from files, English, German, Spanish, French and your own languages and the auto-updater work.
+> Status: v0.17.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
 
 ## Download
 
@@ -28,7 +28,7 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 - **16 decks, smooth transitions.** Set up to 16 looks and glide between them with Fade, Dissolve, Zoom, Wipe, Radial, Spin or Slide, timed in seconds or beats, with an optional auto cycle.
 - **Audio reactive.** Pick system audio (your DJ program), a microphone, a line-in or a demo signal. Layers, the master and every effect parameter can follow Bass, Mid, High, Level or Kick, and an effect can be set to Gate so it only shows while the music is loud. Eight macro knobs and four tempo synced LFOs work as sources in the same places.
 - **Live control.** Play it from a MIDI controller (learn a knob with one click, Windows) or remote control it over OSC from TouchDesigner, Max, Python and more. NyrexVJ can also send tempo, beats and audio levels back out over OSC.
-- **Unreal Engine and other programs.** Four Spout input clips show the picture of Unreal, TouchDesigner or a game (Windows), and the OSC output hands the tempo, beats, spectrum and your own named values to them. See [docs/UNREAL.md](docs/UNREAL.md). There is no Unreal plugin yet.
+- **Unreal Engine and other programs.** Four Spout input clips show the picture of Unreal, TouchDesigner or a game (Windows), and the OSC output hands the tempo, beats, spectrum and your own named values to them. An experimental Unreal Engine plugin with Blueprint nodes is included as source in `integrations/unreal/NyrexVJ`, it has never been compiled with Unreal Engine. See [docs/UNREAL.md](docs/UNREAL.md).
 - **OBS in two clicks.** Spout output with a sender name of your choice. In OBS add the source "Spout2 Capture" and select the sender.
 - **54 clips, 76 effects, 26 presets.** Fractals, raymarched 3D scenes, neon sacred geometry, laser webs, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals, real 3D models and scenes and 3D effects such as Image Terrain, Hyperspace, Chrome Liquid, Shatter and Mirror Corridor. Everything that is new in a version carries a small "new" behind its name until the next minor version.
 - **Resolume-style layout.** Clip grid on top, deck and tempo rows below it, preview and output at the bottom left, Master, Layer and Clip windows next to them and the Browser on the right. A Pause button freezes the picture.
@@ -248,8 +248,9 @@ NyrexVJ/
 │   └── main.cpp
 ├── tests/          Unit tests for core, audio, control, i18n and update logic
 ├── scripts/        Repository checks (translation coverage)
+├── integrations/   Experimental Unreal Engine plugin (source only)
 ├── resources/      Windows icon and resource template
-├── docs/           Images used by this readme
+├── docs/           Guides, decisions (ADRs), the interface list and images used by this readme
 ├── third_party/    Vendored glad and nlohmann/json
 └── .github/        CI, issue templates
 ```

@@ -1,5 +1,11 @@
 # Änderungsprotokoll
 
+## 0.17.0 - 2026-11-20
+
+- Unreal-Engine-Plugin (experimentell): Der Ordner integrations/unreal/NyrexVJ ist ein Plugin mit Blueprint-Knoten für die Musikdaten von NyrexVJ (Audiopegel, Spektrum, BPM, Beat-Nummer und -Phase, deine benannten Parameter) und die Ereignisse On Beat, On Onset, On Connected und On Disconnected sowie mit Knoten, die Steuerbefehle zurückschicken (Master-Pegel, Ebenen-Deckkraft, Spalte, Deck, Tap oder jede /nyrex/-Adresse). Kopiere den Ordner in den Plugins-Ordner deines Projekts. Es wurde noch nie mit der Unreal Engine übersetzt, nur der Protokollteil ist hier getestet, rechne also mit kleinen Korrekturen, siehe docs/UNREAL.md.
+- Der Protokollteil des Plugins wird bei jedem Build gegen den echten OSC-Sender und -Parser von NyrexVJ getestet, auch mit beschädigten und abgeschnittenen Paketen, Größengrenzen und einer unbekannten Schemanummer. Eine Änderung an der OSC-Ausgabe kann ihn deshalb nicht mehr unbemerkt kaputt machen.
+- Die neue Seite docs/INTERFACES.md listet jedes Netzwerkprotokoll, Dateiformat und jeden Ordner auf, den andere Programme oder ältere Versionen berühren können, mit Versionsnummern und der Regel für Änderungen.
+
 ## 0.16.0 - 2026-11-19
 
 - Shader-Clips aus Dateien: Lege .glsl-, .frag- oder .fs-Dateien in den neuen Shader-Ordner (oder ziehe sie auf das Fenster), dann erscheinen sie als Clips in der Bibliothek (Filter Shader). Beide Stile funktionieren und werden automatisch erkannt: der NyrexVJ-Stil mit void main() und der Shadertoy-Stil mit mainImage. Eine gespeicherte Änderung lädt den Shader und sein Vorschaubild neu, während er läuft, ein Kompilierfehler erscheint mit der Zeilennummer deiner Datei im Clip-Fenster, und Beispiel-Shader erstellen schreibt einen funktionierenden Startpunkt. Siehe docs/SHADERS.md.

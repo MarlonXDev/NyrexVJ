@@ -88,8 +88,16 @@ std::vector<fs::path> searchFolders() {
 
 using Handle = void*;
 
-Handle openLibrary(const fs::path&, const std::string& file) {
-    return dlopen(file.c_str(), RTLD_NOW | RTLD_LOCAL);
+Handle openLibrary(const fs::path& directory, const std::string& file) {
+    if (directory.empty()) {
+        return dlopen(file.c_str(), RTLD_NOW | RTLD_LOCAL);
+    }
+    const fs::path full = directory / file;
+    std::error_code ec;
+    if (!fs::exists(full, ec)) {
+        return nullptr;
+    }
+    return dlopen(full.c_str(), RTLD_NOW | RTLD_LOCAL);
 }
 
 void* symbol(Handle handle, const char* name) {
@@ -97,7 +105,20 @@ void* symbol(Handle handle, const char* name) {
 }
 
 std::vector<fs::path> searchFolders() {
-    return {fs::path()};
+    std::vector<fs::path> folders;
+    const char* custom = std::getenv("NYREXVJ_FFMPEG_DIR");
+    if (custom != nullptr && *custom != '\0') {
+        folders.push_back(fs::path(custom));
+    }
+    folders.push_back(fs::path(ffmpegDirectory()));
+    const std::string exe = platform::currentExePath();
+    if (!exe.empty()) {
+        const fs::path dir = fs::path(exe).parent_path();
+        folders.push_back(dir / "ffmpeg");
+        folders.push_back(dir);
+    }
+    folders.push_back(fs::path());
+    return folders;
 }
 
 #endif

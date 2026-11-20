@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.20.0 - 2026-11-20
+
+- Linux release: every build now also produces `NyrexVJ-linux-x64` (one file) and `NyrexVJ-linux-x64.tar.gz` (with licenses, changelogs and the list of libraries). The program is built on Ubuntu 22.04 with libstdc++ linked in, needs only libc and libm, runs on glibc 2.35 or newer and uses X11 or XWayland. CI checks the library list and the glibc version of every build, so a new dependency cannot slip in unnoticed.
+- Audio on Linux: system audio (everything the PC plays), the default input and every PulseAudio or PipeWire source can be chosen in the Audio tab, loaded at run time without a build dependency. A missing sound server shows a clear message and the demo signal keeps working. Checked against a real PulseAudio server and a fake library; PipeWire itself was not available for the test.
+- MIDI on Linux: controllers that show up as ALSA sequencer ports can be added and learned like on Windows, and are listed with duplicate names told apart. Tested against a fake ALSA library, no real controller was available.
+- Auto-update on Linux: the updater downloads `NyrexVJ-linux-x64` from the nightly build or the latest release, checks its SHA-256 from `SHA256SUMS.txt` and that it really is a Linux program, and replaces the running file atomically. It needs libcurl, and when libcurl is missing the update card says so. Tested against a local web server (download progress, redirect, error codes, refused connection, missing library).
+- FFmpeg on Linux: the video libraries are also found in `NYREXVJ_FFMPEG_DIR`, in an `ffmpeg` folder next to the program and in the user data folder, not only on the system library path, so a portable folder with the program and an FFmpeg 8.x build works.
+- Build and release: one workflow now builds and tests Windows and Linux (shader check, a short start of the program on a virtual display, dependency check) for every push and pull request, and a separate step publishes. A tagged release is only published when both builds pass. If only the Linux build fails, the nightly still gets the Windows files so Windows updates never wait for Linux.
+- New files `docs/DEPENDENCIES.md` (what a release needs, every optional library with its file names and override variable, build requirements) and `THIRD_PARTY_LICENSES.md` (versions, licenses and full texts of GLFW, Dear ImGui, nlohmann/json, stb and glad).
+- Fixed: the build failed with the GCC 11 that Ubuntu 22.04 ships because of one C++20 time function. All sources now compile with GCC 11 and GCC 13.
+
 ## 0.19.0 - 2026-11-20
 
 - Hidden layers cost almost nothing: a layer whose opacity is at 0 (or 0.1 percent and below, including audio modulation) is no longer drawn, neither its clip nor its effects nor its blend pass. Its preview in the layer strip is still refreshed, at about 7.5 times a second instead of every frame, and a layer with a feedback effect such as Trails is always drawn so its trails do not reset. In the test environment a composition with three of four layers faded out needed 47 instead of 146 ms per frame, one with opacities 1, 0.5, 0.25 and 0 needed 96 instead of 134 ms, and a composition with all layers visible is unchanged. The output is identical to the picture before, pixel by pixel.

@@ -256,7 +256,8 @@ std::vector<AutosaveEntry> listAutosaves(const fs::path& dataDir) {
         entry.bytes = fs::file_size(latest, ec);
         const auto written = fs::last_write_time(latest, ec);
         if (!ec) {
-            const auto system = std::chrono::clock_cast<std::chrono::system_clock>(written);
+            const auto age = fs::file_time_type::clock::now() - written;
+            const auto system = std::chrono::system_clock::now() - std::chrono::duration_cast<std::chrono::system_clock::duration>(age);
             entry.timestamp = static_cast<long long>(std::chrono::duration_cast<std::chrono::seconds>(system.time_since_epoch()).count());
         }
         entries.push_back(entry);

@@ -16,6 +16,7 @@
 
 namespace nvj::platform {
 
+#ifndef __linux__
 bool updatesSupported() {
     return false;
 }
@@ -69,6 +70,7 @@ bool openUrl(const std::string&) {
 bool openFolder(const std::string&) {
     return false;
 }
+#endif
 
 size_t processMemoryBytes() {
     std::ifstream in("/proc/self/statm");

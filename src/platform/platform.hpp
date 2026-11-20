@@ -35,4 +35,8 @@ void setCurrentThreadBackground(bool background);
 unsigned long currentProcessId();
 bool processAlive(unsigned long pid);
 
+#ifdef __linux__
+void setCurlLibraryForTesting(const std::string& path);
+#endif
+
 }

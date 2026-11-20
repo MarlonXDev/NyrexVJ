@@ -78,7 +78,7 @@ void Updater::checkAsync() {
         channel = channel_;
     }
     if (!backend.supported) {
-        set(UpdateState::Unsupported, "Automatic updates are available in the Windows version");
+        set(UpdateState::Unsupported, "Automatic updates are not available on this system. On Linux they need libcurl (libcurl.so.4)");
         return;
     }
     joinWorker();
@@ -183,7 +183,7 @@ void Updater::runInstall(ReleaseInfo release, UpdaterBackend backend) {
         return;
     }
 
-    if (binary.body.size() < kMinBinarySize || binary.body[0] != 'M' || binary.body[1] != 'Z') {
+    if (binary.body.size() < kMinBinarySize || !looksLikeProgram(binary.body)) {
         fail("The downloaded file is not a valid program");
         return;
     }

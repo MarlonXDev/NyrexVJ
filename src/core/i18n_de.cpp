@@ -114,7 +114,6 @@ const Translation kGerman[] = {
     {"Audio reaction", "Audio-Reaktion"},
     {"Audio reactivity", "Audio-Reaktivität"},
     {"Audio source", "Audioquelle"},
-    {"Automatic updates are available in the Windows version", "Automatische Updates gibt es in der Windows-Version"},
     {"Axis", "Achse"},
     {"B  blackout", "B  Blackout"},
     {"BLACKOUT", "BLACKOUT"},
@@ -1044,6 +1043,7 @@ const Translation kGerman[] = {
     {"Layers and their effects are drawn at a lower resolution and scaled up when they are mixed. Master effects and every output stay at full resolution. Full quality changes nothing.", "Layer und ihre Effekte werden in geringerer Auflösung gezeichnet und beim Mischen hochskaliert. Master-Effekte und alle Ausgaben bleiben in voller Auflösung. Volle Qualität ändert nichts."},
     {"Automatic lowers the resolution in small steps only while a frame takes longer than the budget, and raises it again when there is room.", "Automatisch senkt die Auflösung in kleinen Schritten nur, solange ein Frame länger als das Budget braucht, und erhöht sie wieder, sobald Luft ist."},
     {"Layers are drawn at %d × %d (%d %%)", "Layer werden mit %d × %d gezeichnet (%d %%)"},
+    {"Automatic updates are not available on this system. On Linux they need libcurl (libcurl.so.4)", "Automatische Updates sind auf diesem System nicht verfügbar. Unter Linux brauchen sie libcurl (libcurl.so.4)"},
 };
 
 }

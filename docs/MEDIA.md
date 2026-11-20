@@ -114,13 +114,13 @@ avutil-60.dll  swscale-9.dll  avcodec-62.dll  avformat-62.dll  swresample-6.dll
 
 The library version in each name must match the headers NyrexVJ was built with, which is why the FFmpeg release is fixed. The Clip window always shows the exact names this NyrexVJ was built for.
 
-The Clip window of a video clip lists the files and has a Check again button, so no restart is needed. On Linux install the FFmpeg libraries of your distribution (`libavcodec`, `libavformat`, `libavutil`, `libswscale`, `libswresample`); the program uses the library versions it was built against.
+The Clip window of a video clip lists the files and has a Check again button, so no restart is needed. On Linux the files are searched in `NYREXVJ_FFMPEG_DIR` (when set), the `ffmpeg` folder of the user data folder, an `ffmpeg` folder next to the program, the folder of the program and finally the system library path. Either copy the `.so` files of an FFmpeg 8.x LGPL shared build into one of those folders, or install the FFmpeg libraries of your distribution when its version numbers match the list in the Clip window (`libavcodec`, `libavformat`, `libavutil`, `libswscale`, `libswresample`); the program uses the library versions it was built against.
 
 Whoever distributes NyrexVJ together with the FFmpeg libraries has to follow the LGPL for them (notice, source offer, replaceable libraries). The official NyrexVJ downloads do not contain them.
 
 ## For developers
 
-- Building with video support needs only the FFmpeg **headers** (`-DNYREXVJ_FFMPEG_ROOT=<folder with include/>`, or the system headers on Linux). Without them the build still works and the Clip window says that video support was left out. `-DNYREXVJ_VIDEO=OFF` leaves it out on purpose. The Windows build workflow downloads the 8.1 headers and libraries; if that fails the build continues without video.
+- Building with video support needs only the FFmpeg **headers** (`-DNYREXVJ_FFMPEG_ROOT=<folder with include/>`, or the system headers on Linux). Without them the build still works and the Clip window says that video support was left out. `-DNYREXVJ_VIDEO=OFF` leaves it out on purpose. The Windows and Linux build workflows download the 8.1 headers and libraries; if that fails the build continues without video.
 - `src/media/ffmpeg_api.hpp` lists the 40 FFmpeg functions that are used (the hardware decoding ones included). `src/media/ffmpeg_dyn.cpp` loads them (`dlopen` / `LoadLibraryExW`) and refuses to run when one is missing.
 - `NYREXVJ_NO_FFMPEG=1` makes the libraries count as missing (to try the error path). `NYREXVJ_REQUIRE_VIDEO=1` makes `nvj_media_tests` fail instead of skipping when video decoding is unavailable.
 - Pipeline code: `src/media/video_decoder.cpp` (decoder thread, hardware probe and fallback), `src/media/video_hardware.cpp` (probe of the hardware interfaces), `src/media/hap.cpp` (HAP container parser), `src/render/video_gpu.cpp` (upload and colour conversion on the graphics card), `src/core/frame_pacer.cpp` (frame rate limit), `src/app/ui_video.cpp` (settings and monitor).

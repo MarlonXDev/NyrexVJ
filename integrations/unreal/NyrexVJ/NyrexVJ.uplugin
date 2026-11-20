@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "NyrexVJ",
+	"Description": "Blueprint access to NyrexVJ: audio levels, spectrum, tempo, beat events and exposed parameters over OSC, plus control messages back to NyrexVJ.",
+	"Category": "Audio",
+	"CreatedBy": "MarlonXDev",
+	"CreatedByURL": "https://github.com/MarlonXDev/NyrexVJ",
+	"DocsURL": "https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/UNREAL.md",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "NyrexVJ",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

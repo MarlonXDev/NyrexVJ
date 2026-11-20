@@ -15,13 +15,14 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | ID | Topic | Status |
 | --- | --- | --- |
 | [0001](adr/0001-native-3d-runtime.md) | Native 3D rendering and Clip Creator separation | Accepted (2026-11-18), prototype implemented in v0.6.0 |
-| [0002](adr/0002-unreal-integration.md) | Unreal Engine interoperability through Spout and OSC | Accepted for the prototype (2026-11-18), implemented in v0.10.0; plugin/SDK still proposed |
+| [0002](adr/0002-unreal-integration.md) | Unreal Engine interoperability through Spout and OSC | Accepted for the prototype (2026-11-18), implemented in v0.10.0; plugin follows in ADR 0009 |
 | [0003](adr/0003-shared-ai-collaboration.md) | Shared Claude/Codex instructions and review workflow | Proposed |
 | [0004](adr/0004-scene-document-and-clip-pack.md) | Scene document, `.nyxclip` pack format and asset library | Accepted (2026-11-18) |
 | [0005](adr/0005-pbr-shading.md) | Physically based shading for scene clips | Accepted (2026-11-18) |
 | [0006](adr/0006-clip-creator.md) | Clip Creator | Accepted (2026-11-18) |
 | [0007](adr/0007-spout-receiver.md) | Spout receiver as input slots | Accepted (2026-11-18) |
 | [0008](adr/0008-osc-output-protocol.md) | OSC output and the versioned protocol (schema 1) | Accepted (2026-11-18) |
+| [0009](adr/0009-unreal-plugin.md) | Experimental Unreal Engine plugin with Blueprint access | Accepted as experimental (2026-11-20) |
 
 ## New ADR template
 

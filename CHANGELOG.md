@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0 - 2026-11-20
+
+- Unreal Engine plugin (experimental): the folder integrations/unreal/NyrexVJ is a plugin with Blueprint nodes for the music data of NyrexVJ (audio levels, spectrum, BPM, beat number and phase, your named parameters) and the events On Beat, On Onset, On Connected and On Disconnected, and with nodes that send controls back (master level, layer opacity, column, deck, tap or any /nyrex/ address). Copy the folder into the Plugins folder of your project. It has never been compiled with Unreal Engine, only its protocol part is tested here, so expect to fix small things, see docs/UNREAL.md.
+- The protocol part of the plugin is tested on every build against the real OSC sender and parser of NyrexVJ, including damaged and cut-off packets, size limits and an unknown schema number, so a change to the OSC output cannot silently break it any more.
+- New page docs/INTERFACES.md lists every network protocol, file format and folder that other programs or older versions can touch, with version numbers and the rule for changing each one.
+
 ## 0.16.0 - 2026-11-19
 
 - Shader clips from files: put .glsl, .frag or .fs files into the new shaders folder (or drag them onto the window) and they appear in the Library as clips (filter Shaders). Both styles work and are found automatically: NyrexVJ style with void main() and Shadertoy style with mainImage. A saved change reloads the shader and its thumbnail while it plays, a compile error shows with the line number of your file in the Clip window, and Create example shader writes a working starting point. See docs/SHADERS.md.

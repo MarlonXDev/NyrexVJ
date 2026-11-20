@@ -38,7 +38,7 @@ The current README explicitly says video clips are not implemented. MIDI mapping
 
 ### Professional output (candidate v0.9)
 - Multi-display output, projection mapping, warping, edge blending and NDI output landed in v0.14.0, see [OUTPUTS.md](OUTPUTS.md). Real projectors, real multi-monitor fullscreen and the real NDI runtime are untested. DMX over Art-Net, the VRSL strip in the video and VRChat OSC parameters landed in v0.15.0, see [DMX.md](DMX.md). The strip's channel order is unverified against a real VRSL world, and no real Art-Net node or VRChat was tried.
-- Extend Unreal SDK with Blueprint-accessible controls and optional discovery if the prototype succeeds. Not started: no Unreal plugin exists and no public SDK is promised without maintainer approval.
+- Extend Unreal SDK with Blueprint-accessible controls and optional discovery if the prototype succeeds. An experimental plugin with Blueprint access to the OSC data and to the controls landed in v0.17.0 ([ADR 0009](adr/0009-unreal-plugin.md), `integrations/unreal/NyrexVJ`). Its protocol core is tested on every build, the Unreal-facing code has never been compiled with Unreal Engine, so it is not a supported SDK yet. Discovery is not started.
 
 ### Production readiness (candidate v1.0)
 - Reliability, performance regression tests, crash recovery, project compatibility, documentation, and release quality. Crash recovery (session marker, rotating autosaves, crash report, recovery dialog) and the performance benchmark landed in v0.11.0.

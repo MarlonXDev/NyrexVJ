@@ -801,6 +801,36 @@ void testDecodeModes() {
     }
 }
 
+bool onlyLibvaMissing(const char* file) {
+    return std::string(file) != "libva-drm.so.2";
+}
+
+bool nothingLoads(const char*) {
+    return false;
+}
+
+bool everythingLoads(const char*) {
+    return true;
+}
+
+void testHardwareLibraryGuard() {
+    CHECK(nvj::hardwareBackendLibraries("cuda").empty());
+    CHECK(nvj::hardwareBackendLibraries("nonsense").empty());
+#ifndef _WIN32
+    CHECK(!nvj::hardwareBackendLibraries("vaapi").empty());
+    CHECK(!nvj::hardwareBackendLibraries("vdpau").empty());
+    CHECK(!nvj::hardwareBackendLibraries("qsv").empty());
+    CHECK(nvj::missingHardwareLibrary("vaapi", onlyLibvaMissing) == "libva-drm.so.2");
+    CHECK(nvj::missingHardwareLibrary("qsv", onlyLibvaMissing) == "libva-drm.so.2");
+    CHECK(nvj::missingHardwareLibrary("vdpau", onlyLibvaMissing).empty());
+    CHECK(nvj::missingHardwareLibrary("vaapi", nothingLoads) == "libva.so.2");
+    CHECK(nvj::missingHardwareLibrary("vdpau", nothingLoads) == "libvdpau.so.1");
+#endif
+    CHECK(nvj::missingHardwareLibrary("cuda", nothingLoads).empty());
+    CHECK(nvj::missingHardwareLibrary("vaapi", everythingLoads).empty());
+    CHECK(nvj::missingHardwareLibrary("software").empty());
+}
+
 void testHardwareProbe() {
     const nvj::HardwareProbeReport report = nvj::probeHardwareDecoding();
     CHECK(report.ffmpegAvailable);
@@ -899,6 +929,7 @@ int main() {
     testVideo();
     testHapParser();
     testModeNames();
+    testHardwareLibraryGuard();
     if (videoAvailable()) {
         testHapDirect();
         testGpuLayouts();

@@ -33,5 +33,7 @@ const char* probeCodecLabel(size_t index);
 std::vector<std::string> hardwareBackendOrder();
 std::string hardwareBackendLabel(const std::string& backend);
 HardwareProbeReport probeHardwareDecoding();
+std::vector<std::string> hardwareBackendLibraries(const std::string& backend);
+std::string missingHardwareLibrary(const std::string& backend, bool (*canLoad)(const char*) = nullptr);
 
 }

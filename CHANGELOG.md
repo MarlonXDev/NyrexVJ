@@ -10,6 +10,7 @@
 - Build and release: one workflow now builds and tests Windows and Linux (shader check, a short start of the program on a virtual display, dependency check) for every push and pull request, and a separate step publishes. A tagged release is only published when both builds pass. If only the Linux build fails, the nightly still gets the Windows files so Windows updates never wait for Linux.
 - New files `docs/DEPENDENCIES.md` (what a release needs, every optional library with its file names and override variable, build requirements) and `THIRD_PARTY_LICENSES.md` (versions, licenses and full texts of GLFW, Dear ImGui, nlohmann/json, stb and glad).
 - Fixed: the build failed with the GCC 11 that Ubuntu 22.04 ships because of one C++20 time function. All sources now compile with GCC 11 and GCC 13.
+- Fixed on Linux: with the portable FFmpeg builds the program could abort when it tried VA-API, Intel QSV or VDPAU on a computer without the matching libva or VDPAU libraries. NyrexVJ now checks for these libraries first and reports the missing file in the hardware decoding table instead.
 
 ## 0.19.0 - 2026-11-20
 

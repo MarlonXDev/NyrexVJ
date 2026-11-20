@@ -10,6 +10,7 @@
 - Build und Release: Ein Workflow baut und testet jetzt Windows und Linux (Shader-Prüfung, kurzer Programmstart auf einem virtuellen Display, Abhängigkeitsprüfung) bei jedem Push und Pull Request, ein eigener Schritt veröffentlicht. Ein getaggtes Release wird nur veröffentlicht, wenn beide Builds bestehen. Scheitert nur der Linux-Build, bekommt der Nightly trotzdem die Windows-Dateien, Windows-Updates warten also nie auf Linux.
 - Neue Dateien `docs/DEPENDENCIES.md` (was ein Release braucht, jede optionale Bibliothek mit Dateinamen und Überschreib-Variable, Voraussetzungen zum Bauen) und `THIRD_PARTY_LICENSES.md` (Versionen, Lizenzen und volle Texte von GLFW, Dear ImGui, nlohmann/json, stb und glad).
 - Behoben: Der Build scheiterte mit dem GCC 11 von Ubuntu 22.04 wegen einer einzigen C++20-Zeitfunktion. Alle Quelldateien übersetzen jetzt mit GCC 11 und GCC 13.
+- Behoben unter Linux: Mit den portablen FFmpeg-Builds konnte das Programm abbrechen, wenn es VA-API, Intel QSV oder VDPAU auf einem Rechner ohne die passenden libva- oder VDPAU-Bibliotheken probierte. NyrexVJ prüft diese Bibliotheken jetzt zuerst und nennt die fehlende Datei in der Tabelle der Hardware-Decodierung.
 
 ## 0.19.0 - 2026-11-20
 

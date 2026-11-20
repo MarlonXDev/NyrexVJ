@@ -1,5 +1,7 @@
 #pragma once
 
+#include "media/video_types.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -26,14 +28,6 @@ struct VideoInfo {
     std::string codec;
 };
 
-struct VideoFrame {
-    int width = 0;
-    int height = 0;
-    double time = 0.0;
-    unsigned long long id = 0;
-    std::vector<uint8_t> rgba;
-};
-
 constexpr int kMaxVideoDimension = 1920;
 
 std::string ffmpegDirectory();
@@ -47,12 +41,13 @@ public:
     VideoDecoder(const VideoDecoder&) = delete;
     VideoDecoder& operator=(const VideoDecoder&) = delete;
 
-    bool open(const std::string& path, std::string& error, int maxDimension = kMaxVideoDimension);
+    bool open(const std::string& path, std::string& error, const VideoOptions& options = VideoOptions());
     void close();
     bool isOpen() const;
     bool failed() const;
     std::string failure() const;
     const VideoInfo& info() const;
+    VideoStatus status() const;
     std::shared_ptr<const VideoFrame> frameAt(double seconds);
 
 private:

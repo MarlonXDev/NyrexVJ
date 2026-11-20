@@ -139,8 +139,11 @@ set(NYREXVJ_CORE_SOURCES
     src/core/frame_pacer.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
+    src/media/hap.cpp
     src/media/media_image.cpp
     src/media/video_decoder.cpp
+    src/media/video_hardware.cpp
+    src/media/video_probe_data.cpp
     src/core/recovery.cpp
     src/core/crash_handler.cpp
     src/render/effect_library.cpp
@@ -229,6 +232,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_stage.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
+    src/render/video_gpu.cpp
     src/render/stb_impl.cpp
 )
 

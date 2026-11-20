@@ -23,6 +23,9 @@ struct Settings {
     bool autoInstall = true;
     bool vsync = true;
     int fpsLimit = 60;
+    std::string videoDecoder = "auto";
+    bool hapDirect = true;
+    bool videoGpuConvert = true;
     bool openOutputOnStart = false;
     bool showStatusBar = true;
     int perfBudgetFps = 60;

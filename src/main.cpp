@@ -32,6 +32,10 @@ struct Options {
     std::string dumpOutputs;
     std::string benchScene;
     std::string benchVideo;
+    std::string videoSelfTest;
+    std::string videoMode;
+    bool noHapDirect = false;
+    bool noGpuConvert = false;
     double frameReport = 0.0;
     int benchComp = 0;
     double benchBudget = 0.0;
@@ -70,6 +74,14 @@ Options parseOptions(int argc, char** argv) {
             options.frameReport = std::atof(argv[++i]);
         } else if (arg == "--bench-video" && hasValue) {
             options.benchVideo = argv[++i];
+        } else if (arg == "--video-selftest" && hasValue) {
+            options.videoSelfTest = argv[++i];
+        } else if (arg == "--video-mode" && hasValue) {
+            options.videoMode = argv[++i];
+        } else if (arg == "--no-hap-direct") {
+            options.noHapDirect = true;
+        } else if (arg == "--no-gpu-convert") {
+            options.noGpuConvert = true;
         } else if (arg == "--bench-comp" && hasValue) {
             options.benchComp = std::atoi(argv[++i]);
         } else if (arg == "--bench-budget" && hasValue) {
@@ -265,10 +277,13 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || options.benchComp > 0) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.videoSelfTest.empty() || options.benchComp > 0) {
         glfwSwapInterval(0);
         int benchExit = 0;
-        if (!options.benchScene.empty()) {
+        app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
+        if (!options.videoSelfTest.empty()) {
+            benchExit = nvj::runVideoSelfTest(app.engine(), options.videoSelfTest, options.benchOut);
+        } else if (!options.benchScene.empty()) {
             benchExit = nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut);
         } else if (!options.benchVideo.empty()) {
             benchExit = nvj::runVideoBenchmark(app.engine(), options.benchVideo, options.benchOut);

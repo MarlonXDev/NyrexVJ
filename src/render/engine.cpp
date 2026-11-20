@@ -243,11 +243,19 @@ uniform sampler2D uTex;
 uniform vec2 uFit;
 uniform float uPremult;
 uniform float uBackdrop;
+uniform vec2 uTexScale;
+uniform float uYcocg;
 void main() {
     vec2 p = (vUv - 0.5) * uFit + 0.5;
     vec2 inside = step(vec2(0.0), p) * step(p, vec2(1.0));
     float mask = inside.x * inside.y;
-    vec4 t = texture(uTex, vec2(p.x, 1.0 - p.y));
+    vec4 t = texture(uTex, vec2(p.x, 1.0 - p.y) * uTexScale);
+    if (uYcocg > 0.5) {
+        float k = t.z * (255.0 / 8.0) + 1.0;
+        float co = (t.x - 0.50196) / k;
+        float cg = (t.y - 0.50196) / k;
+        t = vec4(t.w + co - cg, t.w + cg, t.w - co - cg, 1.0);
+    }
     float a = t.a * mask;
     vec3 c = (uPremult > 0.5 ? t.rgb : t.rgb * t.a) * mask;
     if (uBackdrop > 0.5) {
@@ -379,6 +387,8 @@ bool Engine::buildPrograms() {
     mediaProgram_.fit = glGetUniformLocation(mediaProgram_.id, "uFit");
     mediaProgram_.premult = glGetUniformLocation(mediaProgram_.id, "uPremult");
     mediaProgram_.backdrop = glGetUniformLocation(mediaProgram_.id, "uBackdrop");
+    mediaProgram_.texScale = glGetUniformLocation(mediaProgram_.id, "uTexScale");
+    mediaProgram_.ycocg = glGetUniformLocation(mediaProgram_.id, "uYcocg");
 
     clips_.assign(clipLibrary().size(), ClipProgram{});
     effects_.assign(effectLibrary().size(), EffectProgram{});
@@ -399,9 +409,38 @@ bool Engine::buildPrograms() {
     return true;
 }
 
-std::unique_ptr<MediaPlayer> Engine::makeMedia(const ClipDef& def) const {
+VideoOptions Engine::videoOptions() const {
+    VideoOptions options;
+    options.mode = videoMode_;
+    options.gpuConversion = gpuConversion_ && videoGpu_.caps().conversion;
+    options.compressedTextures = videoGpu_.caps().compressedTextures;
+    options.hapDirect = hapDirect_ && videoGpu_.caps().compressedTextures;
+    return options;
+}
+
+void Engine::setVideoSettings(VideoDecodeMode mode, bool hapDirect, bool gpuConversion) {
+    if (mode == videoMode_ && hapDirect == hapDirect_ && gpuConversion == gpuConversion_) {
+        return;
+    }
+    videoMode_ = mode;
+    hapDirect_ = hapDirect;
+    gpuConversion_ = gpuConversion;
+    const VideoOptions options = videoOptions();
+    for (std::unique_ptr<MediaPlayer>& player : media_) {
+        if (!player || !player->isVideo()) {
+            continue;
+        }
+        player->setVideoOptions(options);
+        if (player->state() != MediaState::Idle) {
+            player->release();
+        }
+    }
+}
+
+std::unique_ptr<MediaPlayer> Engine::makeMedia(const ClipDef& def) {
     if (def.kind == ClipKind::ImageFile || def.kind == ClipKind::VideoFile) {
-        return std::make_unique<MediaPlayer>(def.name, def.path, def.kind == ClipKind::VideoFile);
+        const bool video = def.kind == ClipKind::VideoFile;
+        return std::make_unique<MediaPlayer>(def.name, def.path, video, video ? &videoGpu_ : nullptr, videoOptions());
     }
     return nullptr;
 }
@@ -547,6 +586,8 @@ bool Engine::drawMedia(MediaPlayer& player, float scale, bool backdrop, double c
     glUniform2f(mediaProgram_.fit, std::max(target / source, 1.0f) / zoom, std::max(source / target, 1.0f) / zoom);
     glUniform1f(mediaProgram_.premult, player.premultiplied() ? 1.0f : 0.0f);
     glUniform1f(mediaProgram_.backdrop, backdrop ? 1.0f : 0.0f);
+    glUniform2f(mediaProgram_.texScale, player.scaleX(), player.scaleY());
+    glUniform1f(mediaProgram_.ycocg, player.ycocg() ? 1.0f : 0.0f);
     triangle_.draw();
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
@@ -611,6 +652,7 @@ int Engine::loadedSceneCount() const {
 
 bool Engine::init() {
     triangle_.create();
+    videoGpu_.create();
     strip_.init();
     glGenQueries(kGpuQueries, gpuQueries_.data());
     glGenTextures(1, &audioTexture_);
@@ -732,6 +774,13 @@ GpuMemory Engine::gpuMemory() const {
     for (const std::unique_ptr<MediaPlayer>& player : media_) {
         if (player) {
             memory.media += static_cast<size_t>(player->gpuBytes());
+            if (player->isVideo()) {
+                const VideoMemory video = player->videoMemory();
+                memory.video.output += video.output;
+                memory.video.planes += video.planes;
+                memory.video.compressed += video.compressed;
+                memory.video.staging += video.staging;
+            }
         }
     }
     for (const std::unique_ptr<ScenePlayer>& player : scenes_) {
@@ -879,6 +928,7 @@ void Engine::shutdown() {
     deferredThumbs_.clear();
     scenes_.clear();
     media_.clear();
+    videoGpu_.destroy();
     deferredMediaThumbs_.clear();
     sceneRenderer_.shutdown();
     for (EffectProgram& effect : effects_) {

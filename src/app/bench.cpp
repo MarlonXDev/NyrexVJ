@@ -5,6 +5,7 @@
 #include "core/log.hpp"
 #include "core/preset.hpp"
 #include "platform/platform.hpp"
+#include "render/asset_import.hpp"
 #include "render/clip_library.hpp"
 
 #include <nlohmann/json.hpp>
@@ -320,12 +321,31 @@ int runVideoBenchmark(Engine& engine, const std::string& spec, const std::string
             item["size"] = std::to_string(info.width) + "x" + std::to_string(info.height);
             item["textureSize"] = std::to_string(player->width()) + "x" + std::to_string(player->height());
             item["gpuBytes"] = player->gpuBytes();
+            const VideoStatus status = player->status();
+            const UploadStats upload = player->uploadStats();
+            const VideoMemory memory = player->videoMemory();
+            item["path"] = decodePathName(status.path);
+            item["decoder"] = status.decoder;
+            item["backend"] = status.backend;
+            item["pixelFormat"] = status.pixelFormat;
+            item["variant"] = status.variant;
+            item["fallbackReason"] = status.fallbackReason;
+            item["threads"] = status.threads;
+            item["decodeMs"] = status.decodeMs;
+            item["decoded"] = status.decoded;
+            item["dropped"] = status.dropped;
+            item["underruns"] = status.underruns;
+            item["uploadRoute"] = uploadRouteName(player->uploadRoute());
+            item["uploadMs"] = upload.averageMs;
+            item["uploadFrames"] = upload.frames;
+            item["memory"] = {{"output", memory.output}, {"planes", memory.planes}, {"compressed", memory.compressed}, {"staging", memory.staging}};
         }
         videos.push_back(std::move(item));
     }
     report["videos"] = std::move(videos);
     const GpuMemory memory = engine.gpuMemory();
     report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"mediaBytes", memory.media}, {"processResidentBytes", platform::processMemoryBytes()}};
+    report["videoSettings"] = {{"decoder", videoDecodeModeName(engine.videoDecodeMode())}, {"hapDirect", engine.hapDirect()}, {"gpuConversion", engine.gpuConversion()}, {"compressedTextures", engine.videoCaps().compressedTextures}, {"pixelBuffers", engine.videoCaps().pixelBuffers}};
 
     const std::string text = report.dump(2);
     logLine("Benchmark result:\n" + text);
@@ -334,6 +354,164 @@ int runVideoBenchmark(Engine& engine, const std::string& spec, const std::string
         out << text << '\n';
     }
     return 0;
+}
+
+
+namespace {
+
+struct SelfVariant {
+    VideoDecodeMode mode;
+    bool hapDirect;
+    bool gpuConversion;
+};
+
+struct SelfShot {
+    bool ok = false;
+    std::vector<unsigned char> pixels;
+    int width = 0;
+    int height = 0;
+    std::string route;
+    std::string path;
+    std::string decoder;
+    std::string error;
+};
+
+SelfShot captureClip(Engine& engine, int clip, const SelfVariant& variant) {
+    SelfShot shot;
+    engine.setVideoSettings(variant.mode, variant.hapDirect, variant.gpuConversion);
+    engine.clearLayer(0);
+    engine.comp.layers[0].cells[0] = clip;
+    engine.paused = true;
+    engine.trigger(0, 0);
+    const auto start = std::chrono::steady_clock::now();
+    MediaPlayer* player = engine.mediaPlayer(clip);
+    const auto step = [&]() {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(1.0 / 60.0);
+        engine.render();
+        glFinish();
+    };
+    while (player != nullptr && !player->ready()) {
+        step();
+        std::this_thread::sleep_for(std::chrono::milliseconds(4));
+        if (player->state() == MediaState::Failed) {
+            shot.error = player->error();
+            return shot;
+        }
+        if (std::chrono::steady_clock::now() - start > std::chrono::seconds(30)) {
+            shot.error = "the video did not become ready";
+            return shot;
+        }
+    }
+    for (int i = 0; i < 4; ++i) {
+        step();
+    }
+    if (player == nullptr || !engine.readOutput(shot.pixels, shot.width, shot.height)) {
+        shot.error = "the output could not be read";
+        return shot;
+    }
+    shot.route = uploadRouteName(player->uploadRoute());
+    shot.path = decodePathName(player->status().path);
+    shot.decoder = player->status().decoder;
+    shot.ok = true;
+    return shot;
+}
+
+}
+
+int runVideoSelfTest(Engine& engine, const std::string& directory, const std::string& outputPath) {
+    namespace fs = std::filesystem;
+    std::vector<fs::path> files;
+    std::error_code error;
+    for (const auto& entry : fs::directory_iterator(fs::path(std::u8string(directory.begin(), directory.end())), error)) {
+        const std::string extension = entry.path().extension().string();
+        if (entry.is_regular_file() && (extension == ".mp4" || extension == ".mov" || extension == ".mkv" || extension == ".webm")) {
+            files.push_back(entry.path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    if (files.empty()) {
+        logLine("Video self test: no video files in '" + directory + "'");
+        return 1;
+    }
+    for (const fs::path& file : files) {
+        const std::u8string text = file.u8string();
+        importAsset(std::string(text.begin(), text.end()));
+    }
+    rescanLibrary();
+    engine.syncLibrary();
+
+    const VideoGpuCaps& caps = engine.videoCaps();
+    const SelfVariant gpu{VideoDecodeMode::Auto, true, true};
+    const SelfVariant cpu{VideoDecodeMode::ForceSoftware, false, false};
+    json report;
+    report["renderer"] = caps.renderer;
+    report["conversion"] = caps.conversion;
+    report["compressedTextures"] = caps.compressedTextures;
+    report["pixelBuffers"] = caps.pixelBuffers;
+    json items = json::array();
+    bool passed = true;
+    for (const fs::path& file : files) {
+        const std::u8string stemText = file.stem().u8string();
+        const std::string stem(stemText.begin(), stemText.end());
+        const int clip = clipIndexByName(videoClipName(stem));
+        json item;
+        item["file"] = file.filename().string();
+        if (clip < 0) {
+            item["error"] = "clip not found";
+            item["passed"] = false;
+            passed = false;
+            items.push_back(std::move(item));
+            continue;
+        }
+        const SelfShot reference = captureClip(engine, clip, cpu);
+        const SelfShot fast = captureClip(engine, clip, gpu);
+        bool itemPassed = reference.ok && fast.ok && reference.pixels.size() == fast.pixels.size();
+        item["referenceRoute"] = reference.route;
+        item["route"] = fast.route;
+        item["path"] = fast.path;
+        item["decoder"] = fast.decoder;
+        if (!reference.ok || !fast.ok) {
+            item["error"] = !reference.ok ? reference.error : fast.error;
+        } else if (!itemPassed) {
+            item["error"] = "the output sizes differ";
+        } else {
+            double sum = 0.0;
+            int worst = 0;
+            size_t count = 0;
+            for (size_t i = 0; i + 3 < fast.pixels.size(); i += 4) {
+                for (size_t c = 0; c < 3; ++c) {
+                    const int delta = std::abs(static_cast<int>(fast.pixels[i + c]) - static_cast<int>(reference.pixels[i + c]));
+                    sum += delta;
+                    worst = std::max(worst, delta);
+                    ++count;
+                }
+            }
+            const double mean = count == 0 ? 0.0 : sum / static_cast<double>(count);
+            item["meanDifference"] = mean;
+            item["worstDifference"] = worst;
+            const bool compressed = file.filename().string().find("hap") != std::string::npos;
+            const std::string expected = compressed ? "compressed direct" : "gpu convert";
+            const bool routeOk = (compressed && !caps.compressedTextures) || (!compressed && !caps.conversion) || fast.route == expected;
+            const bool lit = mean >= 0.0 && sum > 0.0;
+            item["expectedRoute"] = expected;
+            itemPassed = mean < 4.0 && routeOk && lit && reference.route == "cpu rgba";
+        }
+        item["passed"] = itemPassed;
+        passed = passed && itemPassed;
+        logLine("Video self test " + item["file"].get<std::string>() + ": " + (itemPassed ? "passed" : "FAILED") + " (" + item.value("route", std::string()) + ", difference " + std::to_string(item.value("meanDifference", -1.0)) + ")");
+        items.push_back(std::move(item));
+    }
+    engine.paused = false;
+    report["clips"] = std::move(items);
+    report["passed"] = passed;
+    const std::string text = report.dump(2);
+    logLine("Video self test result:\n" + text);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return passed ? 0 : 1;
 }
 
 namespace {

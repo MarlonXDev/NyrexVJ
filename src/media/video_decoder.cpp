@@ -11,9 +11,50 @@ std::string ffmpegDirectory() {
     return (std::filesystem::path(userDataDir()) / "ffmpeg").string();
 }
 
+const char* decodePathName(DecodePath path) {
+    switch (path) {
+    case DecodePath::Software:
+        return "software";
+    case DecodePath::Hardware:
+        return "hardware";
+    case DecodePath::HapGpu:
+        return "hap-gpu";
+    case DecodePath::HapCpu:
+        return "hap-cpu";
+    default:
+        return "none";
+    }
+}
+
+const char* videoDecodeModeName(VideoDecodeMode mode) {
+    switch (mode) {
+    case VideoDecodeMode::PreferHardware:
+        return "hardware";
+    case VideoDecodeMode::ForceSoftware:
+        return "software";
+    default:
+        return "auto";
+    }
+}
+
+VideoDecodeMode videoDecodeModeFromName(const std::string& name) {
+    if (name == "hardware") {
+        return VideoDecodeMode::PreferHardware;
+    }
+    if (name == "software") {
+        return VideoDecodeMode::ForceSoftware;
+    }
+    return VideoDecodeMode::Auto;
+}
+
 }
 
 #ifdef NYREXVJ_HAVE_FFMPEG
+
+#include "media/hap.hpp"
+#include "media/video_hardware.hpp"
+#include "media/video_hardware_internal.hpp"
+#include "platform/platform.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -21,6 +62,7 @@ std::string ffmpegDirectory() {
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
+#include <cstring>
 #include <deque>
 #include <mutex>
 #include <thread>
@@ -33,29 +75,152 @@ constexpr size_t kQueueLimit = 5;
 constexpr double kSeekBehind = 0.35;
 constexpr double kSeekAhead = 1.5;
 constexpr int kMaxFailures = 200;
+constexpr int kProbePackets = 160;
+
+using Buffer = std::vector<uint8_t>;
 
 bool hasAlphaFormat(const FfmpegApi& api, int format) {
     const AVPixFmtDescriptor* descriptor = api.av_pix_fmt_desc_get(static_cast<AVPixelFormat>(format));
     return descriptor != nullptr && (descriptor->flags & AV_PIX_FMT_FLAG_ALPHA) != 0;
 }
 
+int ceilShift(int value, int shift) {
+    return -((-value) >> shift);
+}
+
+int decoderThreadCount(AVCodecID codec, int width, int height) {
+    const int cores = static_cast<int>(std::max(1u, std::thread::hardware_concurrency()));
+    int threads = std::clamp(cores / 4, 1, 4);
+    if (static_cast<long long>(width) * static_cast<long long>(height) > 2600000ll) {
+        threads = std::clamp(cores / 3, 2, 6);
+    } else if (codec != AV_CODEC_ID_H264 && cores >= 4) {
+        threads = std::max(threads, 2);
+    }
+    return std::min(threads, cores);
+}
+
+bool worthHardware(AVCodecID codec, int width, int height) {
+    const bool heavyCodec = codec == AV_CODEC_ID_H264 || codec == AV_CODEC_ID_HEVC || codec == AV_CODEC_ID_AV1 || codec == AV_CODEC_ID_VP9;
+    return heavyCodec && static_cast<long long>(width) * static_cast<long long>(height) >= 1280ll * 720ll;
+}
+
+int colorMatrix(const AVFrame& frame) {
+    if (frame.colorspace == AVCOL_SPC_BT2020_NCL || frame.colorspace == AVCOL_SPC_BT2020_CL) {
+        return 2;
+    }
+    if (frame.colorspace == AVCOL_SPC_BT709) {
+        return 1;
+    }
+    if (frame.colorspace == AVCOL_SPC_SMPTE170M || frame.colorspace == AVCOL_SPC_BT470BG) {
+        return 0;
+    }
+    return frame.height >= 720 ? 1 : 0;
+}
+
+bool describeFrame(const FfmpegApi& api, const AVFrame& frame, VideoFrame& out) {
+    if (frame.width <= 0 || frame.height <= 0) {
+        return false;
+    }
+    const AVPixelFormat format = static_cast<AVPixelFormat>(frame.format);
+    const AVPixFmtDescriptor* d = api.av_pix_fmt_desc_get(format);
+    if (d == nullptr) {
+        return false;
+    }
+    constexpr uint64_t kRejected = AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_PAL | AV_PIX_FMT_FLAG_BITSTREAM | AV_PIX_FMT_FLAG_BE | AV_PIX_FMT_FLAG_HWACCEL | AV_PIX_FMT_FLAG_FLOAT;
+    if ((d->flags & kRejected) != 0 || (d->flags & AV_PIX_FMT_FLAG_PLANAR) == 0) {
+        return false;
+    }
+    const bool alpha = (d->flags & AV_PIX_FMT_FLAG_ALPHA) != 0;
+    if (d->nb_components != (alpha ? 4 : 3)) {
+        return false;
+    }
+    const int depth = d->comp[0].depth;
+    if (depth < 8 || depth > 16) {
+        return false;
+    }
+    for (int i = 1; i < d->nb_components; ++i) {
+        if (d->comp[i].depth != depth) {
+            return false;
+        }
+    }
+    const int bytes = depth > 8 ? 2 : 1;
+    const int shift = d->comp[0].shift;
+    if (shift != 0 && shift != 16 - depth) {
+        return false;
+    }
+    const bool semi = d->comp[1].plane == d->comp[2].plane;
+    int planeCount = 0;
+    if (semi) {
+        if (alpha || d->comp[1].plane != 1 || d->comp[1].step != 2 * bytes || d->comp[2].step != 2 * bytes || d->comp[1].offset != 0 || d->comp[2].offset != bytes || d->comp[0].plane != 0 || d->comp[0].step != bytes) {
+            return false;
+        }
+        planeCount = 2;
+    } else {
+        for (int i = 0; i < d->nb_components; ++i) {
+            if (d->comp[i].plane != i || d->comp[i].step != bytes || d->comp[i].offset != 0) {
+                return false;
+            }
+        }
+        planeCount = d->nb_components;
+    }
+    for (int i = 0; i < planeCount; ++i) {
+        if (frame.data[i] == nullptr || frame.linesize[i] <= 0) {
+            return false;
+        }
+    }
+    const int chromaWidth = ceilShift(frame.width, d->log2_chroma_w);
+    const int chromaHeight = ceilShift(frame.height, d->log2_chroma_h);
+    out.layout = semi ? VideoLayout::SemiPlanar : VideoLayout::Planar;
+    out.compressed = CompressedFormat::None;
+    out.planeCount = planeCount;
+    out.planes = {};
+    out.planes[0] = {frame.data[0], frame.width, frame.height, frame.linesize[0], 1, bytes};
+    if (semi) {
+        out.planes[1] = {frame.data[1], chromaWidth, chromaHeight, frame.linesize[1], 2, bytes};
+    } else {
+        out.planes[1] = {frame.data[1], chromaWidth, chromaHeight, frame.linesize[1], 1, bytes};
+        out.planes[2] = {frame.data[2], chromaWidth, chromaHeight, frame.linesize[2], 1, bytes};
+        if (alpha) {
+            out.planes[3] = {frame.data[3], frame.width, frame.height, frame.linesize[3], 1, bytes};
+        }
+    }
+    out.width = frame.width;
+    out.height = frame.height;
+    out.bitDepth = depth;
+    out.msbAligned = shift != 0;
+    const char* name = api.av_get_pix_fmt_name(format);
+    out.fullRange = frame.color_range == AVCOL_RANGE_JPEG || (name != nullptr && std::strncmp(name, "yuvj", 4) == 0);
+    out.matrix = colorMatrix(frame);
+    out.hasAlpha = alpha;
+    return true;
+}
+
 }
 
 struct VideoDecoder::Impl {
     const FfmpegApi* api = nullptr;
+    VideoOptions options;
     AVFormatContext* format = nullptr;
     AVCodecContext* codec = nullptr;
     SwsContext* scaler = nullptr;
     AVPacket* packet = nullptr;
     AVFrame* frame = nullptr;
+    HardwareSetup hardware;
+    bool hardwareActive = false;
+    bool hapDirect = false;
+    CompressedFormat hapFormat = CompressedFormat::None;
+    size_t hapBytes = 0;
     int stream = -1;
     double timeBase = 0.0;
     double startTime = 0.0;
     double duration = 0.0;
     double framePeriod = 1.0 / 30.0;
+    int sourceWidth = 0;
+    int sourceHeight = 0;
     int outWidth = 0;
     int outHeight = 0;
     VideoInfo info;
+    VideoStatus status;
     bool opened = false;
 
     std::thread worker;
@@ -63,11 +228,16 @@ struct VideoDecoder::Impl {
     std::condition_variable wake;
     std::deque<std::shared_ptr<VideoFrame>> queue;
     std::shared_ptr<VideoFrame> shown;
-    std::vector<std::shared_ptr<VideoFrame>> pool;
+    std::vector<std::shared_ptr<Buffer>> pool;
     std::atomic<double> want{0.0};
     std::atomic<bool> stop{false};
     std::atomic<bool> broken{false};
+    std::atomic<double> decodeMs{0.0};
+    std::atomic<unsigned long long> decoded{0};
+    std::atomic<unsigned long long> dropped{0};
+    std::atomic<unsigned long long> underruns{0};
     std::string reason;
+    std::string pixelFormat;
     unsigned long long nextId = 1;
 
     long long loops = 0;
@@ -76,7 +246,10 @@ struct VideoDecoder::Impl {
     double skipUntil = -1.0;
     bool draining = false;
     bool ended = false;
+    bool starving = false;
     int failures = 0;
+    double workSeconds = 0.0;
+    bool announcedFormat = false;
 
     ~Impl() { shutdown(); }
 
@@ -108,6 +281,7 @@ struct VideoDecoder::Impl {
             if (codec != nullptr) {
                 api->avcodec_free_context(&codec);
             }
+            releaseHardware(*api, hardware);
             if (format != nullptr) {
                 api->avformat_close_input(&format);
             }
@@ -115,36 +289,41 @@ struct VideoDecoder::Impl {
         opened = false;
     }
 
-    std::shared_ptr<VideoFrame> takeBuffer() {
-        for (const std::shared_ptr<VideoFrame>& candidate : pool) {
+    std::shared_ptr<Buffer> takeBuffer(size_t size) {
+        for (const std::shared_ptr<Buffer>& candidate : pool) {
             if (candidate.use_count() == 1) {
+                if (candidate->size() != size) {
+                    candidate->assign(size, 0);
+                }
                 return candidate;
             }
         }
         if (pool.size() >= kQueueLimit + 4) {
             return nullptr;
         }
-        std::shared_ptr<VideoFrame> created = std::make_shared<VideoFrame>();
-        created->width = outWidth;
-        created->height = outHeight;
-        created->rgba.resize(static_cast<size_t>(outWidth) * static_cast<size_t>(outHeight) * 4);
+        std::shared_ptr<Buffer> created = std::make_shared<Buffer>(size, 0);
         pool.push_back(created);
         return created;
     }
 
-    void seekTo(long long wraps, double inside) {
+    void seekTo(long long wraps, double inside, bool keepQueue = false) {
         loops = wraps;
         const double absolute = static_cast<double>(wraps) * duration + inside;
         const double target = (inside + startTime) / timeBase;
         api->av_seek_frame(format, stream, static_cast<int64_t>(target), AVSEEK_FLAG_BACKWARD);
-        api->avcodec_flush_buffers(codec);
+        if (codec != nullptr) {
+            api->avcodec_flush_buffers(codec);
+        }
         draining = false;
         ended = false;
         skipUntil = absolute;
-        windowStart = absolute;
-        decodedUntil = absolute;
+        workSeconds = 0.0;
         std::lock_guard<std::mutex> lock(mutex);
-        queue.clear();
+        decodedUntil = absolute;
+        if (!keepQueue) {
+            queue.clear();
+        }
+        windowStart = queue.empty() ? absolute : std::min(absolute, queue.front()->time);
     }
 
     void seekAbsolute(double absolute) {
@@ -157,55 +336,187 @@ struct VideoDecoder::Impl {
         seekTo(wraps, std::clamp(absolute - static_cast<double>(wraps) * duration, 0.0, duration));
     }
 
-    void convertAndPush(double absolute) {
-        std::shared_ptr<VideoFrame> out;
+    void recordWork(double seconds) {
+        workSeconds += seconds;
+    }
+
+    void push(std::shared_ptr<VideoFrame> out, double absolute) {
+        const double ms = workSeconds * 1000.0;
+        workSeconds = 0.0;
+        const double previous = decodeMs.load();
+        decodeMs.store(previous <= 0.0 ? ms : previous * 0.9 + ms * 0.1);
+        decoded.fetch_add(1);
+        out->time = absolute;
+        out->outWidth = outWidth;
+        out->outHeight = outHeight;
+        std::lock_guard<std::mutex> lock(mutex);
+        out->id = nextId++;
+        queue.push_back(std::move(out));
+        decodedUntil = absolute;
+    }
+
+    void announce(const std::string& text) {
+        if (announcedFormat) {
+            return;
+        }
+        announcedFormat = true;
+        std::lock_guard<std::mutex> lock(mutex);
+        pixelFormat = text;
+    }
+
+    void convertToRgba(const AVFrame& source, double absolute) {
+        std::shared_ptr<Buffer> buffer;
         {
             std::lock_guard<std::mutex> lock(mutex);
-            out = takeBuffer();
+            buffer = takeBuffer(static_cast<size_t>(outWidth) * static_cast<size_t>(outHeight) * 4);
         }
-        if (!out) {
+        if (!buffer) {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
             return;
         }
-        scaler = api->sws_getCachedContext(scaler, frame->width, frame->height, static_cast<AVPixelFormat>(frame->format), outWidth, outHeight, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
+        scaler = api->sws_getCachedContext(scaler, source.width, source.height, static_cast<AVPixelFormat>(source.format), outWidth, outHeight, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
         if (scaler == nullptr) {
             fail("the picture format of this video cannot be converted");
             return;
         }
         int space = SWS_CS_DEFAULT;
-        if (frame->colorspace == AVCOL_SPC_BT709 || (frame->colorspace == AVCOL_SPC_UNSPECIFIED && frame->height >= 720)) {
+        if (source.colorspace == AVCOL_SPC_BT709 || (source.colorspace == AVCOL_SPC_UNSPECIFIED && source.height >= 720)) {
             space = SWS_CS_ITU709;
-        } else if (frame->colorspace == AVCOL_SPC_BT2020_NCL || frame->colorspace == AVCOL_SPC_BT2020_CL) {
+        } else if (source.colorspace == AVCOL_SPC_BT2020_NCL || source.colorspace == AVCOL_SPC_BT2020_CL) {
             space = SWS_CS_BT2020;
         }
-        const int sourceRange = frame->color_range == AVCOL_RANGE_JPEG ? 1 : 0;
+        const int sourceRange = source.color_range == AVCOL_RANGE_JPEG ? 1 : 0;
         api->sws_setColorspaceDetails(scaler, api->sws_getCoefficients(space), sourceRange, api->sws_getCoefficients(SWS_CS_DEFAULT), 1, 0, 1 << 16, 1 << 16);
-        uint8_t* destination[4] = {out->rgba.data(), nullptr, nullptr, nullptr};
+        uint8_t* destination[4] = {buffer->data(), nullptr, nullptr, nullptr};
         int stride[4] = {outWidth * 4, 0, 0, 0};
-        api->sws_scale(scaler, frame->data, frame->linesize, 0, frame->height, destination, stride);
-        out->time = absolute;
-        std::lock_guard<std::mutex> lock(mutex);
-        out->id = nextId++;
-        queue.push_back(out);
-        decodedUntil = absolute;
+        api->sws_scale(scaler, source.data, source.linesize, 0, source.height, destination, stride);
+        std::shared_ptr<VideoFrame> out = std::make_shared<VideoFrame>();
+        out->width = outWidth;
+        out->height = outHeight;
+        out->layout = VideoLayout::Rgba;
+        out->planeCount = 1;
+        out->planes[0] = {buffer->data(), outWidth, outHeight, outWidth * 4, 4, 1};
+        out->hasAlpha = hasAlphaFormat(*api, source.format);
+        out->owner = buffer;
+        const char* name = api->av_get_pix_fmt_name(static_cast<AVPixelFormat>(source.format));
+        announce(std::string(name != nullptr ? name : "unknown") + " (processor conversion)");
+        push(std::move(out), absolute);
+    }
+
+    void produce(double absolute) {
+        AVFrame* source = frame;
+        AVFrame* download = nullptr;
+        if (hardwareActive && frame->format == static_cast<int>(hardware.format)) {
+            download = api->av_frame_alloc();
+            if (download == nullptr) {
+                return;
+            }
+            const int moved = api->av_hwframe_transfer_data(download, frame, 0);
+            if (moved < 0) {
+                api->av_frame_free(&download);
+                if (++failures > kMaxFailures) {
+                    fail("the picture could not be read back from the graphics card");
+                }
+                return;
+            }
+            api->av_frame_copy_props(download, frame);
+            download->width = frame->width;
+            download->height = frame->height;
+            source = download;
+        }
+        VideoFrame description;
+        bool handled = false;
+        if (options.gpuConversion && describeFrame(*api, *source, description)) {
+            AVFrame* keep = download;
+            if (keep == nullptr) {
+                keep = api->av_frame_alloc();
+                if (keep != nullptr) {
+                    api->av_frame_move_ref(keep, source);
+                }
+            }
+            if (keep != nullptr) {
+                std::shared_ptr<VideoFrame> out = std::make_shared<VideoFrame>(description);
+                const FfmpegApi* shared = api;
+                out->owner = std::shared_ptr<void>(keep, [shared](void* raw) {
+                    AVFrame* released = static_cast<AVFrame*>(raw);
+                    shared->av_frame_free(&released);
+                });
+                const char* name = api->av_get_pix_fmt_name(static_cast<AVPixelFormat>(keep->format));
+                announce(name != nullptr ? name : "unknown");
+                push(std::move(out), absolute);
+                handled = true;
+                download = nullptr;
+            }
+        }
+        if (!handled) {
+            convertToRgba(*source, absolute);
+        }
+        if (download != nullptr) {
+            api->av_frame_free(&download);
+        }
+    }
+
+    void produceHap(const AVPacket& input, double absolute) {
+        std::shared_ptr<Buffer> buffer;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            buffer = takeBuffer(hapBytes);
+        }
+        if (!buffer) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            return;
+        }
+        HapFrameInfo frameInfo;
+        std::string problem;
+        const HapResult result = hapDecode(input.data, static_cast<size_t>(input.size), sourceWidth, sourceHeight, buffer->data(), buffer->size(), frameInfo, &problem);
+        if (result != HapResult::Ok || frameInfo.format != hapFormat) {
+            if (++failures > kMaxFailures) {
+                fail(problem.empty() ? "the HAP video could not be read" : problem);
+            }
+            return;
+        }
+        failures = 0;
+        const int codedWidth = hapCodedSize(sourceWidth);
+        const int codedHeight = hapCodedSize(sourceHeight);
+        const int blockBytes = hapFormat == CompressedFormat::Dxt1 ? 8 : 16;
+        std::shared_ptr<VideoFrame> out = std::make_shared<VideoFrame>();
+        out->width = sourceWidth;
+        out->height = sourceHeight;
+        out->layout = VideoLayout::Compressed;
+        out->compressed = hapFormat;
+        out->planeCount = 1;
+        out->planes[0] = {buffer->data(), codedWidth, codedHeight, codedWidth / 4 * blockBytes, 1, 1};
+        out->hasAlpha = hapFormat == CompressedFormat::Dxt5;
+        out->owner = buffer;
+        announce(hapVariantName(hapFormat));
+        push(std::move(out), absolute);
+    }
+
+    double timestampOf(int64_t stamp) const {
+        const double inside = static_cast<double>(stamp) * timeBase - startTime;
+        return static_cast<double>(loops) * duration + std::max(inside, 0.0);
     }
 
     void step() {
+        const auto begin = std::chrono::steady_clock::now();
+        stepInner();
+        recordWork(std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count());
+    }
+
+    void stepInner() {
+        if (hapDirect) {
+            stepHap();
+            return;
+        }
         int result = api->avcodec_receive_frame(codec, frame);
         if (result >= 0) {
             int64_t stamp = frame->best_effort_timestamp;
             if (stamp == AV_NOPTS_VALUE) {
                 stamp = frame->pts;
             }
-            double absolute;
-            if (stamp == AV_NOPTS_VALUE) {
-                absolute = decodedUntil + framePeriod;
-            } else {
-                const double inside = static_cast<double>(stamp) * timeBase - startTime;
-                absolute = static_cast<double>(loops) * duration + std::max(inside, 0.0);
-            }
+            const double absolute = stamp == AV_NOPTS_VALUE ? decodedUntil + framePeriod : timestampOf(stamp);
             if (absolute >= skipUntil - framePeriod * 0.5) {
-                convertAndPush(absolute);
+                produce(absolute);
             }
             api->av_frame_unref(frame);
             failures = 0;
@@ -240,15 +551,35 @@ struct VideoDecoder::Impl {
         api->av_packet_unref(packet);
     }
 
+    void stepHap() {
+        const int read = api->av_read_frame(format, packet);
+        if (read < 0) {
+            onEnd();
+            return;
+        }
+        if (packet->stream_index == stream && packet->size > 0) {
+            int64_t stamp = packet->pts;
+            if (stamp == AV_NOPTS_VALUE) {
+                stamp = packet->dts;
+            }
+            const double absolute = stamp == AV_NOPTS_VALUE ? decodedUntil + framePeriod : timestampOf(stamp);
+            if (absolute >= skipUntil - framePeriod * 0.5) {
+                produceHap(*packet, absolute);
+            }
+        }
+        api->av_packet_unref(packet);
+    }
+
     void onEnd() {
         if (duration > 0.0) {
-            seekTo(loops + 1, 0.0);
+            seekTo(loops + 1, 0.0, true);
         } else {
             ended = true;
         }
     }
 
     void run() {
+        platform::setCurrentThreadBackground(true);
         while (!stop.load() && !broken.load()) {
             const double target = want.load();
             bool seek = false;
@@ -272,22 +603,88 @@ struct VideoDecoder::Impl {
             step();
         }
     }
+
+    bool probeHardware(AVCodecContext* context, std::string& problem) {
+        AVPacket* probe = api->av_packet_alloc();
+        AVFrame* picture = api->av_frame_alloc();
+        bool success = false;
+        if (probe == nullptr || picture == nullptr) {
+            problem = "out of memory";
+        } else {
+            for (int i = 0; i < kProbePackets && !success; ++i) {
+                const int read = api->av_read_frame(format, probe);
+                if (read < 0) {
+                    problem = "the stream ended before a picture was decoded";
+                    break;
+                }
+                if (probe->stream_index == stream) {
+                    const int sent = api->avcodec_send_packet(context, probe);
+                    if (sent < 0 && sent != AVERROR(EAGAIN)) {
+                        problem = "the graphics card refused the stream (" + ffmpegError(*api, sent) + ")";
+                        api->av_packet_unref(probe);
+                        break;
+                    }
+                    const int received = api->avcodec_receive_frame(context, picture);
+                    if (received >= 0) {
+                        if (picture->format != static_cast<int>(hardware.format)) {
+                            problem = "the graphics card did not take over the decoding";
+                        } else {
+                            AVFrame* check = api->av_frame_alloc();
+                            if (check != nullptr && api->av_hwframe_transfer_data(check, picture, 0) >= 0) {
+                                success = true;
+                            } else {
+                                problem = "the picture could not be read back from the graphics card";
+                            }
+                            if (check != nullptr) {
+                                api->av_frame_free(&check);
+                            }
+                        }
+                        api->av_frame_unref(picture);
+                        api->av_packet_unref(probe);
+                        break;
+                    }
+                    if (received != AVERROR(EAGAIN)) {
+                        problem = "the graphics card could not decode the stream (" + ffmpegError(*api, received) + ")";
+                        api->av_packet_unref(probe);
+                        break;
+                    }
+                }
+                api->av_packet_unref(probe);
+            }
+            if (!success && problem.empty()) {
+                problem = "no picture came out of the graphics card";
+            }
+        }
+        if (picture != nullptr) {
+            api->av_frame_free(&picture);
+        }
+        if (probe != nullptr) {
+            api->av_packet_free(&probe);
+        }
+        return success;
+    }
+
+    void rewind() {
+        api->av_seek_frame(format, stream, static_cast<int64_t>(startTime / timeBase), AVSEEK_FLAG_BACKWARD);
+    }
 };
 
 VideoDecoder::VideoDecoder() : impl_(std::make_unique<Impl>()) {}
 
 VideoDecoder::~VideoDecoder() = default;
 
-bool VideoDecoder::open(const std::string& path, std::string& error, int maxDimension) {
+bool VideoDecoder::open(const std::string& path, std::string& error, const VideoOptions& options) {
     close();
     impl_ = std::make_unique<Impl>();
     Impl& d = *impl_;
+    d.options = options;
     std::string problem;
     d.api = ffmpegApi(problem);
     if (d.api == nullptr) {
         error = "FFmpeg is not available";
         return false;
     }
+    platform::setCurrentThreadBackground(true);
     const FfmpegApi& api = *d.api;
     if (api.avformat_open_input(&d.format, path.c_str(), nullptr, nullptr) < 0) {
         error = "the video file cannot be opened";
@@ -305,32 +702,23 @@ bool VideoDecoder::open(const std::string& path, std::string& error, int maxDime
         return false;
     }
     AVStream* stream = d.format->streams[d.stream];
-    const AVCodec* decoder = api.avcodec_find_decoder(stream->codecpar->codec_id);
+    const AVCodecID codecId = stream->codecpar->codec_id;
+    const AVCodec* decoder = api.avcodec_find_decoder(codecId);
     if (decoder == nullptr) {
-        error = std::string("this FFmpeg has no decoder for ") + api.avcodec_get_name(stream->codecpar->codec_id);
+        error = std::string("this FFmpeg has no decoder for ") + api.avcodec_get_name(codecId);
         d.shutdown();
         return false;
     }
-    d.codec = api.avcodec_alloc_context3(decoder);
-    if (d.codec == nullptr || api.avcodec_parameters_to_context(d.codec, stream->codecpar) < 0) {
-        error = "the decoder could not be prepared";
-        d.shutdown();
-        return false;
-    }
-    d.codec->thread_count = 0;
-    if (api.avcodec_open2(d.codec, decoder, nullptr) < 0) {
-        error = "the decoder could not be opened";
-        d.shutdown();
-        return false;
-    }
-    const int width = stream->codecpar->width > 0 ? stream->codecpar->width : d.codec->width;
-    const int height = stream->codecpar->height > 0 ? stream->codecpar->height : d.codec->height;
+    const int width = stream->codecpar->width;
+    const int height = stream->codecpar->height;
     if (width <= 0 || height <= 0 || width > 16384 || height > 16384) {
         error = "the video size is not supported";
         d.shutdown();
         return false;
     }
-    const int limit = std::clamp(maxDimension, 64, 4096);
+    d.sourceWidth = width;
+    d.sourceHeight = height;
+    const int limit = std::clamp(options.maxDimension, 64, 4096);
     const double shrink = std::min(1.0, static_cast<double>(limit) / static_cast<double>(std::max(width, height)));
     d.outWidth = std::max(2, static_cast<int>(std::lround(width * shrink)) & ~1);
     d.outHeight = std::max(2, static_cast<int>(std::lround(height * shrink)) & ~1);
@@ -362,13 +750,126 @@ bool VideoDecoder::open(const std::string& path, std::string& error, int maxDime
     d.info.fps = fps;
     d.info.duration = length;
     d.info.hasAlpha = hasAlphaFormat(api, stream->codecpar->format);
-    d.info.codec = api.avcodec_get_name(stream->codecpar->codec_id);
+    d.info.codec = api.avcodec_get_name(codecId);
+    d.status.codec = d.info.codec;
     d.packet = api.av_packet_alloc();
     d.frame = api.av_frame_alloc();
     if (d.packet == nullptr || d.frame == nullptr) {
         error = "out of memory";
         d.shutdown();
         return false;
+    }
+
+    if (d.info.codec == "hap") {
+        CompressedFormat tagged = CompressedFormat::None;
+        std::string hapReason;
+        bool direct = false;
+        if (!options.hapDirect) {
+            hapReason = "HAP direct upload is turned off";
+        } else if (!options.compressedTextures) {
+            hapReason = "this graphics driver cannot show compressed textures";
+        } else if (!hapFormatFromFourcc(stream->codecpar->codec_tag, tagged)) {
+            hapReason = "this HAP variant is not handled by the direct path";
+        } else {
+            HapFrameInfo inspected;
+            HapResult inspectResult = HapResult::Corrupt;
+            for (int i = 0; i < kProbePackets; ++i) {
+                if (api.av_read_frame(d.format, d.packet) < 0) {
+                    break;
+                }
+                if (d.packet->stream_index == d.stream && d.packet->size > 0) {
+                    inspectResult = hapInspect(d.packet->data, static_cast<size_t>(d.packet->size), inspected);
+                    api.av_packet_unref(d.packet);
+                    break;
+                }
+                api.av_packet_unref(d.packet);
+            }
+            d.rewind();
+            if (inspectResult == HapResult::Ok && inspected.format == tagged) {
+                direct = true;
+            } else {
+                hapReason = "the frames of this HAP file need the processor path";
+            }
+        }
+        if (direct) {
+            d.hapDirect = true;
+            d.hapFormat = tagged;
+            d.hapBytes = hapTextureBytes(tagged, width, height);
+            d.info.hasAlpha = tagged == CompressedFormat::Dxt5;
+            d.status.path = DecodePath::HapGpu;
+            d.status.backend = "gpu";
+            d.status.decoder = "HAP direct upload";
+            d.status.variant = hapVariantName(tagged);
+            d.status.threads = 1;
+        } else {
+            d.status.fallbackReason = hapReason;
+            d.status.variant = "HAP";
+        }
+    }
+
+    if (!d.hapDirect) {
+        const bool hapSoftware = d.info.codec == "hap";
+        const bool wantHardware = !hapSoftware && options.mode != VideoDecodeMode::ForceSoftware && (options.mode == VideoDecodeMode::PreferHardware || worthHardware(codecId, width, height));
+        d.status.hardwareWanted = wantHardware;
+        std::string failures;
+        if (wantHardware) {
+            for (const std::string& backend : hardwareBackendOrder()) {
+                HardwareSetup setup;
+                std::string why;
+                if (!prepareHardware(api, codecId, backend, setup, why)) {
+                    failures += (failures.empty() ? "" : "; ") + hardwareBackendLabel(backend) + ": " + why;
+                    continue;
+                }
+                AVCodecContext* context = nullptr;
+                if (!openHardwareContext(api, stream->codecpar, setup, context, why)) {
+                    releaseHardware(api, setup);
+                    failures += (failures.empty() ? "" : "; ") + hardwareBackendLabel(backend) + ": " + why;
+                    continue;
+                }
+                if (!d.probeHardware(context, why)) {
+                    api.avcodec_free_context(&context);
+                    releaseHardware(api, setup);
+                    d.rewind();
+                    failures += (failures.empty() ? "" : "; ") + hardwareBackendLabel(backend) + ": " + why;
+                    continue;
+                }
+                d.codec = context;
+                d.hardware = setup;
+                d.hardwareActive = true;
+                api.avcodec_flush_buffers(d.codec);
+                d.seekTo(0, 0.0);
+                d.status.path = DecodePath::Hardware;
+                d.status.backend = backend;
+                d.status.decoder = setup.decoder->name;
+                d.status.threads = 1;
+                break;
+            }
+        }
+        if (!d.hardwareActive) {
+            d.codec = api.avcodec_alloc_context3(decoder);
+            if (d.codec == nullptr || api.avcodec_parameters_to_context(d.codec, stream->codecpar) < 0) {
+                error = "the decoder could not be prepared";
+                d.shutdown();
+                return false;
+            }
+            const int threads = decoderThreadCount(codecId, width, height);
+            d.codec->thread_count = threads;
+            if (api.avcodec_open2(d.codec, decoder, nullptr) < 0) {
+                error = "the decoder could not be opened";
+                d.shutdown();
+                return false;
+            }
+            d.status.path = hapSoftware ? DecodePath::HapCpu : DecodePath::Software;
+            d.status.backend = "software";
+            d.status.decoder = decoder->name;
+            d.status.threads = threads;
+            if (!failures.empty()) {
+                d.status.fallbackReason = failures;
+            }
+        }
+    }
+    if (!d.status.fallbackReason.empty()) {
+        logLine("Video '" + path + "': " + d.status.fallbackReason);
     }
     d.opened = true;
     Impl* impl = &d;
@@ -403,6 +904,24 @@ const VideoInfo& VideoDecoder::info() const {
     return impl_->info;
 }
 
+VideoStatus VideoDecoder::status() const {
+    VideoStatus result;
+    if (!impl_) {
+        return result;
+    }
+    Impl& d = *impl_;
+    {
+        std::lock_guard<std::mutex> lock(d.mutex);
+        result = d.status;
+        result.pixelFormat = d.pixelFormat;
+    }
+    result.decodeMs = d.decodeMs.load();
+    result.decoded = d.decoded.load();
+    result.dropped = d.dropped.load();
+    result.underruns = d.underruns.load();
+    return result;
+}
+
 std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double seconds) {
     if (!impl_ || !impl_->opened) {
         return nullptr;
@@ -410,13 +929,26 @@ std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double seconds) {
     Impl& d = *impl_;
     d.want.store(std::max(seconds, 0.0));
     std::lock_guard<std::mutex> lock(d.mutex);
+    int popped = 0;
     while (!d.queue.empty() && d.queue.front()->time <= seconds) {
         d.shown = d.queue.front();
         d.queue.pop_front();
+        ++popped;
     }
     if (!d.shown && !d.queue.empty()) {
         d.shown = d.queue.front();
         d.queue.pop_front();
+        popped = 1;
+    }
+    if (popped > 1) {
+        d.dropped.fetch_add(static_cast<unsigned long long>(popped - 1));
+    }
+    if (d.shown) {
+        const bool late = d.queue.empty() && seconds - d.shown->time > d.framePeriod * 2.0;
+        if (late && !d.starving) {
+            d.underruns.fetch_add(1);
+        }
+        d.starving = late;
     }
     return d.shown;
 }
@@ -442,7 +974,7 @@ VideoDecoder::VideoDecoder() = default;
 
 VideoDecoder::~VideoDecoder() = default;
 
-bool VideoDecoder::open(const std::string&, std::string& error, int) {
+bool VideoDecoder::open(const std::string&, std::string& error, const VideoOptions&) {
     error = "this build was made without video support";
     return false;
 }
@@ -464,6 +996,10 @@ std::string VideoDecoder::failure() const {
 const VideoInfo& VideoDecoder::info() const {
     static const VideoInfo none;
     return none;
+}
+
+VideoStatus VideoDecoder::status() const {
+    return VideoStatus{};
 }
 
 std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double) {

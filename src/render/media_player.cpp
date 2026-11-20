@@ -8,7 +8,11 @@
 
 namespace nvj {
 
-MediaPlayer::MediaPlayer(std::string label, std::string path, bool video) : label_(std::move(label)), path_(std::move(path)), video_(video) {}
+MediaPlayer::MediaPlayer(std::string label, std::string path, bool video, VideoGpu* gpu, const VideoOptions& options) : label_(std::move(label)), path_(std::move(path)), video_(video), gpu_(gpu), options_(options) {
+    if (video_ && gpu_ != nullptr) {
+        uploader_ = std::make_unique<VideoUploader>(*gpu_);
+    }
+}
 
 MediaPlayer::~MediaPlayer() {
     if (imageLoad_.valid()) {
@@ -17,7 +21,31 @@ MediaPlayer::~MediaPlayer() {
     if (videoLoad_.valid()) {
         videoLoad_.wait();
     }
+    decoder_.reset();
+    uploader_.reset();
     destroyTexture();
+}
+
+bool MediaPlayer::hasPicture() const {
+    return uploader_ ? uploader_->hasPicture() : hasPicture_;
+}
+
+int MediaPlayer::width() const {
+    if (uploader_) {
+        return uploader_->hasPicture() ? uploader_->width() : info_.decodedWidth;
+    }
+    return width_;
+}
+
+int MediaPlayer::height() const {
+    if (uploader_) {
+        return uploader_->hasPicture() ? uploader_->height() : info_.decodedHeight;
+    }
+    return height_;
+}
+
+void MediaPlayer::setVideoOptions(const VideoOptions& options) {
+    options_ = options;
 }
 
 void MediaPlayer::destroyTexture() {
@@ -54,10 +82,23 @@ void MediaPlayer::start() {
     error_.clear();
     const std::string path = path_;
     if (video_) {
-        videoLoad_ = std::async(std::launch::async, [path] {
+        if (!uploader_) {
+            error_ = "Video playback is not available because the video renderer is missing";
+            state_ = MediaState::Failed;
+            return;
+        }
+        VideoOptions options = options_;
+        if (safeUpload_ || gpu_ == nullptr || !gpu_->caps().conversion) {
+            options.gpuConversion = false;
+        }
+        if (safeUpload_ || gpu_ == nullptr || !gpu_->caps().compressedTextures) {
+            options.hapDirect = false;
+            options.compressedTextures = false;
+        }
+        videoLoad_ = std::async(std::launch::async, [path, options] {
             VideoLoad load;
             load.decoder = std::make_unique<VideoDecoder>();
-            load.ok = load.decoder->open(path, load.error);
+            load.ok = load.decoder->open(path, load.error, options);
             return load;
         });
     } else {
@@ -89,7 +130,6 @@ MediaState MediaPlayer::poll() {
         }
         decoder_ = std::move(load.decoder);
         info_ = decoder_->info();
-        createTexture(info_.decodedWidth, info_.decodedHeight, nullptr, false);
         lastFrame_ = 0;
         state_ = MediaState::Ready;
         return state_;
@@ -125,15 +165,25 @@ bool MediaPlayer::update(double clock) {
         return false;
     }
     const std::shared_ptr<const VideoFrame> frame = decoder_->frameAt(clock);
-    if (frame && frame->id != lastFrame_ && frame->width == width_ && frame->height == height_) {
-        glBindTexture(GL_TEXTURE_2D, texture_);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frame->width, frame->height, GL_RGBA, GL_UNSIGNED_BYTE, frame->rgba.data());
-        glBindTexture(GL_TEXTURE_2D, 0);
-        lastFrame_ = frame->id;
-        hasPicture_ = true;
+    if (frame && frame->id != lastFrame_) {
+        if (uploader_->present(*frame)) {
+            lastFrame_ = frame->id;
+        } else if (!safeUpload_) {
+            logLine("Video clip '" + label_ + "': the GPU upload failed, switching to the safe CPU path");
+            safeUpload_ = true;
+            uploader_->release();
+            decoder_.reset();
+            state_ = MediaState::Idle;
+            lastFrame_ = 0;
+            return false;
+        } else {
+            error_ = "The picture could not be uploaded to the graphics card";
+            state_ = MediaState::Failed;
+            logLine("Video clip '" + label_ + "' stopped: " + error_);
+            return false;
+        }
     }
-    return hasPicture_;
+    return uploader_->hasPicture();
 }
 
 void MediaPlayer::touch() {
@@ -154,6 +204,9 @@ void MediaPlayer::release() {
         videoLoad_ = std::future<VideoLoad>();
     }
     decoder_.reset();
+    if (uploader_) {
+        uploader_->release();
+    }
     destroyTexture();
     state_ = MediaState::Idle;
     lastFrame_ = 0;
@@ -162,10 +215,37 @@ void MediaPlayer::release() {
 void MediaPlayer::retry() {
     release();
     thumbnailDone = false;
+    safeUpload_ = false;
     error_.clear();
 }
 
+VideoMemory MediaPlayer::videoMemory() const {
+    return uploader_ ? uploader_->memory() : VideoMemory{};
+}
+
+VideoStatus MediaPlayer::status() const {
+    VideoStatus status;
+    if (decoder_) {
+        status = decoder_->status();
+    }
+    if (safeUpload_ && status.fallbackReason.empty()) {
+        status.fallbackReason = "GPU upload failed, using the CPU path";
+    }
+    return status;
+}
+
+UploadStats MediaPlayer::uploadStats() const {
+    return uploader_ ? uploader_->stats() : UploadStats{};
+}
+
+UploadRoute MediaPlayer::uploadRoute() const {
+    return uploader_ ? uploader_->route() : UploadRoute::None;
+}
+
 unsigned long long MediaPlayer::gpuBytes() const {
+    if (uploader_) {
+        return uploader_->memory().total();
+    }
     if (texture_ == 0) {
         return 0;
     }

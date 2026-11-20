@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.17.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.18.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -136,10 +136,14 @@ set(NYREXVJ_CORE_SOURCES
     src/core/stage.cpp
     src/core/stage_json.cpp
     src/core/edit_history.cpp
+    src/core/frame_pacer.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
+    src/media/hap.cpp
     src/media/media_image.cpp
     src/media/video_decoder.cpp
+    src/media/video_hardware.cpp
+    src/media/video_probe_data.cpp
     src/core/recovery.cpp
     src/core/crash_handler.cpp
     src/render/effect_library.cpp
@@ -215,6 +219,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_control.cpp
     src/app/ui_creator.cpp
     src/app/ui_settings.cpp
+    src/app/ui_video.cpp
     src/app/ui_panels.cpp
     src/app/ui_welcome.cpp
     src/app/ui_recovery.cpp
@@ -228,6 +233,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_stage.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
+    src/render/video_gpu.cpp
     src/render/stb_impl.cpp
 )
 

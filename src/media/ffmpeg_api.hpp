@@ -6,6 +6,9 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
+#include <libavutil/buffer.h>
+#include <libavutil/error.h>
+#include <libavutil/hwcontext.h>
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
 }
@@ -20,6 +23,8 @@ extern "C" {
     X(av_seek_frame) \
     X(avformat_close_input) \
     X(avcodec_find_decoder) \
+    X(avcodec_find_decoder_by_name) \
+    X(avcodec_get_hw_config) \
     X(avcodec_alloc_context3) \
     X(avcodec_parameters_to_context) \
     X(avcodec_open2) \
@@ -34,6 +39,16 @@ extern "C" {
     X(av_frame_alloc) \
     X(av_frame_free) \
     X(av_frame_unref) \
+    X(av_frame_move_ref) \
+    X(av_frame_copy_props) \
+    X(av_hwdevice_ctx_create) \
+    X(av_hwdevice_find_type_by_name) \
+    X(av_hwdevice_get_type_name) \
+    X(av_hwframe_transfer_data) \
+    X(av_buffer_ref) \
+    X(av_buffer_unref) \
+    X(av_strerror) \
+    X(av_get_pix_fmt_name) \
     X(av_log_set_level) \
     X(av_pix_fmt_desc_get) \
     X(sws_getCachedContext) \

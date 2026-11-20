@@ -1,5 +1,7 @@
 #include "app/app.hpp"
 #include "app/bench.hpp"
+#include "core/frame_pacer.hpp"
+#include "core/frame_stats.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 #include "render/spout_input.hpp"
@@ -15,6 +17,7 @@
 
 #include <stb_image_write.h>
 
+#include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -28,6 +31,12 @@ struct Options {
     std::string dumpOutput;
     std::string dumpOutputs;
     std::string benchScene;
+    std::string benchVideo;
+    std::string videoSelfTest;
+    std::string videoMode;
+    bool noHapDirect = false;
+    bool noGpuConvert = false;
+    double frameReport = 0.0;
     int benchComp = 0;
     double benchBudget = 0.0;
     bool benchAll = false;
@@ -61,6 +70,18 @@ Options parseOptions(int argc, char** argv) {
             options.start.selectOutput = std::atoi(argv[++i]) - 1;
         } else if (arg == "--bench-scene" && hasValue) {
             options.benchScene = argv[++i];
+        } else if (arg == "--frame-report" && hasValue) {
+            options.frameReport = std::atof(argv[++i]);
+        } else if (arg == "--bench-video" && hasValue) {
+            options.benchVideo = argv[++i];
+        } else if (arg == "--video-selftest" && hasValue) {
+            options.videoSelfTest = argv[++i];
+        } else if (arg == "--video-mode" && hasValue) {
+            options.videoMode = argv[++i];
+        } else if (arg == "--no-hap-direct") {
+            options.noHapDirect = true;
+        } else if (arg == "--no-gpu-convert") {
+            options.noGpuConvert = true;
         } else if (arg == "--bench-comp" && hasValue) {
             options.benchComp = std::atoi(argv[++i]);
         } else if (arg == "--bench-budget" && hasValue) {
@@ -256,9 +277,19 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || options.benchComp > 0) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.videoSelfTest.empty() || options.benchComp > 0) {
         glfwSwapInterval(0);
-        const int benchExit = !options.benchScene.empty() ? nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut) : nvj::runCompositionBenchmark(app.engine(), options.benchComp, options.benchBudget, options.benchAll, options.benchOut);
+        int benchExit = 0;
+        app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
+        if (!options.videoSelfTest.empty()) {
+            benchExit = nvj::runVideoSelfTest(app.engine(), options.videoSelfTest, options.benchOut);
+        } else if (!options.benchScene.empty()) {
+            benchExit = nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut);
+        } else if (!options.benchVideo.empty()) {
+            benchExit = nvj::runVideoBenchmark(app.engine(), options.benchVideo, options.benchOut);
+        } else {
+            benchExit = nvj::runCompositionBenchmark(app.engine(), options.benchComp, options.benchBudget, options.benchAll, options.benchOut);
+        }
         app.shutdown();
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
@@ -287,6 +318,11 @@ int main(int argc, char** argv) {
         }
     }
 
+    nvj::FramePacer pacer;
+    nvj::FrameStats reportStats(200000);
+    const double reportStart = glfwGetTime();
+    double reportLast = -1.0;
+    double reportSlept = 0.0;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
@@ -363,6 +399,35 @@ int main(int argc, char** argv) {
         }
 
         glfwSwapBuffers(window);
+
+        if (options.frames <= 0) {
+            pacer.setTargetFps(app.fpsLimit());
+            if (pacer.limited()) {
+                const double finished = glfwGetTime();
+                const double deadline = pacer.nextDeadline(finished);
+                if (deadline > finished) {
+                    nvj::platform::sleepPrecise(deadline - finished);
+                    reportSlept += deadline - finished;
+                }
+            }
+        }
+
+        if (options.frameReport > 0.0) {
+            const double stamp = glfwGetTime();
+            if (reportLast >= 0.0) {
+                reportStats.add((stamp - reportLast) * 1000.0);
+            }
+            reportLast = stamp;
+            if (stamp - reportStart >= options.frameReport) {
+                const nvj::FrameSummary summary = reportStats.summary();
+                const int limit = app.fpsLimit();
+                const double target = limit > 0 ? 1000.0 / static_cast<double>(limit) : 0.0;
+                char line[400];
+                std::snprintf(line, sizeof(line), "Frame report: limit %s, VSync %s, %d frames in %.1f s (%.1f FPS), interval avg %.2f ms, median %.2f ms, p95 %.2f ms, p99 %.2f ms, max %.2f ms, limiter idle %.2f ms per frame%s", limit > 0 ? (std::to_string(limit) + " FPS").c_str() : "unlimited", app.wantsVsync() ? "on" : "off", summary.count + 1, stamp - reportStart, summary.avg > 0.0 ? 1000.0 / summary.avg : 0.0, summary.avg, summary.p50, summary.p95, summary.p99, summary.max, reportSlept * 1000.0 / static_cast<double>(summary.count + 1), target > 0.0 ? (std::string(", target ") + std::to_string(target).substr(0, 5) + " ms").c_str() : "");
+                nvj::logLine(line);
+                break;
+            }
+        }
     }
 
     app.shutdown();

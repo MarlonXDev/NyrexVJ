@@ -25,6 +25,7 @@ struct GpuMemory {
     size_t sceneDepth = 0;
     size_t sceneGeometry = 0;
     size_t media = 0;
+    VideoMemory video;
 
     size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media; }
 };
@@ -79,6 +80,13 @@ public:
     MediaPlayer* mediaPlayer(int clip);
     int loadedMediaCount() const;
     GpuMemory gpuMemory() const;
+    void setVideoSettings(VideoDecodeMode mode, bool hapDirect, bool gpuConversion = true);
+    VideoDecodeMode videoDecodeMode() const { return videoMode_; }
+    bool hapDirect() const { return hapDirect_; }
+    bool gpuConversion() const { return gpuConversion_; }
+    const VideoGpuCaps& videoCaps() const { return videoGpu_.caps(); }
+    VideoOptions videoOptions() const;
+    std::vector<const MediaPlayer*> activeVideos() const;
     void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
     bool gpuTimingAvailable() const { return gpuQueries_[0] != 0; }
     double gpuFrameMs() const { return gpuMs_; }
@@ -184,6 +192,8 @@ private:
         GLint fit = -1;
         GLint premult = -1;
         GLint backdrop = -1;
+        GLint texScale = -1;
+        GLint ycocg = -1;
     };
 
     struct Transition {
@@ -213,7 +223,7 @@ private:
     void renderSceneThumbnail(size_t index);
     void serviceScenes();
     bool ensureMedia(size_t index);
-    std::unique_ptr<MediaPlayer> makeMedia(const ClipDef& def) const;
+    std::unique_ptr<MediaPlayer> makeMedia(const ClipDef& def);
     void renderMediaThumbnail(size_t index);
     void serviceMedia();
     bool drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock);
@@ -250,6 +260,10 @@ private:
     ThumbProgram thumb_;
     SpoutProgram spoutProgram_;
     MediaProgram mediaProgram_;
+    VideoGpu videoGpu_;
+    VideoDecodeMode videoMode_ = VideoDecodeMode::Auto;
+    bool hapDirect_ = true;
+    bool gpuConversion_ = true;
     std::vector<std::unique_ptr<MediaPlayer>> media_;
     std::vector<size_t> deferredMediaThumbs_;
     std::array<SpoutInput, kSpoutInputSlots> spoutSlots_;

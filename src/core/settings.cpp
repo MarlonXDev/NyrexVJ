@@ -1,8 +1,10 @@
 #include "core/settings.hpp"
 
+#include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
 #include "core/stage_json.hpp"
+#include "media/video_types.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -47,6 +49,16 @@ bool loadSettings(Settings& settings) {
     };
     result.autoInstall = boolean("autoInstall", true);
     result.vsync = boolean("vsync", true);
+    auto fpsLimit = doc.find("fpsLimit");
+    if (fpsLimit != doc.end() && fpsLimit->is_number_integer()) {
+        result.fpsLimit = clampFpsLimit(fpsLimit->get<int>());
+    }
+    auto videoDecoder = doc.find("videoDecoder");
+    if (videoDecoder != doc.end() && videoDecoder->is_string()) {
+        result.videoDecoder = videoDecodeModeName(videoDecodeModeFromName(videoDecoder->get<std::string>()));
+    }
+    result.hapDirect = boolean("hapDirect", true);
+    result.videoGpuConvert = boolean("videoGpuConvert", true);
     result.openOutputOnStart = boolean("openOutputOnStart", false);
     result.showStatusBar = boolean("showStatusBar", true);
     result.showTimings = boolean("showTimings", true);
@@ -180,6 +192,10 @@ bool saveSettings(const Settings& settings) {
     doc["restoreSession"] = settings.restoreSession;
     doc["autoInstall"] = settings.autoInstall;
     doc["vsync"] = settings.vsync;
+    doc["fpsLimit"] = settings.fpsLimit;
+    doc["videoDecoder"] = settings.videoDecoder;
+    doc["hapDirect"] = settings.hapDirect;
+    doc["videoGpuConvert"] = settings.videoGpuConvert;
     doc["openOutputOnStart"] = settings.openOutputOnStart;
     doc["showStatusBar"] = settings.showStatusBar;
     doc["showTimings"] = settings.showTimings;

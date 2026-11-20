@@ -2,6 +2,7 @@
 
 #include "app/theme.hpp"
 #include "app/ui_common.hpp"
+#include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 #include "update/update_logic.hpp"
@@ -308,6 +309,7 @@ void App::drawSettingsPage(int page) {
             persist();
         }
         ImGui::SetItemTooltip("%s", tr("Turn this off to let the program render as fast as possible."));
+        drawFrameRateLimit();
         drawSpoutControls();
         drawNdiControls();
     } else if (page == SettingsControl) {
@@ -539,9 +541,44 @@ void App::drawUpdateCard() {
     }
 }
 
+void App::drawFrameRateLimit() {
+    char current[32];
+    if (settings_.fpsLimit > 0) {
+        std::snprintf(current, sizeof(current), "%d FPS", settings_.fpsLimit);
+    } else {
+        std::snprintf(current, sizeof(current), "%s", tr("Unlimited"));
+    }
+    ImGui::SetNextItemWidth(220.0f);
+    if (ImGui::BeginCombo(trId("Frame rate limit", "optFpsLimit"), current)) {
+        for (const int fps : kFpsLimits) {
+            char label[32];
+            if (fps > 0) {
+                std::snprintf(label, sizeof(label), "%d FPS", fps);
+            } else {
+                std::snprintf(label, sizeof(label), "%s", tr("Unlimited"));
+            }
+            if (ImGui::Selectable(label, settings_.fpsLimit == fps)) {
+                settings_.fpsLimit = fps;
+                saveSettings(settings_);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("Caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat."));
+}
+
 void App::drawPerformancePage() {
     auto persist = [this]() { saveSettings(settings_); };
     const double budget = budgetMilliseconds(settings_.perfBudgetFps);
+
+    ImGui::SeparatorText(tr("Frame rate"));
+    drawFrameRateLimit();
+    if (ImGui::Checkbox(trId("Sync to display refresh (VSync)", "optVsync"), &settings_.vsync)) {
+        persist();
+    }
+
+    drawVideoSettings();
+    drawVideoMonitor();
 
     ImGui::SeparatorText(tr("Frame budget"));
     static const int kBudgets[] = {30, 45, 60, 90, 120, 144};
@@ -619,7 +656,24 @@ void App::drawPerformancePage() {
 
     ImGui::SeparatorText(tr("Memory"));
     const GpuMemory memory = engine_.gpuMemory();
-    ImGui::Text("%s: %.0f MB", tr("GPU memory (estimate)"), static_cast<double>(memory.total()) / (1024.0 * 1024.0));
+    const auto megabytes = [](unsigned long long bytes) { return static_cast<double>(bytes) / (1024.0 * 1024.0); };
+    ImGui::Text("%s: %.0f MB", tr("GPU memory (estimate)"), megabytes(memory.total()));
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::Text("%s: %.1f MB", tr("Render targets"), megabytes(memory.targets));
+        ImGui::Text("%s: %.1f MB", tr("Thumbnails"), megabytes(memory.thumbnails));
+        ImGui::Text("%s: %.1f MB", tr("3D depth buffers"), megabytes(memory.sceneDepth));
+        ImGui::Text("%s: %.1f MB", tr("3D geometry and textures"), megabytes(memory.sceneGeometry));
+        ImGui::Text("%s: %.1f MB", tr("Images and videos"), megabytes(memory.media));
+        ImGui::EndTooltip();
+    }
+    ImGui::Text("%s: %.1f MB", tr("Video memory"), megabytes(memory.video.total()));
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::Text("%s: %.1f MB", tr("Pictures"), megabytes(memory.video.output));
+        ImGui::Text("%s: %.1f MB", tr("Colour planes"), megabytes(memory.video.planes));
+        ImGui::Text("%s: %.1f MB", tr("Compressed (HAP)"), megabytes(memory.video.compressed));
+        ImGui::Text("%s: %.1f MB", tr("Upload buffers"), megabytes(memory.video.staging));
+        ImGui::EndTooltip();
+    }
     ImGui::Text("%s: %.0f MB", tr("Program memory"), static_cast<double>(platform::processMemoryBytes()) / (1024.0 * 1024.0));
     ImGui::Text("%s: %d", tr("3D scenes loaded"), engine_.loadedSceneCount());
 

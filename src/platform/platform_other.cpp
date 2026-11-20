@@ -1,11 +1,18 @@
 #include "platform/platform.hpp"
 
 #include <cerrno>
+#include <chrono>
 #include <csignal>
 #include <fstream>
 #include <filesystem>
+#include <thread>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#ifdef __linux__
+#include <sys/syscall.h>
+#endif
 
 namespace nvj::platform {
 
@@ -71,6 +78,37 @@ size_t processMemoryBytes() {
         return 0;
     }
     return static_cast<size_t>(resident) * static_cast<size_t>(sysconf(_SC_PAGESIZE));
+}
+
+double processCpuSeconds() {
+    rusage usage{};
+    if (getrusage(RUSAGE_SELF, &usage) != 0) {
+        return 0.0;
+    }
+    const auto seconds = [](const timeval& value) { return static_cast<double>(value.tv_sec) + static_cast<double>(value.tv_usec) * 1.0e-6; };
+    return seconds(usage.ru_utime) + seconds(usage.ru_stime);
+}
+
+void sleepPrecise(double seconds) {
+    if (seconds <= 0.0) {
+        return;
+    }
+    const auto end = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(seconds));
+    constexpr double kSpin = 0.0001;
+    if (seconds > kSpin) {
+        std::this_thread::sleep_for(std::chrono::duration<double>(seconds - kSpin));
+    }
+    while (std::chrono::steady_clock::now() < end) {
+        std::this_thread::yield();
+    }
+}
+
+void setCurrentThreadBackground(bool background) {
+#ifdef __linux__
+    setpriority(PRIO_PROCESS, static_cast<id_t>(syscall(SYS_gettid)), background ? 5 : 0);
+#else
+    (void)background;
+#endif
 }
 
 unsigned long currentProcessId() {

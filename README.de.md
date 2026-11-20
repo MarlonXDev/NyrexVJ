@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.17.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264 und HAP, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
+> Stand: v0.18.0. Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, bis zu vier Ausgabefenster mit Projection Mapping, Verzerrung und Kantenüberblendung (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264, HEVC, AV1, HAP, mit Hardware-Decodierung, Farbumrechnung auf der Grafikkarte, Bildratenbegrenzung und Video-Monitor, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
 
 ## Download
 
@@ -332,6 +332,11 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--bench-budget MS` | Mit `--bench-comp` mit Code 2 beenden, wenn die mittlere Bildzeit über MS liegt |
 | `--bench-all` | Mit `--bench-comp` alle Werks-Looks nacheinander messen |
 | `--bench-out DATEI.json` | Mit `--bench-scene` oder `--bench-comp` das Ergebnis zusätzlich als JSON schreiben |
+| `--bench-video SEKUNDEN:CLIP1,CLIP2` | Prozessorzeit, Decodierzeit, Upload-Zeit und Videospeicher der genannten Video-Clips messen, SEKUNDEN lang, dann beenden (`--bench-out` schreibt JSON) |
+| `--video-selftest ORDNER` | Jedes Video aus ORDNER über den Grafikkartenweg und den Prozessorweg abspielen und die Bilder vergleichen, Exit-Code 1 bei einem Unterschied |
+| `--video-mode auto\|hardware\|software` | Den Video-Decoder für diesen Lauf wählen |
+| `--no-hap-direct` / `--no-gpu-convert` | Den komprimierten HAP-Upload oder die Farbumrechnung auf der Grafikkarte für diesen Lauf abschalten |
+| `--frame-report SEKUNDEN` | Statistik über Bildzeit und Wartezeit der Bildratenbegrenzung nach SEKUNDEN ausgeben |
 | `--frames N` | N Frames mit festen 60 FPS rendern, dann beenden |
 | `--screenshot DATEI.png` | Mit `--frames` das Fenster als PNG speichern |
 | `--dump-output DATEI.png` | Mit `--frames` die Engine-Ausgabe als PNG speichern |

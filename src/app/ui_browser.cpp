@@ -225,6 +225,35 @@ void App::drawMediaDetails(const MediaPlayer& player, bool tooltip) {
             if (info.hasAlpha) {
                 ImGui::Text("%s", tr("Has transparency"));
             }
+            const VideoStatus status = player.status();
+            if (status.path != DecodePath::None) {
+                const bool hap = status.path == DecodePath::HapGpu || status.path == DecodePath::HapCpu;
+                std::string decoder = status.decoder;
+                if (status.path == DecodePath::Hardware && !status.backend.empty()) {
+                    decoder += "  (" + hardwareBackendLabel(status.backend) + ")";
+                }
+                if (hap && !status.variant.empty()) {
+                    decoder = status.variant + "  -  " + decoder;
+                }
+                ImGui::Text("%s: %s", tr("Decoder"), decoder.c_str());
+                const char* path = tr("Software (processor)");
+                if (status.path == DecodePath::Hardware) {
+                    path = tr("Hardware (graphics card)");
+                } else if (status.path == DecodePath::HapGpu) {
+                    path = tr("HAP, compressed upload");
+                } else if (status.path == DecodePath::HapCpu) {
+                    path = tr("HAP, processor fallback");
+                }
+                ImGui::Text("%s: %s", tr("Decoding"), path);
+                if (!status.fallbackReason.empty()) {
+                    ImGui::PushTextWrapPos(tooltip ? ImGui::GetFontSize() * 26.0f : 0.0f);
+                    ImGui::TextDisabled("%s: %s", tr("Why"), trMessage(status.fallbackReason).c_str());
+                    ImGui::PopTextWrapPos();
+                    if (!tooltip && !status.fallbackDetail.empty() && ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("%s", status.fallbackDetail.c_str());
+                    }
+                }
+            }
         }
         ImGui::Text("%s: %.2f MB", tr("GPU memory"), static_cast<double>(player.gpuBytes()) / (1024.0 * 1024.0));
         break;

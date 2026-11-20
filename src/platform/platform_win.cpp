@@ -11,6 +11,7 @@
 
 #include "core/log.hpp"
 
+#include <chrono>
 #include <cwchar>
 #include <filesystem>
 #include <fstream>
@@ -20,6 +21,51 @@
 namespace nvj::platform {
 
 namespace {
+
+class SleepTimer {
+public:
+    SleepTimer() {
+        handle_ = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+        highResolution_ = handle_ != nullptr;
+        if (handle_ == nullptr) {
+            handle_ = CreateWaitableTimerW(nullptr, TRUE, nullptr);
+            using SetResolution = LONG(NTAPI*)(ULONG, BOOLEAN, PULONG);
+            HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+            SetResolution setResolution = ntdll != nullptr ? reinterpret_cast<SetResolution>(reinterpret_cast<void*>(GetProcAddress(ntdll, "NtSetTimerResolution"))) : nullptr;
+            if (setResolution != nullptr) {
+                ULONG actual = 0;
+                setResolution(10000, TRUE, &actual);
+            }
+        }
+    }
+
+    ~SleepTimer() {
+        if (handle_ != nullptr) {
+            CloseHandle(handle_);
+        }
+    }
+
+    SleepTimer(const SleepTimer&) = delete;
+    SleepTimer& operator=(const SleepTimer&) = delete;
+
+    bool highResolution() const { return highResolution_; }
+
+    void wait(double seconds) {
+        if (handle_ == nullptr) {
+            Sleep(static_cast<DWORD>(seconds * 1000.0));
+            return;
+        }
+        LARGE_INTEGER due;
+        due.QuadPart = -static_cast<LONGLONG>(seconds * 1.0e7);
+        if (SetWaitableTimer(handle_, &due, 0, nullptr, nullptr, FALSE)) {
+            WaitForSingleObject(handle_, INFINITE);
+        }
+    }
+
+private:
+    HANDLE handle_ = nullptr;
+    bool highResolution_ = false;
+};
 
 std::wstring widen(const std::string& text) {
     if (text.empty()) {
@@ -446,6 +492,42 @@ size_t processMemoryBytes() {
         return 0;
     }
     return static_cast<size_t>(counters.WorkingSetSize);
+}
+
+double processCpuSeconds() {
+    FILETIME created{};
+    FILETIME exited{};
+    FILETIME kernel{};
+    FILETIME user{};
+    if (!GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user)) {
+        return 0.0;
+    }
+    const auto seconds = [](const FILETIME& value) {
+        ULARGE_INTEGER wide;
+        wide.LowPart = value.dwLowDateTime;
+        wide.HighPart = value.dwHighDateTime;
+        return static_cast<double>(wide.QuadPart) * 1.0e-7;
+    };
+    return seconds(kernel) + seconds(user);
+}
+
+void sleepPrecise(double seconds) {
+    if (seconds <= 0.0) {
+        return;
+    }
+    thread_local SleepTimer timer;
+    const auto end = std::chrono::steady_clock::now() + std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(seconds));
+    const double spin = timer.highResolution() ? 0.0006 : 0.0016;
+    if (seconds > spin) {
+        timer.wait(seconds - spin);
+    }
+    while (std::chrono::steady_clock::now() < end) {
+        YieldProcessor();
+    }
+}
+
+void setCurrentThreadBackground(bool background) {
+    SetThreadPriority(GetCurrentThread(), background ? THREAD_PRIORITY_BELOW_NORMAL : THREAD_PRIORITY_NORMAL);
 }
 
 unsigned long currentProcessId() {

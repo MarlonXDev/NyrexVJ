@@ -496,6 +496,7 @@ void App::frame(double dt) {
     control_.configure(control);
     control_.update(dt);
     updateAudio(dt);
+    engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);
     engine_.update(dt);
     engine_.configureSpout(settings_.spoutInputs, spout_.active() ? std::string(spoutName_) : std::string(), settings_.spoutInputFlip);
     OscOutConfig oscOut;

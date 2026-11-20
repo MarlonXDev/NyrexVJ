@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.17.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264 and HAP, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
+> Status: v0.18.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
 
 ## Download
 
@@ -332,6 +332,11 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--bench-budget MS` | With `--bench-comp`, exit with code 2 when the average frame time is above MS |
 | `--bench-all` | With `--bench-comp`, measure every factory look one after another |
 | `--bench-out FILE.json` | With `--bench-scene` or `--bench-comp`, also write the result as JSON |
+| `--bench-video SECONDS:CLIP1,CLIP2` | Measure the processor time, decode time, upload time and video memory of the listed video clips playing for SECONDS, then exit (`--bench-out` writes JSON) |
+| `--video-selftest FOLDER` | Play every video of FOLDER through the graphics card path and the processor path and compare the pictures, exit code 1 on a difference |
+| `--video-mode auto\|hardware\|software` | Choose the video decoder for this run |
+| `--no-hap-direct` / `--no-gpu-convert` | Switch off the compressed HAP upload or the colour conversion on the graphics card for this run |
+| `--frame-report SECONDS` | Print frame time and sleep time statistics of the frame rate limiter after SECONDS |
 | `--frames N` | Run N frames at a fixed 60 FPS step, then exit |
 | `--screenshot FILE.png` | With `--frames`, save the window as PNG |
 | `--dump-output FILE.png` | With `--frames`, save the engine output as PNG |

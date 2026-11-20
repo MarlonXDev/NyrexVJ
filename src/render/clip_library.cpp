@@ -226,6 +226,25 @@ void appendSpoutClips(std::vector<ClipDef>& clips) {
     }
 }
 
+void appendLiveClips(std::vector<ClipDef>& clips) {
+    for (int slot = 0; slot < kLiveInputSlots; ++slot) {
+        ClipDef def;
+        def.name = "NDI Input " + std::to_string(slot + 1);
+        def.body = "const int kSlot = " + std::to_string(slot + 1) + ";\n" + kSpoutPlaceholder;
+        def.kind = ClipKind::NdiSource;
+        def.sceneIndex = slot;
+        clips.push_back(std::move(def));
+    }
+    for (int slot = 0; slot < kLiveInputSlots; ++slot) {
+        ClipDef def;
+        def.name = "Camera " + std::to_string(slot + 1);
+        def.body = "const int kSlot = " + std::to_string(slot + 1) + ";\n" + kSpoutPlaceholder;
+        def.kind = ClipKind::CameraSource;
+        def.sceneIndex = slot;
+        clips.push_back(std::move(def));
+    }
+}
+
 void appendSceneClips(std::vector<ClipDef>& clips) {
     const std::vector<BuiltinSceneInfo>& builtin = builtinScenes();
     for (size_t i = 0; i < builtin.size(); ++i) {
@@ -843,6 +862,7 @@ void main() {
 
     appendExtraClips(clips);
     appendSpoutClips(clips);
+    appendLiveClips(clips);
     appendSceneClips(clips);
     return clips;
 }

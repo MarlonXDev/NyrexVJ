@@ -123,6 +123,11 @@ std::vector<fs::path> searchFolders() {
 
 #endif
 
+fs::path& usedFolder() {
+    static fs::path folder;
+    return folder;
+}
+
 bool load(FfmpegApi& api, std::string& problem) {
     const char* disabled = std::getenv("NYREXVJ_NO_FFMPEG");
     if (disabled != nullptr && *disabled != '\0') {
@@ -144,6 +149,7 @@ bool load(FfmpegApi& api, std::string& problem) {
         }
         if (all) {
             found = true;
+            usedFolder() = folder;
             break;
         }
     }
@@ -209,6 +215,49 @@ const FfmpegApi* ffmpegApi(std::string& problem) {
         } else {
             error = failure;
             logLine("FFmpeg libraries were not loaded (" + error + "), video clips are not available");
+        }
+    }
+    problem = error;
+    return ok ? &api : nullptr;
+}
+
+const FfmpegDeviceApi* ffmpegDeviceApi(std::string& problem) {
+    static FfmpegDeviceApi api;
+    static std::string error;
+    static bool ok = false;
+    static bool tried = false;
+    std::string base;
+    if (ffmpegApi(base) == nullptr) {
+        problem = "FFmpeg is not loaded (" + base + ")";
+        return nullptr;
+    }
+    std::lock_guard<std::mutex> lock(loadMutex());
+    if (!tried) {
+        tried = true;
+        const Library library{"avdevice", LIBAVFORMAT_VERSION_MAJOR};
+        Handle handle = openLibrary(usedFolder(), libraryFile(library));
+#ifndef _WIN32
+        if (handle == nullptr) {
+            handle = openLibrary(fs::path(), libraryFile(library));
+        }
+#endif
+        if (handle == nullptr) {
+            error = libraryFile(library) + " was not found";
+        } else {
+            api.registerAll = reinterpret_cast<decltype(api.registerAll)>(symbol(handle, "avdevice_register_all"));
+            api.listInputSources = reinterpret_cast<decltype(api.listInputSources)>(symbol(handle, "avdevice_list_input_sources"));
+            api.freeList = reinterpret_cast<decltype(api.freeList)>(symbol(handle, "avdevice_free_list_devices"));
+            if (api.registerAll == nullptr || api.listInputSources == nullptr || api.freeList == nullptr) {
+                error = "the functions of " + libraryFile(library) + " are missing";
+            } else {
+                api.registerAll();
+                ok = true;
+                error.clear();
+                logLine("FFmpeg device library loaded, cameras and capture cards are available");
+            }
+        }
+        if (!ok) {
+            logLine("FFmpeg device library was not loaded (" + error + "), cameras are not available");
         }
     }
     problem = error;

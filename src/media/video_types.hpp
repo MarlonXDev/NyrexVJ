@@ -8,7 +8,7 @@
 
 namespace nvj {
 
-enum class VideoLayout { Rgba, Planar, SemiPlanar, Compressed };
+enum class VideoLayout { Rgba, Planar, SemiPlanar, Compressed, PackedUyvy };
 
 enum class CompressedFormat { None, Dxt1, Dxt5, YcoCgDxt5 };
 

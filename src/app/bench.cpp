@@ -2,8 +2,10 @@
 
 #include "audio/audio_features.hpp"
 #include "core/frame_stats.hpp"
+#include "core/live_source.hpp"
 #include "core/log.hpp"
 #include "core/preset.hpp"
+#include "media/camera_capture.hpp"
 #include "platform/platform.hpp"
 #include "render/asset_import.hpp"
 #include "render/clip_library.hpp"
@@ -12,6 +14,9 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <memory>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -1023,6 +1028,442 @@ int runMemoryBenchmark(Engine& engine, const std::string& outputPath) {
     report["phases"] = std::move(phases);
     const std::string text = report.dump(2);
     logLine("Memory benchmark:\n" + text);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return 0;
+}
+
+}
+
+namespace nvj {
+
+namespace {
+
+struct Rgb8 {
+    int r;
+    int g;
+    int b;
+};
+
+Rgb8 referenceUyvy(int y, int u, int v, bool hd) {
+    const double kr = hd ? 0.2126 : 0.299;
+    const double kb = hd ? 0.0722 : 0.114;
+    const double kg = 1.0 - kr - kb;
+    const double yn = (y - 16) / 219.0;
+    const double cb = (u - 128) / 224.0;
+    const double cr = (v - 128) / 224.0;
+    const double r = yn + 2.0 * (1.0 - kr) * cr;
+    const double b = yn + 2.0 * (1.0 - kb) * cb;
+    const double g = (yn - kr * r - kb * b) / kg;
+    const auto pack = [](double value) { return static_cast<int>(std::lround(std::clamp(value, 0.0, 1.0) * 255.0)); };
+    return {pack(r), pack(g), pack(b)};
+}
+
+struct UyvyCase {
+    std::string name;
+    int width;
+    int height;
+    int outWidth;
+    int outHeight;
+    bool gradient;
+    int y;
+    int u;
+    int v;
+};
+
+json runUyvyCase(VideoUploader& uploader, const UyvyCase& testCase) {
+    json item;
+    item["name"] = testCase.name;
+    const int width = testCase.width;
+    const int height = testCase.height;
+    std::vector<uint8_t> data(static_cast<size_t>(width) * 2u * static_cast<size_t>(height));
+    std::vector<Rgb8> expected(static_cast<size_t>(width) * static_cast<size_t>(height));
+    const bool hd = height >= 720;
+    for (int row = 0; row < height; ++row) {
+        for (int pair = 0; pair < width / 2; ++pair) {
+            int y0 = testCase.y;
+            int y1 = testCase.y;
+            int u = testCase.u;
+            int v = testCase.v;
+            if (testCase.gradient) {
+                y0 = 16 + (pair * 2 * 219) / std::max(width - 1, 1);
+                y1 = 16 + ((pair * 2 + 1) * 219) / std::max(width - 1, 1);
+                u = 16 + (row * 224) / std::max(height - 1, 1);
+                v = 240 - (pair * 224) / std::max(width / 2 - 1, 1);
+            }
+            const size_t at = (static_cast<size_t>(row) * static_cast<size_t>(width) + static_cast<size_t>(pair) * 2u) * 2u;
+            data[at] = static_cast<uint8_t>(u);
+            data[at + 1] = static_cast<uint8_t>(y0);
+            data[at + 2] = static_cast<uint8_t>(v);
+            data[at + 3] = static_cast<uint8_t>(y1);
+            expected[static_cast<size_t>(row) * static_cast<size_t>(width) + static_cast<size_t>(pair) * 2u] = referenceUyvy(y0, u, v, hd);
+            expected[static_cast<size_t>(row) * static_cast<size_t>(width) + static_cast<size_t>(pair) * 2u + 1u] = referenceUyvy(y1, u, v, hd);
+        }
+    }
+    VideoFrame frame;
+    frame.layout = VideoLayout::PackedUyvy;
+    frame.width = width;
+    frame.height = height;
+    frame.outWidth = testCase.outWidth;
+    frame.outHeight = testCase.outHeight;
+    frame.matrix = hd ? 1 : 0;
+    frame.planeCount = 1;
+    frame.planes[0].data = data.data();
+    frame.planes[0].width = width / 2;
+    frame.planes[0].height = height;
+    frame.planes[0].stride = width * 2;
+    frame.planes[0].channels = 4;
+    frame.planes[0].bytes = 1;
+    const bool presented = uploader.present(frame);
+    item["presented"] = presented;
+    if (!presented || uploader.texture() == 0) {
+        item["passed"] = false;
+        return item;
+    }
+    std::vector<uint8_t> pixels(static_cast<size_t>(uploader.width()) * static_cast<size_t>(uploader.height()) * 4u);
+    glBindTexture(GL_TEXTURE_2D, uploader.texture());
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+    item["outputSize"] = std::to_string(uploader.width()) + "x" + std::to_string(uploader.height());
+    item["route"] = uploadRouteName(uploader.route());
+    bool passed = uploader.width() == testCase.outWidth && uploader.height() == testCase.outHeight && uploader.route() == UploadRoute::GpuConvert;
+    if (testCase.outWidth == width && testCase.outHeight == height) {
+        int worst = 0;
+        double sum = 0.0;
+        for (size_t i = 0; i < expected.size(); ++i) {
+            const int dr = std::abs(static_cast<int>(pixels[i * 4]) - expected[i].r);
+            const int dg = std::abs(static_cast<int>(pixels[i * 4 + 1]) - expected[i].g);
+            const int db = std::abs(static_cast<int>(pixels[i * 4 + 2]) - expected[i].b);
+            worst = std::max({worst, dr, dg, db});
+            sum += dr + dg + db;
+        }
+        item["worstDifference"] = worst;
+        item["meanDifference"] = sum / (static_cast<double>(expected.size()) * 3.0);
+        passed = passed && worst <= 2;
+    } else {
+        double reference[3] = {0.0, 0.0, 0.0};
+        double actual[3] = {0.0, 0.0, 0.0};
+        for (const Rgb8& pixel : expected) {
+            reference[0] += pixel.r;
+            reference[1] += pixel.g;
+            reference[2] += pixel.b;
+        }
+        const size_t outPixels = static_cast<size_t>(uploader.width()) * static_cast<size_t>(uploader.height());
+        for (size_t i = 0; i < outPixels; ++i) {
+            actual[0] += pixels[i * 4];
+            actual[1] += pixels[i * 4 + 1];
+            actual[2] += pixels[i * 4 + 2];
+        }
+        double worstMean = 0.0;
+        for (int c = 0; c < 3; ++c) {
+            worstMean = std::max(worstMean, std::abs(reference[c] / static_cast<double>(expected.size()) - actual[c] / static_cast<double>(outPixels)));
+        }
+        item["meanChannelDifference"] = worstMean;
+        passed = passed && worstMean <= 4.0;
+    }
+    item["passed"] = passed;
+    return item;
+}
+
+int threadCount() {
+#ifdef __linux__
+    std::error_code ec;
+    int count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator("/proc/self/task", ec)) {
+        (void)entry;
+        ++count;
+    }
+    return count;
+#else
+    return -1;
+#endif
+}
+
+}
+
+int runLiveSelfTest(Engine& engine, const std::string& outputPath) {
+    json report;
+    bool passed = true;
+    const VideoGpuCaps& caps = engine.videoCaps();
+    report["renderer"] = caps.renderer;
+    report["conversion"] = caps.conversion;
+    if (!caps.conversion) {
+        report["error"] = "the picture conversion shader is not available";
+        report["passed"] = false;
+        logLine("Live self test: " + report["error"].get<std::string>());
+        return 1;
+    }
+
+    json shader = json::array();
+    {
+        VideoGpu gpu;
+        gpu.create();
+        VideoUploader uploader(gpu);
+        const std::vector<UyvyCase> cases = {
+            {"red 601 (480p)", 64, 48, 64, 48, false, 82, 90, 240},
+            {"green 601 (480p)", 64, 48, 64, 48, false, 145, 54, 34},
+            {"blue 601 (480p)", 64, 48, 64, 48, false, 41, 240, 110},
+            {"white", 64, 48, 64, 48, false, 235, 128, 128},
+            {"black", 64, 48, 64, 48, false, 16, 128, 128},
+            {"red 709 (720p)", 1280, 720, 1280, 720, false, 63, 102, 240},
+            {"gradient 601", 256, 144, 256, 144, true, 0, 0, 0},
+            {"gradient 709", 1280, 720, 1280, 720, true, 0, 0, 0},
+            {"gradient 1080p", 1920, 1080, 1920, 1080, true, 0, 0, 0},
+            {"downscale 4k to 1080p", 3840, 2160, 1920, 1080, true, 0, 0, 0},
+        };
+        for (const UyvyCase& testCase : cases) {
+            json item = runUyvyCase(uploader, testCase);
+            passed = passed && item.value("passed", false);
+            logLine("Live self test shader " + testCase.name + ": " + (item.value("passed", false) ? "passed" : "FAILED"));
+            shader.push_back(std::move(item));
+        }
+        VideoFrame bad;
+        bad.layout = VideoLayout::PackedUyvy;
+        bad.width = 63;
+        bad.height = 4;
+        bad.outWidth = 63;
+        bad.outHeight = 4;
+        bad.planeCount = 1;
+        uint8_t dummy[512] = {};
+        bad.planes[0].data = dummy;
+        bad.planes[0].width = 31;
+        bad.planes[0].height = 4;
+        bad.planes[0].stride = 126;
+        bad.planes[0].channels = 4;
+        bad.planes[0].bytes = 1;
+        const bool rejected = !uploader.present(bad);
+        report["oddWidthRejected"] = rejected;
+        passed = passed && rejected;
+        uploader.release();
+        gpu.destroy();
+    }
+    report["shader"] = std::move(shader);
+
+    json camera;
+    const CameraSupport support = cameraSupport();
+    camera["supported"] = support.ffmpeg && support.devices;
+    if (!(support.ffmpeg && support.devices)) {
+        camera["skipped"] = support.problem;
+    } else {
+        const int baselineThreads = threadCount();
+        engine.setVideoSettings(VideoDecodeMode::Auto, true, true);
+        {
+            const std::unique_ptr<Composition> neutral = std::make_unique<Composition>();
+            engine.comp = *neutral;
+        }
+        engine.blackout = false;
+        engine.clearLayer(0);
+        std::array<std::string, kLiveInputSlots> none;
+        std::array<std::string, kLiveInputSlots> cameras;
+        cameras[0] = "lavfi:color=c=red:size=640x360:rate=30,format=rgb24";
+        engine.configureLive(none, cameras, std::string(), CameraMode{});
+        const int clip = clipIndexByName("Camera 1");
+        camera["clipFound"] = clip >= 0;
+        passed = passed && clip >= 0;
+        if (clip >= 0) {
+            engine.comp.layers[0].cells[0] = clip;
+            engine.paused = true;
+            engine.trigger(0, 0);
+            const auto start = std::chrono::steady_clock::now();
+            const auto step = [&](double dt) {
+                engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+                engine.update(dt);
+                engine.render();
+                glFinish();
+            };
+            while (engine.liveInfo(LiveKind::Camera, 0).uploaded < 3 && std::chrono::steady_clock::now() - start < std::chrono::seconds(15)) {
+                step(1.0 / 60.0);
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+            for (int i = 0; i < 3; ++i) {
+                step(1.0 / 60.0);
+            }
+            const LiveInputInfo info = engine.liveInfo(LiveKind::Camera, 0);
+            camera["uploaded"] = info.uploaded;
+            camera["route"] = uploadRouteName(info.route);
+            camera["state"] = liveStateName(info.status.state);
+            camera["size"] = std::to_string(info.status.width) + "x" + std::to_string(info.status.height);
+            camera["latencyMs"] = info.latencyMs;
+            std::vector<unsigned char> pixels;
+            int width = 0;
+            int height = 0;
+            bool colorOk = false;
+            if (engine.readOutput(pixels, width, height) && width > 0 && height > 0) {
+                const size_t centre = (static_cast<size_t>(height / 2) * static_cast<size_t>(width) + static_cast<size_t>(width / 2)) * 4u;
+                camera["centerPixel"] = {pixels[centre], pixels[centre + 1], pixels[centre + 2]};
+                colorOk = pixels[centre] >= 240 && pixels[centre + 1] <= 12 && pixels[centre + 2] <= 12;
+            }
+            camera["colorOk"] = colorOk;
+            const bool live = info.status.state == LiveState::Live && info.route == UploadRoute::GpuConvert && info.uploaded >= 3;
+            const size_t liveBytes = engine.gpuMemory().live;
+            camera["gpuBytesWhileActive"] = liveBytes;
+            passed = passed && live && colorOk && liveBytes > 0;
+
+            engine.clearLayer(0);
+            double elapsed = 0.0;
+            const auto releaseStart = std::chrono::steady_clock::now();
+            bool released = false;
+            while (std::chrono::steady_clock::now() - releaseStart < std::chrono::seconds(20)) {
+                engine.update(0.5);
+                engine.render();
+                glFinish();
+                elapsed += 0.5;
+                const LiveInputInfo now = engine.liveInfo(LiveKind::Camera, 0);
+                if (!now.active && engine.gpuMemory().live == 0) {
+                    released = true;
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+            camera["releasedWhenUnused"] = released;
+            camera["releaseAfterEngineSeconds"] = elapsed;
+            passed = passed && released && elapsed >= kLiveIdleSeconds;
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            const int threadsAfter = threadCount();
+            camera["threadsBefore"] = baselineThreads;
+            camera["threadsAfter"] = threadsAfter;
+            if (baselineThreads >= 0) {
+                passed = passed && threadsAfter <= baselineThreads;
+            }
+            camera["gpuBytesAfterRelease"] = engine.gpuMemory().live;
+        }
+    }
+    report["camera"] = std::move(camera);
+    report["passed"] = passed;
+    const std::string text = report.dump(2);
+    logLine("Live self test result:\n" + text);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return passed ? 0 : 1;
+}
+
+int runLiveBenchmark(Engine& engine, const std::string& spec, const std::string& outputPath) {
+    const size_t first = spec.find(':');
+    const size_t second = first == std::string::npos ? std::string::npos : spec.find(':', first + 1);
+    if (second == std::string::npos) {
+        logLine("Benchmark: use SECONDS:camera:SOURCE or SECONDS:ndi:NAME");
+        return 1;
+    }
+    const double seconds = std::clamp(std::atof(spec.substr(0, first).c_str()), 2.0, 600.0);
+    const std::string kindText = spec.substr(first + 1, second - first - 1);
+    const std::string source = spec.substr(second + 1);
+    const bool ndi = kindText == "ndi";
+    if (!ndi && kindText != "camera") {
+        logLine("Benchmark: the kind must be camera or ndi");
+        return 1;
+    }
+    std::array<std::string, kLiveInputSlots> ndiNames;
+    std::array<std::string, kLiveInputSlots> cameraNames;
+    (ndi ? ndiNames : cameraNames)[0] = source;
+    engine.configureLive(ndiNames, cameraNames, "NyrexVJ", CameraMode{});
+    const int clip = clipIndexByName(ndi ? "NDI Input 1" : "Camera 1");
+    if (clip < 0) {
+        return 1;
+    }
+    engine.clearLayer(0);
+    engine.comp.layers[0].cells[0] = clip;
+    engine.trigger(0, 0);
+    const LiveKind kind = ndi ? LiveKind::Ndi : LiveKind::Camera;
+    const double period = 1.0 / 60.0;
+    const auto step = [&](double dt) {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(dt);
+        engine.render();
+    };
+    const auto waitStart = std::chrono::steady_clock::now();
+    while (engine.liveInfo(kind, 0).uploaded < 10) {
+        step(period);
+        glFinish();
+        std::this_thread::sleep_for(std::chrono::milliseconds(4));
+        if (std::chrono::steady_clock::now() - waitStart > std::chrono::seconds(30)) {
+            logLine("Benchmark: the live source did not deliver pictures: " + engine.liveInfo(kind, 0).startError + " " + engine.liveInfo(kind, 0).status.error);
+            return 1;
+        }
+    }
+    engine.resetLiveLatency();
+    engine.setGpuTiming(false);
+    GLuint query = 0;
+    glGenQueries(1, &query);
+    std::vector<double> work;
+    std::vector<double> gpu;
+    std::vector<double> interval;
+    std::vector<double> latency;
+    int frames = 0;
+    int late = 0;
+    unsigned long long uploadedStart = engine.liveInfo(kind, 0).uploaded;
+    const double cpuStart = platform::processCpuSeconds();
+    const double rasterStart = rasterizerCpuSeconds();
+    const auto wallStart = std::chrono::steady_clock::now();
+    const auto stepDuration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(period));
+    auto next = wallStart;
+    auto previous = wallStart;
+    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count() < seconds) {
+        next += stepDuration;
+        const auto begin = std::chrono::steady_clock::now();
+        const double dt = std::chrono::duration<double>(begin - previous).count();
+        if (frames > 0) {
+            interval.push_back(dt * 1000.0);
+            if (dt > period * 1.5) {
+                ++late;
+            }
+        }
+        previous = begin;
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(frames == 0 ? period : dt);
+        glBeginQuery(GL_TIME_ELAPSED, query);
+        engine.render();
+        glEndQuery(GL_TIME_ELAPSED);
+        glFinish();
+        const auto finished = std::chrono::steady_clock::now();
+        GLuint64 nanoseconds = 0;
+        glGetQueryObjectui64v(query, GL_QUERY_RESULT, &nanoseconds);
+        work.push_back(std::chrono::duration<double, std::milli>(finished - begin).count());
+        gpu.push_back(static_cast<double>(nanoseconds) / 1.0e6);
+        latency.push_back(engine.liveInfo(kind, 0).latencyMs);
+        ++frames;
+        if (finished > next) {
+            next = finished;
+        }
+        std::this_thread::sleep_until(next);
+    }
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count();
+    const double cpu = platform::processCpuSeconds() - cpuStart;
+    const double raster = rasterizerCpuSeconds() - rasterStart;
+    glDeleteQueries(1, &query);
+    const LiveInputInfo info = engine.liveInfo(kind, 0);
+
+    json report;
+    report["kind"] = kindText;
+    report["source"] = source;
+    report["seconds"] = wall;
+    report["frames"] = frames;
+    report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
+    report["processCpuSeconds"] = cpu;
+    report["processCpuPercentOfOneCore"] = wall > 0.0 ? cpu / wall * 100.0 : 0.0;
+    report["softwareRasterizerCpuSeconds"] = raster;
+    report["cpuWithoutRasterizerPercentOfOneCore"] = wall > 0.0 ? (cpu - raster) / wall * 100.0 : 0.0;
+    report["lateFrames"] = late;
+    report["workMs"] = summarize(work);
+    report["gpuMs"] = summarize(gpu);
+    report["frameIntervalMs"] = summarize(interval);
+    report["captureToUploadMs"] = summarize(latency);
+    report["captureToUploadMaxMs"] = info.latencyMaxMs;
+    report["uploadMs"] = info.uploadMs;
+    report["uploadRoute"] = uploadRouteName(info.route);
+    report["sourceSize"] = std::to_string(info.status.width) + "x" + std::to_string(info.status.height);
+    report["sourceFps"] = info.status.fps;
+    report["picturesUploaded"] = info.uploaded - uploadedStart;
+    report["picturesDropped"] = info.status.dropped;
+    report["state"] = liveStateName(info.status.state);
+    report["memory"] = {{"output", info.memory.output}, {"planes", info.memory.planes}, {"staging", info.memory.staging}, {"liveTotal", info.memory.total()}, {"processResidentBytes", platform::processMemoryBytes()}};
+    const std::string text = report.dump(2);
+    logLine("Benchmark result:\n" + text);
     if (!outputPath.empty()) {
         std::ofstream out(outputPath);
         out << text << '\n';

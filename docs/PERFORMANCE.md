@@ -50,6 +50,20 @@ Command line:
 - `--bench-switch SECONDS:clip1,clip2,...`: switches between video clips and counts empty frames and the time to the first picture (see [MEDIA.md](MEDIA.md)); `--no-prewarm` turns the background preparation of the next clip off for the run.
 - `scripts/make_bench_presets.py DIR`: writes the five scenario presets used below (`Bench Four Visible`, `Bench Three Hidden`, `Bench Hidden Feedback`, `Bench Heavy Chain`, `Bench Fade Mix`) into a presets folder, so the same files can be run with any version through `--preset`.
 
+## What is new in 0.22.0: live sources
+
+NDI inputs and cameras ([LIVE.md](LIVE.md), [ADR 0014](adr/0014-live-sources.md)) are built to cost nothing when unused and little when used:
+
+- **No cost when unused.** A source starts when a layer shows its clip and is released three seconds after the last use. An unused slot has no thread, no texture, no buffer and no open device. `--live-selftest` checks that graphics memory of the slot and the thread count return to their start values.
+- **Half the bytes.** Pictures travel as packed UYVY (2 bytes per pixel) and are converted on the graphics card, so the processor converts nothing and the upload is half of an RGBA upload.
+- **Newest picture only.** There is no queue; a slow render drops older pictures (counted and shown), and the picture on screen is never older than the last one received.
+- **No waiting on the render thread.** Capture, discovery and closing a device run on their own threads; a device that hangs is cut off by a deadline.
+- **Render loop.** The only additions are a check of eight idle timestamps per frame and, for a live clip, one textured quad like the one used for video. Layers without live clips are unchanged: the default composition (`--bench-comp 25`, 960 x 540, llvmpipe, three runs each, `main` and this version alternating) took 124.6, 126.7 and 127.8 ms per frame on `main` and 120.6, 134.8 and 121.2 ms with live sources, which is no difference outside the run to run spread of about 10 percent of this software renderer.
+
+Measured with FFmpeg's test source and software OpenGL (see [LIVE.md](LIVE.md) for the table): a 1080p60 source needs 3.1 ms of upload per picture, 12.5 ms from arrival to the end of the upload on average (95th percentile 14.4 ms), 16.6 MB of video memory and 16.5 % of one processor core including the generation of the test picture; 720p30 needs 2.3 ms, 7.4 MB and 6.9 %. No real camera, capture card, NDI runtime or graphics card was available.
+
+Command line: `--bench-live SECONDS:camera:SOURCE` and `SECONDS:ndi:NAME` measure one source; `--live-selftest` runs the end to end check.
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

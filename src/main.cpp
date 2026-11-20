@@ -33,6 +33,8 @@ struct Options {
     std::string benchScene;
     std::string benchVideo;
     std::string benchSwitch;
+    std::string benchLive;
+    bool liveSelfTest = false;
     bool noPrewarm = false;
     std::string videoSelfTest;
     std::string videoMode;
@@ -81,6 +83,10 @@ Options parseOptions(int argc, char** argv) {
             options.benchVideo = argv[++i];
         } else if (arg == "--bench-switch" && hasValue) {
             options.benchSwitch = argv[++i];
+        } else if (arg == "--bench-live" && hasValue) {
+            options.benchLive = argv[++i];
+        } else if (arg == "--live-selftest") {
+            options.liveSelfTest = true;
         } else if (arg == "--no-prewarm") {
             options.noPrewarm = true;
         } else if (arg == "--video-selftest" && hasValue) {
@@ -297,12 +303,16 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchMemory) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchMemory) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
         app.engine().prewarmNext = !options.noPrewarm;
-        if (!options.benchSwitch.empty()) {
+        if (options.liveSelfTest) {
+            benchExit = nvj::runLiveSelfTest(app.engine(), options.benchOut);
+        } else if (!options.benchLive.empty()) {
+            benchExit = nvj::runLiveBenchmark(app.engine(), options.benchLive, options.benchOut);
+        } else if (!options.benchSwitch.empty()) {
             benchExit = nvj::runSwitchBenchmark(app.engine(), options.benchSwitch, options.benchOut);
         } else if (!options.videoSelfTest.empty()) {
             benchExit = nvj::runVideoSelfTest(app.engine(), options.videoSelfTest, options.benchOut);

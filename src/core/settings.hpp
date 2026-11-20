@@ -11,6 +11,7 @@
 namespace nvj {
 
 constexpr int kSpoutInputSlots = 4;
+constexpr int kLiveInputSlots = 4;
 
 struct OscOutParam {
     std::string name;
@@ -61,6 +62,11 @@ struct Settings {
     VrchatConfig vrchat;
     std::array<std::string, kSpoutInputSlots> spoutInputs;
     bool spoutInputFlip = false;
+    std::array<std::string, kLiveInputSlots> ndiInputs;
+    std::array<std::string, kLiveInputSlots> cameraInputs;
+    int cameraWidth = 1280;
+    int cameraHeight = 720;
+    int cameraFps = 30;
 };
 
 bool loadSettings(Settings& settings);

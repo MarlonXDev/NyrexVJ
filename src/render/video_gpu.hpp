@@ -76,6 +76,7 @@ private:
     GLint locCoeff_ = -1;
     GLint locStep_ = -1;
     GLint locTaps_ = -1;
+    GLint locSrcSize_ = -1;
 
     friend class VideoUploader;
 };

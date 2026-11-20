@@ -27,6 +27,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0011](adr/0011-render-pipeline-optimisation.md) | Render pipeline optimisation: hidden layers, layer resolution, freed pictures, pass profiler | Accepted (2026-11-20), implemented in v0.19.0 |
 | [0012](adr/0012-open-source-vj-platform-plan.md) | Plan towards a full open source VJ platform: platforms, media control, live sources, outputs, show sync, node editor, plugins | Accepted (2026-11-20), milestones v0.20.0 to v0.26.0 |
 | [0013](adr/0013-media-control.md) | Media control: play head, reverse playback, exact seeking, in and out points, loop modes, beat sync, pre-rolled switching | Accepted (2026-11-20), implemented in v0.21.0 |
+| [0014](adr/0014-live-sources.md) | Live sources: NDI input with discovery, cameras and capture cards, reconnecting, a cheap upload path | Accepted (2026-11-20), implemented in v0.22.0 |
 
 ## New ADR template
 

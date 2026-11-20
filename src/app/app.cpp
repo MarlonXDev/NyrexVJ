@@ -501,11 +501,17 @@ void App::frame(double dt) {
     control_.configure(control);
     control_.update(dt);
     updateAudio(dt);
+    serviceLiveBrowse();
     engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);
     engine_.prewarmNext = settings_.prewarmNext;
     engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
     engine_.update(dt);
     engine_.configureSpout(settings_.spoutInputs, spout_.active() ? std::string(spoutName_) : std::string(), settings_.spoutInputFlip);
+    CameraMode cameraMode;
+    cameraMode.width = settings_.cameraWidth;
+    cameraMode.height = settings_.cameraHeight;
+    cameraMode.fps = settings_.cameraFps;
+    engine_.configureLive(settings_.ndiInputs, settings_.cameraInputs, settings_.ndiEnabled ? settings_.ndiName : std::string(), cameraMode);
     OscOutConfig oscOut;
     oscOut.enabled = settings_.oscOutEnabled;
     oscOut.host = settings_.oscOutHost;

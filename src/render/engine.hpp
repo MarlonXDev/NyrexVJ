@@ -7,6 +7,7 @@
 #include "render/dmx_strip.hpp"
 #include "render/gl_util.hpp"
 #include "render/gpu_profiler.hpp"
+#include "render/live_input.hpp"
 #include "render/media_player.hpp"
 #include "render/scene_player.hpp"
 #include "render/spout_input.hpp"
@@ -26,9 +27,10 @@ struct GpuMemory {
     size_t sceneDepth = 0;
     size_t sceneGeometry = 0;
     size_t media = 0;
+    size_t live = 0;
     VideoMemory video;
 
-    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media; }
+    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live; }
 };
 
 class Engine {
@@ -108,6 +110,10 @@ public:
     void configureSpout(const std::array<std::string, kSpoutInputSlots>& names, const std::string& excluded, bool flip);
     const SpoutReceiveStatus& spoutStatus(int slot) const;
     const std::vector<std::string>& spoutSenders();
+    void configureLive(const std::array<std::string, kLiveInputSlots>& ndi, const std::array<std::string, kLiveInputSlots>& camera, const std::string& excludedNdi, const CameraMode& mode);
+    const LiveInput* liveInput(LiveKind kind, int slot) const;
+    LiveInputInfo liveInfo(LiveKind kind, int slot) const;
+    void resetLiveLatency();
 
     Composition comp;
     bool blackout = false;
@@ -262,6 +268,11 @@ private:
     void prepareSpout(int slot);
     bool drawSpout(int slot, float scale);
     void serviceSpout();
+    void prepareLive(const ClipDef& def);
+    bool drawLive(const ClipDef& def, float scale);
+    void serviceLive();
+    LiveInput* liveSlot(LiveKind kind, int slot);
+    static size_t liveIndex(LiveKind kind, int slot) { return static_cast<size_t>(kind == LiveKind::Ndi ? 0 : kLiveInputSlots) + static_cast<size_t>(slot); }
     void blit(const RenderTarget& source, const RenderTarget& target);
 
     std::vector<ClipProgram> clips_;
@@ -285,6 +296,13 @@ private:
     bool spoutFlip_ = false;
     std::array<double, kSpoutInputSlots> spoutLastUse_{};
     std::array<unsigned long long, kSpoutInputSlots> spoutFrame_{};
+    std::array<std::unique_ptr<LiveInput>, static_cast<size_t>(kLiveInputSlots) * 2> liveInputs_;
+    std::array<double, static_cast<size_t>(kLiveInputSlots) * 2> liveLastUse_{};
+    std::array<unsigned long long, static_cast<size_t>(kLiveInputSlots) * 2> liveFrame_{};
+    std::array<std::string, kLiveInputSlots> liveNdi_;
+    std::array<std::string, kLiveInputSlots> liveCamera_;
+    std::string liveExcluded_;
+    CameraMode liveMode_;
     unsigned long long frameId_ = 0;
     double clock_ = 0.0;
     std::vector<std::string> spoutSenderList_;

@@ -562,7 +562,14 @@ Composition feedbackGalaxy() {
 }
 
 std::vector<Composition> buildFactory() {
-    return {neonClub(), hyperdrive(), neonCathedral(), chromeMeltdown(), shatterStorm(), mandalaMachine(), terrainFlight(), tesseractClub(), feedbackGalaxy(), milkyRed(), crystalCavern(), crystalLines(), acidRainbow(), deepSpace(), synthwaveNight(), laserShow(), minimalMono(), showcase3d(), warpTunnel(), audioReactor(), fractalDream(), cyberRain(), inferno(), worlds3d(), crystalCube(), popArt()};
+    using Builder = Composition (*)();
+    static constexpr Builder builders[] = {neonClub, hyperdrive, neonCathedral, chromeMeltdown, shatterStorm, mandalaMachine, terrainFlight, tesseractClub, feedbackGalaxy, milkyRed, crystalCavern, crystalLines, acidRainbow, deepSpace, synthwaveNight, laserShow, minimalMono, showcase3d, warpTunnel, audioReactor, fractalDream, cyberRain, inferno, worlds3d, crystalCube, popArt};
+    std::vector<Composition> presets;
+    presets.reserve(sizeof(builders) / sizeof(builders[0]));
+    for (const Builder build : builders) {
+        presets.push_back(build());
+    }
+    return presets;
 }
 
 const std::vector<std::string>& bankNames() {

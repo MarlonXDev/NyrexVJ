@@ -49,6 +49,7 @@ The diagram is a target abstraction, not a description of existing code.
 - Consider a reusable NyrexVJ control protocol for other creative tools.
 
 ## Performance and reliability requirements to validate
+- What the renderer skips, the optional reduced layer resolution, the pass profiler and the measurements are in [PERFORMANCE.md](PERFORMANCE.md) and [ADR 0011](adr/0011-render-pipeline-optimisation.md).
 - Never block the render loop on video decoding, file I/O, or network operations.
 - Specify GPU/CPU memory budgets and test under multi-layer load.
 - Handle lost Spout senders, missing media, GPU resource failures, and app restart gracefully.

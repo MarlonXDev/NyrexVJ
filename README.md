@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.18.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
+> Status: v0.19.0. Clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)), a render pass profiler, hidden layers that cost nothing and an optional reduced layer resolution (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
 
 ## Download
 
@@ -38,6 +38,7 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 - **Settings window.** One place for audio, output, Spout, updates, language and interface size, plus a status bar that shows FPS, tempo, deck and audio at a glance.
 - **Your own shader clips.** Drop a .glsl, .frag or .fs file (your own or from Shadertoy) into the shaders folder and it becomes a clip. See [docs/SHADERS.md](docs/SHADERS.md).
 - **English, German, Spanish and French.** English is the default, switch any time under Help, Language. You can add your own language with a small .json file, see [docs/LANGUAGES.md](docs/LANGUAGES.md).
+- **Light on the graphics card.** Layers faded to zero opacity are not drawn, an optional layer resolution (Full, Balanced, Performance or Automatic) trades pixels for frame time, unused pictures are freed, and Settings, Performance shows which clip or effect takes the time. Measured numbers and limits are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 - **Welcome screen.** Shown on the first start and after every update, with everything that is new.
 - **Self-updating.** Checks GitHub on start, verifies the SHA-256 sum and shows a small card at the top right with Restart now or Later.
 
@@ -247,7 +248,7 @@ NyrexVJ/
 │   ├── platform/   Windows and fallback platform code
 │   └── main.cpp
 ├── tests/          Unit tests for core, audio, control, i18n and update logic
-├── scripts/        Repository checks (translation coverage)
+├── scripts/        Repository checks (translation coverage), video and render benchmark helpers
 ├── integrations/   Experimental Unreal Engine plugin (source only)
 ├── resources/      Windows icon and resource template
 ├── docs/           Guides, decisions (ADRs), the interface list and images used by this readme
@@ -332,6 +333,10 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--bench-budget MS` | With `--bench-comp`, exit with code 2 when the average frame time is above MS |
 | `--bench-all` | With `--bench-comp`, measure every factory look one after another |
 | `--bench-out FILE.json` | With `--bench-scene` or `--bench-comp`, also write the result as JSON |
+| `--profile` | With `--bench-comp`, time every render pass on its own and add the table to the JSON result |
+| `--bench-shaders FRAMES` | Measure the GPU time of every clip alone and of every effect alone over FRAMES frames and print the most expensive ones (`--bench-out` writes JSON), then exit |
+| `--bench-memory` | Report the size of the render targets while idle, during and after a deck transition and for each render quality, then exit |
+| `--quality 0\|1\|2\|3` | Layer resolution for this run: 0 Full, 1 Balanced, 2 Performance, 3 Automatic |
 | `--bench-video SECONDS:CLIP1,CLIP2` | Measure the processor time, decode time, upload time and video memory of the listed video clips playing for SECONDS, then exit (`--bench-out` writes JSON) |
 | `--video-selftest FOLDER` | Play every video of FOLDER through the graphics card path and the processor path and compare the pictures, exit code 1 on a difference |
 | `--video-mode auto\|hardware\|software` | Choose the video decoder for this run |

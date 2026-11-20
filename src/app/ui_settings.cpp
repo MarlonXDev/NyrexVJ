@@ -567,6 +567,23 @@ void App::drawFrameRateLimit() {
     ImGui::SetItemTooltip("%s", tr("Caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat."));
 }
 
+namespace {
+
+const char* qualityLabel(int mode) {
+    switch (mode) {
+    case QualityBalanced:
+        return tr("Balanced (75 %)");
+    case QualityPerformance:
+        return tr("Performance (50 %)");
+    case QualityAuto:
+        return tr("Automatic");
+    default:
+        return tr("Full quality");
+    }
+}
+
+}
+
 void App::drawPerformancePage() {
     auto persist = [this]() { saveSettings(settings_); };
     const double budget = budgetMilliseconds(settings_.perfBudgetFps);
@@ -599,6 +616,25 @@ void App::drawPerformancePage() {
     ImGui::SetItemTooltip("%s", tr("The budget is the time one frame may take. Frames above it count as too slow."));
     if (ImGui::Checkbox(trId("Show timings in the status bar", "optTimings"), &settings_.showTimings)) {
         persist();
+    }
+
+    ImGui::SeparatorText(tr("Render quality"));
+    ImGui::SetNextItemWidth(220.0f);
+    if (ImGui::BeginCombo(trId("Layer resolution", "optQuality"), qualityLabel(settings_.renderQuality))) {
+        for (int mode = 0; mode < QualityModeCount; ++mode) {
+            if (ImGui::Selectable(qualityLabel(mode), settings_.renderQuality == mode)) {
+                settings_.renderQuality = mode;
+                persist();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("Layers and their effects are drawn at a lower resolution and scaled up when they are mixed. Master effects and every output stay at full resolution. Full quality changes nothing."));
+    if (settings_.renderQuality == QualityAuto) {
+        ImGui::TextWrapped("%s", tr("Automatic lowers the resolution in small steps only while a frame takes longer than the budget, and raises it again when there is room."));
+    }
+    if (engine_.layerScale() < 0.999f) {
+        ImGui::TextDisabled(tr("Layers are drawn at %d × %d (%d %%)"), engine_.layerWidth(), engine_.layerHeight(), static_cast<int>(engine_.layerScale() * 100.0f + 0.5f));
     }
 
     ImGui::SeparatorText(tr("Measured"));
@@ -653,6 +689,8 @@ void App::drawPerformancePage() {
         perfCpuSummary_ = FrameSummary{};
         perfGpuSummary_ = FrameSummary{};
     }
+
+    drawPassProfiler();
 
     ImGui::SeparatorText(tr("Memory"));
     const GpuMemory memory = engine_.gpuMemory();

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.18.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.19.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -137,6 +137,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/stage_json.cpp
     src/core/edit_history.cpp
     src/core/frame_pacer.cpp
+    src/core/render_policy.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
     src/media/hap.cpp
@@ -220,10 +221,12 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_creator.cpp
     src/app/ui_settings.cpp
     src/app/ui_video.cpp
+    src/app/ui_profile.cpp
     src/app/ui_panels.cpp
     src/app/ui_welcome.cpp
     src/app/ui_recovery.cpp
     src/render/engine.cpp
+    src/render/gpu_profiler.cpp
     src/render/gl_util.cpp
     src/render/output_window.cpp
     src/render/output_manager.cpp

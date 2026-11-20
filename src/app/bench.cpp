@@ -7,6 +7,7 @@
 #include "platform/platform.hpp"
 #include "render/asset_import.hpp"
 #include "render/clip_library.hpp"
+#include "render/effect_library.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -542,6 +543,89 @@ bool waitForScenes(Engine& engine) {
     }
 }
 
+const char* passKindName(PassKind kind) {
+    switch (kind) {
+    case PassKind::Housekeeping: return "housekeeping";
+    case PassKind::Source: return "source";
+    case PassKind::Effect: return "effect";
+    case PassKind::Composite: return "composite";
+    case PassKind::Preview: return "preview";
+    case PassKind::Final: return "final";
+    case PassKind::Transition: return "transition";
+    default: return "other";
+    }
+}
+
+class PassAverages {
+public:
+    void add(const std::vector<ProfileSample>& samples) {
+        ++frames_;
+        for (const ProfileSample& sample : samples) {
+            Item* found = nullptr;
+            for (Item& item : items_) {
+                if (item.sample.kind == sample.kind && item.sample.deck == sample.deck && item.sample.layer == sample.layer && item.sample.slot == sample.slot && item.sample.name == sample.name) {
+                    found = &item;
+                    break;
+                }
+            }
+            if (found == nullptr) {
+                items_.push_back(Item{sample, 0.0});
+                found = &items_.back();
+            }
+            found->sum += sample.ms;
+        }
+    }
+
+    double averageMs(PassKind kind) const {
+        double sum = 0.0;
+        for (const Item& item : items_) {
+            if (item.sample.kind == kind) {
+                sum += item.sum;
+            }
+        }
+        return frames_ > 0 ? sum / static_cast<double>(frames_) : 0.0;
+    }
+
+    double totalMs() const {
+        double sum = 0.0;
+        for (const Item& item : items_) {
+            sum += item.sum;
+        }
+        return frames_ > 0 ? sum / static_cast<double>(frames_) : 0.0;
+    }
+
+    json toJson() const {
+        std::vector<const Item*> order;
+        for (const Item& item : items_) {
+            order.push_back(&item);
+        }
+        std::sort(order.begin(), order.end(), [](const Item* a, const Item* b) { return a->sum > b->sum; });
+        const double total = totalMs() * static_cast<double>(std::max(frames_, 1));
+        json rows = json::array();
+        for (const Item* item : order) {
+            json row;
+            row["kind"] = passKindName(item->sample.kind);
+            row["deck"] = item->sample.deck;
+            row["layer"] = item->sample.layer;
+            row["slot"] = item->sample.slot;
+            row["name"] = item->sample.name;
+            row["avgMs"] = frames_ > 0 ? item->sum / static_cast<double>(frames_) : 0.0;
+            row["share"] = total > 0.0 ? item->sum / total : 0.0;
+            rows.push_back(std::move(row));
+        }
+        return rows;
+    }
+
+private:
+    struct Item {
+        ProfileSample sample;
+        double sum = 0.0;
+    };
+
+    std::vector<Item> items_;
+    int frames_ = 0;
+};
+
 json measureComposition(Engine& engine, int frames, double budgetMs) {
     json report;
     report["name"] = engine.comp.name;
@@ -558,8 +642,12 @@ json measureComposition(Engine& engine, int frames, double budgetMs) {
         engine.render();
     }
     glFinish();
+    const bool profiling = engine.profiling();
     GLuint query = 0;
-    glGenQueries(1, &query);
+    if (!profiling) {
+        glGenQueries(1, &query);
+    }
+    PassAverages passes;
     FrameStats cpu(static_cast<size_t>(frames));
     FrameStats gpu(static_cast<size_t>(frames));
     FrameStats total(static_cast<size_t>(frames));
@@ -567,19 +655,36 @@ json measureComposition(Engine& engine, int frames, double budgetMs) {
         engine.setAudio(virtualAudio(engine.beat(), engine.time()));
         engine.update(1.0 / 60.0);
         const auto begin = std::chrono::steady_clock::now();
-        glBeginQuery(GL_TIME_ELAPSED, query);
+        if (!profiling) {
+            glBeginQuery(GL_TIME_ELAPSED, query);
+        }
         engine.render();
-        glEndQuery(GL_TIME_ELAPSED);
+        if (!profiling) {
+            glEndQuery(GL_TIME_ELAPSED);
+        }
         const auto submitted = std::chrono::steady_clock::now();
         glFinish();
         const auto finished = std::chrono::steady_clock::now();
-        GLuint64 nanoseconds = 0;
-        glGetQueryObjectui64v(query, GL_QUERY_RESULT, &nanoseconds);
+        double gpuMs = 0.0;
+        if (profiling) {
+            engine.profileFlush();
+            passes.add(engine.profiler().lastSamples());
+            gpuMs = engine.profiler().lastFrameMs();
+        } else {
+            GLuint64 nanoseconds = 0;
+            glGetQueryObjectui64v(query, GL_QUERY_RESULT, &nanoseconds);
+            gpuMs = static_cast<double>(nanoseconds) / 1.0e6;
+        }
         cpu.add(std::chrono::duration<double, std::milli>(submitted - begin).count());
-        gpu.add(static_cast<double>(nanoseconds) / 1.0e6);
+        gpu.add(gpuMs);
         total.add(std::chrono::duration<double, std::milli>(finished - begin).count());
     }
-    glDeleteQueries(1, &query);
+    if (query != 0) {
+        glDeleteQueries(1, &query);
+    }
+    if (profiling) {
+        report["passes"] = passes.toJson();
+    }
     const auto toJson = [](const FrameSummary& s) {
         return json{{"avg", s.avg}, {"min", s.min}, {"p50", s.p50}, {"p95", s.p95}, {"p99", s.p99}, {"max", s.max}};
     };
@@ -626,6 +731,192 @@ int runCompositionBenchmark(Engine& engine, int frames, double budgetMs, bool al
         out << text << '\n';
     }
     return passed ? 0 : 2;
+}
+
+
+int runShaderBenchmark(Engine& engine, int frames, const std::string& outputPath) {
+    frames = std::clamp(frames, 5, 100000);
+    engine.setGpuTiming(false);
+    engine.setProfiling(true);
+
+    Composition blank;
+    blank.resolution = engine.comp.resolution;
+    engine.applyComposition(blank);
+
+    const auto step = [&]() {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(1.0 / 60.0);
+        engine.render();
+    };
+    const auto measure = [&](PassKind kind, double& kindMs, double& totalMs) {
+        for (int i = 0; i < 6; ++i) {
+            step();
+        }
+        glFinish();
+        PassAverages passes;
+        for (int i = 0; i < frames; ++i) {
+            step();
+            glFinish();
+            engine.profileFlush();
+            passes.add(engine.profiler().lastSamples());
+        }
+        kindMs = passes.averageMs(kind);
+        totalMs = passes.totalMs();
+    };
+
+    json report;
+    report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
+    report["frames"] = frames;
+
+    const std::vector<ClipDef>& library = clipLibrary();
+    json clips = json::array();
+    int reference = -1;
+    double referenceMs = 0.0;
+    for (size_t c = 0; c < library.size(); ++c) {
+        const ClipDef& clip = library[c];
+        if (clip.isScene() || clip.isMedia() || clip.kind == ClipKind::SpoutSource || !clip.error.empty()) {
+            continue;
+        }
+        Layer& layer = engine.comp.layers[0];
+        layer.fx = {};
+        layer.cells[0] = static_cast<int>(c);
+        layer.activeColumn = -1;
+        engine.trigger(0, 0);
+        double sourceMs = 0.0;
+        double totalMs = 0.0;
+        measure(PassKind::Source, sourceMs, totalMs);
+        json item;
+        item["name"] = clip.name;
+        item["sourceMs"] = sourceMs;
+        item["frameMs"] = totalMs;
+        clips.push_back(std::move(item));
+        logLine("Clip " + clip.name + ": " + std::to_string(sourceMs) + " ms");
+        if (reference < 0 || sourceMs < referenceMs) {
+            reference = static_cast<int>(c);
+            referenceMs = sourceMs;
+        }
+    }
+    std::sort(clips.begin(), clips.end(), [](const json& a, const json& b) { return a["sourceMs"].get<double>() > b["sourceMs"].get<double>(); });
+    report["clips"] = std::move(clips);
+
+    json effects = json::array();
+    if (reference >= 0) {
+        report["effectReferenceClip"] = library[static_cast<size_t>(reference)].name;
+        Layer& layer = engine.comp.layers[0];
+        layer.cells[0] = reference;
+        layer.activeColumn = -1;
+        engine.trigger(0, 0);
+        const std::vector<EffectDef>& defs = effectLibrary();
+        for (size_t e = 0; e < defs.size(); ++e) {
+            layer.fx = {};
+            setEffect(layer.fx[0], static_cast<int>(e));
+            layer.fx[0].enabled = true;
+            double effectMs = 0.0;
+            double totalMs = 0.0;
+            measure(PassKind::Effect, effectMs, totalMs);
+            json item;
+            item["name"] = defs[e].name;
+            item["feedback"] = defs[e].usesPrevious;
+            item["effectMs"] = effectMs;
+            item["frameMs"] = totalMs;
+            effects.push_back(std::move(item));
+            logLine("Effect " + defs[e].name + ": " + std::to_string(effectMs) + " ms");
+        }
+        layer.fx = {};
+    }
+    std::sort(effects.begin(), effects.end(), [](const json& a, const json& b) { return a["effectMs"].get<double>() > b["effectMs"].get<double>(); });
+    report["effects"] = std::move(effects);
+
+    const auto top = [](const json& list, const char* key, size_t count) {
+        std::string text;
+        for (size_t i = 0; i < std::min(count, list.size()); ++i) {
+            text += "  " + list[i]["name"].get<std::string>() + ": " + std::to_string(list[i][key].get<double>()) + " ms\n";
+        }
+        return text;
+    };
+    logLine("Most expensive clips:\n" + top(report["clips"], "sourceMs", 10));
+    logLine("Most expensive effects:\n" + top(report["effects"], "effectMs", 10));
+
+    engine.setProfiling(false);
+    const std::string text = report.dump(2);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return 0;
+}
+
+
+int runMemoryBenchmark(Engine& engine, const std::string& outputPath) {
+    engine.setGpuTiming(false);
+    const auto step = [&]() {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(1.0 / 60.0);
+        engine.render();
+    };
+    const auto snapshot = [&](const std::string& phase) {
+        glFinish();
+        const GpuMemory memory = engine.gpuMemory();
+        json item;
+        item["phase"] = phase;
+        item["targetsBytes"] = memory.targets;
+        item["totalBytes"] = memory.total();
+        item["layerWidth"] = engine.layerWidth();
+        item["layerHeight"] = engine.layerHeight();
+        logLine("Memory " + phase + ": targets " + std::to_string(memory.targets / 1024) + " KiB, total " + std::to_string(memory.total() / 1024) + " KiB");
+        return item;
+    };
+
+    json report;
+    report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
+    json phases = json::array();
+
+    for (int i = 0; i < 10; ++i) {
+        step();
+    }
+    phases.push_back(snapshot("idle"));
+
+    engine.duplicateActiveDeckTo(1);
+    engine.comp.deckSettings.syncBeats = false;
+    engine.comp.deckSettings.seconds = 0.25f;
+    engine.switchDeck(1);
+    for (int i = 0; i < 6; ++i) {
+        step();
+    }
+    phases.push_back(snapshot("duringTransition"));
+    for (int i = 0; i < 20; ++i) {
+        step();
+    }
+    phases.push_back(snapshot("afterTransition"));
+    for (int i = 0; i < 320; ++i) {
+        step();
+    }
+    phases.push_back(snapshot("fiveSecondsLater"));
+
+    const char* names[] = {"quality100", "quality75", "quality50"};
+    for (int mode = 0; mode < 3; ++mode) {
+        engine.setQuality(mode, 1000.0 / 60.0);
+        for (int i = 0; i < 4; ++i) {
+            step();
+        }
+        phases.push_back(snapshot(names[mode]));
+    }
+    engine.setQuality(0, 1000.0 / 60.0);
+    for (int i = 0; i < 4; ++i) {
+        step();
+    }
+    phases.push_back(snapshot("quality100Again"));
+
+    report["phases"] = std::move(phases);
+    const std::string text = report.dump(2);
+    logLine("Memory benchmark:\n" + text);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return 0;
 }
 
 }

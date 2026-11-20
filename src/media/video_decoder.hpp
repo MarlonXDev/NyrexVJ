@@ -49,6 +49,10 @@ public:
     const VideoInfo& info() const;
     VideoStatus status() const;
     std::shared_ptr<const VideoFrame> frameAt(double seconds);
+    void setRange(double in, double out);
+    void setDirection(bool reverse);
+    bool reversing() const;
+    double framePeriod() const;
 
 private:
     struct Impl;

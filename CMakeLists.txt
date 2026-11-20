@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.20.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.21.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -142,6 +142,7 @@ set(NYREXVJ_CORE_SOURCES
     src/media/ffmpeg_dyn.cpp
     src/media/hap.cpp
     src/media/media_image.cpp
+    src/media/playback_driver.cpp
     src/media/video_decoder.cpp
     src/media/video_hardware.cpp
     src/media/video_probe_data.cpp
@@ -153,6 +154,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/log.cpp
     src/core/novelty.cpp
     src/core/preset.cpp
+    src/core/playhead.cpp
     src/core/settings.cpp
     src/core/sha256.cpp
     src/control/control_system.cpp
@@ -274,6 +276,10 @@ if(NYREXVJ_BUILD_TESTS)
     add_executable(nvj_tests tests/tests.cpp)
     target_link_libraries(nvj_tests PRIVATE nvj_core)
     add_test(NAME nvj_tests COMMAND nvj_tests)
+    add_executable(nvj_playhead_tests tests/test_playhead.cpp)
+    target_link_libraries(nvj_playhead_tests PRIVATE nvj_core)
+    target_include_directories(nvj_playhead_tests PRIVATE tests)
+    add_test(NAME nvj_playhead_tests COMMAND nvj_playhead_tests)
     add_executable(nvj_audio_tests tests/test_audio.cpp)
     target_link_libraries(nvj_audio_tests PRIVATE nvj_core)
     target_include_directories(nvj_audio_tests PRIVATE tests)

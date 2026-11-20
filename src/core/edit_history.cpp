@@ -45,9 +45,9 @@ void EditHistory::apply(Composition& comp, const State& state, int clipCount) {
         comp.layers[l].activeColumn = keep;
     }
     auto sanitize = [clipCount](Layer& layer) {
-        for (int& cell : layer.cells) {
-            if (cell >= clipCount) {
-                cell = -1;
+        for (size_t c = 0; c < layer.cells.size(); ++c) {
+            if (layer.cells[c] >= clipCount) {
+                layer.setCell(c, -1);
             }
         }
     };

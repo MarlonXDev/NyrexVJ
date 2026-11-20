@@ -32,6 +32,8 @@ struct Options {
     std::string dumpOutputs;
     std::string benchScene;
     std::string benchVideo;
+    std::string benchSwitch;
+    bool noPrewarm = false;
     std::string videoSelfTest;
     std::string videoMode;
     bool noHapDirect = false;
@@ -77,6 +79,10 @@ Options parseOptions(int argc, char** argv) {
             options.frameReport = std::atof(argv[++i]);
         } else if (arg == "--bench-video" && hasValue) {
             options.benchVideo = argv[++i];
+        } else if (arg == "--bench-switch" && hasValue) {
+            options.benchSwitch = argv[++i];
+        } else if (arg == "--no-prewarm") {
+            options.noPrewarm = true;
         } else if (arg == "--video-selftest" && hasValue) {
             options.videoSelfTest = argv[++i];
         } else if (arg == "--video-mode" && hasValue) {
@@ -291,11 +297,14 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchMemory) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchMemory) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
-        if (!options.videoSelfTest.empty()) {
+        app.engine().prewarmNext = !options.noPrewarm;
+        if (!options.benchSwitch.empty()) {
+            benchExit = nvj::runSwitchBenchmark(app.engine(), options.benchSwitch, options.benchOut);
+        } else if (!options.videoSelfTest.empty()) {
             benchExit = nvj::runVideoSelfTest(app.engine(), options.videoSelfTest, options.benchOut);
         } else if (options.benchMemory) {
             benchExit = nvj::runMemoryBenchmark(app.engine(), options.benchOut);

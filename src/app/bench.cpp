@@ -420,6 +420,117 @@ SelfShot captureClip(Engine& engine, int clip, const SelfVariant& variant) {
 
 }
 
+int runSwitchBenchmark(Engine& engine, const std::string& spec, const std::string& outputPath) {
+    const size_t colon = spec.find(':');
+    const double seconds = std::clamp(std::atof(spec.substr(0, colon).c_str()), 0.3, 30.0);
+    std::vector<std::string> stems;
+    if (colon != std::string::npos) {
+        std::stringstream list(spec.substr(colon + 1));
+        std::string item;
+        while (std::getline(list, item, ',')) {
+            if (!item.empty()) {
+                stems.push_back(item);
+            }
+        }
+    }
+    if (stems.size() < 2) {
+        logLine("Benchmark: give SECONDS:name1,name2,... with at least two video clips");
+        return 1;
+    }
+    if (stems.size() > static_cast<size_t>(kColumnCount)) {
+        stems.resize(static_cast<size_t>(kColumnCount));
+    }
+    std::vector<int> clips;
+    for (size_t i = 0; i < stems.size(); ++i) {
+        const int clip = clipIndexByName(videoClipName(stems[i]));
+        if (clip < 0) {
+            logLine("Benchmark: unknown video clip '" + stems[i] + "'");
+            return 1;
+        }
+        clips.push_back(clip);
+        engine.comp.layers[0].cells[i] = clip;
+    }
+    const double period = 1.0 / 60.0;
+    const auto step = [&](double dt) {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(dt);
+        engine.render();
+        glFinish();
+    };
+    const auto pace = [&](auto&& body) {
+        const auto start = std::chrono::steady_clock::now();
+        auto next = start;
+        auto previous = start;
+        const auto interval = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(period));
+        while (body(std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count(), std::chrono::duration<double>(std::chrono::steady_clock::now() - previous).count())) {
+            previous = std::chrono::steady_clock::now();
+            next += interval;
+            if (previous > next) {
+                next = previous;
+            }
+            std::this_thread::sleep_until(next);
+        }
+    };
+
+    engine.trigger(0, 0);
+    bool firstReady = false;
+    pace([&](double elapsed, double dt) {
+        step(std::min(dt, 0.1));
+        MediaPlayer* player = engine.mediaPlayer(clips[0]);
+        firstReady = player != nullptr && player->ready();
+        return !firstReady && elapsed < 60.0;
+    });
+    if (!firstReady) {
+        logLine("Benchmark: the first video did not become ready");
+        return 1;
+    }
+
+    const int cycles = 2;
+    const int switches = static_cast<int>(clips.size()) * cycles;
+    std::vector<double> blankFrames;
+    std::vector<double> readyMs;
+    int current = 0;
+    for (int s = 0; s < switches; ++s) {
+        current = (current + 1) % static_cast<int>(clips.size());
+        engine.trigger(0, current);
+        int blank = 0;
+        double ready = -1.0;
+        pace([&](double elapsed, double dt) {
+            step(std::min(dt, 0.1));
+            MediaPlayer* player = engine.mediaPlayer(clips[static_cast<size_t>(current)]);
+            const bool shown = player != nullptr && player->ready();
+            if (!shown && ready < 0.0) {
+                ++blank;
+            } else if (shown && ready < 0.0) {
+                ready = elapsed * 1000.0;
+            }
+            return elapsed < seconds;
+        });
+        blankFrames.push_back(static_cast<double>(blank));
+        readyMs.push_back(ready < 0.0 ? seconds * 1000.0 : ready);
+    }
+
+    json report;
+    report["clips"] = stems;
+    report["secondsPerClip"] = seconds;
+    report["switches"] = switches;
+    report["prewarm"] = engine.prewarmNext;
+    report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    report["blankFramesPerSwitch"] = summarize(blankFrames);
+    report["millisecondsToFirstPicture"] = summarize(readyMs);
+    report["switchesWithBlankFrames"] = static_cast<int>(std::count_if(blankFrames.begin(), blankFrames.end(), [](double value) { return value > 0.0; }));
+    report["loadedClips"] = engine.loadedMediaCount();
+    const GpuMemory memory = engine.gpuMemory();
+    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"mediaBytes", memory.media}, {"processResidentBytes", platform::processMemoryBytes()}};
+    const std::string text = report.dump(2);
+    logLine("Benchmark result:\n" + text);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return 0;
+}
+
 int runVideoSelfTest(Engine& engine, const std::string& directory, const std::string& outputPath) {
     namespace fs = std::filesystem;
     std::vector<fs::path> files;

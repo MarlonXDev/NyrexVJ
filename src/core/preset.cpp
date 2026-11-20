@@ -195,6 +195,29 @@ json masterToJson(const Master& master) {
     return node;
 }
 
+json playbackToJson(const ClipPlayback& playback) {
+    json node;
+    node["in"] = playback.in;
+    node["out"] = playback.out;
+    node["loop"] = loopModeName(playback.loop);
+    node["speed"] = playback.speed;
+    node["beats"] = playback.syncBeats;
+    return node;
+}
+
+ClipPlayback playbackFromJson(const json& node) {
+    ClipPlayback playback;
+    if (!node.is_object()) {
+        return playback;
+    }
+    playback.in = readNumber(node, "in", 0.0f, 0.0f, 1.0e7f);
+    playback.out = readNumber(node, "out", 0.0f, 0.0f, 1.0e7f);
+    playback.loop = loopModeFromName(readString(node, "loop"));
+    playback.speed = readNumber(node, "speed", 1.0f, kMinPlaySpeed, kMaxPlaySpeed);
+    playback.syncBeats = readNumber(node, "beats", 0.0f, 0.0f, 128.0f);
+    return clampedPlayback(playback);
+}
+
 json layersToJson(const std::array<Layer, kLayerCount>& source) {
     const std::vector<ClipDef>& clips = clipLibrary();
     json layers = json::array();
@@ -209,6 +232,15 @@ json layersToJson(const std::array<Layer, kLayerCount>& source) {
             }
         }
         entry["cells"] = cells;
+        bool anyPlayback = false;
+        json playback = json::array();
+        for (const ClipPlayback& item : layer.playback) {
+            anyPlayback = anyPlayback || !item.isDefault();
+            playback.push_back(item.isDefault() ? json(nullptr) : playbackToJson(item));
+        }
+        if (anyPlayback) {
+            entry["playback"] = playback;
+        }
         entry["active"] = layer.activeColumn;
         entry["opacity"] = layer.opacity;
         entry["blend"] = blendName(layer.blend);
@@ -267,6 +299,12 @@ void layersFromJson(const json& layers, std::array<Layer, kLayerCount>& result, 
                     warnings->push_back("Unknown clip '" + cell.get<std::string>() + "'");
                 }
                 layer.cells[c] = index;
+            }
+        }
+        auto playback = entry.find("playback");
+        if (playback != entry.end() && playback->is_array()) {
+            for (size_t c = 0; c < playback->size() && c < static_cast<size_t>(kColumnCount); ++c) {
+                layer.playback[c] = playbackFromJson((*playback)[c]);
             }
         }
         int active = -1;

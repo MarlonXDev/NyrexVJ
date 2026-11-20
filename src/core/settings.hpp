@@ -26,6 +26,7 @@ struct Settings {
     std::string videoDecoder = "auto";
     bool hapDirect = true;
     bool videoGpuConvert = true;
+    bool prewarmNext = true;
     bool openOutputOnStart = false;
     bool showStatusBar = true;
     int perfBudgetFps = 60;

@@ -302,8 +302,10 @@ void App::drawClipPanel() {
     Layer& layer = engine_.comp.layers[static_cast<size_t>(selectedLayer_)];
     const std::vector<ClipDef>& library = clipLibrary();
     int clip = layer.cells[static_cast<size_t>(selectedColumn_)];
+    int clipColumn = selectedColumn_;
     if (clip < 0 && layer.activeColumn >= 0) {
-        clip = layer.cells[static_cast<size_t>(layer.activeColumn)];
+        clipColumn = layer.activeColumn;
+        clip = layer.cells[static_cast<size_t>(clipColumn)];
     }
 
     if (clip < 0) {
@@ -337,6 +339,9 @@ void App::drawClipPanel() {
         media->touch();
         ImGui::Spacing();
         drawMediaControls(*media);
+        if (media->isVideo()) {
+            drawPlaybackControls(*media, layer.playback[static_cast<size_t>(clipColumn)]);
+        }
     }
 
     if (def.isShaderFile()) {

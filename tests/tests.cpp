@@ -183,7 +183,7 @@ void testLibraries() {
     CHECK(effects.size() >= 20);
     std::set<std::string> clipNames;
     for (const auto& clip : clips) {
-        CHECK(clip.isScene() ? clip.body.empty() : !clip.body.empty());
+        CHECK((clip.isScene() || clip.isMedia()) ? clip.body.empty() : !clip.body.empty());
         CHECK(!clip.isScene() || clip.is3d);
         clipNames.insert(clip.name);
     }
@@ -269,6 +269,54 @@ void testPresets() {
     CHECK(broken.layers[0].fx[1].params[1] == 0.0f);
     CHECK(!nvj::compositionFromJson("garbage", broken, error));
     CHECK(!nvj::compositionFromJson("{}", broken, error));
+}
+
+void testPlaybackPersistence() {
+    nvj::Composition comp = nvj::factoryPresets()[0];
+    const std::string plain = nvj::compositionToJson(comp);
+    CHECK(plain.find("\"playback\"") == std::string::npos);
+
+    nvj::ClipPlayback range;
+    range.in = 1.5;
+    range.out = 4.25;
+    range.loop = nvj::LoopMode::PingPong;
+    range.speed = -2.0f;
+    range.syncBeats = 4.0f;
+    comp.layers[1].playback[2] = range;
+    comp.layers[3].playback[7].loop = nvj::LoopMode::OnceStop;
+
+    const std::string text = nvj::compositionToJson(comp);
+    CHECK(text.find("\"playback\"") != std::string::npos);
+    nvj::Composition loaded;
+    std::string error;
+    std::vector<std::string> warnings;
+    CHECK(nvj::compositionFromJson(text, loaded, error, &warnings));
+    CHECK(warnings.empty());
+    CHECK(loaded.layers[1].playback[2] == range);
+    CHECK(loaded.layers[3].playback[7].loop == nvj::LoopMode::OnceStop);
+    CHECK(loaded.layers[0].playback[0].isDefault());
+    CHECK(loaded.layers[1].playback[3].isDefault());
+    CHECK(sameComposition(comp, loaded));
+
+    const char* hostile = R"({"layers":[{"cells":["Plasma"],"playback":[{"in":-5,"out":1e30,"loop":"Bogus","speed":99,"beats":-3},"text",null,7]}]})";
+    nvj::Composition clamped;
+    CHECK(nvj::compositionFromJson(hostile, clamped, error, &warnings));
+    const nvj::ClipPlayback& safe = clamped.layers[0].playback[0];
+    CHECK(safe.in == 0.0);
+    CHECK(safe.out <= 1.0e7);
+    CHECK(safe.loop == nvj::LoopMode::Loop);
+    CHECK(safe.speed == nvj::kMaxPlaySpeed);
+    CHECK(safe.syncBeats == 0.0f);
+    CHECK(clamped.layers[0].playback[1].isDefault());
+    CHECK(clamped.layers[0].playback[2].isDefault());
+    CHECK(clamped.layers[0].playback[3].isDefault());
+
+    const char* older = R"({"layers":[{"cells":["Plasma","Plasma"],"active":0}]})";
+    nvj::Composition legacy;
+    CHECK(nvj::compositionFromJson(older, legacy, error, &warnings));
+    for (const nvj::ClipPlayback& item : legacy.layers[0].playback) {
+        CHECK(item.isDefault());
+    }
 }
 
 void testDecks() {
@@ -1345,6 +1393,7 @@ int main() {
     testHashFile();
     testLibraries();
     testPresets();
+    testPlaybackPersistence();
     testBlendModes();
     testFrameStats();
     testFramePacer();

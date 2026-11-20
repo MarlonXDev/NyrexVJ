@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/playhead.hpp"
+#include "media/playback_driver.hpp"
 #include "media/video_decoder.hpp"
 #include "render/gl_util.hpp"
 #include "render/video_gpu.hpp"
@@ -23,6 +25,15 @@ public:
 
     MediaState poll();
     bool update(double clock);
+    bool update(double clock, double beat);
+    bool prepare(const ClipPlayback& playback);
+    void setPlayback(const ClipPlayback& playback);
+    void scrubTo(double position);
+    void stepFrames(int frames);
+    double position() const;
+    double framePeriod() const;
+    bool controllable() const { return video_ && state_ == MediaState::Ready && info_.duration > 0.0; }
+    const Playhead& playhead() const { return driver_.head(); }
     void touch();
     double idleSeconds() const;
     void release();
@@ -67,6 +78,7 @@ private:
     };
 
     bool hasPicture() const;
+    bool present(double seconds);
     void start();
     void destroyTexture();
     void createTexture(int width, int height, const uint8_t* pixels, bool mipmaps);
@@ -88,6 +100,8 @@ private:
     VideoOptions options_;
     std::unique_ptr<VideoUploader> uploader_;
     double clock_ = 0.0;
+    double lastBeat_ = 0.0;
+    PlaybackDriver driver_;
     unsigned long long lastFrame_ = 0;
     std::future<ImageLoad> imageLoad_;
     std::future<VideoLoad> videoLoad_;

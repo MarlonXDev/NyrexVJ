@@ -15,6 +15,7 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cfloat>
 #include <cmath>
@@ -300,6 +301,111 @@ void App::drawMediaControls(MediaPlayer& player) {
     }
 }
 
+namespace {
+
+std::string timecodeText(double seconds) {
+    const double clamped = std::max(seconds, 0.0);
+    const int minutes = static_cast<int>(clamped / 60.0);
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%02d:%05.2f", minutes, clamped - minutes * 60.0);
+    return buffer;
+}
+
+}
+
+void App::drawPlaybackControls(MediaPlayer& player, ClipPlayback& playback) {
+    if (!player.controllable()) {
+        return;
+    }
+    const double duration = player.videoInfo().duration;
+    const double period = player.framePeriod();
+    const double position = player.position();
+    ImGui::SeparatorText(tr("Playback"));
+    ImGui::Text("%s / %s", timecodeText(position).c_str(), timecodeText(duration).c_str());
+    ImGui::SameLine();
+    ImGui::TextDisabled(tr("Frame %d"), static_cast<int>(std::lround(position / period)));
+
+    float scrub = static_cast<float>(position);
+    ImGui::SetNextItemWidth(-1.0f);
+    if (ImGui::SliderFloat("##scrub", &scrub, 0.0f, static_cast<float>(duration), "")) {
+        player.scrubTo(static_cast<double>(scrub));
+    }
+    if (ImGui::ArrowButton("##playStepBack", ImGuiDir_Left)) {
+        player.stepFrames(-1);
+    }
+    ImGui::SetItemTooltip("%s", tr("Step back one frame"));
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("##playStepForward", ImGuiDir_Right)) {
+        player.stepFrames(1);
+    }
+    ImGui::SetItemTooltip("%s", tr("Step forward one frame"));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(playback.speed == 0.0f ? trId("Play", "playPlay") : trId("Pause", "playPause"))) {
+        playback.speed = playback.speed == 0.0f ? 1.0f : 0.0f;
+    }
+
+    const double zero = 0.0;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
+    ImGui::DragScalar(trId("In point", "playIn"), ImGuiDataType_Double, &playback.in, 0.01f, &zero, &duration, "%.2f s");
+    ImGui::SameLine();
+    if (ImGui::SmallButton(trId("Set here", "playSetIn"))) {
+        playback.in = position;
+    }
+    ImGui::SetItemTooltip("%s", tr("Set from position"));
+    double outShown = playback.out > 0.0 ? std::min(playback.out, duration) : duration;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
+    if (ImGui::DragScalar(trId("Out point", "playOut"), ImGuiDataType_Double, &outShown, 0.01f, &zero, &duration, "%.2f s")) {
+        playback.out = outShown >= duration - period * 0.01 ? 0.0 : outShown;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(trId("Set here", "playSetOut"))) {
+        playback.out = position >= duration - period * 0.01 ? 0.0 : position;
+    }
+    ImGui::SetItemTooltip("%s", tr("Set from position"));
+    playback.in = std::clamp(playback.in, 0.0, std::max(duration - period, 0.0));
+    if (playback.out > 0.0 && playback.out < playback.in + period) {
+        playback.out = std::min(playback.in + period, duration);
+    }
+
+    const char* loops[kLoopModeCount] = {tr("Loop"), tr("Ping-pong"), tr("Once, hold last frame"), tr("Once, then disappear")};
+    int loop = static_cast<int>(playback.loop);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
+    if (ImGui::Combo(trId("Loop mode", "playLoop"), &loop, loops, kLoopModeCount)) {
+        playback.loop = static_cast<LoopMode>(std::clamp(loop, 0, kLoopModeCount - 1));
+    }
+
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
+    ImGui::SliderFloat(trId("Clip speed", "playSpeed"), &playback.speed, kMinPlaySpeed, kMaxPlaySpeed, "%.2fx");
+    ImGui::SetItemTooltip("%s", tr("Negative values play the clip backwards. Backwards playback decodes short pieces in advance, videos with long keyframe intervals need more processor time and memory for it. A clip that runs in several layers shares one decoder."));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(trId("Reverse", "playReverse"))) {
+        playback.speed = playback.speed == 0.0f ? -1.0f : -playback.speed;
+    }
+
+    std::array<std::string, kSyncBeatChoices> beatLabels;
+    for (int i = 0; i < kSyncBeatChoices; ++i) {
+        const float beats = syncBeatsChoice(i);
+        char text[24];
+        std::snprintf(text, sizeof(text), "%g", beats);
+        beatLabels[static_cast<size_t>(i)] = i == 0 ? std::string(tr("Off")) : std::string(text);
+    }
+    const int beatIndex = syncBeatsIndex(playback.syncBeats);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
+    if (ImGui::BeginCombo(trId("Clip length in beats", "playBeats"), beatLabels[static_cast<size_t>(beatIndex)].c_str())) {
+        for (int i = 0; i < kSyncBeatChoices; ++i) {
+            if (ImGui::Selectable(beatLabels[static_cast<size_t>(i)].c_str(), i == beatIndex)) {
+                playback.syncBeats = syncBeatsChoice(i);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("Plays the range from In to Out in exactly this many beats and follows the tempo of the deck. Off plays the clip at its own speed."));
+
+    if (!playback.isDefault() && ImGui::SmallButton(trId("Reset playback", "playReset"))) {
+        playback = ClipPlayback{};
+    }
+}
+
 void App::assignClipToSelectedCell(int clip) {
     const std::vector<ClipDef>& library = clipLibrary();
     if (clip < 0 || clip >= static_cast<int>(library.size())) {
@@ -307,7 +413,7 @@ void App::assignClipToSelectedCell(int clip) {
     }
     selectedLayer_ = std::clamp(selectedLayer_, 0, kLayerCount - 1);
     selectedColumn_ = std::clamp(selectedColumn_, 0, kColumnCount - 1);
-    engine_.comp.layers[static_cast<size_t>(selectedLayer_)].cells[static_cast<size_t>(selectedColumn_)] = clip;
+    engine_.comp.layers[static_cast<size_t>(selectedLayer_)].setCell(static_cast<size_t>(selectedColumn_), clip);
     engine_.trigger(selectedLayer_, selectedColumn_);
     toast(library[static_cast<size_t>(clip)].name + "  >  " + ui::cellLabel(selectedLayer_, selectedColumn_));
 }
@@ -320,7 +426,7 @@ void App::assignClipToFreeCell(int clip, int layer) {
     Layer& target = engine_.comp.layers[static_cast<size_t>(layer)];
     for (int c = 0; c < kColumnCount; ++c) {
         if (target.cells[static_cast<size_t>(c)] < 0) {
-            target.cells[static_cast<size_t>(c)] = clip;
+            target.setCell(static_cast<size_t>(c), clip);
             selectedLayer_ = layer;
             selectedColumn_ = c;
             engine_.trigger(layer, c);

@@ -2,6 +2,7 @@
 
 #include "media/hap.hpp"
 #include "media/media_image.hpp"
+#include "media/playback_driver.hpp"
 #include "media/video_decoder.hpp"
 #include "media/video_hardware.hpp"
 #include "render/asset_import.hpp"
@@ -877,6 +878,381 @@ void testLoopContinuity() {
     }
 }
 
+int indexOfFrame(const nvj::VideoFrame& frame) {
+    if (frame.planeCount < 1 || frame.planes[0].data == nullptr) {
+        return -1;
+    }
+    const nvj::VideoPlane& plane = frame.planes[0];
+    const int centerX = plane.width / 2;
+    const int centerY = plane.height / 2;
+    const int step = frame.layout == nvj::VideoLayout::Rgba ? 4 : 1;
+    double sum = 0.0;
+    int count = 0;
+    for (int y = centerY - 4; y < centerY + 4; ++y) {
+        for (int x = centerX - 4; x < centerX + 4; ++x) {
+            sum += plane.data[static_cast<size_t>(y) * static_cast<size_t>(plane.stride) + static_cast<size_t>(x * step)];
+            ++count;
+        }
+    }
+    const double level = sum / count;
+    const bool limited = frame.layout != nvj::VideoLayout::Rgba && !frame.fullRange;
+    const double luma = limited ? level : level * 219.0 / 255.0 + 16.0;
+    return static_cast<int>(std::lround((luma - 40.0) / 3.0));
+}
+
+bool reachIndex(nvj::VideoDecoder& decoder, double clock, int expectedIndex, double expectedTime, double slack = 0.0015) {
+    const auto start = std::chrono::steady_clock::now();
+    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() < 5.0) {
+        const std::shared_ptr<const nvj::VideoFrame> frame = decoder.frameAt(clock);
+        if (frame && std::abs(frame->time - expectedTime) < slack) {
+            if (indexOfFrame(*frame) == expectedIndex) {
+                return true;
+            }
+            std::fprintf(stderr, "index mismatch at %.4f: expected %d got %d\n", clock, expectedIndex, indexOfFrame(*frame));
+            return false;
+        }
+        if (decoder.failed()) {
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    }
+    std::fprintf(stderr, "no frame for clock %.4f (index %d, time %.4f)\n", clock, expectedIndex, expectedTime);
+    return false;
+}
+
+void testExactSeek() {
+    std::string error;
+    for (const char* file : {"test_index_mjpeg.avi", "test_index_h264.mp4"}) {
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open((kData / file).string(), error, nvj::VideoOptions()));
+        CHECK(decoder.info().duration > 2.3 && decoder.info().duration < 2.5);
+        const double targets[] = {1.0, 0.0, 2.3, 1.2, 1.18, 0.5, 2.36, 0.04, 1.95, 1.2, 1.16, 1.2, 0.08};
+        for (const double target : targets) {
+            const int expected = static_cast<int>(std::floor(target * 25.0 + 1.0e-6));
+            CHECK(reachIndex(decoder, target + 0.0005, expected, expected * 0.04));
+        }
+        CHECK(decoder.status().seeks > 5);
+        CHECK(!decoder.failed());
+        for (int k = 0; k < 24; ++k) {
+            const double clock = (12 + k) * 0.04;
+            CHECK(reachIndex(decoder, clock + 0.0005, 12 + k, clock));
+        }
+    }
+}
+
+void testRangeLoop() {
+    std::string error;
+    struct Case {
+        const char* file;
+        double in;
+        double out;
+        int first;
+        int count;
+    };
+    const Case cases[] = {{"test_index_mjpeg.avi", 0.4, 1.2, 10, 20}, {"test_index_h264.mp4", 0.48, 1.48, 12, 25}, {"test_index_h264.mp4", 1.0, 2.0, 25, 25}};
+    for (const Case& c : cases) {
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open((kData / c.file).string(), error, nvj::VideoOptions()));
+        decoder.setRange(c.in, c.out);
+        CHECK(std::abs(decoder.status().rangeIn - c.in) < 1.0e-6);
+        CHECK(std::abs(decoder.status().rangeOut - c.out) < 1.0e-6);
+        int found = 0;
+        const int total = c.count * 3;
+        for (int k = 0; k < total; ++k) {
+            const double clock = k * 0.04;
+            if (!reachIndex(decoder, clock + 0.0005, c.first + k % c.count, clock)) {
+                std::fprintf(stderr, "range loop %s failed at step %d\n", c.file, k);
+                break;
+            }
+            ++found;
+        }
+        CHECK(found == total);
+        decoder.setRange(0.0, 0.0);
+        CHECK(decoder.status().rangeOut > 2.3);
+        CHECK(reachIndex(decoder, 0.0005, 0, 0.0));
+        CHECK(reachIndex(decoder, 2.3, 57, 57 * 0.04));
+        CHECK(!decoder.failed());
+    }
+}
+
+void testReversePlayback() {
+    std::string error;
+    for (const char* file : {"test_index_mjpeg.avi", "test_index_h264.mp4"}) {
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open((kData / file).string(), error, nvj::VideoOptions()));
+        CHECK(!decoder.reversing());
+        CHECK(reachIndex(decoder, 0.0005, 0, 0.0));
+        decoder.setDirection(true);
+        CHECK(decoder.reversing());
+        int found = 0;
+        double lastTime = 1.0e9;
+        bool descending = true;
+        for (int k = 59; k >= 0; --k) {
+            const double clock = k * 0.04;
+            if (!reachIndex(decoder, clock + 0.0005, k, clock)) {
+                std::fprintf(stderr, "reverse %s failed at index %d\n", file, k);
+                break;
+            }
+            const std::shared_ptr<const nvj::VideoFrame> frame = decoder.frameAt(clock + 0.0005);
+            descending = descending && frame && frame->time < lastTime;
+            lastTime = frame ? frame->time : lastTime;
+            ++found;
+        }
+        CHECK(found == 60);
+        CHECK(descending);
+        const nvj::VideoStatus reverse = decoder.status();
+        CHECK(reverse.reverse);
+        CHECK(reverse.reverseFrames >= 6 && reverse.reverseFrames <= 16);
+        decoder.setDirection(false);
+        CHECK(!decoder.reversing());
+        for (int k = 12; k < 40; ++k) {
+            const double clock = k * 0.04;
+            CHECK(reachIndex(decoder, clock + 0.0005, k, clock));
+        }
+        decoder.setDirection(true);
+        for (int k = 39; k >= 20; --k) {
+            const double clock = k * 0.04;
+            CHECK(reachIndex(decoder, clock + 0.0005, k, clock));
+        }
+        CHECK(!decoder.failed());
+        decoder.setRange(0.48, 1.48);
+        for (int k = 24; k >= 0; --k) {
+            const double clock = k * 0.04;
+            CHECK(reachIndex(decoder, clock + 0.0005, 12 + k, clock));
+        }
+        decoder.setDirection(false);
+        for (int k = 0; k < 25; ++k) {
+            const double clock = k * 0.04;
+            CHECK(reachIndex(decoder, clock + 0.0005, 12 + k, clock));
+        }
+        CHECK(!decoder.failed());
+    }
+}
+
+void testReverseHap() {
+    std::string error;
+    nvj::VideoDecoder decoder;
+    CHECK(decoder.open((kData / "test_hap.mov").string(), error, nvj::VideoOptions()));
+    const double fps = decoder.info().fps;
+    CHECK(fps > 1.0);
+    const int last = std::max(2, std::min(20, static_cast<int>(decoder.info().duration * fps) - 2));
+    CHECK(waitForFrame(decoder, 0.0005, 0.0, 0.002) != nullptr);
+    decoder.setDirection(true);
+    int found = 0;
+    for (int k = last; k >= 0; --k) {
+        const double clock = k / fps;
+        const std::shared_ptr<const nvj::VideoFrame> frame = waitForFrame(decoder, clock + 0.0005, clock - 0.002, clock + 0.002);
+        if (!frame || std::abs(frame->time - clock) > 0.002) {
+            break;
+        }
+        ++found;
+    }
+    CHECK(found == last + 1);
+    CHECK(!decoder.failed());
+}
+
+int expectedIndex(const nvj::Playhead& head) {
+    return static_cast<int>(std::floor(head.position() * 25.0 + 1.0e-6));
+}
+
+struct Transport {
+    nvj::VideoDecoder decoder;
+    nvj::PlaybackDriver driver;
+    double seconds = 0.0;
+    bool visible = true;
+
+    bool open(const char* file, const nvj::ClipPlayback& playback) {
+        std::string error;
+        driver.setPlayback(playback);
+        return decoder.open((kData / file).string(), error, nvj::VideoOptions());
+    }
+
+    bool step(double clock, double beat, bool wait = true) {
+        visible = driver.drive(decoder, decoder.info(), clock, beat, seconds);
+        if (!visible || !wait) {
+            return true;
+        }
+        const int expected = expectedIndex(driver.head());
+        const double offset = seconds - (driver.head().position() - driver.head().in());
+        return reachIndex(decoder, seconds, expected, expected * 0.04 - driver.head().in() + offset);
+    }
+};
+
+void testTransportModes() {
+    for (const char* file : {"test_index_mjpeg.avi", "test_index_h264.mp4"}) {
+        {
+            Transport t;
+            CHECK(t.open(file, nvj::ClipPlayback{}));
+            int good = 0;
+            for (int k = 0; k < 130; ++k) {
+                if (!t.step(0.01 + k * 0.04, 0.0)) {
+                    std::fprintf(stderr, "default loop %s failed at step %d\n", file, k);
+                    break;
+                }
+                ++good;
+            }
+            CHECK(good == 130);
+        }
+        {
+            nvj::ClipPlayback playback;
+            playback.in = 0.4;
+            playback.out = 1.2;
+            playback.speed = 2.0f;
+            Transport t;
+            CHECK(t.open(file, playback));
+            int good = 0;
+            for (int k = 0; k < 60; ++k) {
+                if (!t.step(0.01 + k * 0.04, 0.0)) {
+                    std::fprintf(stderr, "range speed 2 %s failed at step %d\n", file, k);
+                    break;
+                }
+                ++good;
+            }
+            CHECK(good == 60);
+        }
+        {
+            nvj::ClipPlayback playback;
+            playback.in = 0.4;
+            playback.out = 1.2;
+            playback.loop = nvj::LoopMode::PingPong;
+            Transport t;
+            CHECK(t.open(file, playback));
+            int good = 0;
+            bool sawReverse = false;
+            for (int k = 0; k < 90; ++k) {
+                if (!t.step(0.01 + k * 0.04, 0.0)) {
+                    std::fprintf(stderr, "pingpong %s failed at step %d\n", file, k);
+                    break;
+                }
+                sawReverse = sawReverse || t.driver.head().reverse();
+                ++good;
+            }
+            CHECK(good == 90);
+            CHECK(sawReverse);
+        }
+        {
+            nvj::ClipPlayback playback;
+            playback.in = 0.4;
+            playback.out = 1.2;
+            playback.loop = nvj::LoopMode::OnceHold;
+            Transport t;
+            CHECK(t.open(file, playback));
+            int good = 0;
+            for (int k = 0; k < 40; ++k) {
+                if (!t.step(0.01 + k * 0.04, 0.0)) {
+                    break;
+                }
+                ++good;
+            }
+            CHECK(good == 40);
+            CHECK(t.driver.head().finished() && t.visible);
+            CHECK(expectedIndex(t.driver.head()) == 29);
+        }
+        {
+            nvj::ClipPlayback playback;
+            playback.in = 0.4;
+            playback.out = 1.2;
+            playback.loop = nvj::LoopMode::OnceStop;
+            Transport t;
+            CHECK(t.open(file, playback));
+            bool vanished = false;
+            for (int k = 0; k < 40; ++k) {
+                t.step(0.01 + k * 0.04, 0.0, false);
+                vanished = vanished || !t.visible;
+                if (k < 15) {
+                    CHECK(t.visible);
+                }
+            }
+            CHECK(vanished && !t.visible);
+            t.step(0.0, 0.0, false);
+            CHECK(t.visible && !t.driver.head().finished());
+        }
+        {
+            nvj::ClipPlayback playback;
+            playback.speed = -1.0f;
+            Transport t;
+            CHECK(t.open(file, playback));
+            int good = 0;
+            for (int k = 0; k < 90; ++k) {
+                if (!t.step(0.01 + k * 0.04, 0.0)) {
+                    std::fprintf(stderr, "reverse loop %s failed at step %d\n", file, k);
+                    break;
+                }
+                ++good;
+            }
+            CHECK(good == 90);
+            CHECK(t.decoder.status().reverse || t.driver.head().position() > 0.0);
+        }
+        {
+            nvj::ClipPlayback playback;
+            playback.in = 0.4;
+            playback.out = 1.2;
+            playback.syncBeats = 4.0f;
+            Transport t;
+            CHECK(t.open(file, playback));
+            int good = 0;
+            for (int k = 0; k < 50; ++k) {
+                if (!t.step(0.01 + k * 0.04, k * 0.51)) {
+                    std::fprintf(stderr, "beat sync %s failed at step %d\n", file, k);
+                    break;
+                }
+                ++good;
+            }
+            CHECK(good == 50);
+        }
+        {
+            nvj::ClipPlayback playback;
+            playback.speed = 0.0f;
+            Transport t;
+            CHECK(t.open(file, playback));
+            CHECK(t.step(0.01, 0.0));
+            t.driver.scrubTo(1.01);
+            CHECK(t.step(0.02, 0.0));
+            CHECK(expectedIndex(t.driver.head()) == 25);
+            t.driver.stepFrames(1);
+            CHECK(t.step(0.03, 0.0));
+            CHECK(expectedIndex(t.driver.head()) == 26);
+            t.driver.stepFrames(-2);
+            CHECK(t.step(0.04, 0.0));
+            CHECK(expectedIndex(t.driver.head()) == 24);
+            t.driver.scrubTo(0.01);
+            CHECK(t.step(0.05, 0.0));
+            CHECK(expectedIndex(t.driver.head()) == 0);
+            t.driver.scrubTo(2.35);
+            CHECK(t.step(0.06, 0.0));
+            CHECK(expectedIndex(t.driver.head()) == 58);
+        }
+    }
+}
+
+void testPrerollReady() {
+    for (const char* file : {"test_index_mjpeg.avi", "test_index_h264.mp4"}) {
+        nvj::ClipPlayback playback;
+        playback.in = 1.2;
+        playback.out = 2.2;
+        Transport t;
+        CHECK(t.open(file, playback));
+        double seconds = 0.0;
+        const auto begin = std::chrono::steady_clock::now();
+        std::shared_ptr<const nvj::VideoFrame> frame;
+        while (std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count() < 5.0) {
+            CHECK(t.driver.prepare(t.decoder, t.decoder.info(), seconds));
+            frame = t.decoder.frameAt(seconds);
+            if (frame && indexOfFrame(*frame) == 30) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        }
+        CHECK(frame != nullptr && indexOfFrame(*frame) == 30);
+        const unsigned long long seeksBefore = t.decoder.status().seeks;
+        t.visible = t.driver.drive(t.decoder, t.decoder.info(), 0.001, 0.0, seconds);
+        const std::shared_ptr<const nvj::VideoFrame> first = t.decoder.frameAt(seconds);
+        CHECK(first != nullptr && indexOfFrame(*first) == 30);
+        CHECK(t.decoder.status().seeks == seeksBefore);
+        CHECK(t.decoder.status().dropped == 0);
+    }
+}
+
 void testManyDecoders() {
     constexpr int kCount = 6;
     std::vector<std::unique_ptr<nvj::VideoDecoder>> decoders;
@@ -936,6 +1312,12 @@ int main() {
         testDecodeModes();
         testHardwareProbe();
         testLoopContinuity();
+        testExactSeek();
+        testRangeLoop();
+        testReversePlayback();
+        testReverseHap();
+        testTransportModes();
+        testPrerollReady();
         testManyDecoders();
     }
     return testing::finish();

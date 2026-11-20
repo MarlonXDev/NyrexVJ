@@ -111,6 +111,11 @@ void App::drawVideoSettings() {
     }
     ImGui::SetItemTooltip("%s", tr("The processor only hands over the raw picture and the graphics card turns it into colours. This saves a lot of processor time. Turn it off only if a video shows wrong colours."));
 
+    if (ImGui::Checkbox(trId("Prepare the next clip of every layer", "optPrewarmNext"), &settings_.prewarmNext)) {
+        persist();
+    }
+    ImGui::SetItemTooltip("%s", tr("The next video in each layer is opened and decoded up to its first picture in the background, so a clip change does not wait for the decoder. It costs one extra decoder and one picture of graphics memory per layer. Turn it off on very weak computers."));
+
     ImGui::BeginDisabled(!caps.compressedTextures);
     if (ImGui::Checkbox(trId("Upload HAP videos compressed", "optHapDirect"), &settings_.hapDirect)) {
         persist();
@@ -206,6 +211,10 @@ void App::drawVideoMonitor() {
                     ImGui::Text("%s: %s", tr("Picture format"), status.pixelFormat.c_str());
                 }
                 ImGui::Text("%s: %d", tr("Decoder threads"), status.threads);
+                ImGui::Text("%s: %llu", tr("Seeks"), status.seeks);
+                if (status.reverse) {
+                    ImGui::Text(tr("Playing backwards, buffer of %d pictures"), status.reverseFrames);
+                }
                 ImGui::Text("%s: %s", tr("Upload"), uploadRouteLabel(player->uploadRoute()));
                 ImGui::EndTooltip();
             }

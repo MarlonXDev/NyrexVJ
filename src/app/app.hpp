@@ -109,6 +109,7 @@ private:
     void drawSceneDetails(const ScenePlayer& player);
     void drawMediaDetails(const MediaPlayer& player, bool tooltip);
     void drawMediaControls(MediaPlayer& player);
+    void drawPlaybackControls(MediaPlayer& player, ClipPlayback& playback);
     void queueDroppedFiles(const std::vector<std::string>& paths);
     void serviceImports();
     void drawClipTile(int index, const ImVec2& size);

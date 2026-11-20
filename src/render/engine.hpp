@@ -112,6 +112,7 @@ public:
     Composition comp;
     bool blackout = false;
     bool paused = false;
+    bool prewarmNext = true;
 
 private:
     struct ClipProgram {
@@ -236,7 +237,8 @@ private:
     std::unique_ptr<MediaPlayer> makeMedia(const ClipDef& def);
     void renderMediaThumbnail(size_t index);
     void serviceMedia();
-    bool drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock);
+    bool drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock, const ClipPlayback* playback = nullptr);
+    void prewarmMedia();
     bool ensureEffect(size_t index);
     void uploadAudio();
     void computeEffective();
@@ -253,7 +255,7 @@ private:
     RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner);
     RenderTarget* chainFeedback(int chain) { return &feedback_[static_cast<size_t>(chain * kEffectSlots)]; }
     bool* chainUsed(int chain) { return &feedbackUsed_[static_cast<size_t>(chain * kEffectSlots)]; }
-    void drawLayerSource(int clipIndex, const Layer& layer, float scale, double clock, const RenderTarget& target);
+    void drawLayerSource(int clipIndex, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target);
     void renderPreview();
     void pollGpuQueries();
     void downsample(const RenderTarget& source, const RenderTarget& target);

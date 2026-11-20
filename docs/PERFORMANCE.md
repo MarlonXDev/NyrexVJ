@@ -37,6 +37,7 @@ What reduced resolution changes: sharp edges soften, and effects that work with 
 - A render target that was created for deck transitions and never used was removed (one full-size picture, 7.9 MiB at 1080p).
 - The two pictures of a transition (15.8 MiB at 1080p) are freed 300 frames (5 seconds at 60 FPS) after the last transition and created again at the next one, so a show that does not use transitions does not carry them, and one that does only creates them once per use.
 - Reduced layer resolution frees the full-size layer pictures (see above).
+- Preparing the next clip of every layer (Settings, Performance, Video playback) keeps one extra decoder and one picture per layer: about 14.5 MB for each prepared 1080p clip. Turn it off if video memory is tight. Backwards playback of video buffers up to 16 pictures per clip (about 96 MiB at most for 1080p, see [MEDIA.md](MEDIA.md)).
 
 ### Seeing where the time goes (Settings, Performance, Where the GPU time goes)
 Tick **Measure every render pass**. Every pass (clip, each effect of each layer and of the master, preview, blend, the final stage, transition) gets its own GPU timer, and the table shows the average time, the share and a warning for a single pass that takes a quarter or more of the total. The setting is not saved and is off at start. The results come a few frames late so the program never waits for them, and while it is on the total GPU time of the status bar is the sum of the passes. It costs one timer query per pass, which is small, but leave it off during a show.
@@ -46,6 +47,7 @@ Command line:
 - `--bench-shaders FRAMES`: measures every clip (alone on one layer) and every effect (alone on the cheapest clip, default parameters) and prints the most expensive ten of each, with `--bench-out FILE.json` the complete lists.
 - `--bench-memory`: reports the size of the render targets while idle, during and after a deck transition and for each render quality.
 - `--quality N`: 0 Full, 1 Balanced, 2 Performance, 3 Automatic for this run.
+- `--bench-switch SECONDS:clip1,clip2,...`: switches between video clips and counts empty frames and the time to the first picture (see [MEDIA.md](MEDIA.md)); `--no-prewarm` turns the background preparation of the next clip off for the run.
 - `scripts/make_bench_presets.py DIR`: writes the five scenario presets used below (`Bench Four Visible`, `Bench Three Hidden`, `Bench Hidden Feedback`, `Bench Heavy Chain`, `Bench Fade Mix`) into a presets folder, so the same files can be run with any version through `--preset`.
 
 ## Measured

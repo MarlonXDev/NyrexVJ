@@ -12,14 +12,56 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <sstream>
+#include <thread>
 #include <vector>
+
+#ifdef __linux__
+#include <unistd.h>
+#endif
 
 namespace nvj {
 
 namespace {
 
 using json = nlohmann::json;
+
+double rasterizerCpuSeconds() {
+#ifdef __linux__
+    double total = 0.0;
+    const double ticks = static_cast<double>(sysconf(_SC_CLK_TCK));
+    std::error_code error;
+    for (const auto& entry : std::filesystem::directory_iterator("/proc/self/task", error)) {
+        std::ifstream nameFile(entry.path() / "comm");
+        std::string name;
+        std::getline(nameFile, name);
+        if (name.rfind("llvmpipe", 0) != 0) {
+            continue;
+        }
+        std::ifstream statFile(entry.path() / "stat");
+        std::string content;
+        std::getline(statFile, content);
+        const size_t close = content.rfind(')');
+        if (close == std::string::npos) {
+            continue;
+        }
+        std::istringstream rest(content.substr(close + 1));
+        std::string skip;
+        for (int i = 0; i < 11; ++i) {
+            rest >> skip;
+        }
+        unsigned long long user = 0;
+        unsigned long long system = 0;
+        rest >> user >> system;
+        total += static_cast<double>(user + system) / ticks;
+    }
+    return total;
+#else
+    return 0.0;
+#endif
+}
 
 json summarize(std::vector<double> values) {
     json result;
@@ -124,6 +166,166 @@ int runSceneBenchmark(Engine& engine, const std::string& spec, const std::string
     }
     const GpuMemory memory = engine.gpuMemory();
     report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"renderTargetBytes", memory.targets}, {"thumbnailBytes", memory.thumbnails}, {"sceneDepthBytes", memory.sceneDepth}, {"sceneGeometryBytes", memory.sceneGeometry}, {"mediaBytes", memory.media}, {"processResidentBytes", platform::processMemoryBytes()}};
+
+    const std::string text = report.dump(2);
+    logLine("Benchmark result:\n" + text);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return 0;
+}
+
+int runVideoBenchmark(Engine& engine, const std::string& spec, const std::string& outputPath) {
+    const size_t colon = spec.find(':');
+    const double seconds = std::clamp(std::atof(spec.substr(0, colon).c_str()), 2.0, 600.0);
+    std::vector<std::string> stems;
+    if (colon != std::string::npos) {
+        std::stringstream list(spec.substr(colon + 1));
+        std::string item;
+        while (std::getline(list, item, ',')) {
+            if (!item.empty()) {
+                stems.push_back(item);
+            }
+        }
+    }
+    if (stems.empty()) {
+        logLine("Benchmark: no video clips given, use SECONDS:name1,name2");
+        return 1;
+    }
+    if (stems.size() > static_cast<size_t>(kLayerCount)) {
+        stems.resize(static_cast<size_t>(kLayerCount));
+    }
+    std::vector<int> clips;
+    for (const std::string& stem : stems) {
+        const int clip = clipIndexByName(videoClipName(stem));
+        if (clip < 0) {
+            logLine("Benchmark: unknown video clip '" + stem + "'");
+            return 1;
+        }
+        clips.push_back(clip);
+    }
+    for (size_t l = 0; l < clips.size(); ++l) {
+        engine.comp.layers[l].cells[0] = clips[l];
+        engine.trigger(static_cast<int>(l), 0);
+    }
+
+    const auto step = [&](double dt) {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(dt);
+        engine.render();
+    };
+    const auto allReady = [&]() {
+        for (const int clip : clips) {
+            MediaPlayer* player = engine.mediaPlayer(clip);
+            if (player == nullptr || !player->ready()) {
+                return false;
+            }
+        }
+        return true;
+    };
+    const auto waitStart = std::chrono::steady_clock::now();
+    while (!allReady()) {
+        step(1.0 / 60.0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(4));
+        if (std::chrono::steady_clock::now() - waitStart > std::chrono::seconds(60)) {
+            logLine("Benchmark: videos did not become ready");
+            return 1;
+        }
+    }
+    const double period = 1.0 / 60.0;
+    {
+        auto next = std::chrono::steady_clock::now();
+        auto last = next;
+        for (int i = 0; i < 60; ++i) {
+            next += std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(period));
+            const auto now = std::chrono::steady_clock::now();
+            step(std::chrono::duration<double>(now - last).count());
+            last = now;
+            glFinish();
+            std::this_thread::sleep_until(next);
+        }
+    }
+
+    engine.setGpuTiming(false);
+    GLuint query = 0;
+    glGenQueries(1, &query);
+    std::vector<double> work;
+    std::vector<double> gpu;
+    std::vector<double> interval;
+    int late = 0;
+    int frames = 0;
+    const double cpuStart = platform::processCpuSeconds();
+    const double rasterStart = rasterizerCpuSeconds();
+    const auto wallStart = std::chrono::steady_clock::now();
+    const auto step_duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(period));
+    auto next = wallStart;
+    auto previous = wallStart;
+    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count() < seconds) {
+        next += step_duration;
+        const auto begin = std::chrono::steady_clock::now();
+        const double dt = std::chrono::duration<double>(begin - previous).count();
+        if (frames > 0) {
+            interval.push_back(dt * 1000.0);
+            if (dt > period * 1.5) {
+                ++late;
+            }
+        }
+        previous = begin;
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(frames == 0 ? period : dt);
+        glBeginQuery(GL_TIME_ELAPSED, query);
+        engine.render();
+        glEndQuery(GL_TIME_ELAPSED);
+        glFinish();
+        const auto finished = std::chrono::steady_clock::now();
+        GLuint64 nanoseconds = 0;
+        glGetQueryObjectui64v(query, GL_QUERY_RESULT, &nanoseconds);
+        work.push_back(std::chrono::duration<double, std::milli>(finished - begin).count());
+        gpu.push_back(static_cast<double>(nanoseconds) / 1.0e6);
+        ++frames;
+        if (finished > next) {
+            next = finished;
+        }
+        std::this_thread::sleep_until(next);
+    }
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count();
+    const double cpu = platform::processCpuSeconds() - cpuStart;
+    const double raster = rasterizerCpuSeconds() - rasterStart;
+    glDeleteQueries(1, &query);
+
+    json report;
+    report["clips"] = stems;
+    report["seconds"] = wall;
+    report["frames"] = frames;
+    report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
+    report["processCpuSeconds"] = cpu;
+    report["processCpuPercentOfOneCore"] = wall > 0.0 ? cpu / wall * 100.0 : 0.0;
+    report["softwareRasterizerCpuSeconds"] = raster;
+    report["cpuWithoutRasterizerSeconds"] = cpu - raster;
+    report["cpuWithoutRasterizerPercentOfOneCore"] = wall > 0.0 ? (cpu - raster) / wall * 100.0 : 0.0;
+    report["lateFrames"] = late;
+    report["workMs"] = summarize(work);
+    report["gpuMs"] = summarize(gpu);
+    report["frameIntervalMs"] = summarize(interval);
+    json videos = json::array();
+    for (size_t l = 0; l < clips.size(); ++l) {
+        MediaPlayer* player = engine.mediaPlayer(clips[l]);
+        json item;
+        item["clip"] = stems[l];
+        if (player != nullptr) {
+            const VideoInfo& info = player->videoInfo();
+            item["codec"] = info.codec;
+            item["size"] = std::to_string(info.width) + "x" + std::to_string(info.height);
+            item["textureSize"] = std::to_string(player->width()) + "x" + std::to_string(player->height());
+            item["gpuBytes"] = player->gpuBytes();
+        }
+        videos.push_back(std::move(item));
+    }
+    report["videos"] = std::move(videos);
+    const GpuMemory memory = engine.gpuMemory();
+    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"mediaBytes", memory.media}, {"processResidentBytes", platform::processMemoryBytes()}};
 
     const std::string text = report.dump(2);
     logLine("Benchmark result:\n" + text);

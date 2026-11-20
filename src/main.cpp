@@ -28,6 +28,7 @@ struct Options {
     std::string dumpOutput;
     std::string dumpOutputs;
     std::string benchScene;
+    std::string benchVideo;
     int benchComp = 0;
     double benchBudget = 0.0;
     bool benchAll = false;
@@ -61,6 +62,8 @@ Options parseOptions(int argc, char** argv) {
             options.start.selectOutput = std::atoi(argv[++i]) - 1;
         } else if (arg == "--bench-scene" && hasValue) {
             options.benchScene = argv[++i];
+        } else if (arg == "--bench-video" && hasValue) {
+            options.benchVideo = argv[++i];
         } else if (arg == "--bench-comp" && hasValue) {
             options.benchComp = std::atoi(argv[++i]);
         } else if (arg == "--bench-budget" && hasValue) {
@@ -256,9 +259,16 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || options.benchComp > 0) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || options.benchComp > 0) {
         glfwSwapInterval(0);
-        const int benchExit = !options.benchScene.empty() ? nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut) : nvj::runCompositionBenchmark(app.engine(), options.benchComp, options.benchBudget, options.benchAll, options.benchOut);
+        int benchExit = 0;
+        if (!options.benchScene.empty()) {
+            benchExit = nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut);
+        } else if (!options.benchVideo.empty()) {
+            benchExit = nvj::runVideoBenchmark(app.engine(), options.benchVideo, options.benchOut);
+        } else {
+            benchExit = nvj::runCompositionBenchmark(app.engine(), options.benchComp, options.benchBudget, options.benchAll, options.benchOut);
+        }
         app.shutdown();
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();

@@ -448,6 +448,23 @@ size_t processMemoryBytes() {
     return static_cast<size_t>(counters.WorkingSetSize);
 }
 
+double processCpuSeconds() {
+    FILETIME created{};
+    FILETIME exited{};
+    FILETIME kernel{};
+    FILETIME user{};
+    if (!GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user)) {
+        return 0.0;
+    }
+    const auto seconds = [](const FILETIME& value) {
+        ULARGE_INTEGER wide;
+        wide.LowPart = value.dwLowDateTime;
+        wide.HighPart = value.dwHighDateTime;
+        return static_cast<double>(wide.QuadPart) * 1.0e-7;
+    };
+    return seconds(kernel) + seconds(user);
+}
+
 unsigned long currentProcessId() {
     return static_cast<unsigned long>(GetCurrentProcessId());
 }

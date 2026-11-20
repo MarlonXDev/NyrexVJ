@@ -4,6 +4,7 @@
 #include <csignal>
 #include <fstream>
 #include <filesystem>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -71,6 +72,15 @@ size_t processMemoryBytes() {
         return 0;
     }
     return static_cast<size_t>(resident) * static_cast<size_t>(sysconf(_SC_PAGESIZE));
+}
+
+double processCpuSeconds() {
+    rusage usage{};
+    if (getrusage(RUSAGE_SELF, &usage) != 0) {
+        return 0.0;
+    }
+    const auto seconds = [](const timeval& value) { return static_cast<double>(value.tv_sec) + static_cast<double>(value.tv_usec) * 1.0e-6; };
+    return seconds(usage.ru_utime) + seconds(usage.ru_stime);
 }
 
 unsigned long currentProcessId() {

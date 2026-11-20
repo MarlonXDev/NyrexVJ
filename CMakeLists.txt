@@ -219,6 +219,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_control.cpp
     src/app/ui_creator.cpp
     src/app/ui_settings.cpp
+    src/app/ui_video.cpp
     src/app/ui_panels.cpp
     src/app/ui_welcome.cpp
     src/app/ui_recovery.cpp

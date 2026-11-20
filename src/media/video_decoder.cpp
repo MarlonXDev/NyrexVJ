@@ -864,12 +864,13 @@ bool VideoDecoder::open(const std::string& path, std::string& error, const Video
             d.status.decoder = decoder->name;
             d.status.threads = threads;
             if (!failures.empty()) {
-                d.status.fallbackReason = failures;
+                d.status.fallbackReason = "no hardware decoder worked on this computer";
+                d.status.fallbackDetail = failures;
             }
         }
     }
     if (!d.status.fallbackReason.empty()) {
-        logLine("Video '" + path + "': " + d.status.fallbackReason);
+        logLine("Video '" + path + "': " + d.status.fallbackReason + (d.status.fallbackDetail.empty() ? std::string() : " (" + d.status.fallbackDetail + ")"));
     }
     d.opened = true;
     Impl* impl = &d;

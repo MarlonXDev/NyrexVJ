@@ -418,6 +418,16 @@ VideoOptions Engine::videoOptions() const {
     return options;
 }
 
+std::vector<const MediaPlayer*> Engine::activeVideos() const {
+    std::vector<const MediaPlayer*> result;
+    for (const std::unique_ptr<MediaPlayer>& player : media_) {
+        if (player && player->isVideo() && player->state() == MediaState::Ready) {
+            result.push_back(player.get());
+        }
+    }
+    return result;
+}
+
 void Engine::setVideoSettings(VideoDecodeMode mode, bool hapDirect, bool gpuConversion) {
     if (mode == videoMode_ && hapDirect == hapDirect_ && gpuConversion == gpuConversion_) {
         return;

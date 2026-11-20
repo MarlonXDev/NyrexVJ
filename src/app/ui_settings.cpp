@@ -577,6 +577,9 @@ void App::drawPerformancePage() {
         persist();
     }
 
+    drawVideoSettings();
+    drawVideoMonitor();
+
     ImGui::SeparatorText(tr("Frame budget"));
     static const int kBudgets[] = {30, 45, 60, 90, 120, 144};
     char current[48];
@@ -653,7 +656,24 @@ void App::drawPerformancePage() {
 
     ImGui::SeparatorText(tr("Memory"));
     const GpuMemory memory = engine_.gpuMemory();
-    ImGui::Text("%s: %.0f MB", tr("GPU memory (estimate)"), static_cast<double>(memory.total()) / (1024.0 * 1024.0));
+    const auto megabytes = [](unsigned long long bytes) { return static_cast<double>(bytes) / (1024.0 * 1024.0); };
+    ImGui::Text("%s: %.0f MB", tr("GPU memory (estimate)"), megabytes(memory.total()));
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::Text("%s: %.1f MB", tr("Render targets"), megabytes(memory.targets));
+        ImGui::Text("%s: %.1f MB", tr("Thumbnails"), megabytes(memory.thumbnails));
+        ImGui::Text("%s: %.1f MB", tr("3D depth buffers"), megabytes(memory.sceneDepth));
+        ImGui::Text("%s: %.1f MB", tr("3D geometry and textures"), megabytes(memory.sceneGeometry));
+        ImGui::Text("%s: %.1f MB", tr("Images and videos"), megabytes(memory.media));
+        ImGui::EndTooltip();
+    }
+    ImGui::Text("%s: %.1f MB", tr("Video memory"), megabytes(memory.video.total()));
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::Text("%s: %.1f MB", tr("Pictures"), megabytes(memory.video.output));
+        ImGui::Text("%s: %.1f MB", tr("Colour planes"), megabytes(memory.video.planes));
+        ImGui::Text("%s: %.1f MB", tr("Compressed (HAP)"), megabytes(memory.video.compressed));
+        ImGui::Text("%s: %.1f MB", tr("Upload buffers"), megabytes(memory.video.staging));
+        ImGui::EndTooltip();
+    }
     ImGui::Text("%s: %.0f MB", tr("Program memory"), static_cast<double>(platform::processMemoryBytes()) / (1024.0 * 1024.0));
     ImGui::Text("%s: %d", tr("3D scenes loaded"), engine_.loadedSceneCount());
 

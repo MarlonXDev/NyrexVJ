@@ -371,11 +371,25 @@ void testPresetFiles() {
     settings.openOutputOnStart = true;
     settings.showStatusBar = false;
     settings.uiScale = 1.25f;
+    settings.fpsLimit = 90;
+    settings.videoDecoder = "hardware";
+    settings.hapDirect = false;
+    settings.videoGpuConvert = false;
     CHECK(nvj::saveSettings(settings));
     nvj::Settings back;
     CHECK(nvj::loadSettings(back));
     CHECK(!back.checkUpdates && back.channel == nvj::UpdateChannel::Stable && back.outputs[0].monitor == 2);
     CHECK(!back.autoInstall && !back.vsync && back.openOutputOnStart && !back.showStatusBar && back.uiScale == 1.25f);
+    CHECK(back.fpsLimit == 90 && back.videoDecoder == "hardware" && !back.hapDirect && !back.videoGpuConvert);
+
+    nvj::Settings defaults;
+    CHECK(defaults.fpsLimit == 60 && defaults.videoDecoder == "auto" && defaults.hapDirect && defaults.videoGpuConvert);
+    settings.videoDecoder = "nonsense";
+    settings.fpsLimit = 77;
+    CHECK(nvj::saveSettings(settings));
+    nvj::Settings repaired;
+    CHECK(nvj::loadSettings(repaired));
+    CHECK(repaired.videoDecoder == "auto" && repaired.fpsLimit == 90);
 
     std::filesystem::remove_all(dir);
 }

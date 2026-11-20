@@ -86,6 +86,7 @@ public:
     bool gpuConversion() const { return gpuConversion_; }
     const VideoGpuCaps& videoCaps() const { return videoGpu_.caps(); }
     VideoOptions videoOptions() const;
+    std::vector<const MediaPlayer*> activeVideos() const;
     void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
     bool gpuTimingAvailable() const { return gpuQueries_[0] != 0; }
     double gpuFrameMs() const { return gpuMs_; }

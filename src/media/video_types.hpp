@@ -62,6 +62,7 @@ struct VideoStatus {
     std::string pixelFormat;
     std::string variant;
     std::string fallbackReason;
+    std::string fallbackDetail;
     bool hardwareWanted = false;
     int threads = 1;
     double decodeMs = 0.0;

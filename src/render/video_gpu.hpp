@@ -110,7 +110,7 @@ private:
         unsigned long long bytes = 0;
     };
 
-    static constexpr int kRing = 2;
+    static constexpr int kRing = 1;
 
     bool presentRgba(const VideoFrame& frame);
     bool presentCompressed(const VideoFrame& frame);

@@ -11,6 +11,7 @@
 #include "core/i18n.hpp"
 #include "core/recovery.hpp"
 #include "core/settings.hpp"
+#include "media/video_hardware.hpp"
 #include "render/asset_import.hpp"
 #include "render/engine.hpp"
 #include "render/media_player.hpp"
@@ -119,6 +120,8 @@ private:
     void undoEdit();
     void drawPerformancePage();
     void drawFrameRateLimit();
+    void drawVideoSettings();
+    void drawVideoMonitor();
     void redoEdit();
     void drawCreator();
     void shutdownCreator();
@@ -211,6 +214,9 @@ private:
     FrameSummary perfFrameSummary_;
     FrameSummary perfCpuSummary_;
     FrameSummary perfGpuSummary_;
+    std::future<HardwareProbeReport> hardwareProbe_;
+    HardwareProbeReport hardwareReport_;
+    bool hasHardwareReport_ = false;
     double perfRefresh_ = 0.0;
     bool restart_ = false;
     int selectedLayer_ = 0;

@@ -795,7 +795,7 @@ void testDecodeModes() {
         if (status.path == nvj::DecodePath::Hardware) {
             CHECK(!status.backend.empty());
         } else {
-            CHECK(status.path == nvj::DecodePath::Software && !status.fallbackReason.empty());
+            CHECK(status.path == nvj::DecodePath::Software && !status.fallbackReason.empty() && !status.fallbackDetail.empty());
         }
         CHECK(!decoder.failed());
     }

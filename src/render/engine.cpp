@@ -831,6 +831,11 @@ GpuMemory Engine::gpuMemory() const {
         memory.thumbnails += bytes(target);
     }
     memory.sceneDepth = sceneRenderer_.depthBytes();
+    for (const std::unique_ptr<LiveInput>& input : liveInputs_) {
+        if (input) {
+            memory.live += static_cast<size_t>(input->info().memory.total());
+        }
+    }
     for (const std::unique_ptr<MediaPlayer>& player : media_) {
         if (player) {
             memory.media += static_cast<size_t>(player->gpuBytes());
@@ -971,6 +976,9 @@ void Engine::shutdown() {
     }
     for (SpoutInput& slot : spoutSlots_) {
         slot.release();
+    }
+    for (std::unique_ptr<LiveInput>& input : liveInputs_) {
+        input.reset();
     }
     if (spoutProgram_.id) {
         glDeleteProgram(spoutProgram_.id);
@@ -1313,6 +1321,103 @@ bool Engine::drawSpout(int slot, float scale) {
     triangle_.draw();
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
+}
+
+void Engine::configureLive(const std::array<std::string, kLiveInputSlots>& ndi, const std::array<std::string, kLiveInputSlots>& camera, const std::string& excludedNdi, const CameraMode& mode) {
+    liveNdi_ = ndi;
+    liveCamera_ = camera;
+    liveExcluded_ = excludedNdi;
+    liveMode_ = mode;
+}
+
+LiveInput* Engine::liveSlot(LiveKind kind, int slot) {
+    if (slot < 0 || slot >= kLiveInputSlots) {
+        return nullptr;
+    }
+    std::unique_ptr<LiveInput>& input = liveInputs_[liveIndex(kind, slot)];
+    if (!input) {
+        input = std::make_unique<LiveInput>(videoGpu_, kind);
+    }
+    return input.get();
+}
+
+const LiveInput* Engine::liveInput(LiveKind kind, int slot) const {
+    if (slot < 0 || slot >= kLiveInputSlots) {
+        return nullptr;
+    }
+    return liveInputs_[liveIndex(kind, slot)].get();
+}
+
+LiveInputInfo Engine::liveInfo(LiveKind kind, int slot) const {
+    const LiveInput* input = liveInput(kind, slot);
+    return input != nullptr ? input->info() : LiveInputInfo{};
+}
+
+void Engine::resetLiveLatency() {
+    for (std::unique_ptr<LiveInput>& input : liveInputs_) {
+        if (input) {
+            input->resetLatencyWindow();
+        }
+    }
+}
+
+void Engine::prepareLive(const ClipDef& def) {
+    const LiveKind kind = def.kind == ClipKind::NdiSource ? LiveKind::Ndi : LiveKind::Camera;
+    const size_t index = liveIndex(kind, def.sceneIndex);
+    LiveInput* input = liveSlot(kind, def.sceneIndex);
+    if (input == nullptr) {
+        return;
+    }
+    liveLastUse_[index] = clock_;
+    if (liveFrame_[index] == frameId_) {
+        return;
+    }
+    liveFrame_[index] = frameId_;
+    LiveInputConfig config;
+    config.maxDimension = videoOptions().maxDimension;
+    if (kind == LiveKind::Ndi) {
+        config.source = liveNdi_[static_cast<size_t>(def.sceneIndex)];
+        config.excluded = liveExcluded_;
+    } else {
+        config.source = liveCamera_[static_cast<size_t>(def.sceneIndex)];
+        config.camera = liveMode_;
+    }
+    input->update(config, clock_);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+bool Engine::drawLive(const ClipDef& def, float scale) {
+    const LiveKind kind = def.kind == ClipKind::NdiSource ? LiveKind::Ndi : LiveKind::Camera;
+    const LiveInput* input = liveInput(kind, def.sceneIndex);
+    if (input == nullptr || !input->hasPicture() || input->texture() == 0 || input->width() <= 0 || input->height() <= 0) {
+        return false;
+    }
+    const float source = static_cast<float>(input->width()) / static_cast<float>(input->height());
+    const float target = static_cast<float>(out_.width) / static_cast<float>(out_.height);
+    const float zoom = std::max(scale, 0.05f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(mediaProgram_.id);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, input->texture());
+    glUniform1i(mediaProgram_.tex, 0);
+    glUniform2f(mediaProgram_.fit, std::max(target / source, 1.0f) / zoom, std::max(source / target, 1.0f) / zoom);
+    glUniform1f(mediaProgram_.premult, input->premultiplied() ? 1.0f : 0.0f);
+    glUniform1f(mediaProgram_.backdrop, 0.0f);
+    glUniform2f(mediaProgram_.texScale, input->scaleX(), input->scaleY());
+    glUniform1f(mediaProgram_.ycocg, 0.0f);
+    triangle_.draw();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return true;
+}
+
+void Engine::serviceLive() {
+    for (size_t i = 0; i < liveInputs_.size(); ++i) {
+        if (liveInputs_[i] && (liveInputs_[i]->active() || liveInputs_[i]->hasPicture()) && clock_ - liveLastUse_[i] > kLiveIdleSeconds) {
+            liveInputs_[i]->releaseAsync();
+        }
+    }
 }
 
 void Engine::serviceSpout() {
@@ -1680,8 +1785,11 @@ void Engine::blit(const RenderTarget& source, const RenderTarget& target) {
 void Engine::drawLayerSource(int clipIndex, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target) {
     const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
     const bool spoutClip = clipDef.kind == ClipKind::SpoutSource;
+    const bool liveClip = clipDef.isLive();
     if (spoutClip) {
         prepareSpout(clipDef.sceneIndex);
+    } else if (liveClip) {
+        prepareLive(clipDef);
     }
     target.bind();
     glDisable(GL_BLEND);
@@ -1701,7 +1809,8 @@ void Engine::drawLayerSource(int clipIndex, const Layer& layer, const ClipPlayba
         sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, target);
     } else if (media_[static_cast<size_t>(clipIndex)]) {
         drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock, &playback);
-    } else if (!spoutClip || !drawSpout(clipDef.sceneIndex, scale)) {
+    } else if (liveClip && drawLive(clipDef, scale)) {
+    } else if (liveClip || !spoutClip || !drawSpout(clipDef.sceneIndex, scale)) {
         drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clock), static_cast<float>(beat_), comp.bpm, static_cast<float>(target.width), static_cast<float>(target.height), layer.colorA, layer.colorB, layer.rainbow, scale);
     }
 }
@@ -1997,6 +2106,7 @@ void Engine::render() {
     serviceMedia();
     prewarmMedia();
     serviceSpout();
+    serviceLive();
 
     feedbackUsed_.fill(false);
     uploadAudio();

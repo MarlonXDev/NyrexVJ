@@ -34,6 +34,14 @@ constexpr Entry kClips[] = {
     {"Spout Input 2", 0, 10},
     {"Spout Input 3", 0, 10},
     {"Spout Input 4", 0, 10},
+    {"NDI Input 1", 0, 22},
+    {"NDI Input 2", 0, 22},
+    {"NDI Input 3", 0, 22},
+    {"NDI Input 4", 0, 22},
+    {"Camera 1", 0, 22},
+    {"Camera 2", 0, 22},
+    {"Camera 3", 0, 22},
+    {"Camera 4", 0, 22},
 };
 
 constexpr Entry kEffects[] = {

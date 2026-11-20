@@ -322,6 +322,10 @@ void App::drawClipPanel() {
     ImGui::TextDisabled("%s", ui::cellLabel(selectedLayer_, selectedColumn_).c_str());
     if (def.kind == ClipKind::SpoutSource) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Spout input"));
+    } else if (def.kind == ClipKind::NdiSource) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("NDI input"));
+    } else if (def.kind == ClipKind::CameraSource) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Camera or capture card"));
     } else if (engine_.isSceneClip(clip)) {
         ImGui::TextColored(ui::kAccent, "%s", def.kind == ClipKind::ModelFile ? tr("3D model file") : tr("3D scene"));
     } else if (def.kind == ClipKind::VideoFile) {
@@ -368,6 +372,11 @@ void App::drawClipPanel() {
     if (def.kind == ClipKind::SpoutSource) {
         ImGui::Spacing();
         drawSpoutInputControls(def.sceneIndex);
+    }
+
+    if (def.isLive()) {
+        ImGui::Spacing();
+        drawLiveInputControls(def);
     }
 
     if (engine_.isSceneClip(clip)) {

@@ -25,11 +25,14 @@ Every library below is optional. When one is missing, only the matching feature 
 | Feature | Windows | Linux | Override |
 | --- | --- | --- | --- |
 | Video clips (FFmpeg 8.x, LGPL build) | `avutil-60.dll`, `swscale-9.dll`, `avcodec-62.dll`, `avformat-62.dll`, `swresample-6.dll` in `ffmpeg\` next to the program or in the user data folder | `libavutil.so.60`, `libswscale.so.9`, `libavcodec.so.62`, `libavformat.so.62`, `libswresample.so.6` in `ffmpeg/` next to the program, in the user data folder `ffmpeg/`, or on the system library path | `NYREXVJ_FFMPEG_DIR` (Linux), `NYREXVJ_NO_FFMPEG=1` switches video off |
-| NDI output | NDI runtime (`Processing.NDI.Lib.x64.dll`) | `libndi.so.6`, `libndi.so.5` or `libndi.so`, also from `NDI_RUNTIME_DIR_V6` and `NDI_RUNTIME_DIR_V5` | `NYREXVJ_NDI_LIB` |
+| Cameras and capture cards (FFmpeg device library, needs the video libraries above) | `avdevice-62.dll` and `avfilter-11.dll` next to the other FFmpeg DLLs | `libavdevice.so.62` and `libavfilter.so.11` next to the other FFmpeg libraries | the same as for video, `NYREXVJ_FFMPEG_DIR` (Linux) |
+| NDI input and output | NDI runtime (`Processing.NDI.Lib.x64.dll`) | `libndi.so.6`, `libndi.so.5` or `libndi.so`, also from `NDI_RUNTIME_DIR_V6` and `NDI_RUNTIME_DIR_V5` | `NYREXVJ_NDI_LIB` |
 | Audio capture | Windows audio (WASAPI), part of Windows | `libpulse-simple.so.0` and `libpulse.so.0` (PulseAudio, or PipeWire with its PulseAudio server) | `NYREXVJ_PULSE_LIB` |
 | MIDI input | Windows multimedia (WinMM), part of Windows | `libasound.so.2` (ALSA sequencer) | `NYREXVJ_ALSA_LIB` |
 | Update download | WinHTTP, part of Windows | `libcurl.so.4` | none |
 | Open a web page or folder | Windows shell | `xdg-open` | none |
+
+The device library number is the same as the number of `avformat`. `libavdevice` itself needs `libavfilter`, so both files have to be in the same folder; the LGPL shared builds of FFmpeg contain them. Cameras need the device library on top of the video libraries; without it video clips still work.
 
 The exact FFmpeg file names that your build looks for are listed in the clip details when a video clip cannot be loaded, together with a button that opens the folder. They depend on the FFmpeg headers the program was built with, so a program built with other headers asks for other numbers.
 

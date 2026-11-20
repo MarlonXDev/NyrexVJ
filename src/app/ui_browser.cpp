@@ -173,6 +173,8 @@ bool matchesKind(const ClipDef& clip, int kind) {
         return clip.isMedia();
     case 7:
         return clip.isShaderFile();
+    case 8:
+        return clip.isLive();
     default:
         return true;
     }
@@ -504,6 +506,10 @@ void App::drawClipTile(int index, const ImVec2& size) {
     const char* badge = nullptr;
     if (clip.kind == ClipKind::SpoutSource) {
         badge = tr("Spout");
+    } else if (clip.kind == ClipKind::NdiSource) {
+        badge = tr("NDI");
+    } else if (clip.kind == ClipKind::CameraSource) {
+        badge = tr("Camera");
     } else if (clip.kind == ClipKind::VideoFile) {
         badge = tr("Video");
     } else if (clip.kind == ClipKind::ImageFile) {
@@ -587,10 +593,14 @@ void App::drawClipTile(int index, const ImVec2& size) {
 
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders")};
-    for (int k = 0; k < 8; ++k) {
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders"), tr("Live")};
+    const float rightEdge = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+    for (int k = 0; k < 9; ++k) {
         if (k > 0) {
-            ImGui::SameLine(0.0f, 4.0f);
+            const float buttonWidth = ImGui::CalcTextSize(kinds[k]).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+            if (ImGui::GetItemRectMax().x + 4.0f + buttonWidth < rightEdge) {
+                ImGui::SameLine(0.0f, 4.0f);
+            }
         }
         ImGui::PushID(k);
         if (ui::accentButton(kinds[k], libraryKind_ == k)) {

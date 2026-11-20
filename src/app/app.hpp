@@ -11,6 +11,7 @@
 #include "core/i18n.hpp"
 #include "core/recovery.hpp"
 #include "core/settings.hpp"
+#include "media/camera_capture.hpp"
 #include "media/video_hardware.hpp"
 #include "render/asset_import.hpp"
 #include "render/engine.hpp"
@@ -173,6 +174,8 @@ private:
     void drawSpoutControls();
     void drawNdiControls();
     void drawSpoutInputControls(int slot);
+    void drawLiveInputControls(const ClipDef& def);
+    void serviceLiveBrowse();
     void loadComposition(const Composition& comp, const std::string& message);
     void saveCurrentPreset();
     void refreshUserPresets();
@@ -242,6 +245,10 @@ private:
     bool mappingFollowsTexture_ = true;
     char presetName_[64] = {};
     char spoutName_[64] = {};
+    bool ndiBrowsing_ = false;
+    double ndiBrowseTouch_ = 0.0;
+    std::vector<CameraDevice> cameraList_;
+    double cameraListedAt_ = -1.0e9;
     char ndiName_[64] = {};
     char oscOutFilter_[64] = {};
     int oscOutPick_ = -1;

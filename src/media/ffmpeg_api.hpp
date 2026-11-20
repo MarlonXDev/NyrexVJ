@@ -7,6 +7,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libavutil/buffer.h>
+#include <libavutil/dict.h>
 #include <libavutil/error.h>
 #include <libavutil/hwcontext.h>
 #include <libavutil/pixdesc.h>
@@ -16,7 +17,11 @@ extern "C" {
 #include <string>
 
 #define NYX_FFMPEG_FUNCTIONS(X) \
+    X(avformat_alloc_context) \
     X(avformat_open_input) \
+    X(av_find_input_format) \
+    X(av_dict_set) \
+    X(av_dict_free) \
     X(avformat_find_stream_info) \
     X(av_find_best_stream) \
     X(av_read_frame) \
@@ -70,6 +75,27 @@ struct FfmpegApi {
 };
 
 const FfmpegApi* ffmpegApi(std::string& problem);
+
+struct FfmpegDeviceInfo {
+    char* name;
+    char* description;
+    int* mediaTypes;
+    int mediaTypeCount;
+};
+
+struct FfmpegDeviceInfoList {
+    FfmpegDeviceInfo** devices;
+    int count;
+    int defaultDevice;
+};
+
+struct FfmpegDeviceApi {
+    void (*registerAll)() = nullptr;
+    int (*listInputSources)(const AVInputFormat*, const char*, AVDictionary*, FfmpegDeviceInfoList**) = nullptr;
+    void (*freeList)(FfmpegDeviceInfoList**) = nullptr;
+};
+
+const FfmpegDeviceApi* ffmpegDeviceApi(std::string& problem);
 
 }
 

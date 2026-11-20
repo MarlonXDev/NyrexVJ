@@ -201,6 +201,26 @@ void testLibraries() {
         }
     }
     CHECK(nvj::clipIndexByName("Spout Input 5") == -1);
+    for (int slot = 0; slot < nvj::kLiveInputSlots; ++slot) {
+        const struct {
+            const char* prefix;
+            nvj::ClipKind kind;
+        } live[] = {{"NDI Input ", nvj::ClipKind::NdiSource}, {"Camera ", nvj::ClipKind::CameraSource}};
+        for (const auto& entry : live) {
+            const int index = nvj::clipIndexByName(entry.prefix + std::to_string(slot + 1));
+            CHECK(index >= 0);
+            if (index >= 0) {
+                const nvj::ClipDef& clip = clips[static_cast<size_t>(index)];
+                CHECK(clip.kind == entry.kind);
+                CHECK(clip.sceneIndex == slot);
+                CHECK(clip.isLive());
+                CHECK(!clip.isScene() && !clip.isMedia() && !clip.is3d);
+                CHECK(!clip.body.empty());
+            }
+        }
+    }
+    CHECK(nvj::clipIndexByName("NDI Input 5") == -1);
+    CHECK(nvj::clipIndexByName("Camera 5") == -1);
     std::set<std::string> effectNames;
     for (const auto& effect : effects) {
         CHECK(effect.paramCount() >= 1);

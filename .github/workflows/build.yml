@@ -175,6 +175,7 @@ jobs:
           fi
           export NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-data"
           build/NyrexVJ --check-shaders
+          build/NyrexVJ --live-selftest
           build/NyrexVJ --frames 30 --fresh --no-update-check --screenshot "$RUNNER_TEMP/smoke.png"
           test -s "$RUNNER_TEMP/smoke.png"
 

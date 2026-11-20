@@ -171,6 +171,29 @@ bool loadSettings(Settings& settings) {
         }
     }
     result.spoutInputFlip = boolean("spoutInputFlip", false);
+    const auto textArray = [&doc](const char* key, auto& target) {
+        auto it = doc.find(key);
+        if (it != doc.end() && it->is_array()) {
+            for (size_t i = 0; i < it->size() && i < target.size(); ++i) {
+                if ((*it)[i].is_string()) {
+                    target[i] = (*it)[i].get<std::string>().substr(0, 256);
+                }
+            }
+        }
+    };
+    textArray("ndiInputs", result.ndiInputs);
+    textArray("cameraInputs", result.cameraInputs);
+    const auto cameraValue = [&doc](const char* key, int fallback, int low, int high) {
+        auto it = doc.find(key);
+        if (it == doc.end() || !it->is_number_integer()) {
+            return fallback;
+        }
+        const int value = it->get<int>();
+        return value == 0 ? 0 : std::clamp(value, low, high);
+    };
+    result.cameraWidth = cameraValue("cameraWidth", 1280, 160, 7680);
+    result.cameraHeight = cameraValue("cameraHeight", 720, 120, 4320);
+    result.cameraFps = cameraValue("cameraFps", 30, 1, 240);
     result.outputs = defaultOutputs();
     result.outputs[0].monitor = legacyMonitor;
     auto outputs = doc.find("outputs");
@@ -239,6 +262,11 @@ bool saveSettings(const Settings& settings) {
     doc["oscOutParams"] = params;
     doc["spoutInputs"] = nlohmann::json(settings.spoutInputs);
     doc["spoutInputFlip"] = settings.spoutInputFlip;
+    doc["ndiInputs"] = nlohmann::json(settings.ndiInputs);
+    doc["cameraInputs"] = nlohmann::json(settings.cameraInputs);
+    doc["cameraWidth"] = settings.cameraWidth;
+    doc["cameraHeight"] = settings.cameraHeight;
+    doc["cameraFps"] = settings.cameraFps;
     nlohmann::json outputs = nlohmann::json::array();
     for (const OutputSpec& spec : settings.outputs) {
         outputs.push_back(outputToJson(spec));

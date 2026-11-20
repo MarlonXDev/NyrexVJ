@@ -36,8 +36,20 @@ uniform vec2 uCRange;
 uniform vec4 uCoeff;
 uniform vec2 uStep;
 uniform int uTaps;
+uniform ivec2 uSrcSize;
+
+vec4 convertPacked(vec2 uv) {
+    ivec2 p = clamp(ivec2(uv * vec2(uSrcSize)), ivec2(0), uSrcSize - 1);
+    vec4 t = texelFetch(uY, ivec2(p.x >> 1, p.y), 0);
+    float y = ((((p.x & 1) == 0) ? t.g : t.a) * uTexScale - uYRange.x) * uYRange.y;
+    vec2 c = (vec2(t.r, t.b) * uTexScale - uCRange.x) * uCRange.y;
+    return vec4(y + uCoeff.x * c.y, y + uCoeff.y * c.x + uCoeff.z * c.y, y + uCoeff.w * c.x, 1.0);
+}
 
 vec4 convert(vec2 uv) {
+    if (uMode == 3) {
+        return convertPacked(uv);
+    }
     float y = (texture(uY, uv).r * uTexScale - uYRange.x) * uYRange.y;
     vec2 c = uMode == 1 ? texture(uU, uv).rg : vec2(texture(uU, uv).r, texture(uV, uv).r);
     c = (c * uTexScale - uCRange.x) * uCRange.y;
@@ -150,6 +162,7 @@ bool VideoGpu::create() {
         locCoeff_ = glGetUniformLocation(program_, "uCoeff");
         locStep_ = glGetUniformLocation(program_, "uStep");
         locTaps_ = glGetUniformLocation(program_, "uTaps");
+        locSrcSize_ = glGetUniformLocation(program_, "uSrcSize");
     } else {
         caps_.note = "the picture conversion shader failed: " + error;
         logLine("Video conversion shader failed: " + error);
@@ -210,8 +223,12 @@ void VideoGpu::beginConversion(const VideoFrame& frame, int outWidth, int outHei
     glUniform1i(locU_, 1);
     glUniform1i(locV_, 2);
     glUniform1i(locA_, 3);
-    const int mode = frame.layout == VideoLayout::SemiPlanar ? 1 : (frame.planeCount == 4 ? 2 : 0);
+    int mode = frame.layout == VideoLayout::SemiPlanar ? 1 : (frame.planeCount == 4 ? 2 : 0);
+    if (frame.layout == VideoLayout::PackedUyvy) {
+        mode = 3;
+    }
     glUniform1i(locMode_, mode);
+    glUniform2i(locSrcSize_, frame.width, frame.height);
     const int depth = std::clamp(frame.bitDepth, 8, 16);
     const double maxCode = std::pow(2.0, depth) - 1.0;
     const double k = std::pow(2.0, depth - 8);
@@ -486,7 +503,11 @@ bool VideoUploader::presentCompressed(const VideoFrame& frame) {
 }
 
 bool VideoUploader::presentYuv(const VideoFrame& frame) {
-    if (!gpu_.caps().conversion || frame.planeCount < 2 || frame.outWidth <= 0 || frame.outHeight <= 0) {
+    const bool packed = frame.layout == VideoLayout::PackedUyvy;
+    if (!gpu_.caps().conversion || frame.planeCount < (packed ? 1 : 2) || frame.outWidth <= 0 || frame.outHeight <= 0) {
+        return false;
+    }
+    if (packed && (frame.width <= 0 || frame.height <= 0 || (frame.width & 1) != 0 || frame.planes[0].width != frame.width / 2 || frame.planes[0].height != frame.height || frame.planes[0].channels != 4)) {
         return false;
     }
     if (compressedAllocated_) {
@@ -506,7 +527,9 @@ bool VideoUploader::presentYuv(const VideoFrame& frame) {
         if (plane.data == nullptr || plane.width <= 0 || plane.height <= 0) {
             return false;
         }
-        if (plane.bytes == 1) {
+        if (plane.bytes == 1 && plane.channels == 4) {
+            formats[i] = PlaneFormat{GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE};
+        } else if (plane.bytes == 1) {
             formats[i] = plane.channels == 2 ? PlaneFormat{GL_RG8, GL_RG, GL_UNSIGNED_BYTE} : PlaneFormat{GL_R8, GL_RED, GL_UNSIGNED_BYTE};
         } else {
             formats[i] = plane.channels == 2 ? PlaneFormat{GL_RG16, GL_RG, GL_UNSIGNED_SHORT} : PlaneFormat{GL_R16, GL_RED, GL_UNSIGNED_SHORT};

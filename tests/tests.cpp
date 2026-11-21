@@ -1339,6 +1339,13 @@ void testModulation() {
     CHECK(std::fabs(nvj::modulationSource(nvj::BandBar, audio, modulators, 6.0, 3) - 0.0f) < 1e-5f);
     CHECK(std::fabs(nvj::modulationSource(nvj::BandBar, audio, modulators, 7.0, 3) - 1.0f / 3.0f) < 1e-5f);
     CHECK(nvj::modulationSource(nvj::BandBar, audio, modulators, 7.0, 100) == 7.0f / 8.0f);
+    CHECK(std::fabs(nvj::modulationSource(nvj::BandTimecodeSecond, audio, modulators, 1.0, 4, 12.25) - 0.25f) < 1e-5f);
+    CHECK(std::fabs(nvj::modulationSource(nvj::BandTimecodeMinute, audio, modulators, 1.0, 4, 90.0) - 0.5f) < 1e-5f);
+    CHECK(nvj::modulationSource(nvj::BandTimecodeSecond, audio, modulators, 1.0, 4) == 0.0f);
+    CHECK(nvj::modulationSource(nvj::BandTimecodeMinute, audio, modulators, 1.0, 4, -1.0) == 0.0f);
+    CHECK(nvj::modulationSource(nvj::BandTimecodeMinute, audio, modulators, 1.0, 4, std::nan("")) == 0.0f);
+    CHECK(nvj::audioBandFromName("TC minute") == nvj::BandTimecodeMinute);
+    CHECK(nvj::audioBandFromName(nvj::audioBandName(nvj::BandTimecodeSecond)) == nvj::BandTimecodeSecond);
     CHECK(nvj::modulationSource(-4, audio, modulators, 1.0, 4) == 0.0f);
     CHECK(nvj::modulationSource(nvj::AudioBandCount, audio, modulators, 1.0, 4) == 0.0f);
     CHECK(nvj::modulationSource(nvj::BandBeat, audio, modulators, std::nan(""), 4) == 0.0f);

@@ -7,7 +7,7 @@ namespace nvj {
 
 float lfoCycleBeats(const Lfo& lfo);
 float lfoValue(const Lfo& lfo, int index, double beat);
-float modulationSource(int source, const AudioFeatures& audio, const Modulators& modulators, double beat, int beatsPerBar);
+float modulationSource(int source, const AudioFeatures& audio, const Modulators& modulators, double beat, int beatsPerBar, double timecode = -1.0);
 bool isAudioSource(int source);
 int clampBeatsPerBar(int beats);
 

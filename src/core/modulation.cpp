@@ -61,7 +61,7 @@ bool isAudioSource(int source) {
     return source >= BandBass && source <= BandKick;
 }
 
-float modulationSource(int source, const AudioFeatures& audio, const Modulators& modulators, double beat, int beatsPerBar) {
+float modulationSource(int source, const AudioFeatures& audio, const Modulators& modulators, double beat, int beatsPerBar, double timecode) {
     if (source <= BandOff || source >= AudioBandCount) {
         return 0.0f;
     }
@@ -74,6 +74,14 @@ float modulationSource(int source, const AudioFeatures& audio, const Modulators&
     }
     if (source >= BandMacro1 && source <= BandMacro8) {
         return std::clamp(modulators.macros[static_cast<size_t>(source - BandMacro1)], 0.0f, 1.0f);
+    }
+    if (source == BandTimecodeSecond || source == BandTimecodeMinute) {
+        if (!std::isfinite(timecode) || timecode < 0.0) {
+            return 0.0f;
+        }
+        const double period = source == BandTimecodeSecond ? 1.0 : 60.0;
+        const double phase = timecode / period;
+        return static_cast<float>(phase - std::floor(phase));
     }
     if (!std::isfinite(beat)) {
         return 0.0f;

@@ -21,7 +21,7 @@ bool bandCombo(const char* id, int& band, float width) {
     ImGui::SetNextItemWidth(width);
     if (ImGui::BeginCombo(id, tr(audioBandName(band)))) {
         for (int b = 0; b < AudioBandCount; ++b) {
-            if (b == BandLfo1 || b == BandMacro1 || b == BandBeat) {
+            if (b == BandLfo1 || b == BandMacro1 || b == BandBeat || b == BandTimecodeSecond) {
                 ImGui::Separator();
             }
             if (ImGui::Selectable(tr(audioBandName(b)), band == b)) {

@@ -52,6 +52,8 @@ enum AudioBand {
     BandMacro8,
     BandBeat,
     BandBar,
+    BandTimecodeSecond,
+    BandTimecodeMinute,
     AudioBandCount
 };
 

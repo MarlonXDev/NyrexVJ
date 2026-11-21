@@ -1,4 +1,5 @@
 #include "check.hpp"
+#include "core/cue_list.hpp"
 #include "core/ltc.hpp"
 #include "core/timecode.hpp"
 #include "ltc_signal.hpp"
@@ -545,6 +546,81 @@ void testLtcJumpAndGap() {
     CHECK(gapDecoder.frames() == gapFrames.size());
 }
 
+void testCues() {
+    std::vector<nvj::Cue> cues;
+    nvj::Cue a;
+    a.seconds = 4.0;
+    a.target = "master/level";
+    a.value = 0.5f;
+    nvj::Cue b;
+    b.seconds = 1.0;
+    b.target = "tap";
+    nvj::Cue c;
+    c.seconds = 4.0;
+    c.target = "resync";
+    cues.push_back(a);
+    cues.push_back(b);
+    cues.push_back(c);
+    nvj::sortCues(cues);
+    CHECK(cues[0].target == "tap");
+    CHECK(cues[1].target == "master/level" && cues[2].target == "resync");
+    CHECK(nvj::dueCues(cues, 0.0, 0.9).empty());
+    CHECK(nvj::dueCues(cues, 0.9, 1.0).size() == 1);
+    CHECK(nvj::dueCues(cues, 1.0, 1.5).empty());
+    CHECK(nvj::dueCues(cues, 3.0, 4.0).size() == 2);
+    CHECK(nvj::dueCues(cues, 4.0, 5.0).empty());
+    CHECK(nvj::dueCues(cues, 5.0, 4.0).empty());
+    CHECK(nvj::dueCues(cues, 2.0, 2.0).empty());
+
+    const std::string json = nvj::cuesToJson(cues);
+    std::vector<nvj::Cue> loaded;
+    CHECK(nvj::cuesFromJson(json, loaded));
+    CHECK(loaded.size() == 3);
+    CHECK(loaded.size() == 3 && loaded[1].target == "master/level" && std::fabs(loaded[1].value - 0.5f) < 1.0e-6f);
+    std::vector<nvj::Cue> untouched = cues;
+    CHECK(!nvj::cuesFromJson("not json", untouched));
+    CHECK(!nvj::cuesFromJson("{\"cues\": 5}", untouched));
+    CHECK(untouched.size() == 3);
+    std::vector<nvj::Cue> filtered;
+    CHECK(nvj::cuesFromJson("{\"cues\":[{\"seconds\":2,\"target\":\"tap\",\"value\":7},{\"seconds\":-1,\"target\":\"tap\"},{\"seconds\":1,\"target\":\"\"},{\"target\":\"tap\"},5,{\"seconds\":0.5,\"target\":\"resync\"}]}", filtered));
+    CHECK(filtered.size() == 2);
+    CHECK(filtered.size() == 2 && filtered[0].target == "resync" && filtered[1].value == 1.0f);
+    std::string many = "{\"cues\":[";
+    for (int i = 0; i < 600; ++i) {
+        many += std::string(i ? "," : "") + "{\"seconds\":" + std::to_string(i) + ",\"target\":\"tap\"}";
+    }
+    many += "]}";
+    CHECK(nvj::cuesFromJson(many, filtered));
+    CHECK(filtered.size() == nvj::kMaxCues);
+
+    nvj::CueRunner runner;
+    int fired[3] = {0, 0, 0};
+    for (int i = 0; i <= 125; ++i) {
+        for (size_t index : runner.advance(cues, true, i * 0.04)) {
+            ++fired[index];
+        }
+    }
+    CHECK(fired[0] == 1 && fired[1] == 1 && fired[2] == 1);
+    CHECK(runner.tracking());
+    CHECK(runner.advance(cues, true, 60.0).empty());
+    CHECK(runner.skipped() == 1);
+    CHECK(runner.advance(cues, true, 0.5).empty());
+    CHECK(runner.skipped() == 2);
+    for (int i = 0; i <= 30; ++i) {
+        for (size_t index : runner.advance(cues, true, 0.5 + i * 0.04)) {
+            ++fired[index];
+        }
+    }
+    CHECK(fired[0] == 2);
+    CHECK(runner.advance(cues, false, 3.9).empty());
+    CHECK(!runner.tracking());
+    CHECK(runner.advance(cues, true, 4.2).empty());
+    CHECK(runner.advance(cues, true, std::nan("")).empty());
+    CHECK(!runner.tracking());
+    runner.reset();
+    CHECK(!runner.tracking());
+}
+
 void testLtcReset() {
     ltctest::Options options;
     const Timecode start = make(0, 0, 0, 0, FrameRate::Fps30);
@@ -584,5 +660,6 @@ int main() {
     testLtcCorruption();
     testLtcJumpAndGap();
     testLtcReset();
+    testCues();
     return testing::finish();
 }

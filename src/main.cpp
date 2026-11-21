@@ -397,6 +397,8 @@ int main(int argc, char** argv) {
         double dt = options.frames > 0 ? 1.0 / 60.0 : now - last;
         last = now;
 
+        app.applyPendingFonts();
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();

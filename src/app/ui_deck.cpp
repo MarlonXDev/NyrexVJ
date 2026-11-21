@@ -209,7 +209,7 @@ void App::drawTransport(bool wide) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Beat grid"));
         ImGui::SetNextItemWidth(120.0f);
         int beatsPerBar = comp.beatsPerBar;
-        if (ImGui::SliderInt(tr("Beats per bar"), &beatsPerBar, kMinBeatsPerBar, kMaxBeatsPerBar)) {
+        if (ui::sliderInt(tr("Beats per bar"), &beatsPerBar, kMinBeatsPerBar, kMaxBeatsPerBar)) {
             comp.beatsPerBar = clampBeatsPerBar(beatsPerBar);
         }
         if (ImGui::Button("<<")) {
@@ -249,7 +249,11 @@ void App::drawTransport(bool wide) {
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("%s", tr("Transition"));
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(104.0f);
+    float transitionWidth = 104.0f;
+    for (int t = 0; t < TransitionTypeCount; ++t) {
+        transitionWidth = ui::fitComboWidth(transitionWidth, tr(transitionName(t)));
+    }
+    ImGui::SetNextItemWidth(transitionWidth);
     if (ImGui::BeginCombo("##transition", tr(transitionName(settings.transition)))) {
         for (int t = 0; t < TransitionTypeCount; ++t) {
             if (ImGui::Selectable(tr(transitionName(t)), settings.transition == t)) {
@@ -264,9 +268,9 @@ void App::drawTransport(bool wide) {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(120.0f);
     if (settings.syncBeats) {
-        ImGui::SliderInt("##transbeats", &settings.beats, 1, 32, "%d beats");
+        ui::sliderInt("##transbeats", &settings.beats, 1, 32, "%d beats");
     } else {
-        ImGui::SliderFloat("##transsec", &settings.seconds, 0.0f, 10.0f, "%.1f s");
+        ui::sliderFloat("##transsec", &settings.seconds, 0.0f, 10.0f, "%.1f s");
     }
     ImGui::SameLine(0.0f, 16.0f);
     ImGui::Checkbox(trId("Auto cycle", "transCycle"), &settings.autoCycle);
@@ -276,7 +280,7 @@ void App::drawTransport(bool wide) {
         ImGui::TextDisabled("%s", tr("every"));
         ImGui::SameLine();
         ImGui::SetNextItemWidth(110.0f);
-        ImGui::SliderInt("##cyclebeats", &settings.cycleBeats, 4, 128, "%d beats");
+        ui::sliderInt("##cyclebeats", &settings.cycleBeats, 4, 128, "%d beats");
     }
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);
     ImGui::ProgressBar(engine_.transitioning() ? engine_.transitionProgress() : 0.0f, ImVec2(-FLT_MIN, 4.0f), "");
@@ -366,7 +370,7 @@ void App::drawDeck() {
                 engine_.clearLayer(row);
             }
             ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::SliderFloat("##opacity", &layer.opacity, 0.0f, 1.0f, "%.2f");
+            ui::sliderFloat("##opacity", &layer.opacity, 0.0f, 1.0f, "%.2f");
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::BeginCombo("##blend", tr(blendName(layer.blend)))) {
                 for (int b = 0; b < BlendModeCount; ++b) {

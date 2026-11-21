@@ -9,9 +9,13 @@ enum class Language {
     German = 1,
     Spanish = 2,
     French = 3,
+    Italian = 4,
+    Portuguese = 5,
+    Dutch = 6,
+    Japanese = 7,
 };
 
-constexpr int kBuiltInLanguageCount = 4;
+constexpr int kBuiltInLanguageCount = 8;
 
 void setLanguage(Language language);
 Language currentLanguage();
@@ -20,6 +24,9 @@ const char* languageCode(Language language);
 const char* languageLabel(Language language);
 Language languageFromCode(const std::string& code);
 bool isUserLanguage(Language language);
+void setNativeLabelsAvailable(bool available);
+bool nativeLabelsAvailable();
+bool languageNeedsCjkFont(Language language);
 
 const char* tr(const char* english);
 const char* trId(const char* english, const char* id);
@@ -33,6 +40,10 @@ struct Translation {
 const Translation* germanTable(int& count);
 const Translation* spanishTable(int& count);
 const Translation* frenchTable(int& count);
+const Translation* italianTable(int& count);
+const Translation* portugueseTable(int& count);
+const Translation* dutchTable(int& count);
+const Translation* japaneseTable(int& count);
 const Translation* builtInTable(Language language, int& count);
 
 struct UserLanguageReport {

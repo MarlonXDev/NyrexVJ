@@ -41,7 +41,15 @@ constexpr BuiltInInfo kBuiltIn[kBuiltInLanguageCount] = {
     {"de", "Deutsch"},
     {"es", "Espa\xC3\xB1ol"},
     {"fr", "Fran\xC3\xA7""ais"},
+    {"it", "Italiano"},
+    {"pt", "Portugu\xC3\xAA""s"},
+    {"nl", "Nederlands"},
+    {"ja", "Japanese"},
 };
+
+constexpr const char* kJapaneseNativeLabel = "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E";
+
+bool gNativeLabels = false;
 
 Language gLanguage = Language::English;
 LanguageData* gActive = nullptr;
@@ -161,8 +169,23 @@ const char* languageCode(Language language) {
     return data ? data->code.c_str() : kBuiltIn[0].code;
 }
 
+void setNativeLabelsAvailable(bool available) {
+    gNativeLabels = available;
+}
+
+bool nativeLabelsAvailable() {
+    return gNativeLabels;
+}
+
+bool languageNeedsCjkFont(Language language) {
+    return language == Language::Japanese;
+}
+
 const char* languageLabel(Language language) {
     const int index = static_cast<int>(language);
+    if (language == Language::Japanese && gNativeLabels) {
+        return kJapaneseNativeLabel;
+    }
     if (index >= 0 && index < kBuiltInLanguageCount) {
         return kBuiltIn[index].label;
     }
@@ -188,6 +211,14 @@ const Translation* builtInTable(Language language, int& count) {
         return spanishTable(count);
     case Language::French:
         return frenchTable(count);
+    case Language::Italian:
+        return italianTable(count);
+    case Language::Portuguese:
+        return portugueseTable(count);
+    case Language::Dutch:
+        return dutchTable(count);
+    case Language::Japanese:
+        return japaneseTable(count);
     default:
         count = 0;
         return nullptr;

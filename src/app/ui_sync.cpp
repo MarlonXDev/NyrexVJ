@@ -193,7 +193,7 @@ void App::drawSyncClockSection() {
     ImGui::Spacing();
     rowLabel(tr("Latency"));
     ImGui::SetNextItemWidth(kFieldWidth);
-    ImGui::SliderFloat("##syncLatency", &settings_.syncLatencyMs, -500.0f, 500.0f, "%.0f ms");
+    ui::sliderFloat("##syncLatency", &settings_.syncLatencyMs, -500.0f, 500.0f, "%.0f ms");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         settings_.syncLatencyMs = std::clamp(settings_.syncLatencyMs, -500.0f, 500.0f);
         persist();

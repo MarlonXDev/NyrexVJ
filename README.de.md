@@ -35,7 +35,7 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 - **OBS mit zwei Klicks.** Spout-Ausgabe mit frei wählbarem Sendernamen. In OBS die Quelle "Spout2 Capture" hinzufügen und den Sender auswählen.
 - **54 Clips, 76 Effekte, 26 Presets.** Fraktale, 3D-Szenen mit Raymarching, Neon-Geometrie, Laser-Netze, Konturlinien-Flüssigkeiten, Kristalltunnel, Blitze, Feuer, Spektrum-Visuals, echte 3D-Modelle und -Szenen und 3D-Effekte wie Image Terrain, Hyperspace, Chrome Liquid, Shatter und Mirror Corridor. Alles, was in einer Version neu ist, trägt ein kleines "neu" hinter dem Namen, bis die nächste Nebenversion kommt.
 - **Layout im Resolume-Stil.** Clip-Raster oben, Deck- und Tempozeile darunter, Vorschau und Ausgabe unten links, Master-, Ebenen- und Clip-Fenster daneben und der Browser rechts. Ein Pause-Knopf friert das Bild ein.
-- **Neun Farbthemen.** Einstellungen, Aussehen schaltet die ganze Oberfläche zwischen Orange (Standard), Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono um.
+- **Zehn Farbthemen.** Einstellungen, Aussehen schaltet die ganze Oberfläche zwischen Studio (Standard: neutrales Dunkel mit rotorangem Akzent, runden Ecken und schlanken Reglern), Orange, Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono um.
 - **Eigene 3D-Modelle.** Lege .glb- oder .gltf-Dateien in den Modellordner und spiele sie wie jeden Clip, mit Texturen, Animation und Audio-Reaktion.
 - **Clip Creator.** Baue eigene 3D-Szenen aus Formen, Modellen und Lichtern, lass alles zur Musik bewegen und speichere sie als tragbare .nyxclip-Dateien.
 - **Einstellungsfenster.** Ein Ort für Audio, Ausgabe, Spout, Updates, Sprache und Oberflächengröße, dazu eine Statusleiste mit FPS, Tempo, Deck und Audio auf einen Blick.
@@ -87,7 +87,7 @@ Rechtsklick auf einen Deck-Knopf: umbenennen, aktuelles Deck hierher kopieren, m
 Der Tab zeigt das Live-Spektrum, Bass-, Mitten-, Höhen- und Pegelanzeigen, Beat-Erkennung und eine Tempo-Schätzung. Verstärkung, Glättung und Beat-Schwelle sind in Einstellungen, Audio einstellbar, und "BPM mit Audio synchronisieren" koppelt das Tempo an den erkannten Beat. Liefert das gewählte Gerät mehrere Sekunden lang keinen Ton, weisen der Tab und die Statusleiste darauf hin.
 
 <p align="center">
-  <img src="docs/screenshot-settings.png" alt="Einstellungsfenster, Seite Audio" width="100%">
+  <img src="docs/screenshot-settings.png" alt="Einstellungsfenster, Seite Audio, im Design Studio" width="100%">
 </p>
 
 Die Reaktivität stellst du an drei Stellen ein:
@@ -240,7 +240,7 @@ Einstellungen, Steuerung, OSC-Ausgabe, OSC-Daten senden anhaken. NyrexVJ sendet 
 
 ## Sprachen
 
-Englisch ist die Standardsprache, Deutsch, Spanisch und Französisch sind eingebaut. Umschalten unter Einstellungen, Allgemein, unter Hilfe, Sprache oder auf dem Willkommensbildschirm, die Wahl wird gespeichert. Spanisch und Französisch wurden mit maschineller Hilfe übersetzt und noch nicht von Muttersprachlern geprüft, Korrekturen sind willkommen. Clip- und Effektnamen bleiben Englisch, damit sie zu dem passen, was andere VJ-Programme verwenden.
+Englisch ist die Standardsprache, Deutsch, Spanisch, Französisch, Italienisch, Portugiesisch, Niederländisch und Japanisch sind eingebaut. Umschalten unter Einstellungen, Allgemein, unter Hilfe, Sprache oder auf dem Willkommensbildschirm, die Wahl wird gespeichert. Alles außer Deutsch wurde mit maschineller Hilfe übersetzt und noch nicht von Muttersprachlern geprüft, Korrekturen sind willkommen. Japanisch braucht eine japanische Schrift auf dem Computer (Yu Gothic oder Meiryo unter Windows, Noto Sans CJK unter Linux): NyrexVJ fügt sie nur für die fehlenden Zeichen zur eigenen Schrift hinzu, nichts wird mitgeliefert, und ohne sie lässt sich der japanische Text nicht anzeigen und die Einstellungen sagen es. Clip- und Effektnamen bleiben Englisch, damit sie zu dem passen, was andere VJ-Programme verwenden.
 
 Eine eigene Sprache ist eine `.json`-Datei im Ordner `languages`: Einstellungen, Allgemein, Übersetzungsvorlage exportieren schreibt eine Datei mit allen Texten, du übersetzt, was du willst (weggelassene Texte bleiben Englisch), und drückst Sprachen neu laden. Die Schrift zeigt nur lateinische Buchstaben. Alles steht in [docs/LANGUAGES.md](docs/LANGUAGES.md) (englisch).
 

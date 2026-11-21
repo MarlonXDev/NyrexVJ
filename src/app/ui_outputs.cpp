@@ -20,7 +20,7 @@ namespace {
 bool percentSlider(const char* label, float& value, float low, float high) {
     float shown = value * 100.0f;
     ImGui::SetNextItemWidth(-FLT_MIN);
-    const bool changed = ImGui::SliderFloat(label, &shown, low * 100.0f, high * 100.0f, "%.1f %%");
+    const bool changed = ui::sliderFloat(label, &shown, low * 100.0f, high * 100.0f, "%.1f %%");
     if (changed) {
         value = shown / 100.0f;
     }
@@ -414,7 +414,7 @@ void App::drawOutputColor(OutputSpec& spec) {
     ImGui::TextUnformatted(tr("Gamma"));
     ImGui::SameLine(110.0f);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    ImGui::SliderFloat("##cgm", &color.gamma, 0.4f, 2.5f, "%.2f");
+    ui::sliderFloat("##cgm", &color.gamma, 0.4f, 2.5f, "%.2f");
     ImGui::TextUnformatted(tr("Black lift"));
     ImGui::SameLine(110.0f);
     percentSlider("##ck", color.black, 0.0f, 0.3f);
@@ -540,11 +540,11 @@ void App::drawOutputMapping(int index) {
     ImGui::TextUnformatted(tr("Curve"));
     ImGui::SameLine(90.0f);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    ImGui::SliderFloat("##bp", &map.blend.power, 1.0f, 4.0f, "%.2f");
+    ui::sliderFloat("##bp", &map.blend.power, 1.0f, 4.0f, "%.2f");
     ImGui::TextUnformatted(tr("Gamma"));
     ImGui::SameLine(90.0f);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    ImGui::SliderFloat("##bg", &map.blend.gamma, 1.0f, 3.0f, "%.2f");
+    ui::sliderFloat("##bg", &map.blend.gamma, 1.0f, 3.0f, "%.2f");
     ImGui::TextUnformatted(tr("Black level"));
     ImGui::SameLine(90.0f);
     percentSlider("##bk", map.blend.blackLevel, 0.0f, 0.3f);
@@ -832,7 +832,7 @@ void App::drawOutputControls() {
     ImGui::TextUnformatted(tr("Delay"));
     ImGui::SameLine(90.0f);
     ImGui::SetNextItemWidth(160.0f);
-    ImGui::SliderInt("##delayFrames", &spec.delayFrames, 0, kMaxDelayFrames, "%d");
+    ui::sliderInt("##delayFrames", &spec.delayFrames, 0, kMaxDelayFrames, "%d");
     spec.delayFrames = clampDelay(spec.delayFrames);
     ImGui::SameLine();
     ImGui::TextDisabled("%s", tr("frames"));
@@ -878,7 +878,7 @@ void App::drawOutputControls() {
     ImGui::TextDisabled("%s", tr("Splits the picture over a grid of outputs with the right overlap and edge blending. It turns the outputs on and replaces their picture area and blending."));
     ImGui::PopTextWrapPos();
     ImGui::SetNextItemWidth(80.0f);
-    ImGui::SliderInt(tr("Columns"), &gridColumns_, 1, kMaxOutputs);
+    ui::sliderInt(tr("Columns"), &gridColumns_, 1, kMaxOutputs);
     gridRows_ = std::clamp(gridRows_, 1, kMaxOutputs);
     gridColumns_ = std::clamp(gridColumns_, 1, kMaxOutputs);
     if (gridColumns_ * gridRows_ > kMaxOutputs) {
@@ -886,7 +886,7 @@ void App::drawOutputControls() {
     }
     ImGui::SameLine();
     ImGui::SetNextItemWidth(80.0f);
-    ImGui::SliderInt(tr("Rows"), &gridRows_, 1, kMaxOutputs);
+    ui::sliderInt(tr("Rows"), &gridRows_, 1, kMaxOutputs);
     if (gridColumns_ * gridRows_ > kMaxOutputs) {
         gridColumns_ = std::max(1, kMaxOutputs / gridRows_);
     }

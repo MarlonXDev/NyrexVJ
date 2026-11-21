@@ -33,6 +33,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0017](adr/0017-node-effect-editor.md) | Node effect editor: graph document, graph to GLSL compiler, `.nyxfx` files, editor on the ImGui draw list | Accepted (2026-11-21), implemented in v0.25.0 |
 | [0018](adr/0018-plugin-system.md) | Plugin system: C interface for modulation and image sources, manifest checked before code, time budget on a thread of its own, crash marker and safe mode | Accepted (2026-11-21), implemented in v0.26.0 |
 | [0019](adr/0019-dxv-software-codecs.md) | DXV and other software-only codecs: processor decoder kept, no graphics card attempt, clear message, YCoCg conversion | Accepted (2026-11-21), implemented in v0.26.1 |
+| [0020](adr/0020-studio-design-and-more-languages.md) | Studio design as the new default (neutral dark, red-orange accent, rounded style, one-time migration from Orange), Italian, Portuguese, Dutch and Japanese, Japanese through a merged system font | Accepted (2026-11-21), implemented in v0.27.0 |
 
 ## New ADR template
 

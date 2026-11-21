@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.26.1 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.27.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -111,6 +111,10 @@ set(NYREXVJ_CORE_SOURCES
     src/core/i18n_de.cpp
     src/core/i18n_es.cpp
     src/core/i18n_fr.cpp
+    src/core/i18n_it.cpp
+    src/core/i18n_pt.cpp
+    src/core/i18n_nl.cpp
+    src/core/i18n_ja.cpp
     src/audio/audio_analyzer.cpp
     src/audio/audio_system.cpp
     src/audio/synthetic_source.cpp
@@ -239,6 +243,7 @@ endif()
 set(NYREXVJ_APP_SOURCES
     src/main.cpp
     src/app/app.cpp
+    src/app/fonts.cpp
     src/app/bench.cpp
     src/app/output_selftest.cpp
     src/app/theme.cpp

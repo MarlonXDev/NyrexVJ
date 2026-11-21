@@ -5,7 +5,9 @@
 
 #include <imgui.h>
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <string>
 
@@ -38,6 +40,61 @@ inline const Palette kPalettes[] = {
     {"Violet", {0.55f, 0.25f, 1.00f}, {0.00f, 0.85f, 0.90f}},
     {"Mono", {1.00f, 1.00f, 1.00f}, {0.35f, 0.35f, 0.35f}},
 };
+
+inline float fitComboWidth(float minWidth, const char* text) {
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float needed = ImGui::CalcTextSize(text).x + style.FramePadding.x * 2.0f + ImGui::GetFrameHeight();
+    return std::max(minWidth, needed);
+}
+
+inline float sliderRatio(double value, double low, double high, bool logarithmic) {
+    if (high == low) {
+        return 0.0f;
+    }
+    double ratio = (value - low) / (high - low);
+    if (logarithmic && low > 0.0 && high > 0.0 && value > 0.0) {
+        ratio = std::log(value / low) / std::log(high / low);
+    }
+    return static_cast<float>(std::clamp(ratio, 0.0, 1.0));
+}
+
+inline void sliderBackground(float ratio) {
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const float width = ImGui::CalcItemWidth();
+    const float height = ImGui::GetFrameHeight();
+    const float rounding = ImGui::GetStyle().FrameRounding;
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    draw->AddRectFilled(pos, ImVec2(pos.x + width, pos.y + height), ImGui::GetColorU32(ImGuiCol_FrameBg), rounding);
+    const float grab = std::min(ImGui::GetStyle().GrabMinSize, width);
+    const float fillEnd = pos.x + grab * 0.5f + ratio * (width - grab);
+    if (fillEnd - pos.x > 2.0f) {
+        const ImVec4 fill(kAccentDim.x, kAccentDim.y, kAccentDim.z, 0.85f);
+        draw->AddRectFilled(pos, ImVec2(fillEnd, pos.y + height), ImGui::GetColorU32(fill), rounding, ratio >= 0.999f ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersLeft);
+    }
+    draw->AddRect(pos, ImVec2(pos.x + width, pos.y + height), ImGui::GetColorU32(ImGuiCol_Border), rounding);
+}
+
+inline bool sliderFloat(const char* label, float* value, float low, float high, const char* format = "%.3f", ImGuiSliderFlags flags = 0) {
+    sliderBackground(sliderRatio(*value, low, high, (flags & ImGuiSliderFlags_Logarithmic) != 0));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.05f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(1.0f, 1.0f, 1.0f, 0.08f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    const bool changed = ImGui::SliderFloat(label, value, low, high, format, flags);
+    ImGui::PopStyleColor(4);
+    return changed;
+}
+
+inline bool sliderInt(const char* label, int* value, int low, int high, const char* format = "%d", ImGuiSliderFlags flags = 0) {
+    sliderBackground(sliderRatio(*value, low, high, (flags & ImGuiSliderFlags_Logarithmic) != 0));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.05f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(1.0f, 1.0f, 1.0f, 0.08f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    const bool changed = ImGui::SliderInt(label, value, low, high, format, flags);
+    ImGui::PopStyleColor(4);
+    return changed;
+}
 
 inline std::string cellLabel(int layer, int column) {
     return std::string(tr("Layer ")) + std::to_string(layer + 1) + ", " + tr("Column ") + std::to_string(column + 1);

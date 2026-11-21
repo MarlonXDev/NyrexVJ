@@ -329,7 +329,7 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
             changed = true;
         }
         if (o.repeat.kind != RepeatKind::None) {
-            changed |= ImGui::SliderInt(tr("Copies"), &o.repeat.count, 2, kSceneMaxRepeat);
+            changed |= ui::sliderInt(tr("Copies"), &o.repeat.count, 2, kSceneMaxRepeat);
             if (o.repeat.kind == RepeatKind::Ring) {
                 changed |= ImGui::DragFloat(tr("Ring radius"), &o.repeat.radius, 0.02f, 0.0f, 500.0f, "%.2f");
             } else {
@@ -340,10 +340,10 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
     if (o.kind != PrimitiveKind::Model && ImGui::CollapsingHeader(tr("Material"), ImGuiTreeNodeFlags_DefaultOpen)) {
         DocMaterial& m = o.material;
         changed |= colorEdit(tr("Color"), m.color);
-        changed |= ImGui::SliderFloat(tr("Metallic"), &m.metallic, 0.0f, 1.0f, "%.2f");
-        changed |= ImGui::SliderFloat(tr("Roughness"), &m.roughness, 0.04f, 1.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Metallic"), &m.metallic, 0.0f, 1.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Roughness"), &m.roughness, 0.04f, 1.0f, "%.2f");
         changed |= colorEdit(tr("Glow color"), m.emissive);
-        changed |= ImGui::SliderFloat(tr("Glow strength"), &m.emissiveStrength, 0.0f, 6.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Glow strength"), &m.emissiveStrength, 0.0f, 6.0f, "%.2f");
         changed |= assetCombo(tr("Texture"), m.texture, cs.textures, false, cs.pack.get());
         changed |= assetCombo(tr("Normal map"), m.normalTexture, cs.textures, false, cs.pack.get());
         changed |= assetCombo(tr("Glow map"), m.emissiveTexture, cs.textures, false, cs.pack.get());
@@ -427,18 +427,18 @@ bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
         ImGui::EndDisabled();
         cameraSelect = std::clamp(cameraSelect, 0, docCameraCount(doc) - 1);
         ImGui::BeginDisabled(docCameraCount(doc) <= 1);
-        changed |= ImGui::SliderFloat(tr("Cut (beats)"), &doc.cutBeats, 0.0f, 32.0f, "%.1f");
+        changed |= ui::sliderFloat(tr("Cut (beats)"), &doc.cutBeats, 0.0f, 32.0f, "%.1f");
         ImGui::SetItemTooltip("%s", tr("Switches between all cameras of the scene after this many beats. 0 keeps the selected camera."));
         ImGui::EndDisabled();
         ImGui::Separator();
         DocCamera& c = docCameraAt(doc, cameraSelect);
         changed |= inputString(tr("Camera name"), c.name, kDocMaxNameBytes);
-        changed |= ImGui::SliderFloat(tr("Distance"), &c.distance, 0.2f, 4.0f, "%.2f");
-        changed |= ImGui::SliderFloat(tr("Height angle"), &c.pitchDegrees, -80.0f, 80.0f, "%.0f");
+        changed |= ui::sliderFloat(tr("Distance"), &c.distance, 0.2f, 4.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Height angle"), &c.pitchDegrees, -80.0f, 80.0f, "%.0f");
         changed |= ImGui::DragFloat(tr("Start angle"), &c.yawDegrees, 0.5f, -720.0f, 720.0f, "%.0f");
-        changed |= ImGui::SliderFloat(tr("Field of view"), &c.fovDegrees, 15.0f, 110.0f, "%.0f");
-        changed |= ImGui::SliderFloat(tr("Orbit speed"), &c.orbitSpeed, -2.0f, 2.0f, "%.2f");
-        changed |= ImGui::SliderFloat(tr("Height sway"), &c.pitchSway, 0.0f, 30.0f, "%.0f");
+        changed |= ui::sliderFloat(tr("Field of view"), &c.fovDegrees, 15.0f, 110.0f, "%.0f");
+        changed |= ui::sliderFloat(tr("Orbit speed"), &c.orbitSpeed, -2.0f, 2.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Height sway"), &c.pitchSway, 0.0f, 30.0f, "%.0f");
         ImGui::TextDisabled("%s", tr("Audio"));
         changed |= bindingEditor(c.bindings, false, true);
     }
@@ -446,8 +446,8 @@ bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
         changed |= colorEdit(tr("Sky top"), doc.sky.top);
         changed |= colorEdit(tr("Horizon"), doc.sky.horizon);
         changed |= colorEdit(tr("Ground"), doc.sky.ground);
-        changed |= ImGui::SliderFloat(tr("Sky brightness"), &doc.sky.intensity, 0.0f, 3.0f, "%.2f");
-        changed |= ImGui::SliderFloat(tr("Exposure"), &doc.exposure, 0.2f, 3.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Sky brightness"), &doc.sky.intensity, 0.0f, 3.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Exposure"), &doc.exposure, 0.2f, 3.0f, "%.2f");
         ImGui::PushTextWrapPos(0.0f);
         ImGui::TextDisabled("%s", tr("The sky lights the scene and is reflected by shiny objects. The background stays black."));
         ImGui::PopTextWrapPos();

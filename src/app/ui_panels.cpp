@@ -27,6 +27,8 @@ bool pluginBandVisible(const PluginHost* plugins, int band, int current) {
 
 bool bandCombo(const char* id, int& band, float width, const PluginHost* plugins) {
     bool changed = false;
+    width = ui::fitComboWidth(width, tr(audioBandName(band)));
+    width = ui::fitComboWidth(width, tr(audioBandName(BandOff)));
     ImGui::SetNextItemWidth(width);
     if (ImGui::BeginCombo(id, tr(audioBandName(band)))) {
         for (int b = 0; b < AudioBandCount; ++b) {
@@ -49,10 +51,10 @@ bool bandCombo(const char* id, int& band, float width, const PluginHost* plugins
 }
 
 void App::drawGrade(ColorGrade& grade) {
-    ImGui::SliderFloat(trId("Hue", "gradeHue"), &grade.hue, -0.5f, 0.5f, "%.2f");
-    ImGui::SliderFloat(trId("Saturation", "gradeSat"), &grade.saturation, 0.0f, 2.0f, "%.2f");
-    ImGui::SliderFloat(trId("Brightness", "gradeBri"), &grade.brightness, -0.5f, 0.5f, "%.2f");
-    ImGui::SliderFloat(trId("Contrast", "gradeCon"), &grade.contrast, 0.5f, 2.0f, "%.2f");
+    ui::sliderFloat(trId("Hue", "gradeHue"), &grade.hue, -0.5f, 0.5f, "%.2f");
+    ui::sliderFloat(trId("Saturation", "gradeSat"), &grade.saturation, 0.0f, 2.0f, "%.2f");
+    ui::sliderFloat(trId("Brightness", "gradeBri"), &grade.brightness, -0.5f, 0.5f, "%.2f");
+    ui::sliderFloat(trId("Contrast", "gradeCon"), &grade.contrast, 0.5f, 2.0f, "%.2f");
     if (!grade.isIdentity() && ImGui::SmallButton(trId("Reset grade", "gradeReset"))) {
         grade = ColorGrade{};
     }
@@ -82,7 +84,7 @@ void App::drawMods(std::array<AudioMod, kModSlots>& mods, bool master) {
         ImGui::SameLine();
         ImGui::BeginDisabled(mod.band == BandOff);
         ImGui::SetNextItemWidth(-FLT_MIN);
-        ImGui::SliderFloat("##amount", &mod.amount, 0.0f, 1.0f, "%.2f");
+        ui::sliderFloat("##amount", &mod.amount, 0.0f, 1.0f, "%.2f");
         ImGui::EndDisabled();
         ImGui::PopID();
     }
@@ -96,7 +98,7 @@ void App::drawModulators(Modulators& modulators) {
     for (int i = 0; i < kMacroCount; ++i) {
         char label[32];
         std::snprintf(label, sizeof(label), "%s %d###macro%d", tr("Macro"), i + 1, i);
-        ImGui::SliderFloat(label, &modulators.macros[static_cast<size_t>(i)], 0.0f, 1.0f, "%.2f");
+        ui::sliderFloat(label, &modulators.macros[static_cast<size_t>(i)], 0.0f, 1.0f, "%.2f");
     }
     if (ImGui::SmallButton(trId("Reset macros", "macroReset"))) {
         modulators.macros.fill(0.0f);
@@ -130,7 +132,7 @@ void App::drawModulators(Modulators& modulators) {
         }
         ImGui::SameLine();
         ImGui::SetNextItemWidth(50.0f);
-        ImGui::SliderFloat("##phase", &lfo.phase, 0.0f, 1.0f, "%.2f");
+        ui::sliderFloat("##phase", &lfo.phase, 0.0f, 1.0f, "%.2f");
         ImGui::SetItemTooltip("%s", tr("Phase: where in its cycle the LFO starts"));
         ImGui::SameLine();
         const float now = engine_.sourceValue(BandLfo1 + i);
@@ -205,7 +207,7 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
                     continue;
                 }
                 ImGui::PushID(p);
-                ImGui::SliderFloat(tr(def.paramNames[static_cast<size_t>(p)]), &slot.params[static_cast<size_t>(p)], 0.0f, 1.0f, "%.2f");
+                ui::sliderFloat(tr(def.paramNames[static_cast<size_t>(p)]), &slot.params[static_cast<size_t>(p)], 0.0f, 1.0f, "%.2f");
                 if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
                     slot.params[static_cast<size_t>(p)] = def.defaults[static_cast<size_t>(p)];
                 }
@@ -243,7 +245,7 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
                     }
                 }
                 ImGui::SetNextItemWidth(-FLT_MIN);
-                ImGui::SliderFloat("##amount", &slot.reactAmount, 0.0f, 1.0f, slot.reactMode == ReactGate ? tr("Sensitivity %.2f") : tr("Amount %.2f"));
+                ui::sliderFloat("##amount", &slot.reactAmount, 0.0f, 1.0f, slot.reactMode == ReactGate ? tr("Sensitivity %.2f") : tr("Amount %.2f"));
             } else {
                 ImGui::SameLine();
                 ImGui::TextDisabled("%s", tr("Audio reaction"));
@@ -279,7 +281,7 @@ void App::drawLayer() {
     ImGui::TextDisabled("%s", activeClip >= 0 ? library[static_cast<size_t>(activeClip)].name.c_str() : tr("no clip"));
 
     ImGui::SeparatorText(tr("Video"));
-    ImGui::SliderFloat(trId("Opacity", "layerOpacity"), &layer.opacity, 0.0f, 1.0f, "%.2f");
+    ui::sliderFloat(trId("Opacity", "layerOpacity"), &layer.opacity, 0.0f, 1.0f, "%.2f");
     if (ImGui::BeginCombo(trId("Blend", "layerBlend"), tr(blendName(layer.blend)))) {
         for (int b = 0; b < BlendModeCount; ++b) {
             if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
@@ -410,8 +412,8 @@ void App::drawClipPanel() {
     }
 
     ImGui::SeparatorText(tr("Look"));
-    ImGui::SliderFloat(trId("Speed", "layerSpeed"), &layer.speed, 0.1f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
-    ImGui::SliderFloat(trId("Scale", "layerScale"), &layer.scale, 0.25f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+    ui::sliderFloat(trId("Speed", "layerSpeed"), &layer.speed, 0.1f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+    ui::sliderFloat(trId("Scale", "layerScale"), &layer.scale, 0.25f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 
     ImGui::SeparatorText(tr("Color"));
     ImGui::ColorEdit3(trId("Color A", "colorA"), layer.colorA.data(), ImGuiColorEditFlags_NoInputs);
@@ -578,7 +580,7 @@ void App::drawNdiControls() {
 void App::drawMaster() {
     ImGui::Begin(trId("Master", "master"));
     Composition& comp = engine_.comp;
-    ImGui::SliderFloat(trId("Level", "masterLevel"), &comp.master.level, 0.0f, 1.0f, "%.2f");
+    ui::sliderFloat(trId("Level", "masterLevel"), &comp.master.level, 0.0f, 1.0f, "%.2f");
     ImGui::SameLine();
     ui::toggleButton(trId("Blackout", "blackout"), engine_.blackout);
 

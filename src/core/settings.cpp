@@ -89,6 +89,8 @@ bool loadSettings(Settings& settings) {
     if (theme != doc.end() && theme->is_string()) {
         result.theme = theme->get<std::string>();
     }
+    auto design = doc.find("design");
+    result.design = design != doc.end() && design->is_number_integer() ? design->get<int>() : 0;
     auto seen = doc.find("lastSeenVersion");
     if (seen != doc.end() && seen->is_string()) {
         result.lastSeenVersion = seen->get<std::string>();
@@ -253,6 +255,7 @@ bool saveSettings(const Settings& settings) {
     doc["renderQuality"] = settings.renderQuality;
     doc["uiScale"] = settings.uiScale;
     doc["theme"] = settings.theme;
+    doc["design"] = settings.design;
     doc["channel"] = channelName(settings.channel);
     doc["outputMonitor"] = settings.outputs[0].monitor;
     doc["language"] = settings.language;

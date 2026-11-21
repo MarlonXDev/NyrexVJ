@@ -35,7 +35,7 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 - **OBS in two clicks.** Spout output with a sender name of your choice. In OBS add the source "Spout2 Capture" and select the sender.
 - **54 clips, 76 effects, 26 presets.** Fractals, raymarched 3D scenes, neon sacred geometry, laser webs, contour-line fluids, crystal tunnels, lightning, fire, spectrum visuals, real 3D models and scenes and 3D effects such as Image Terrain, Hyperspace, Chrome Liquid, Shatter and Mirror Corridor. Everything that is new in a version carries a small "new" behind its name until the next minor version.
 - **Resolume-style layout.** Clip grid on top, deck and tempo rows below it, preview and output at the bottom left, Master, Layer and Clip windows next to them and the Browser on the right. A Pause button freezes the picture.
-- **Nine colour themes.** Settings, Appearance switches the whole interface between Orange (default), Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono.
+- **Ten colour themes.** Settings, Appearance switches the whole interface between Studio (default: neutral dark with a red-orange accent, rounded corners and slim sliders), Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono.
 - **Your own 3D models.** Drop .glb or .gltf files into the models folder and play them like any clip, with textures, animation and audio reaction.
 - **Clip Creator.** Build your own 3D scenes from shapes, models and lights, let everything move with the music and save them as portable .nyxclip files.
 - **Settings window.** One place for audio, output, Spout, updates, language and interface size, plus a status bar that shows FPS, tempo, deck and audio at a glance.
@@ -87,7 +87,7 @@ Open the Audio tab in the Browser panel, or Settings, Audio.
 The tab shows the live spectrum, Bass, Mid, High and Level meters, beat detection and a tempo estimate. Gain, smoothing and beat threshold are adjustable in Settings, Audio, and "Sync BPM to audio" locks the tempo to the detected beat. If the chosen device delivers no sound for a few seconds the tab and the status bar say so.
 
 <p align="center">
-  <img src="docs/screenshot-settings.png" alt="Settings window, Audio page" width="100%">
+  <img src="docs/screenshot-settings.png" alt="Settings window, Audio page, in the Studio design" width="100%">
 </p>
 
 Reactivity is set in three places:
@@ -240,7 +240,7 @@ Settings, Control, OSC output, tick Send OSC data. NyrexVJ then sends to `127.0.
 
 ## Languages
 
-English is the default. German, Spanish and French are built in. Change it under Settings, General, under Help, Language or on the welcome screen, the choice is saved. Spanish and French were translated with machine help and are not reviewed by native speakers yet, corrections are welcome. Clip and effect names stay in English so they match what other VJ programs call them.
+English is the default. German, Spanish, French, Italian, Portuguese, Dutch and Japanese are built in. Change it under Settings, General, under Help, Language or on the welcome screen, the choice is saved. Everything except German was translated with machine help and is not reviewed by native speakers yet, corrections are welcome. Japanese needs a Japanese font on the computer (Yu Gothic or Meiryo on Windows, Noto Sans CJK on Linux): NyrexVJ adds it to its own font only for the characters that are missing, nothing is bundled, and without one the Japanese text cannot be shown and Settings says so. Clip and effect names stay in English so they match what other VJ programs call them.
 
 Your own language is a `.json` file in the `languages` folder: Settings, General, Export translation template writes a file with every text, you translate what you want (texts you leave out stay English) and press Reload languages. The font shows Latin letters only. Everything is explained in [docs/LANGUAGES.md](docs/LANGUAGES.md).
 

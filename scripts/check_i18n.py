@@ -17,7 +17,7 @@ def unescape(text):
 
 
 ENTRY = re.compile(r'\{"((?:[^"\\]|\\.)*)",\s*"((?:[^"\\]|\\.)*)"\}')
-LANGUAGE_FILES = {"de": "src/core/i18n_de.cpp", "es": "src/core/i18n_es.cpp", "fr": "src/core/i18n_fr.cpp"}
+LANGUAGE_FILES = {"de": "src/core/i18n_de.cpp", "es": "src/core/i18n_es.cpp", "fr": "src/core/i18n_fr.cpp", "it": "src/core/i18n_it.cpp", "pt": "src/core/i18n_pt.cpp", "nl": "src/core/i18n_nl.cpp", "ja": "src/core/i18n_ja.cpp"}
 SPECIFIER = re.compile(r"%[-+ #0]*\d*(?:\.\d+)?[a-zA-Z]")
 
 
@@ -49,7 +49,7 @@ def check_languages():
                 problems.append("%s: empty text for %r" % (code, key))
             if key.endswith(" ") != value.endswith(" ") or key.startswith(" ") != value.startswith(" "):
                 problems.append("%s: edge spaces differ for %r" % (code, key))
-            if code != "de" and any(ord(ch) > 255 for ch in value):
+            if code not in ("de", "ja") and any(ord(ch) > 255 for ch in value):
                 problems.append("%s: character outside Latin-1 in %r" % (code, key))
             if sorted(SPECIFIER.findall(key)) != sorted(SPECIFIER.findall(value)) and key != "Slowest 5%":
                 problems.append("%s: format specifiers differ for %r" % (code, key))

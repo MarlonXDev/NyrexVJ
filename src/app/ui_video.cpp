@@ -219,7 +219,8 @@ void App::drawVideoMonitor() {
                 ImGui::EndTooltip();
             }
             ImGui::TableSetColumnIndex(1);
-            const bool fallback = !status.fallbackReason.empty();
+            const bool explained = !status.fallbackReason.empty();
+            const bool fallback = explained && !status.softwareOnly;
             ImGui::TextColored(fallback ? kWarn : kGood, "%s", decodePathLabel(status.path));
             std::string detail = status.decoder;
             const std::string backend = backendText(status);
@@ -232,7 +233,7 @@ void App::drawVideoMonitor() {
             if (!detail.empty()) {
                 ImGui::TextDisabled("%s", detail.c_str());
             }
-            if (fallback) {
+            if (explained) {
                 ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetFontSize() * 22.0f);
                 ImGui::TextDisabled("%s: %s", tr("Why"), trMessage(status.fallbackReason).c_str());
                 ImGui::PopTextWrapPos();

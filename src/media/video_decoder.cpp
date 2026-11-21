@@ -109,6 +109,9 @@ bool worthHardware(AVCodecID codec, int width, int height) {
 }
 
 int colorMatrix(const AVFrame& frame) {
+    if (frame.colorspace == AVCOL_SPC_YCGCO) {
+        return 3;
+    }
     if (frame.colorspace == AVCOL_SPC_BT2020_NCL || frame.colorspace == AVCOL_SPC_BT2020_CL) {
         return 2;
     }
@@ -193,9 +196,43 @@ bool describeFrame(const FfmpegApi& api, const AVFrame& frame, VideoFrame& out) 
     out.bitDepth = depth;
     out.msbAligned = shift != 0;
     const char* name = api.av_get_pix_fmt_name(format);
-    out.fullRange = frame.color_range == AVCOL_RANGE_JPEG || (name != nullptr && std::strncmp(name, "yuvj", 4) == 0);
     out.matrix = colorMatrix(frame);
+    out.fullRange = out.matrix == 3 || frame.color_range == AVCOL_RANGE_JPEG || (name != nullptr && std::strncmp(name, "yuvj", 4) == 0);
     out.hasAlpha = alpha;
+    return true;
+}
+
+bool convertYcocgToRgba(const FfmpegApi& api, const AVFrame& frame, std::vector<uint8_t>& rgba) {
+    const AVPixFmtDescriptor* d = api.av_pix_fmt_desc_get(static_cast<AVPixelFormat>(frame.format));
+    if (d == nullptr || (d->flags & (AV_PIX_FMT_FLAG_PLANAR | AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_BE)) != AV_PIX_FMT_FLAG_PLANAR || d->nb_components < 3 || d->nb_components > 4) {
+        return false;
+    }
+    for (int i = 0; i < d->nb_components; ++i) {
+        if (d->comp[i].plane != i || d->comp[i].step != 1 || d->comp[i].offset != 0 || d->comp[i].depth != 8 || frame.data[i] == nullptr || frame.linesize[i] <= 0) {
+            return false;
+        }
+    }
+    const bool alpha = d->nb_components == 4;
+    rgba.resize(static_cast<size_t>(frame.width) * static_cast<size_t>(frame.height) * 4u);
+    uint8_t* out = rgba.data();
+    for (int y = 0; y < frame.height; ++y) {
+        const int cy = y >> d->log2_chroma_h;
+        const uint8_t* luma = frame.data[0] + static_cast<ptrdiff_t>(y) * frame.linesize[0];
+        const uint8_t* cg = frame.data[1] + static_cast<ptrdiff_t>(cy) * frame.linesize[1];
+        const uint8_t* co = frame.data[2] + static_cast<ptrdiff_t>(cy) * frame.linesize[2];
+        const uint8_t* opacity = alpha ? frame.data[3] + static_cast<ptrdiff_t>(y) * frame.linesize[3] : nullptr;
+        for (int x = 0; x < frame.width; ++x) {
+            const int cx = x >> d->log2_chroma_w;
+            const int lumaValue = luma[x];
+            const int g = cg[cx] - 128;
+            const int o = co[cx] - 128;
+            out[0] = static_cast<uint8_t>(std::clamp(lumaValue + o - g, 0, 255));
+            out[1] = static_cast<uint8_t>(std::clamp(lumaValue + g, 0, 255));
+            out[2] = static_cast<uint8_t>(std::clamp(lumaValue - g - o, 0, 255));
+            out[3] = opacity != nullptr ? opacity[x] : 255;
+            out += 4;
+        }
+    }
     return true;
 }
 
@@ -233,6 +270,7 @@ struct VideoDecoder::Impl {
     std::deque<std::shared_ptr<VideoFrame>> queue;
     std::shared_ptr<VideoFrame> shown;
     std::vector<std::shared_ptr<Buffer>> pool;
+    std::vector<uint8_t> ycocgScratch;
     std::atomic<double> want{0.0};
     std::atomic<bool> stop{false};
     std::atomic<bool> broken{false};
@@ -440,22 +478,30 @@ struct VideoDecoder::Impl {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
             return;
         }
-        scaler = api->sws_getCachedContext(scaler, source.width, source.height, static_cast<AVPixelFormat>(source.format), outWidth, outHeight, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
+        const bool ycocg = source.colorspace == AVCOL_SPC_YCGCO && convertYcocgToRgba(*api, source, ycocgScratch);
+        const AVPixelFormat inputFormat = ycocg ? AV_PIX_FMT_RGBA : static_cast<AVPixelFormat>(source.format);
+        scaler = api->sws_getCachedContext(scaler, source.width, source.height, inputFormat, outWidth, outHeight, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
         if (scaler == nullptr) {
             fail("the picture format of this video cannot be converted");
             return;
         }
-        int space = SWS_CS_DEFAULT;
-        if (source.colorspace == AVCOL_SPC_BT709 || (source.colorspace == AVCOL_SPC_UNSPECIFIED && source.height >= 720)) {
-            space = SWS_CS_ITU709;
-        } else if (source.colorspace == AVCOL_SPC_BT2020_NCL || source.colorspace == AVCOL_SPC_BT2020_CL) {
-            space = SWS_CS_BT2020;
-        }
-        const int sourceRange = source.color_range == AVCOL_RANGE_JPEG ? 1 : 0;
-        api->sws_setColorspaceDetails(scaler, api->sws_getCoefficients(space), sourceRange, api->sws_getCoefficients(SWS_CS_DEFAULT), 1, 0, 1 << 16, 1 << 16);
         uint8_t* destination[4] = {buffer->data(), nullptr, nullptr, nullptr};
         int stride[4] = {outWidth * 4, 0, 0, 0};
-        api->sws_scale(scaler, source.data, source.linesize, 0, source.height, destination, stride);
+        if (ycocg) {
+            const uint8_t* planes[4] = {ycocgScratch.data(), nullptr, nullptr, nullptr};
+            const int planeStride[4] = {source.width * 4, 0, 0, 0};
+            api->sws_scale(scaler, planes, planeStride, 0, source.height, destination, stride);
+        } else {
+            int space = SWS_CS_DEFAULT;
+            if (source.colorspace == AVCOL_SPC_BT709 || (source.colorspace == AVCOL_SPC_UNSPECIFIED && source.height >= 720)) {
+                space = SWS_CS_ITU709;
+            } else if (source.colorspace == AVCOL_SPC_BT2020_NCL || source.colorspace == AVCOL_SPC_BT2020_CL) {
+                space = SWS_CS_BT2020;
+            }
+            const int sourceRange = source.color_range == AVCOL_RANGE_JPEG ? 1 : 0;
+            api->sws_setColorspaceDetails(scaler, api->sws_getCoefficients(space), sourceRange, api->sws_getCoefficients(SWS_CS_DEFAULT), 1, 0, 1 << 16, 1 << 16);
+            api->sws_scale(scaler, source.data, source.linesize, 0, source.height, destination, stride);
+        }
         std::shared_ptr<VideoFrame> out = std::make_shared<VideoFrame>();
         out->width = outWidth;
         out->height = outHeight;
@@ -1067,7 +1113,8 @@ bool VideoDecoder::open(const std::string& path, std::string& error, const Video
 
     if (!d.hapDirect) {
         const bool hapSoftware = d.info.codec == "hap";
-        const bool wantHardware = !hapSoftware && options.mode != VideoDecodeMode::ForceSoftware && (options.mode == VideoDecodeMode::PreferHardware || worthHardware(codecId, width, height));
+        const bool softwareOnly = !softwareOnlyCodecLabel(d.info.codec).empty();
+        const bool wantHardware = !hapSoftware && !softwareOnly && options.mode != VideoDecodeMode::ForceSoftware && (options.mode == VideoDecodeMode::PreferHardware || worthHardware(codecId, width, height));
         d.status.hardwareWanted = wantHardware;
         std::string failures;
         if (wantHardware) {
@@ -1121,7 +1168,12 @@ bool VideoDecoder::open(const std::string& path, std::string& error, const Video
             d.status.backend = "software";
             d.status.decoder = decoder->name;
             d.status.threads = threads;
-            if (!options.hardwareFailure.empty()) {
+            if (softwareOnly) {
+                d.status.softwareOnly = true;
+                if (options.mode == VideoDecodeMode::PreferHardware) {
+                    d.status.fallbackReason = softwareOnlyReason(d.info.codec);
+                }
+            } else if (!options.hardwareFailure.empty()) {
                 d.status.fallbackReason = "the hardware decoder stopped working during playback";
                 d.status.fallbackDetail = options.hardwareFailure;
             } else if (!failures.empty()) {

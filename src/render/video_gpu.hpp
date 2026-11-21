@@ -74,6 +74,7 @@ private:
     GLint locYRange_ = -1;
     GLint locCRange_ = -1;
     GLint locCoeff_ = -1;
+    GLint locCross_ = -1;
     GLint locStep_ = -1;
     GLint locTaps_ = -1;
     GLint locSrcSize_ = -1;

@@ -234,9 +234,14 @@ Picture pictureFromYuv(const nvj::VideoFrame& frame) {
                 ub = (cb - 128.0 * k) / (224.0 * k);
                 vr = (cr - 128.0 * k) / (224.0 * k);
             }
-            const double r = ly + 2.0 * (1.0 - kr) * vr;
-            const double b = ly + 2.0 * (1.0 - kb) * ub;
-            const double g = ly - 2.0 * kb * (1.0 - kb) / kg * ub - 2.0 * kr * (1.0 - kr) / kg * vr;
+            double r = ly + 2.0 * (1.0 - kr) * vr;
+            double b = ly + 2.0 * (1.0 - kb) * ub;
+            double g = ly - 2.0 * kb * (1.0 - kb) / kg * ub - 2.0 * kr * (1.0 - kr) / kg * vr;
+            if (frame.matrix == 3) {
+                r = ly + vr - ub;
+                g = ly + ub;
+                b = ly - ub - vr;
+            }
             const size_t o = (static_cast<size_t>(y) * static_cast<size_t>(picture.width) + static_cast<size_t>(x)) * 4u;
             picture.pixels[o] = clampByte(r);
             picture.pixels[o + 1] = clampByte(g);
@@ -723,6 +728,7 @@ void testGpuLayouts() {
         {"test_h264.mp4", nvj::VideoLayout::Planar, 3, 8, false, 6.0},
         {"test_hevc10.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0},
         {"test_prores_alpha.mov", nvj::VideoLayout::Planar, 4, 12, true, 6.0},
+        {"test_ycocg.mkv", nvj::VideoLayout::Planar, 3, 8, false, 2.0},
     };
     for (const Case& test : cases) {
         std::string error;
@@ -761,6 +767,81 @@ void testGpuLayouts() {
         CHECK(status.threads >= 1 && status.decoded > 0);
         CHECK(status.decodeMs >= 0.0);
         CHECK(status.fallbackReason.empty());
+    }
+}
+
+void testSoftwareOnlyCodecs() {
+    CHECK(nvj::softwareOnlyCodecLabel("dxv") == "DXV");
+    CHECK(nvj::softwareOnlyCodecLabel("prores") == "ProRes");
+    CHECK(nvj::softwareOnlyCodecLabel("dnxhd") == "DNxHD/DNxHR");
+    CHECK(nvj::softwareOnlyCodecLabel("cfhd") == "CineForm");
+    for (const char* name : {"h264", "hevc", "av1", "vp9", "hap", "mjpeg", "mpeg2video", ""}) {
+        CHECK(nvj::softwareOnlyCodecLabel(name).empty());
+        CHECK(nvj::softwareOnlyReason(name).empty());
+    }
+    CHECK(nvj::softwareOnlyReason("dxv").find("DXV") == 0);
+    CHECK(nvj::softwareOnlyReason("dxv").find("not supported by") == std::string::npos);
+    CHECK(!nvj::softwareOnlyReason("prores").empty() && nvj::softwareOnlyReason("prores") != nvj::softwareOnlyReason("dxv"));
+    std::string error;
+    {
+        nvj::VideoOptions options;
+        options.mode = nvj::VideoDecodeMode::PreferHardware;
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open((kData / "test_prores_alpha.mov").string(), error, options));
+        CHECK(waitForFrame(decoder, 0.0, 0.0, 0.1) != nullptr);
+        const nvj::VideoStatus status = decoder.status();
+        CHECK(status.codec == "prores" && status.softwareOnly && !status.hardwareWanted);
+        CHECK(status.path == nvj::DecodePath::Software && status.backend == "software");
+        CHECK(status.fallbackReason == nvj::softwareOnlyReason("prores") && status.fallbackDetail.empty());
+        CHECK(!decoder.failed());
+    }
+    {
+        nvj::VideoOptions options;
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open((kData / "test_prores_alpha.mov").string(), error, options));
+        CHECK(waitForFrame(decoder, 0.0, 0.0, 0.1) != nullptr);
+        const nvj::VideoStatus status = decoder.status();
+        CHECK(status.softwareOnly && !status.hardwareWanted && status.fallbackReason.empty());
+    }
+    {
+        nvj::VideoOptions options;
+        options.mode = nvj::VideoDecodeMode::PreferHardware;
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open((kData / "test_h264.mp4").string(), error, options));
+        CHECK(waitForFrame(decoder, 0.0, 0.0, 0.01) != nullptr);
+        const nvj::VideoStatus status = decoder.status();
+        CHECK(!status.softwareOnly && status.hardwareWanted);
+        CHECK(status.fallbackReason != nvj::softwareOnlyReason("prores"));
+    }
+}
+
+void testYcocg() {
+    std::string error;
+    nvj::VideoDecoder gpu;
+    CHECK(gpu.open((kData / "test_ycocg.mkv").string(), error, nvj::VideoOptions()));
+    const std::shared_ptr<const nvj::VideoFrame> planar = waitForFrame(gpu, 0.0, 0.0, 0.3);
+    CHECK(planar != nullptr);
+    if (planar) {
+        CHECK(planar->layout == nvj::VideoLayout::Planar && planar->planeCount == 3 && planar->bitDepth == 8);
+        CHECK(planar->matrix == 3 && planar->fullRange);
+        const Picture reference = pictureOf(*planar);
+        const size_t middle = (static_cast<size_t>(reference.height / 2) * static_cast<size_t>(reference.width) + static_cast<size_t>(reference.width / 2)) * 4u;
+        CHECK(std::abs(reference.pixels[middle] - 188) <= 1);
+        CHECK(std::abs(reference.pixels[middle + 1] - 100) <= 1);
+        CHECK(std::abs(reference.pixels[middle + 2] - 124) <= 1);
+    }
+    nvj::VideoDecoder cpu;
+    CHECK(cpu.open((kData / "test_ycocg.mkv").string(), error, legacyOptions()));
+    const std::shared_ptr<const nvj::VideoFrame> rgba = waitForFrame(cpu, 0.0, 0.0, 0.3);
+    CHECK(rgba != nullptr);
+    if (rgba) {
+        CHECK(rgba->layout == nvj::VideoLayout::Rgba);
+        const Picture picture = pictureOf(*rgba);
+        const size_t middle = (static_cast<size_t>(picture.height / 2) * static_cast<size_t>(picture.width) + static_cast<size_t>(picture.width / 2)) * 4u;
+        CHECK(std::abs(picture.pixels[middle] - 188) <= 1);
+        CHECK(std::abs(picture.pixels[middle + 1] - 100) <= 1);
+        CHECK(std::abs(picture.pixels[middle + 2] - 124) <= 1);
+        CHECK(picture.pixels[middle + 3] == 255);
     }
 }
 
@@ -1310,6 +1391,8 @@ int main() {
         testHapDirect();
         testGpuLayouts();
         testDecodeModes();
+        testSoftwareOnlyCodecs();
+        testYcocg();
         testHardwareProbe();
         testLoopContinuity();
         testExactSeek();

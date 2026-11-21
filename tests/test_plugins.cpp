@@ -21,6 +21,13 @@
 #include <vector>
 
 #if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 #include <io.h>
 #define NVJ_DUP _dup
 #define NVJ_DUP2 _dup2
@@ -813,11 +820,27 @@ void testLogLimit() {
     CHECK(lines <= 2 * static_cast<size_t>(kPluginLogsPerSecond) + 5);
 }
 
+#ifdef _WIN32
+LPTOP_LEVEL_EXCEPTION_FILTER gPreviousFilter = nullptr;
+
+LONG WINAPI endChildFilter(EXCEPTION_POINTERS* info) {
+    if (gPreviousFilter != nullptr) {
+        gPreviousFilter(info);
+    }
+    TerminateProcess(GetCurrentProcess(), 3);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
+
 int crashChild(const std::string& dataDir) {
     const fs::path dir(dataDir);
     std::error_code ec;
     fs::create_directories(recoveryDirectory(dir), ec);
     installCrashHandler(crashReportPath(dir).string(), "test");
+#ifdef _WIN32
+    SetErrorMode(SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+    gPreviousFilter = SetUnhandledExceptionFilter(endChildFilter);
+#endif
     PluginHost host(dir);
     waitFor(host, [&]() { return settled(host, "broken"); }, 3.0);
     host.assignModulation(0, "broken/mod");
@@ -905,6 +928,9 @@ void testCrashLeadsToSafeMode() {
 }
 
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    SetErrorMode(SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+#endif
     gSelf = fs::absolute(argv[0]).string();
     if (argc >= 3 && std::string(argv[1]) == "--crash-child") {
         return crashChild(argv[2]);

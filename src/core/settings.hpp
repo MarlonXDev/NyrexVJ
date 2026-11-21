@@ -67,6 +67,13 @@ struct Settings {
     int cameraWidth = 1280;
     int cameraHeight = 720;
     int cameraFps = 30;
+    std::string syncMode = "manual";
+    float syncLatencyMs = 0.0f;
+    bool syncBarAlign = true;
+    bool djLinkEnabled = false;
+    int djLinkPlayer = 0;
+    std::string ltcDevice;
+    bool cuesEnabled = true;
 };
 
 bool loadSettings(Settings& settings);

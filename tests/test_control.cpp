@@ -610,6 +610,28 @@ void testLearnAndFiles() {
     Settings loaded;
     CHECK(loadSettings(loaded));
     CHECK(loaded.oscEnabled && loaded.oscPort == 12345 && loaded.oscAllowRemote && loaded.midiDevice == "Test Pad");
+    CHECK(loaded.syncMode == "manual" && loaded.syncLatencyMs == 0.0f && loaded.syncBarAlign && !loaded.djLinkEnabled && loaded.djLinkPlayer == 0 && loaded.ltcDevice.empty() && loaded.cuesEnabled);
+
+    settings.syncMode = "djlink";
+    settings.syncLatencyMs = -35.5f;
+    settings.syncBarAlign = false;
+    settings.djLinkEnabled = true;
+    settings.djLinkPlayer = 4;
+    settings.ltcDevice = "alsa:ltc";
+    settings.cuesEnabled = false;
+    CHECK(saveSettings(settings));
+    Settings synced;
+    CHECK(loadSettings(synced));
+    CHECK(synced.syncMode == "djlink" && std::fabs(synced.syncLatencyMs + 35.5f) < 1.0e-4f && !synced.syncBarAlign);
+    CHECK(synced.djLinkEnabled && synced.djLinkPlayer == 4 && synced.ltcDevice == "alsa:ltc" && !synced.cuesEnabled);
+
+    settings.syncMode = "nonsense";
+    settings.syncLatencyMs = 900.0f;
+    settings.djLinkPlayer = 99;
+    CHECK(saveSettings(settings));
+    Settings clamped;
+    CHECK(loadSettings(clamped));
+    CHECK(clamped.syncMode == "manual" && clamped.syncLatencyMs == 500.0f && clamped.djLinkPlayer == 6);
 }
 
 #ifndef _WIN32

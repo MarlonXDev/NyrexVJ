@@ -99,6 +99,14 @@ void ControlSystem::takeSyncMessages(std::vector<MidiMessage>& out) {
     sync_.clear();
 }
 
+bool ControlSystem::fireTarget(const std::string& id, float value) {
+    const int target = controlTargetIndex(id);
+    if (target < 0) {
+        return false;
+    }
+    return router_.set(target, value, false);
+}
+
 void ControlSystem::startLearn(int bindingIndex, const std::string& target) {
     learning_ = true;
     learnIndex_ = bindingIndex;

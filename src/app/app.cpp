@@ -68,6 +68,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     appliedVsync_ = settings_.vsync ? 1 : 0;
     oscOverridePort_ = options.oscPort;
     control_.loadBindings();
+    sync_.loadCues();
     control_.refreshMidiDevices();
     loadUserLanguages(userLanguageDirectory());
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
@@ -498,7 +499,16 @@ void App::updateAudio(double dt) {
     audio_.update(dt, engine_.comp.bpm);
     const AudioFeatures& features = audio_.features();
     engine_.setAudio(features);
-    if (settings_.audioSyncBpm && features.active) {
+    const SyncMode syncMode = syncModeFromName(settings_.syncMode.c_str());
+    const bool audioFollow = settings_.audioSyncBpm || syncMode == SyncMode::Audio;
+    if (audioFollow && features.active) {
+        SyncObservation presence;
+        presence.source = SyncSource::Audio;
+        engine_.beatClock().report(presence);
+    }
+    const SyncSource activeSource = engine_.beatClock().active();
+    const bool audioDrives = syncMode == SyncMode::Manual || activeSource == SyncSource::Audio || activeSource == SyncSource::Manual;
+    if (audioFollow && features.active && audioDrives) {
         if (features.bpm > 40.0f && features.bpmConfidence > 0.55f) {
             float blended = engine_.comp.bpm + (features.bpm - engine_.comp.bpm) * 0.08f;
             engine_.comp.bpm = std::clamp(blended, 40.0f, 240.0f);
@@ -506,6 +516,25 @@ void App::updateAudio(double dt) {
         if (features.beatNow) {
             engine_.nudgeBeat(0.35f);
         }
+    }
+}
+
+void App::updateSync(double dt) {
+    SyncConfig config;
+    config.mode = syncModeFromName(settings_.syncMode.c_str());
+    config.latencyMs = settings_.syncLatencyMs;
+    config.barAlign = settings_.syncBarAlign;
+    config.djLink = settings_.djLinkEnabled;
+    config.djPlayer = settings_.djLinkPlayer;
+    config.ltcDevice = settings_.ltcDevice;
+    config.cues = settings_.cuesEnabled;
+    sync_.configure(config);
+    std::vector<MidiMessage> midi;
+    control_.takeSyncMessages(midi);
+    sync_.update(dt, midi, engine_.beatClock());
+    engine_.setTimecode(sync_.timecodeActive(), sync_.timecodeSeconds());
+    for (const Cue& cue : sync_.firedCues()) {
+        control_.fireTarget(cue.target, cue.value);
     }
 }
 
@@ -524,6 +553,7 @@ void App::frame(double dt) {
     control.midiDevice = settings_.midiDevice;
     control_.configure(control);
     control_.update(dt);
+    updateSync(dt);
     updateAudio(dt);
     serviceLiveBrowse();
     engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);

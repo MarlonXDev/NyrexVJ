@@ -28,6 +28,7 @@ public:
     void update(double dt);
     void injectMidi(const MidiMessage& message);
     void takeSyncMessages(std::vector<MidiMessage>& out);
+    bool fireTarget(const std::string& id, float value);
     void refreshMidiDevices();
 
     bool handleOsc(const OscMessage& message);

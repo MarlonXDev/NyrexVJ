@@ -253,6 +253,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/dmx_strip.cpp
     src/app/ui_outputs.cpp
     src/app/ui_stage.cpp
+    src/app/ui_sync.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
     src/render/video_gpu.cpp

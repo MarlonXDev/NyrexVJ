@@ -123,7 +123,7 @@ Plugins ([PLUGINS.md](PLUGINS.md), [ADR 0018](adr/0018-plugin-system.md)) are na
 - **Image sources are 1280 x 720 at 30 frames a second.** A running image source holds about four to five frame buffers of 3.5 MiB in system memory and one texture of the same size on the graphics card, and goes through the existing live path (upload on the graphics card, release after the idle time). The example plasma runs at the full 30 frames a second (30.5 reported by the runner under software OpenGL).
 - **Nothing else changes.** Layers, effects, compositing and the default composition are not touched.
 
-Not measured: a plugin that does real work, plugin sources next to VRChat, Windows at run time, and the processor time of the example image source on its own.
+Not measured: a plugin that does real work, plugin sources next to VRChat, timings on Windows (the plugin tests pass there), and the processor time of the example image source on its own.
 
 Command line: `--plugin-selftest FOLDER` loads a plugin through the real engine and checks both source kinds (`--bench-out` writes JSON); `--no-plugins` switches plugins off for a run.
 

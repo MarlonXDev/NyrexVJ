@@ -46,7 +46,7 @@ Constraints that shaped the design:
 - Image sources are 1280 x 720 and 30 fps for every plugin. The size is fixed so that the buffers and the upload are known; a plugin that wants another size has to scale itself. The limit constants (`NYREXVJ_PLUGIN_MAX_WIDTH` and `MAX_HEIGHT`) are in the header for a later version.
 - Plugin bands share the eight slots. Two bands can point at the same source; they read the same value (one instance for each source key).
 - The ABI is a promise. **Version 1.0 is not declared stable.** It is declared stable after one release of use with the example plugin and the broken plugin tests, as ADR 0012 said. Until then a minor version may still change what is documented as 1.0 if a mistake in the header shows up; the major number rises only for a break.
-- Windows is built and tested by CI, but the plugin path was not run there by the maintainers.
+- The plugin tests pass on the Windows runner of CI (loading a `.dll`, the crash in a child process, the hang). Nobody has run the program with a plugin by hand on Windows, and `--plugin-selftest` runs in CI on Linux only.
 
 ## Validation
 Tests (all run in CI):
@@ -67,4 +67,4 @@ Measured on the maintainer's build machine, Linux, software OpenGL (Mesa llvmpip
 - a throwaway program (not in the repository) that links the core and calls what the render thread calls each frame (`publish`, `update`, and one `modulation` for each of the 8 slots), 200,000 frames, five runs: **0.05 to 0.06 microseconds a frame with plugins off and no slot read, 0.07 to 0.08 with 8 slots read, 0.06 to 0.08 with plugins allowed and nothing enabled, 0.16 to 0.21 with the example plugin running in two slots.** At 60 frames a second the last number is about 12 microseconds in a second. The example plugin's own thread adds about 60 calls of 0.01 to 0.05 ms a second,
 - memory: a running image source holds about four to five frame buffers of 3.5 MiB in system memory and one 3.5 MiB texture on the graphics card; a modulation source holds nothing noticeable.
 
-Not measured: the cost of a plugin that does real work; plugin sources next to VRChat; Windows at run time (`.dll` loading, the crash marker with the Windows handler); a plugin written in another language than C; the start time with many large plugins; plugins with long running threads of their own.
+Not measured: the cost of a plugin that does real work; plugin sources next to VRChat; the program with a plugin by hand on Windows, `--plugin-selftest` and timings on Windows; a plugin written in another language than C; the start time with many large plugins; plugins with long running threads of their own.

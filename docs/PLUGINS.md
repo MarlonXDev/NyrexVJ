@@ -172,5 +172,5 @@ The self test copies the plugin folder into a temporary data folder, enables it,
 
 - NyrexVJ does not stop a plugin from doing something harmful, only from blocking or damaging the picture by mistake.
 - A plugin that writes into memory that is not its own can still crash the program or damage it. The program checks the image buffer, not the rest of the memory.
-- Plugins were tried with the example plugin and a set of test plugins that break each rule on purpose, on Linux. Plugins on Windows (`.dll`) are built and tested in CI but were not run by the maintainers.
+- Plugins were tried with the example plugin and a set of test plugins that break each rule on purpose, on Linux. The plugin tests also pass on Windows in CI (loading a `.dll`, the crash handler, the hang test), but nobody has used a plugin by hand on Windows.
 - The header is **version 1.0 and not yet declared stable**. It is declared stable after one release of use. Until then a minor change may still happen, and the major number rises only for a break.

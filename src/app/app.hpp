@@ -2,6 +2,7 @@
 
 #include "app/creator.hpp"
 #include "app/engine_host.hpp"
+#include "app/node_editor.hpp"
 #include "audio/audio_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
@@ -59,6 +60,8 @@ struct StartOptions {
     std::string transition;
     std::string demoUpdate;
     std::string creator;
+    std::string nodeEffect;
+    bool openNodes = false;
     float transitionSeconds = -1.0f;
     int column = -1;
     int resolution = -1;
@@ -131,6 +134,10 @@ private:
     void drawPassProfiler();
     void redoEdit();
     void drawCreator();
+    void drawNodeEditor();
+    void openNodeEditor(const std::string& stem);
+    void syncNodeEffects(const std::string& forceName = std::string());
+    bool importNodeGraph(const std::string& path);
     void shutdownCreator();
     void restoreCreatorDoc(const SceneDoc& doc);
     bool creatorUnsaved() const;
@@ -232,6 +239,10 @@ private:
     std::vector<std::string> pendingImports_;
     std::future<std::vector<ImportResult>> importJob_;
     std::unique_ptr<CreatorState> creator_;
+    std::unique_ptr<NodeEditorState> nodes_;
+    bool nodesOpen_ = false;
+    bool nodesFocus_ = false;
+    bool nodesHasFocus_ = false;
     bool creatorOpen_ = false;
     bool creatorFocus_ = false;
     bool creatorHasFocus_ = false;

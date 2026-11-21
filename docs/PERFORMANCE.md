@@ -96,6 +96,22 @@ Not measured: the cost of the sync system while VRChat runs, any real timecode s
 
 Command line: `--output-selftest` checks the frame lock, the delay and the sync bars and prints the numbers above for the output side.
 
+## What is new in 0.25.0: node effects
+
+A graph of nodes is compiled into one fragment shader ([NODES.md](NODES.md), [ADR 0017](adr/0017-node-effect-editor.md)) and runs like a hand written effect: one draw for the effect, the same header and footer, the same four parameters. A show that uses no node effect pays nothing for them.
+
+- **No cost when unused.** With no `.nyxfx` file there is no node effect in the library and no program. The folder is scanned at start and when the editor saves or imports, at most 64 files, and a file is read only when its size or time stamp changed. The editor itself draws only while its window is open.
+- **Compiling the text is cheap.** Turning a graph into GLSL took 8 to 24 microseconds for the four example graphs (7 to 13 nodes, medians of three runs). The driver then compiles the shader once; a graph that gives the same text reuses the cached source. Moving nodes, renaming and unused nodes change nothing in the text and cause no rebuild; typing a number into an unlinked input does, so values that move belong in Control, Macro or LFO nodes, which are uniforms.
+- **Same speed as written by hand.** Four example graphs were run against hand written GLSL of the same effect (`--bench-nodes`, Mesa llvmpipe, 1920 x 1080, clip Plasma, effect time only). The ratio graph divided by hand was 0.92 to 1.17 in a run of 30 frames, 0.96 to 1.04 in a run of 60 and 0.91 to 1.07 in a run of 5, with no pair always on one side. The largest value, 1.17 for Mirror Swirl in the run of 30 frames, was 0.99 in the run of 60 and 0.96 in the run of 5, so the runs differ more from each other than graph and hand written effect differ (a short run on a software rasteriser is noisy, which is why three runs are given). The three pairs without feedback produce exactly the same picture (largest pixel difference 0); the Trails pair reads the previous picture and was timed, not compared pixel by pixel. Effect times were 12 to 21 ms for the four effects on this machine.
+- **Picture reads are limited.** A graph may read the incoming picture up to 64 times a pixel. Blur counts its samples (2 to 16) and Edges counts 4. The status line of the editor shows the number. The limit protects against a graph that makes one frame take seconds; it does not make a graph cheap on a slow card.
+- **The previous picture costs memory only when used.** A graph with a Previous Picture node needs a second picture buffer for that effect, the same as the built-in feedback effects. No other node allocates anything.
+- **Modulation costs nothing extra.** The LFO is computed in the shader from the beat uniform, the Macro node reads a uniform array that is declared only when a Macro node is used, and Control nodes are the effect parameters that every effect has.
+- **Render loop.** Layers, effects and compositing are not touched. The default composition is unchanged.
+
+Not measured: node effects next to VRChat, on a real graphics card, the driver compile time of a large graph (96 nodes) and of any graph on Windows.
+
+Command line: `--bench-nodes FRAMES` runs the comparison and prints the numbers (`--bench-out` writes JSON); `--check-shaders` compiles 129 node graphs with the driver as well.
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

@@ -94,6 +94,32 @@ std::string hardwareBackendLabel(const std::string& backend) {
     return backend;
 }
 
+std::string softwareOnlyCodecLabel(const std::string& codecName) {
+    if (codecName == "dxv") {
+        return "DXV";
+    }
+    if (codecName == "prores") {
+        return "ProRes";
+    }
+    if (codecName == "dnxhd") {
+        return "DNxHD/DNxHR";
+    }
+    if (codecName == "cfhd") {
+        return "CineForm";
+    }
+    return std::string();
+}
+
+std::string softwareOnlyReason(const std::string& codecName) {
+    if (codecName == "dxv") {
+        return "DXV is decoded by the processor, graphics cards cannot decode this codec (this is normal)";
+    }
+    if (softwareOnlyCodecLabel(codecName).empty()) {
+        return std::string();
+    }
+    return "this codec is decoded by the processor, graphics cards cannot decode it (this is normal)";
+}
+
 }
 
 #ifdef NYREXVJ_HAVE_FFMPEG

@@ -1305,6 +1305,8 @@ const Translation kFrench[] = {
     {"slowest call", "appel le plus lent"},
     {"Plugins are switched on in Settings, Plugins.", "Les plugins s'activent dans Réglages, Plugins."},
     {"Open plugin settings", "Ouvrir les réglages des plugins"},
+    {"DXV is decoded by the processor, graphics cards cannot decode this codec (this is normal)", "Le DXV est décodé par le processeur, les cartes graphiques ne peuvent pas décoder ce codec (c'est normal)"},
+    {"this codec is decoded by the processor, graphics cards cannot decode it (this is normal)", "ce codec est décodé par le processeur, les cartes graphiques ne peuvent pas le décoder (c'est normal)"},
 };
 
 }

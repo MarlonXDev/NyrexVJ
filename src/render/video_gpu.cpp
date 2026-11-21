@@ -34,6 +34,7 @@ uniform float uAlphaScale;
 uniform vec2 uYRange;
 uniform vec2 uCRange;
 uniform vec4 uCoeff;
+uniform vec2 uCross;
 uniform vec2 uStep;
 uniform int uTaps;
 uniform ivec2 uSrcSize;
@@ -43,7 +44,7 @@ vec4 convertPacked(vec2 uv) {
     vec4 t = texelFetch(uY, ivec2(p.x >> 1, p.y), 0);
     float y = ((((p.x & 1) == 0) ? t.g : t.a) * uTexScale - uYRange.x) * uYRange.y;
     vec2 c = (vec2(t.r, t.b) * uTexScale - uCRange.x) * uCRange.y;
-    return vec4(y + uCoeff.x * c.y, y + uCoeff.y * c.x + uCoeff.z * c.y, y + uCoeff.w * c.x, 1.0);
+    return vec4(y + uCoeff.x * c.y + uCross.x * c.x, y + uCoeff.y * c.x + uCoeff.z * c.y, y + uCoeff.w * c.x + uCross.y * c.y, 1.0);
 }
 
 vec4 convert(vec2 uv) {
@@ -53,7 +54,7 @@ vec4 convert(vec2 uv) {
     float y = (texture(uY, uv).r * uTexScale - uYRange.x) * uYRange.y;
     vec2 c = uMode == 1 ? texture(uU, uv).rg : vec2(texture(uU, uv).r, texture(uV, uv).r);
     c = (c * uTexScale - uCRange.x) * uCRange.y;
-    vec3 rgb = vec3(y + uCoeff.x * c.y, y + uCoeff.y * c.x + uCoeff.z * c.y, y + uCoeff.w * c.x);
+    vec3 rgb = vec3(y + uCoeff.x * c.y + uCross.x * c.x, y + uCoeff.y * c.x + uCoeff.z * c.y, y + uCoeff.w * c.x + uCross.y * c.y);
     float a = uMode == 2 ? texture(uA, uv).r * uAlphaScale : 1.0;
     return vec4(rgb, a);
 }
@@ -160,6 +161,7 @@ bool VideoGpu::create() {
         locYRange_ = glGetUniformLocation(program_, "uYRange");
         locCRange_ = glGetUniformLocation(program_, "uCRange");
         locCoeff_ = glGetUniformLocation(program_, "uCoeff");
+        locCross_ = glGetUniformLocation(program_, "uCross");
         locStep_ = glGetUniformLocation(program_, "uStep");
         locTaps_ = glGetUniformLocation(program_, "uTaps");
         locSrcSize_ = glGetUniformLocation(program_, "uSrcSize");
@@ -245,9 +247,15 @@ void VideoGpu::beginConversion(const VideoFrame& frame, int outWidth, int outHei
         glUniform2f(locYRange_, static_cast<float>(16.0 * k), static_cast<float>(1.0 / (219.0 * k)));
         glUniform2f(locCRange_, static_cast<float>(128.0 * k), static_cast<float>(1.0 / (224.0 * k)));
     }
-    const MatrixWeights w = weightsFor(frame.matrix);
-    const double kg = 1.0 - w.kr - w.kb;
-    glUniform4f(locCoeff_, static_cast<float>(2.0 * (1.0 - w.kr)), static_cast<float>(-2.0 * w.kb * (1.0 - w.kb) / kg), static_cast<float>(-2.0 * w.kr * (1.0 - w.kr) / kg), static_cast<float>(2.0 * (1.0 - w.kb)));
+    if (frame.matrix == 3) {
+        glUniform4f(locCoeff_, 1.0f, 1.0f, 0.0f, -1.0f);
+        glUniform2f(locCross_, -1.0f, -1.0f);
+    } else {
+        const MatrixWeights w = weightsFor(frame.matrix);
+        const double kg = 1.0 - w.kr - w.kb;
+        glUniform4f(locCoeff_, static_cast<float>(2.0 * (1.0 - w.kr)), static_cast<float>(-2.0 * w.kb * (1.0 - w.kb) / kg), static_cast<float>(-2.0 * w.kr * (1.0 - w.kr) / kg), static_cast<float>(2.0 * (1.0 - w.kb)));
+        glUniform2f(locCross_, 0.0f, 0.0f);
+    }
     const bool shrink = frame.width > outWidth * 3 / 2 || frame.height > outHeight * 3 / 2;
     glUniform1i(locTaps_, shrink ? 4 : 1);
     glUniform2f(locStep_, 0.25f / static_cast<float>(std::max(outWidth, 1)), 0.25f / static_cast<float>(std::max(outHeight, 1)));

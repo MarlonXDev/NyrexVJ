@@ -32,6 +32,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0016](adr/0016-show-sync.md) | Show sync: one beat clock, timecode (LTC, MTC), MIDI clock, passive Pro DJ Link, cues, output frame lock | Accepted (2026-11-21), implemented in v0.24.0 |
 | [0017](adr/0017-node-effect-editor.md) | Node effect editor: graph document, graph to GLSL compiler, `.nyxfx` files, editor on the ImGui draw list | Accepted (2026-11-21), implemented in v0.25.0 |
 | [0018](adr/0018-plugin-system.md) | Plugin system: C interface for modulation and image sources, manifest checked before code, time budget on a thread of its own, crash marker and safe mode | Accepted (2026-11-21), implemented in v0.26.0 |
+| [0019](adr/0019-dxv-software-codecs.md) | DXV and other software-only codecs: processor decoder kept, no graphics card attempt, clear message, YCoCg conversion | Accepted (2026-11-21), implemented in v0.26.1 |
 
 ## New ADR template
 

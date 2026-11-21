@@ -598,12 +598,14 @@ int runVideoSelfTest(Engine& engine, const std::string& directory, const std::st
             item["error"] = "the output sizes differ";
         } else {
             double sum = 0.0;
+            double light = 0.0;
             int worst = 0;
             size_t count = 0;
             for (size_t i = 0; i + 3 < fast.pixels.size(); i += 4) {
                 for (size_t c = 0; c < 3; ++c) {
                     const int delta = std::abs(static_cast<int>(fast.pixels[i + c]) - static_cast<int>(reference.pixels[i + c]));
                     sum += delta;
+                    light += fast.pixels[i + c];
                     worst = std::max(worst, delta);
                     ++count;
                 }
@@ -614,7 +616,7 @@ int runVideoSelfTest(Engine& engine, const std::string& directory, const std::st
             const bool compressed = file.filename().string().find("hap") != std::string::npos;
             const std::string expected = compressed ? "compressed direct" : "gpu convert";
             const bool routeOk = (compressed && !caps.compressedTextures) || (!compressed && !caps.conversion) || fast.route == expected;
-            const bool lit = mean >= 0.0 && sum > 0.0;
+            const bool lit = light > 0.0;
             item["expectedRoute"] = expected;
             itemPassed = mean < 4.0 && routeOk && lit && reference.route == "cpu rgba";
         }

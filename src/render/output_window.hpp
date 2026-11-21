@@ -4,6 +4,8 @@
 
 #include <glad/gl.h>
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -31,26 +33,48 @@ public:
     bool isFullscreen() const { return fullscreen_; }
     int monitorIndex() const { return monitorIndex_; }
     void setFullscreen(bool fullscreen, int monitorIndex);
-    void render(GLuint texture, int textureWidth, int textureHeight, const OutputMapping& map, bool testPattern, OutputCapture* capture = nullptr);
+    void render(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, OutputCapture* capture = nullptr);
+    size_t gpuBytes() const;
 
     static std::vector<std::string> monitorNames();
     static int monitorCount();
 
 private:
+    struct SliceGpu {
+        GLuint vao = 0;
+        GLuint vbo = 0;
+        GLuint ebo = 0;
+        GLsizei indexCount = 0;
+        int divisions = 0;
+        size_t vboBytes = 0;
+        size_t eboBytes = 0;
+        OutputMapping mapping;
+        bool meshValid = false;
+        GLuint maskTexture = 0;
+        int maskWidth = 0;
+        int maskHeight = 0;
+        SliceMask mask;
+        bool maskValid = false;
+    };
+
     static void onKey(GLFWwindow* window, int key, int scancode, int action, int mods);
     bool createResources();
     void destroyResources();
-    void uploadMesh(const OutputMapping& map);
+    bool ensureSlice(SliceGpu& slice);
+    void releaseSlice(SliceGpu& slice);
+    void releaseMask(SliceGpu& slice);
+    void uploadMesh(SliceGpu& slice, const OutputMapping& map);
+    void uploadMask(SliceGpu& slice, const SliceMask& mask);
 
     GLFWwindow* window_ = nullptr;
     GLuint program_ = 0;
-    GLuint vao_ = 0;
-    GLuint vbo_ = 0;
-    GLuint ebo_ = 0;
-    GLsizei indexCount_ = 0;
-    OutputMapping meshMap_;
-    bool meshValid_ = false;
+    std::array<SliceGpu, kMaxSlices> slices_;
     GLint textureLocation_ = -1;
+    GLint maskLocation_ = -1;
+    GLint maskOnLocation_ = -1;
+    GLint gainLocation_ = -1;
+    GLint toneLocation_ = -1;
+    GLint blackLocation_ = -1;
     GLint rectLocation_ = -1;
     GLint blendLocation_ = -1;
     GLint shapeLocation_ = -1;

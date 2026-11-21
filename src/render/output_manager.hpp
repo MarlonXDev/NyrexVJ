@@ -30,6 +30,7 @@ public:
     bool testPattern(int index) const;
     void render(GLuint texture, int width, int height);
     bool capture(int index, GLuint texture, int width, int height, OutputCapture& out);
+    size_t gpuBytes() const;
 
 private:
     static bool valid(int index) { return index >= 0 && index < kMaxOutputs; }

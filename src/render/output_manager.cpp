@@ -121,7 +121,7 @@ void OutputManager::render(GLuint texture, int width, int height) {
             continue;
         }
         OutputSpec& spec = (*specs_)[static_cast<size_t>(i)];
-        window.render(texture, width, height, spec.map, patterns_[static_cast<size_t>(i)]);
+        window.render(texture, width, height, spec, patterns_[static_cast<size_t>(i)]);
         if (window.isOpen()) {
             spec.fullscreen = window.isFullscreen();
         }
@@ -132,8 +132,16 @@ bool OutputManager::capture(int index, GLuint texture, int width, int height, Ou
     if (!isOpen(index) || specs_ == nullptr) {
         return false;
     }
-    windows_[static_cast<size_t>(index)].render(texture, width, height, (*specs_)[static_cast<size_t>(index)].map, patterns_[static_cast<size_t>(index)], &out);
+    windows_[static_cast<size_t>(index)].render(texture, width, height, (*specs_)[static_cast<size_t>(index)], patterns_[static_cast<size_t>(index)], &out);
     return out.width > 0 && out.height > 0;
+}
+
+size_t OutputManager::gpuBytes() const {
+    size_t total = 0;
+    for (const OutputWindow& window : windows_) {
+        total += window.gpuBytes();
+    }
+    return total;
 }
 
 }

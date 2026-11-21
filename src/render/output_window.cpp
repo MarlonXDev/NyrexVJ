@@ -30,10 +30,15 @@ in vec2 vUv;
 in vec2 vOut;
 out vec4 fragColor;
 uniform sampler2D uTex;
+uniform sampler2D uMask;
+uniform int uMaskOn;
 uniform vec4 uBlend;
 uniform vec2 uShape;
 uniform float uBrightness;
 uniform int uPattern;
+uniform vec4 uGain;
+uniform vec4 uTone;
+uniform vec2 uBlack;
 
 float ramp(float t) {
     t = clamp(t, 0.0, 1.0);
@@ -63,14 +68,45 @@ vec3 pattern(vec2 uv) {
     return c;
 }
 
+vec3 correct(vec3 c) {
+    c *= uGain.rgb;
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    c = vec3(l) + (c - vec3(l)) * uGain.a;
+    c = clamp((c - 0.5) * uTone.x + 0.5, 0.0, 1.0);
+    c = pow(c, vec3(uTone.y));
+    return vec3(uTone.z) + (1.0 - uTone.z) * c;
+}
+
+float zoneEdge(float distanceToEdge, float size, float pixel) {
+    return 1.0 - clamp((distanceToEdge - size) / max(pixel, 1e-5) + 0.5, 0.0, 1.0);
+}
+
+float blendZone(vec2 p) {
+    float z = 0.0;
+    float px = fwidth(p.x);
+    float py = fwidth(p.y);
+    if (uBlend.x > 0.0) z = max(z, zoneEdge(p.x, uBlend.x, px));
+    if (uBlend.y > 0.0) z = max(z, zoneEdge(1.0 - p.x, uBlend.y, px));
+    if (uBlend.z > 0.0) z = max(z, zoneEdge(p.y, uBlend.z, py));
+    if (uBlend.w > 0.0) z = max(z, zoneEdge(1.0 - p.y, uBlend.w, py));
+    return z;
+}
+
 void main() {
     vec3 c = uPattern == 1 ? pattern(vUv) : texture(uTex, vUv).rgb;
+    if (uPattern != 1 && uTone.w > 0.5) c = correct(c);
     float f = 1.0;
     if (uBlend.x > 0.0) f *= ramp(vOut.x / uBlend.x);
     if (uBlend.y > 0.0) f *= ramp((1.0 - vOut.x) / uBlend.y);
     if (uBlend.z > 0.0) f *= ramp(vOut.y / uBlend.z);
     if (uBlend.w > 0.0) f *= ramp((1.0 - vOut.y) / uBlend.w);
-    fragColor = vec4(c * f * uBrightness, 1.0);
+    c = c * f * uBrightness;
+    if (uBlack.y > 0.5) {
+        float lift = uBlack.x * (1.0 - blendZone(vOut));
+        c = vec3(lift) + (1.0 - lift) * c;
+    }
+    float a = uMaskOn == 1 ? texture(uMask, vOut).r : 1.0;
+    fragColor = vec4(c, a);
 }
 )glsl";
 
@@ -158,7 +194,6 @@ void OutputWindow::close() {
     window_ = nullptr;
     fullscreen_ = false;
     logLine("Output window closed");
-    meshValid_ = false;
 }
 
 bool OutputWindow::createResources() {
@@ -169,57 +204,148 @@ bool OutputWindow::createResources() {
         return false;
     }
     textureLocation_ = glGetUniformLocation(program_, "uTex");
+    maskLocation_ = glGetUniformLocation(program_, "uMask");
+    maskOnLocation_ = glGetUniformLocation(program_, "uMaskOn");
     rectLocation_ = glGetUniformLocation(program_, "uRect");
     blendLocation_ = glGetUniformLocation(program_, "uBlend");
     shapeLocation_ = glGetUniformLocation(program_, "uShape");
     brightnessLocation_ = glGetUniformLocation(program_, "uBrightness");
     patternLocation_ = glGetUniformLocation(program_, "uPattern");
-    glGenVertexArrays(1, &vao_);
-    glGenBuffers(1, &vbo_);
-    glGenBuffers(1, &ebo_);
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+    gainLocation_ = glGetUniformLocation(program_, "uGain");
+    toneLocation_ = glGetUniformLocation(program_, "uTone");
+    blackLocation_ = glGetUniformLocation(program_, "uBlack");
+    return true;
+}
+
+bool OutputWindow::ensureSlice(SliceGpu& slice) {
+    if (slice.vao != 0) {
+        return true;
+    }
+    glGenVertexArrays(1, &slice.vao);
+    glGenBuffers(1, &slice.vbo);
+    glGenBuffers(1, &slice.ebo);
+    glBindVertexArray(slice.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, slice.vbo);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(MeshVertex), reinterpret_cast<void*>(0));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(MeshVertex), reinterpret_cast<void*>(2 * sizeof(float)));
-    const std::vector<uint32_t> indices = buildMeshIndices();
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(uint32_t)), indices.data(), GL_STATIC_DRAW);
-    indexCount_ = static_cast<GLsizei>(indices.size());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slice.ebo);
     glBindVertexArray(0);
-    meshValid_ = false;
+    slice.divisions = 0;
+    slice.indexCount = 0;
+    slice.vboBytes = 0;
+    slice.eboBytes = 0;
+    slice.meshValid = false;
     return true;
 }
 
+void OutputWindow::releaseMask(SliceGpu& slice) {
+    if (slice.maskTexture) {
+        glDeleteTextures(1, &slice.maskTexture);
+        slice.maskTexture = 0;
+    }
+    slice.maskWidth = 0;
+    slice.maskHeight = 0;
+    slice.maskValid = false;
+    slice.mask = SliceMask{};
+}
+
+void OutputWindow::releaseSlice(SliceGpu& slice) {
+    releaseMask(slice);
+    if (slice.vao) {
+        glDeleteVertexArrays(1, &slice.vao);
+        slice.vao = 0;
+    }
+    if (slice.vbo) {
+        glDeleteBuffers(1, &slice.vbo);
+        slice.vbo = 0;
+    }
+    if (slice.ebo) {
+        glDeleteBuffers(1, &slice.ebo);
+        slice.ebo = 0;
+    }
+    slice = SliceGpu{};
+}
+
 void OutputWindow::destroyResources() {
+    for (SliceGpu& slice : slices_) {
+        releaseSlice(slice);
+    }
     if (program_) {
         glDeleteProgram(program_);
         program_ = 0;
     }
-    if (vao_) {
-        glDeleteVertexArrays(1, &vao_);
-        vao_ = 0;
-    }
-    if (vbo_) {
-        glDeleteBuffers(1, &vbo_);
-        vbo_ = 0;
-    }
-    if (ebo_) {
-        glDeleteBuffers(1, &ebo_);
-        ebo_ = 0;
-    }
 }
 
-void OutputWindow::uploadMesh(const OutputMapping& map) {
-    if (meshValid_ && meshMap_ == map) {
+void OutputWindow::uploadMesh(SliceGpu& slice, const OutputMapping& map) {
+    const int divisions = meshDivisionsFor(map);
+    if (slice.divisions != divisions) {
+        const std::vector<uint32_t> indices = buildMeshIndices(divisions);
+        glBindVertexArray(slice.vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slice.ebo);
+        slice.eboBytes = indices.size() * sizeof(uint32_t);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(slice.eboBytes), indices.data(), GL_STATIC_DRAW);
+        slice.indexCount = static_cast<GLsizei>(indices.size());
+        slice.divisions = divisions;
+        slice.meshValid = false;
+    } else {
+        glBindVertexArray(slice.vao);
+    }
+    if (slice.meshValid && slice.mapping == map) {
         return;
     }
-    const std::vector<MeshVertex> mesh = buildMesh(map);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(mesh.size() * sizeof(MeshVertex)), mesh.data(), GL_DYNAMIC_DRAW);
-    meshMap_ = map;
-    meshValid_ = true;
+    const std::vector<MeshVertex> mesh = buildMesh(map, divisions);
+    glBindBuffer(GL_ARRAY_BUFFER, slice.vbo);
+    slice.vboBytes = mesh.size() * sizeof(MeshVertex);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(slice.vboBytes), mesh.data(), GL_DYNAMIC_DRAW);
+    slice.mapping = map;
+    slice.meshValid = true;
+}
+
+void OutputWindow::uploadMask(SliceGpu& slice, const SliceMask& mask) {
+    if (!maskUsable(mask)) {
+        releaseMask(slice);
+        return;
+    }
+    if (slice.maskTexture && slice.maskValid && slice.mask == mask) {
+        return;
+    }
+    const bool soft = mask.feather > 0.0f;
+    const int width = soft ? kMaskWidth / 2 : kMaskWidth;
+    const int height = soft ? kMaskHeight / 2 : kMaskHeight;
+    const std::vector<uint8_t> image = buildMaskImage(mask, width, height);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    if (!slice.maskTexture || slice.maskWidth != width || slice.maskHeight != height) {
+        if (!slice.maskTexture) {
+            glGenTextures(1, &slice.maskTexture);
+        }
+        glBindTexture(GL_TEXTURE_2D, slice.maskTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, image.data());
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        slice.maskWidth = width;
+        slice.maskHeight = height;
+    } else {
+        glBindTexture(GL_TEXTURE_2D, slice.maskTexture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RED, GL_UNSIGNED_BYTE, image.data());
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    slice.mask = mask;
+    slice.maskValid = true;
+}
+
+size_t OutputWindow::gpuBytes() const {
+    size_t total = 0;
+    for (const SliceGpu& slice : slices_) {
+        total += slice.vboBytes + slice.eboBytes;
+        if (slice.maskTexture) {
+            total += static_cast<size_t>(slice.maskWidth) * static_cast<size_t>(slice.maskHeight);
+        }
+    }
+    return total;
 }
 
 void OutputWindow::setFullscreen(bool fullscreen, int monitorIndex) {
@@ -266,7 +392,7 @@ void OutputWindow::onKey(GLFWwindow* window, int key, int, int action, int) {
     }
 }
 
-void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, const OutputMapping& map, bool testPattern, OutputCapture* capture) {
+void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, OutputCapture* capture) {
     if (!window_) {
         return;
     }
@@ -290,6 +416,7 @@ void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, c
     int frameHeight = 0;
     glfwGetFramebufferSize(window_, &frameWidth, &frameHeight);
     if (frameWidth > 0 && frameHeight > 0) {
+        const OutputMapping& primary = spec.map;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, frameWidth, frameHeight);
         glDisable(GL_BLEND);
@@ -299,8 +426,8 @@ void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, c
         glClear(GL_COLOR_BUFFER_BIT);
 
         float rect[4] = {0.0f, 0.0f, 1.0f, 1.0f};
-        if (!map.fill) {
-            const float aspect = (map.slice[2] * static_cast<float>(textureWidth)) / (map.slice[3] * static_cast<float>(textureHeight));
+        if (!primary.fill) {
+            const float aspect = (primary.slice[2] * static_cast<float>(textureWidth)) / (primary.slice[3] * static_cast<float>(textureHeight));
             int viewWidth = frameWidth;
             int viewHeight = static_cast<int>(static_cast<float>(frameWidth) / aspect);
             if (viewHeight > frameHeight) {
@@ -313,19 +440,59 @@ void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, c
             rect[3] = static_cast<float>(viewHeight) / static_cast<float>(frameHeight);
         }
 
-        glBindVertexArray(vao_);
-        uploadMesh(map);
+        OutputColor color = spec.color;
+        normalizeColor(color);
+        const bool colorOn = !isDefaultColor(color);
+
         glUseProgram(program_);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
         glUniform1i(textureLocation_, 0);
+        glUniform1i(maskLocation_, 1);
         glUniform4f(rectLocation_, rect[0], rect[1], rect[2], rect[3]);
-        glUniform4f(blendLocation_, map.blend.left, map.blend.right, map.blend.top, map.blend.bottom);
-        glUniform2f(shapeLocation_, map.blend.power, map.blend.gamma);
-        glUniform1f(brightnessLocation_, map.brightness);
         glUniform1i(patternLocation_, testPattern ? 1 : 0);
-        glDrawElements(GL_TRIANGLES, indexCount_, GL_UNSIGNED_INT, nullptr);
+        glUniform4f(gainLocation_, color.red, color.green, color.blue, color.saturation);
+        glUniform4f(toneLocation_, color.contrast, 1.0f / color.gamma, color.black, colorOn ? 1.0f : 0.0f);
+
+        const int count = std::min(sliceCount(spec), kMaxSlices);
+        for (int i = 0; i < kMaxSlices; ++i) {
+            SliceGpu& gpu = slices_[static_cast<size_t>(i)];
+            const bool active = i < count && (i == 0 || spec.slices[static_cast<size_t>(i - 1)].enabled);
+            if (!active) {
+                if (gpu.vao) {
+                    releaseSlice(gpu);
+                }
+                continue;
+            }
+            const OutputMapping& map = sliceMapping(spec, i);
+            ensureSlice(gpu);
+            uploadMesh(gpu, map);
+            uploadMask(gpu, map.mask);
+            const bool masked = gpu.maskTexture != 0;
+            if (i > 0 || masked) {
+                glEnable(GL_BLEND);
+                glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+            } else {
+                glDisable(GL_BLEND);
+            }
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, masked ? gpu.maskTexture : 0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glUniform1i(maskOnLocation_, masked ? 1 : 0);
+            glUniform4f(blendLocation_, map.blend.left, map.blend.right, map.blend.top, map.blend.bottom);
+            glUniform2f(shapeLocation_, map.blend.power, map.blend.gamma);
+            glUniform1f(brightnessLocation_, map.brightness);
+            const bool lift = map.blend.blackLevel > 0.0f && hasEdgeBlend(map.blend);
+            glUniform2f(blackLocation_, map.blend.blackLevel, lift ? 1.0f : 0.0f);
+            glBindVertexArray(gpu.vao);
+            glDrawElements(GL_TRIANGLES, gpu.indexCount, GL_UNSIGNED_INT, nullptr);
+        }
+        glDisable(GL_BLEND);
         glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
 

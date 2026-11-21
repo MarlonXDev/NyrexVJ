@@ -223,6 +223,7 @@ set(NYREXVJ_APP_SOURCES
     src/main.cpp
     src/app/app.cpp
     src/app/bench.cpp
+    src/app/output_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
     src/app/ui_deck.cpp

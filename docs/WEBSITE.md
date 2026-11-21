@@ -13,7 +13,7 @@ The folder `site/` holds a small static website for NyrexVJ: plain HTML and CSS,
 | `site/de/*.html` | The same four pages in German |
 | `site/assets/` | One stylesheet, the icon and the pictures (WebP) |
 
-Links to documents, the changelog, the roadmap and the downloads point to `github.com`, so the site never has to be updated when a document changes. All colours are variables at the top of `site/assets/style.css`; the two accent colours (orange and cyan, taken from the NyrexVJ icon and interface) are `--accent` and `--accent-2`.
+Links to documents, the changelog, the roadmap and the downloads point to `github.com`, so the site never has to be updated when a document changes. All colours are variables at the top of `site/assets/style.css`; the accent colour (the orange of the NyrexVJ interface) is `--accent`.
 
 ## Publishing
 

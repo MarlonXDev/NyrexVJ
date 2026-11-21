@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NyrexVJ - Live-Visuals für VRChat-Events und Partys</title>
+<meta name="description" content="NyrexVJ ist ein kostenloses Open-Source-VJ-Programm für Live-Visuals. Natives C++ und OpenGL, eine Programmdatei für Windows und eine für Linux.">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../index.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="index.html" aria-current="page">Überblick</a>
+<a href="download.html">Download</a>
+<a href="docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.de.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../index.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<main id="main">
+<section class="sec">
+<div class="wrap">
+<h1>Live-Visuals für VRChat-Events und Partys</h1>
+<p class="lead">NyrexVJ ist ein kostenloses VJ-Programm im Sinne von Resolume Arena. Es spielt generative Clips und Videos auf Ebenen, legt Effekte darüber, folgt deiner Musik und schickt das Bild an OBS oder in ein Vollbild-Ausgabefenster. Natives C++ und OpenGL, keine Spiel-Engine, eine Programmdatei für Windows und eine für Linux.</p>
+<div class="actions">
+<a class="btn" href="download.html">Download</a>
+<a class="btn alt" href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">Quellcode auf GitHub &rarr;</a>
+</div>
+<p class="small">Open Source (MIT-Lizenz), kostenlos, ohne Konto, ohne Werbung. Entwicklungsstände erscheinen als Nightly-Release, rechne also mit rauen Kanten.</p>
+<div class="frame"><img src="../assets/shot-main.webp" width="1280" height="720" alt="Das NyrexVJ-Hauptfenster mit Clip-Raster, Decks, Vorschau und Effekten"></div>
+</div>
+</section>
+<section class="sec s2">
+<div class="wrap">
+<h2>Was es kann</h2>
+<p class="lead">Ein kurzer Rundgang. Die vollständige Liste steht in der README und in der Doku, die auf Englisch geschrieben ist.</p>
+<div class="cards">
+<article class="card"><img src="../assets/card-clips.webp" width="640" height="360" loading="lazy" alt="Ein Raster generativer Clips"><h3>Clips und Effekte</h3><p>Mehr als 50 Clips (Fraktale, Raymarching-3D-Szenen, Neon-Geometrie, Laser, Spektrum-Visuals) und mehr als 70 Effekte. Eigene Shader-Dateien lassen sich einfügen, auch von Shadertoy.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SHADERS.md" target="_blank" rel="noopener noreferrer">Eigene Shader-Clips &rarr;</a></article>
+<article class="card"><img src="../assets/card-3d.webp" width="640" height="360" loading="lazy" alt="Generative 3D-Clips"><h3>3D-Modelle und Szenen</h3><p>Spiele .glb- und .gltf-Modelle wie jeden Clip ab oder baue im Clip Creator Szenen aus Formen, Modellen und Lichtern und speichere sie als portable .nyxclip-Dateien.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SCENE3D.md" target="_blank" rel="noopener noreferrer">3D-Szenen &rarr;</a></article>
+<article class="card"><img src="../assets/card-nodes.webp" width="640" height="360" loading="lazy" alt="Derselbe Clip mit vielen Effekten"><h3>Effekte aus Nodes<span class="badge">Neu!</span></h3><p>Baue eigene Effekte in einem Node-Editor. Ein Graph aus 68 Nodes (Bild, Audio, Beat, Mathe, Farbe, Verzerrung, Rauschen, Formen) wird zu einem Shader, und Effekte sind kleine Dateien, die du teilen kannst.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/NODES.md" target="_blank" rel="noopener noreferrer">Node-Effekt-Editor &rarr;</a></article>
+<article class="card"><img src="../assets/card-audio.webp" width="640" height="360" loading="lazy" alt="NyrexVJ mit den Audio-Einstellungen"><h3>Musik und Live-Steuerung</h3><p>Ebenen und Effekte folgen dem System-Audio, einem Mikrofon oder einem Line-In. Steuere per MIDI-Controller oder über OSC, nutze eine Beat-Uhr mit Timecode und MIDI-Clock und schicke das Bild mit Spout an OBS oder mit NDI an andere Programme.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SYNC.md" target="_blank" rel="noopener noreferrer">Show-Sync &rarr;</a></article>
+<article class="card"><img src="../assets/card-video.webp" width="640" height="360" loading="lazy" alt="NyrexVJ im Resolume-ähnlichen Layout"><h3>Video, das leicht bleibt</h3><p>HAP-Clips gehen komprimiert zur Grafikkarte, andere Videos können Hardware-Decodierung nutzen, und der Monitor zeigt, was jeder Clip kostet. Gebaut, um neben VRChat zu laufen.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/MEDIA.md" target="_blank" rel="noopener noreferrer">Bild- und Videoclips &rarr;</a></article>
+<article class="card"><img src="../assets/card-plugins.webp" width="640" height="360" loading="lazy" alt="Das NyrexVJ-Einstellungsfenster"><h3>Plugins<span class="badge">Neu!</span></h3><p>Füge Modulationsquellen und Bildquellen über eine kleine C-Schnittstelle hinzu. Plugins sind nativer Code und bleiben aus, bis du sie einschaltest.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Plugins &rarr;</a></article>
+</div>
+</div>
+</section>
+<section class="sec s2">
+<div class="wrap">
+<h2>Frei und Open Source</h2>
+<p class="lead">NyrexVJ steht unter der MIT-Lizenz. Code, Roadmap und die Entscheidungen dahinter liegen auf GitHub, Issues und Pull Requests sind willkommen. Die Oberfläche gibt es auf Englisch, Deutsch, Spanisch und Französisch.</p>
+<div class="actions">
+<a class="btn alt" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen &rarr;</a>
+<a class="btn alt" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap &rarr;</a>
+</div>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="index.html">Überblick</a></li><li><a href="download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.de.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li></ul></div>
+<div><h4>Doku (englisch)</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/MEDIA.md" target="_blank" rel="noopener noreferrer">Bild- und Videoclips</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SHADERS.md" target="_blank" rel="noopener noreferrer">Shader-Clips</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/NODES.md" target="_blank" rel="noopener noreferrer">Node-Effekt-Editor</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Plugins</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li></ul></div>
+<div><h4>Info</h4><ul><li><a href="privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

@@ -216,7 +216,7 @@ void App::drawThemePicker() {
     ImGui::SameLine();
     ImGui::Checkbox(trId("Checkbox", "previewCheck"), &checked);
     ImGui::SetNextItemWidth(260.0f);
-    ImGui::SliderFloat(trId("Slider", "previewSlider"), &value, 0.0f, 1.0f, "%.2f");
+    ui::sliderFloat(trId("Slider", "previewSlider"), &value, 0.0f, 1.0f, "%.2f");
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);
     ImGui::ProgressBar(0.65f, ImVec2(260.0f, 8.0f), "");
     ImGui::PopStyleColor();
@@ -245,8 +245,11 @@ void App::drawSettingsPage(int page) {
             }
             ImGui::EndCombo();
         }
+        if (languageNeedsCjkFont(currentLanguage()) && cjkTried_ && !nativeLabelsAvailable()) {
+            ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.30f, 1.0f), "%s", "No Japanese system font was found. Install one, for example Yu Gothic or Noto Sans CJK JP, to see the Japanese text.");
+        }
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-        ImGui::TextWrapped("%s", tr("Spanish and French were translated with machine help and are not reviewed by native speakers yet. Corrections are welcome on GitHub."));
+        ImGui::TextWrapped("%s", tr("Spanish, French, Italian, Portuguese, Dutch and Japanese were translated with machine help and are not reviewed by native speakers yet. Corrections are welcome on GitHub."));
         ImGui::PopStyleColor();
         if (ImGui::SmallButton(tr("Open languages folder"))) {
             std::error_code languageError;
@@ -290,11 +293,11 @@ void App::drawSettingsPage(int page) {
         drawAudioSource();
         ImGui::SeparatorText(tr("Analysis"));
         ImGui::SetNextItemWidth(-170.0f);
-        ImGui::SliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+        ui::sliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
         ImGui::SetNextItemWidth(-170.0f);
-        ImGui::SliderFloat(trId("Smoothing", "audioSmoothing"), &settings_.audioSmoothing, 0.0f, 1.0f, "%.2f");
+        ui::sliderFloat(trId("Smoothing", "audioSmoothing"), &settings_.audioSmoothing, 0.0f, 1.0f, "%.2f");
         ImGui::SetNextItemWidth(-170.0f);
-        ImGui::SliderFloat(trId("Beat sensitivity", "audioSensitivity"), &settings_.audioBeatSensitivity, 0.0f, 1.0f, "%.2f");
+        ui::sliderFloat(trId("Beat sensitivity", "audioSensitivity"), &settings_.audioBeatSensitivity, 0.0f, 1.0f, "%.2f");
         if (ImGui::Checkbox(trId("Sync BPM to audio", "audioSyncBpm"), &settings_.audioSyncBpm)) {
             persist();
         }
@@ -333,7 +336,7 @@ void App::drawSettingsPage(int page) {
         drawThemePicker();
         ImGui::SeparatorText(tr("Scale"));
         ImGui::SetNextItemWidth(260.0f);
-        ImGui::SliderFloat(trId("Interface size", "optScale"), &uiScaleEdit_, 0.7f, 1.8f, "%.2f");
+        ui::sliderFloat(trId("Interface size", "optScale"), &uiScaleEdit_, 0.7f, 1.8f, "%.2f");
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             settings_.uiScale = uiScaleEdit_;
             persist();

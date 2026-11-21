@@ -331,7 +331,7 @@ void App::drawPlaybackControls(MediaPlayer& player, ClipPlayback& playback) {
 
     float scrub = static_cast<float>(position);
     ImGui::SetNextItemWidth(-1.0f);
-    if (ImGui::SliderFloat("##scrub", &scrub, 0.0f, static_cast<float>(duration), "")) {
+    if (ui::sliderFloat("##scrub", &scrub, 0.0f, static_cast<float>(duration), "")) {
         player.scrubTo(static_cast<double>(scrub));
     }
     if (ImGui::ArrowButton("##playStepBack", ImGuiDir_Left)) {
@@ -379,7 +379,7 @@ void App::drawPlaybackControls(MediaPlayer& player, ClipPlayback& playback) {
     }
 
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
-    ImGui::SliderFloat(trId("Clip speed", "playSpeed"), &playback.speed, kMinPlaySpeed, kMaxPlaySpeed, "%.2fx");
+    ui::sliderFloat(trId("Clip speed", "playSpeed"), &playback.speed, kMinPlaySpeed, kMaxPlaySpeed, "%.2fx");
     ImGui::SetItemTooltip("%s", tr("Negative values play the clip backwards. Backwards playback decodes short pieces in advance, videos with long keyframe intervals need more processor time and memory for it. A clip that runs in several layers shares one decoder."));
     ImGui::SameLine();
     if (ImGui::SmallButton(trId("Reverse", "playReverse"))) {
@@ -1000,9 +1000,9 @@ void App::drawAudioTab() {
     ImGui::Checkbox(trId("Sync BPM to audio", "audioSyncBpm"), &settings_.audioSyncBpm);
 
     ImGui::SeparatorText(tr("Analysis"));
-    ImGui::SliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
-    ImGui::SliderFloat(trId("Smoothing", "audioSmoothing"), &settings_.audioSmoothing, 0.0f, 1.0f, "%.2f");
-    ImGui::SliderFloat(trId("Beat sensitivity", "audioSensitivity"), &settings_.audioBeatSensitivity, 0.0f, 1.0f, "%.2f");
+    ui::sliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+    ui::sliderFloat(trId("Smoothing", "audioSmoothing"), &settings_.audioSmoothing, 0.0f, 1.0f, "%.2f");
+    ui::sliderFloat(trId("Beat sensitivity", "audioSensitivity"), &settings_.audioBeatSensitivity, 0.0f, 1.0f, "%.2f");
 
     ImGui::Spacing();
     ImGui::TextWrapped("%s", tr("System audio listens to everything your PC plays, for example a DJ program or a music player. Inputs are microphones, line-in and audio interfaces."));

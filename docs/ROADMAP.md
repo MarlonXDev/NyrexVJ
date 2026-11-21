@@ -60,7 +60,7 @@ Seven milestones, one issue and one pull request each, in this order. Status is 
 - Video clips via FFmpeg (H.264/HAP): landed in v0.13.0, see [MEDIA.md](MEDIA.md).
 - DMX strip output for VRSL: landed in v0.15.0, see [DMX.md](DMX.md).
 - Custom shader clips loaded from files: landed in v0.16.0, see [SHADERS.md](SHADERS.md).
-- More languages: Spanish and French plus your own language files landed in v0.16.0, see [LANGUAGES.md](LANGUAGES.md). The Spanish and French texts are machine assisted and not reviewed by native speakers, and scripts beyond Latin-1 need a font that is not built yet.
+- More languages: Spanish and French plus your own language files landed in v0.16.0, Italian, Portuguese, Dutch and Japanese in v0.27.0, see [LANGUAGES.md](LANGUAGES.md). All of them except German are machine assisted and not reviewed by native speakers. Japanese uses a system font that is merged in at run time; your own language files are still limited to Latin-1.
 
 These existing commitments/ideas should be reconciled with the proposed milestones by maintainers, not silently replaced.
 

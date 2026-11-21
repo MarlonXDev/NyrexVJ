@@ -934,7 +934,7 @@ const Translation kGerman[] = {
     {"The shader file is gone", "Die Shader-Datei ist nicht mehr da"},
     {"The shader needs a void main() or a mainImage function", "Der Shader braucht eine Funktion void main() oder mainImage"},
     {"The shader file is not a text file", "Die Shader-Datei ist keine Textdatei"},
-    {"Spanish and French were translated with machine help and are not reviewed by native speakers yet. Corrections are welcome on GitHub.", "Spanisch und Französisch wurden mit maschineller Hilfe übersetzt und noch nicht von Muttersprachlern geprüft. Korrekturen sind auf GitHub willkommen."},
+    {"Spanish, French, Italian, Portuguese, Dutch and Japanese were translated with machine help and are not reviewed by native speakers yet. Corrections are welcome on GitHub.", "Spanisch, Französisch, Italienisch, Portugiesisch, Niederländisch und Japanisch wurden mit maschineller Hilfe übersetzt und noch nicht von Muttersprachlern geprüft. Korrekturen sind auf GitHub willkommen."},
     {"Open languages folder", "Sprachordner öffnen"},
     {"Your own languages: put .json files into this folder and press Reload languages. docs/LANGUAGES.md explains the format.", "Eigene Sprachen: Lege .json-Dateien in diesen Ordner und drücke Sprachen neu laden. docs/LANGUAGES.md erklärt das Format."},
     {"Export translation template", "Übersetzungsvorlage exportieren"},

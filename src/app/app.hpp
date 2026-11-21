@@ -93,6 +93,7 @@ class App {
 public:
     bool init(GLFWwindow* window, const StartOptions& options);
     void frame(double dt);
+    void applyPendingFonts();
     void shutdown();
     Engine& engine() { return engine_; }
     ControlSystem& control() { return control_; }
@@ -237,6 +238,8 @@ private:
     GLFWwindow* window_ = nullptr;
     std::string iniPath_;
     bool needsLayout_ = false;
+    bool fontCheckPending_ = false;
+    bool cjkTried_ = false;
     bool rescanModels_ = false;
     bool assetsDirty_ = true;
     std::vector<AssetFile> assetModels_;

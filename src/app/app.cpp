@@ -1,5 +1,6 @@
 #include "app/app.hpp"
 
+#include "app/fonts.hpp"
 #include "app/theme.hpp"
 #include "app/ui_common.hpp"
 #include "core/crash_handler.hpp"
@@ -63,6 +64,13 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     needsLayout_ = !std::filesystem::exists(iniPath_);
 
     loadSettings(settings_);
+    if (settings_.design < 1) {
+        settings_.design = 1;
+        if (settings_.theme == "orange") {
+            settings_.theme = "studio";
+        }
+        saveSettings(settings_);
+    }
     applyTheme(themeIndex(settings_.theme));
     outputs_.attach(&settings_.outputs);
     savedOutputs_ = settings_.outputs;
@@ -74,6 +82,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     control_.refreshMidiDevices();
     loadUserLanguages(userLanguageDirectory());
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
+    fontCheckPending_ = true;
 
     {
         const std::filesystem::path dataDir = userDataDir();
@@ -531,8 +540,27 @@ void App::saveCurrentPreset() {
     toast(std::string(tr("Saved preset: ")) + name);
 }
 
+void App::applyPendingFonts() {
+    if (!fontCheckPending_) {
+        return;
+    }
+    fontCheckPending_ = false;
+    if (!languageNeedsCjkFont(currentLanguage()) || cjkTried_) {
+        return;
+    }
+    cjkTried_ = true;
+    const std::string path = findCjkFontPath();
+    if (!path.empty() && mergeCjkFont(path)) {
+        setNativeLabelsAvailable(true);
+        logLine("Japanese font merged: " + path);
+    } else {
+        logLine("No Japanese system font found");
+    }
+}
+
 void App::setLanguageAndSave(Language language) {
     setLanguage(language);
+    fontCheckPending_ = true;
     settings_.language = languageCode(language);
     saveSettings(settings_);
 }

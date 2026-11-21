@@ -495,6 +495,21 @@ void testPresetFiles() {
     CHECK(nvj::loadSettings(repaired));
     CHECK(repaired.videoDecoder == "auto" && repaired.fpsLimit == 90);
 
+    CHECK(defaults.design == 1 && defaults.theme == "studio");
+    {
+        std::ofstream legacy(dir / "settings.json", std::ios::binary | std::ios::trunc);
+        legacy << R"({"theme":"orange","language":"de"})";
+    }
+    nvj::Settings legacySettings;
+    CHECK(nvj::loadSettings(legacySettings));
+    CHECK(legacySettings.design == 0 && legacySettings.theme == "orange" && legacySettings.language == "de");
+    settings.design = 1;
+    settings.theme = "studio";
+    CHECK(nvj::saveSettings(settings));
+    nvj::Settings designBack;
+    CHECK(nvj::loadSettings(designBack));
+    CHECK(designBack.design == 1 && designBack.theme == "studio");
+
     std::filesystem::remove_all(dir);
 }
 

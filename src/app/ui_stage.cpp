@@ -48,7 +48,7 @@ bool bindingEditor(SourceBinding& binding) {
     ImGui::SameLine();
     if (binding.source == 0) {
         ImGui::SetNextItemWidth(150.0f);
-        changed |= ImGui::SliderFloat("##fixed", &binding.fixed, 0.0f, 1.0f, "%.2f");
+        changed |= ui::sliderFloat("##fixed", &binding.fixed, 0.0f, 1.0f, "%.2f");
     } else {
         ImGui::SetNextItemWidth(70.0f);
         changed |= ImGui::DragFloat("##low", &binding.low, 0.005f, 0.0f, 1.0f, "%.2f");
@@ -106,7 +106,7 @@ void App::drawStagePage() {
     }
     ImGui::SetItemTooltip("%s", tr("Universe 1 of this program is sent as this Art-Net universe, the next ones follow."));
     ImGui::SetNextItemWidth(160.0f);
-    if (ImGui::SliderInt(trId("Packets per second", "dmxRate"), &dmx.artnetRate, 1, 44)) {
+    if (ui::sliderInt(trId("Packets per second", "dmxRate"), &dmx.artnetRate, 1, 44)) {
         persist();
     }
     ImGui::EndDisabled();
@@ -266,7 +266,7 @@ void App::drawStagePage() {
         persist();
     }
     ImGui::SetNextItemWidth(160.0f);
-    if (ImGui::SliderInt(trId("Updates per second", "vrcRate"), &vrchat.rate, 1, 60)) {
+    if (ui::sliderInt(trId("Updates per second", "vrcRate"), &vrchat.rate, 1, 60)) {
         persist();
     }
     ImGui::EndDisabled();

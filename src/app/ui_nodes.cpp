@@ -1251,7 +1251,7 @@ void App::drawNodeEditor() {
         ImGui::SetNextItemWidth(-FLT_MIN);
         inputLabel("##label", control.label, kMaxGraphLabel, tr("Label"));
         ImGui::SetNextItemWidth(-FLT_MIN);
-        ImGui::SliderFloat("##default", &control.value, 0.0f, 1.0f, "%.2f");
+        ui::sliderFloat("##default", &control.value, 0.0f, 1.0f, "%.2f");
         ImGui::SetItemTooltip("%s", tr("Default value of the control"));
         ImGui::PopID();
     }

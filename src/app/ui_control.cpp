@@ -168,7 +168,7 @@ void App::drawOscOutSection() {
     }
     int rate = settings_.oscOutRate;
     ImGui::SetNextItemWidth(160.0f);
-    if (ImGui::SliderInt(trId("Updates per second", "oscOutRate"), &rate, 10, 120)) {
+    if (ui::sliderInt(trId("Updates per second", "oscOutRate"), &rate, 10, 120)) {
         settings_.oscOutRate = rate;
     }
     if (ImGui::IsItemDeactivatedAfterEdit()) {

@@ -59,7 +59,7 @@ void testTable() {
             CHECK(germanKeys.count(english) == 1);
             CHECK(english.back() == ' ' ? text.back() == ' ' : text.back() != ' ');
             CHECK(english.front() == ' ' ? text.front() == ' ' : text.front() != ' ');
-            CHECK(latinOnly(text));
+            CHECK(l == static_cast<int>(nvj::Language::Japanese) || latinOnly(text));
             CHECK(english == "Slowest 5%" || percentCount(english) == percentCount(text));
         }
     }
@@ -95,6 +95,32 @@ void testLookup() {
     CHECK(nvj::trMessage("Update available: v1.0.0") == "Mise à jour disponible : v1.0.0");
     CHECK(nvj::trMessage("Could not reach GitHub: HTTP 404") == "Impossible de joindre GitHub : HTTP 404");
     CHECK(nvj::trMessage("").empty());
+
+    nvj::setLanguage(nvj::Language::Italian);
+    CHECK(std::string(nvj::tr("Save")) == "Salva");
+    CHECK(std::string(nvj::tr("Something unknown")) == "Something unknown");
+    CHECK(std::string(nvj::trId("Save", "x")) == "Salva###x");
+    CHECK(nvj::trMessage("Update available: v1.0.0") == "Aggiornamento disponibile: v1.0.0");
+    CHECK(nvj::trMessage("Could not reach GitHub: HTTP 404") == "Impossibile raggiungere GitHub: HTTP 404");
+
+    nvj::setLanguage(nvj::Language::Portuguese);
+    CHECK(std::string(nvj::tr("Save")) == "Salvar");
+    CHECK(std::string(nvj::trId("Save", "x")) == "Salvar###x");
+    CHECK(nvj::trMessage("Update available: v1.0.0") == "Atualização disponível: v1.0.0");
+    CHECK(nvj::trMessage("Could not reach GitHub: HTTP 404") == "Não foi possível acessar o GitHub: HTTP 404");
+
+    nvj::setLanguage(nvj::Language::Dutch);
+    CHECK(std::string(nvj::tr("Save")) == "Opslaan");
+    CHECK(std::string(nvj::trId("Save", "x")) == "Opslaan###x");
+    CHECK(nvj::trMessage("Update available: v1.0.0") == "Update beschikbaar: v1.0.0");
+    CHECK(nvj::trMessage("Could not reach GitHub: HTTP 404") == "Kon GitHub niet bereiken: HTTP 404");
+
+    nvj::setLanguage(nvj::Language::Japanese);
+    CHECK(std::string(nvj::tr("Save")) == "保存");
+    CHECK(std::string(nvj::trId("Save", "x")) == "保存###x");
+    CHECK(nvj::trMessage("Update available: v1.0.0") == "アップデートがあります: v1.0.0");
+    CHECK(nvj::trMessage("Could not reach GitHub: HTTP 404") == "GitHubに接続できませんでした: HTTP 404");
+    CHECK(nvj::trMessage("").empty());
     nvj::setLanguage(nvj::Language::English);
 }
 
@@ -103,6 +129,10 @@ void testLanguageCodes() {
     CHECK(nvj::languageFromCode("en") == nvj::Language::English);
     CHECK(nvj::languageFromCode("es") == nvj::Language::Spanish);
     CHECK(nvj::languageFromCode("fr") == nvj::Language::French);
+    CHECK(nvj::languageFromCode("it") == nvj::Language::Italian);
+    CHECK(nvj::languageFromCode("pt") == nvj::Language::Portuguese);
+    CHECK(nvj::languageFromCode("nl") == nvj::Language::Dutch);
+    CHECK(nvj::languageFromCode("ja") == nvj::Language::Japanese);
     CHECK(nvj::languageFromCode("") == nvj::Language::English);
     CHECK(nvj::languageFromCode("xx") == nvj::Language::English);
     CHECK(std::string(nvj::languageCode(nvj::Language::German)) == "de");
@@ -111,6 +141,16 @@ void testLanguageCodes() {
     CHECK(std::string(nvj::languageCode(nvj::Language::French)) == "fr");
     CHECK(std::string(nvj::languageLabel(nvj::Language::Spanish)) == "Español");
     CHECK(std::string(nvj::languageLabel(nvj::Language::French)) == "Français");
+    CHECK(std::string(nvj::languageLabel(nvj::Language::Italian)) == "Italiano");
+    CHECK(std::string(nvj::languageLabel(nvj::Language::Portuguese)) == "Português");
+    CHECK(std::string(nvj::languageLabel(nvj::Language::Dutch)) == "Nederlands");
+    CHECK(!nvj::nativeLabelsAvailable());
+    CHECK(std::string(nvj::languageLabel(nvj::Language::Japanese)) == "Japanese");
+    nvj::setNativeLabelsAvailable(true);
+    CHECK(std::string(nvj::languageLabel(nvj::Language::Japanese)) == "日本語");
+    nvj::setNativeLabelsAvailable(false);
+    CHECK(nvj::languageNeedsCjkFont(nvj::Language::Japanese));
+    CHECK(!nvj::languageNeedsCjkFont(nvj::Language::Italian));
     CHECK(nvj::languageCount() >= nvj::kBuiltInLanguageCount);
     for (int i = 0; i < nvj::languageCount(); ++i) {
         const nvj::Language language = static_cast<nvj::Language>(i);
@@ -139,14 +179,14 @@ void testUserLanguages() {
     std::string error;
     CHECK(!nvj::parseUserLanguage("not json", code, name, error));
     CHECK(!nvj::parseUserLanguage("[]", code, name, error));
-    CHECK(!nvj::parseUserLanguage(R"({"name":"Italiano","translations":{}})", code, name, error));
-    CHECK(!nvj::parseUserLanguage(R"({"code":"IT","name":"Italiano","translations":{}})", code, name, error));
-    CHECK(!nvj::parseUserLanguage(R"({"code":"it","name":"","translations":{}})", code, name, error));
-    CHECK(!nvj::parseUserLanguage(R"({"code":"it","name":"Italiano"})", code, name, error));
-    CHECK(nvj::parseUserLanguage(R"({"code":"it","name":"Italiano","translations":{}})", code, name, error));
-    CHECK(code == "it" && name == "Italiano");
+    CHECK(!nvj::parseUserLanguage(R"({"name":"Svenska","translations":{}})", code, name, error));
+    CHECK(!nvj::parseUserLanguage(R"({"code":"SV","name":"Svenska","translations":{}})", code, name, error));
+    CHECK(!nvj::parseUserLanguage(R"({"code":"sv","name":"","translations":{}})", code, name, error));
+    CHECK(!nvj::parseUserLanguage(R"({"code":"sv","name":"Svenska"})", code, name, error));
+    CHECK(nvj::parseUserLanguage(R"({"code":"sv","name":"Svenska","translations":{}})", code, name, error));
+    CHECK(code == "sv" && name == "Svenska");
 
-    writeFile(folder / "italiano.json", R"({"code":"it","name":"Italiano","translations":{"Save":"Salva","Saved preset: ":"Preset salvato:","Close":"Chiudi","Open":"","Stop":"停止","Count":5}})");
+    writeFile(folder / "svenska.json", R"({"code":"sv","name":"Svenska","translations":{"Save":"Spara","Saved preset: ":"Preset sparad:","Close":"Stäng","Open":"","Stop":"停止","Count":5}})");
     writeFile(folder / "broken.json", "{ nope");
     writeFile(folder / "clash.json", R"({"code":"de","name":"Doppelt","translations":{"Save":"x"}})");
     writeFile(folder / "notes.txt", "ignored");
@@ -158,35 +198,35 @@ void testUserLanguages() {
     CHECK(!report.firstProblem.empty());
     CHECK(nvj::languageCount() == nvj::kBuiltInLanguageCount + 1);
 
-    const nvj::Language italian = nvj::languageFromCode("it");
-    CHECK(static_cast<int>(italian) == nvj::kBuiltInLanguageCount);
-    CHECK(nvj::isUserLanguage(italian));
+    const nvj::Language swedish = nvj::languageFromCode("sv");
+    CHECK(static_cast<int>(swedish) == nvj::kBuiltInLanguageCount);
+    CHECK(nvj::isUserLanguage(swedish));
     CHECK(!nvj::isUserLanguage(nvj::Language::French));
-    CHECK(std::string(nvj::languageCode(italian)) == "it");
-    CHECK(std::string(nvj::languageLabel(italian)) == "Italiano");
+    CHECK(std::string(nvj::languageCode(swedish)) == "sv");
+    CHECK(std::string(nvj::languageLabel(swedish)) == "Svenska");
 
-    nvj::setLanguage(italian);
-    CHECK(nvj::currentLanguage() == italian);
-    CHECK(std::string(nvj::tr("Save")) == "Salva");
-    CHECK(std::string(nvj::tr("Close")) == "Chiudi");
+    nvj::setLanguage(swedish);
+    CHECK(nvj::currentLanguage() == swedish);
+    CHECK(std::string(nvj::tr("Save")) == "Spara");
+    CHECK(std::string(nvj::tr("Close")) == "Stäng");
     CHECK(std::string(nvj::tr("Open")) == "Open");
     CHECK(std::string(nvj::tr("Stop")) == "Stop");
     CHECK(std::string(nvj::tr("Count")) == "Count");
     CHECK(std::string(nvj::tr("Unknown text")) == "Unknown text");
-    CHECK(nvj::trMessage("Saved preset: demo") == "Preset salvato: demo");
-    CHECK(std::string(nvj::trId("Save", "x")) == "Salva###x");
+    CHECK(nvj::trMessage("Saved preset: demo") == "Preset sparad: demo");
+    CHECK(std::string(nvj::trId("Save", "x")) == "Spara###x");
 
     const nvj::UserLanguageReport again = nvj::loadUserLanguages(folder.string());
     CHECK(again.loaded == 1);
-    CHECK(nvj::currentLanguage() == italian);
-    CHECK(std::string(nvj::tr("Save")) == "Salva");
+    CHECK(nvj::currentLanguage() == swedish);
+    CHECK(std::string(nvj::tr("Save")) == "Spara");
 
-    std::filesystem::remove(folder / "italiano.json");
+    std::filesystem::remove(folder / "svenska.json");
     const nvj::UserLanguageReport gone = nvj::loadUserLanguages(folder.string());
     CHECK(gone.loaded == 0);
     CHECK(nvj::currentLanguage() == nvj::Language::English);
     CHECK(std::string(nvj::tr("Save")) == "Save");
-    CHECK(nvj::languageFromCode("it") == nvj::Language::English);
+    CHECK(nvj::languageFromCode("sv") == nvj::Language::English);
 
     nvj::setLanguage(nvj::Language::German);
     nvj::loadUserLanguages(folder.string());

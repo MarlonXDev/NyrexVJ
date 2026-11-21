@@ -34,6 +34,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0018](adr/0018-plugin-system.md) | Plugin system: C interface for modulation and image sources, manifest checked before code, time budget on a thread of its own, crash marker and safe mode | Accepted (2026-11-21), implemented in v0.26.0 |
 | [0019](adr/0019-dxv-software-codecs.md) | DXV and other software-only codecs: processor decoder kept, no graphics card attempt, clear message, YCoCg conversion | Accepted (2026-11-21), implemented in v0.26.1 |
 | [0020](adr/0020-studio-design-and-more-languages.md) | Studio design as the new default (neutral dark, red-orange accent, rounded style, one-time migration from Orange), Italian, Portuguese, Dutch and Japanese, Japanese through a merged system font | Accepted (2026-11-21), implemented in v0.27.0 |
+| [0021](adr/0021-dxv-hap-conversion-and-ffmpeg-setup.md) | DXV videos converted to HAP in the background (variant to format mapping, no HAP Q Alpha, import modes with Ask as default, content keyed cache, hot swap and fallback to DXV), FFmpeg capability check at start and a one-button setup from BtbN builds with checksum and licence checks, never touching existing installations | Accepted (2026-11-21), implemented in v0.28.0 |
 
 ## New ADR template
 

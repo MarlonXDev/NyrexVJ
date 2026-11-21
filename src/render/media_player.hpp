@@ -2,12 +2,14 @@
 
 #include "core/playhead.hpp"
 #include "media/playback_driver.hpp"
+#include "media/video_redirect.hpp"
 #include "media/video_decoder.hpp"
 #include "render/gl_util.hpp"
 #include "render/video_gpu.hpp"
 #include "scene3d/scene_model.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <future>
 #include <memory>
 #include <string>
@@ -62,6 +64,9 @@ public:
     void setVideoOptions(const VideoOptions& options);
     const VideoOptions& videoOptions() const { return options_; }
     double lastClock() const { return clock_; }
+    bool convertedActive() const { return convertedActive_; }
+    bool convertedRetired() const { return convertedRetired_; }
+    const std::string& openedPath() const { return openPath_; }
 
     bool thumbnailDone = false;
 
@@ -80,6 +85,9 @@ private:
     bool hasPicture() const;
     bool present(double seconds);
     void start();
+    VideoOptions effectiveOptions() const;
+    void serviceUpgrade();
+    void retireConverted(const std::string& reason);
     void destroyTexture();
     void createTexture(int width, int height, const uint8_t* pixels, bool mipmaps);
 
@@ -107,6 +115,12 @@ private:
     std::future<VideoLoad> videoLoad_;
     std::unique_ptr<VideoDecoder> decoder_;
     VideoInfo info_;
+    std::string openPath_;
+    bool convertedActive_ = false;
+    bool convertedRetired_ = false;
+    std::uint64_t redirectGeneration_ = 0;
+    std::string upgradePath_;
+    std::future<VideoLoad> upgradeLoad_;
     std::chrono::steady_clock::time_point lastUse_ = std::chrono::steady_clock::now();
 };
 

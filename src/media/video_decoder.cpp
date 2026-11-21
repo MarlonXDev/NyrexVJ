@@ -8,7 +8,8 @@
 namespace nvj {
 
 std::string ffmpegDirectory() {
-    return (std::filesystem::path(userDataDir()) / "ffmpeg").string();
+    const std::u8string text = (std::filesystem::path(userDataDir()) / "ffmpeg").u8string();
+    return std::string(text.begin(), text.end());
 }
 
 const char* decodePathName(DecodePath path) {
@@ -51,6 +52,7 @@ VideoDecodeMode videoDecodeModeFromName(const std::string& name) {
 
 #ifdef NYREXVJ_HAVE_FFMPEG
 
+#include "media/frame_convert.hpp"
 #include "media/hap.hpp"
 #include "media/video_hardware.hpp"
 #include "media/video_hardware_internal.hpp"
@@ -202,39 +204,6 @@ bool describeFrame(const FfmpegApi& api, const AVFrame& frame, VideoFrame& out) 
     return true;
 }
 
-bool convertYcocgToRgba(const FfmpegApi& api, const AVFrame& frame, std::vector<uint8_t>& rgba) {
-    const AVPixFmtDescriptor* d = api.av_pix_fmt_desc_get(static_cast<AVPixelFormat>(frame.format));
-    if (d == nullptr || (d->flags & (AV_PIX_FMT_FLAG_PLANAR | AV_PIX_FMT_FLAG_RGB | AV_PIX_FMT_FLAG_BE)) != AV_PIX_FMT_FLAG_PLANAR || d->nb_components < 3 || d->nb_components > 4) {
-        return false;
-    }
-    for (int i = 0; i < d->nb_components; ++i) {
-        if (d->comp[i].plane != i || d->comp[i].step != 1 || d->comp[i].offset != 0 || d->comp[i].depth != 8 || frame.data[i] == nullptr || frame.linesize[i] <= 0) {
-            return false;
-        }
-    }
-    const bool alpha = d->nb_components == 4;
-    rgba.resize(static_cast<size_t>(frame.width) * static_cast<size_t>(frame.height) * 4u);
-    uint8_t* out = rgba.data();
-    for (int y = 0; y < frame.height; ++y) {
-        const int cy = y >> d->log2_chroma_h;
-        const uint8_t* luma = frame.data[0] + static_cast<ptrdiff_t>(y) * frame.linesize[0];
-        const uint8_t* cg = frame.data[1] + static_cast<ptrdiff_t>(cy) * frame.linesize[1];
-        const uint8_t* co = frame.data[2] + static_cast<ptrdiff_t>(cy) * frame.linesize[2];
-        const uint8_t* opacity = alpha ? frame.data[3] + static_cast<ptrdiff_t>(y) * frame.linesize[3] : nullptr;
-        for (int x = 0; x < frame.width; ++x) {
-            const int cx = x >> d->log2_chroma_w;
-            const int lumaValue = luma[x];
-            const int g = cg[cx] - 128;
-            const int o = co[cx] - 128;
-            out[0] = static_cast<uint8_t>(std::clamp(lumaValue + o - g, 0, 255));
-            out[1] = static_cast<uint8_t>(std::clamp(lumaValue + g, 0, 255));
-            out[2] = static_cast<uint8_t>(std::clamp(lumaValue - g - o, 0, 255));
-            out[3] = opacity != nullptr ? opacity[x] : 255;
-            out += 4;
-        }
-    }
-    return true;
-}
 
 }
 

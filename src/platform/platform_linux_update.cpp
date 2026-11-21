@@ -119,7 +119,7 @@ bool loadCurlLocked(CurlState& state) {
         state.error.clear();
         return true;
     }
-    state.error = "The update download needs libcurl (libcurl.so.4), which was not found on this computer";
+    state.error = "Downloads need libcurl (libcurl.so.4), which was not found on this computer";
     return false;
 }
 
@@ -156,6 +156,42 @@ int reportProgress(void* user, int64_t total, int64_t now, int64_t, int64_t) {
     Transfer* transfer = static_cast<Transfer*>(user);
     if (transfer->progress && *transfer->progress && now >= 0) {
         (*transfer->progress)(static_cast<size_t>(now), total > 0 ? static_cast<size_t>(total) : 0);
+    }
+    return 0;
+}
+
+struct DownloadTransfer {
+    std::FILE* file = nullptr;
+    const DownloadProgressFn* progress = nullptr;
+    unsigned long long written = 0;
+    unsigned long long limit = 0;
+    bool cancelled = false;
+    bool tooLarge = false;
+    bool writeFailed = false;
+};
+
+size_t writeFile(char* data, size_t size, size_t count, void* user) {
+    DownloadTransfer* transfer = static_cast<DownloadTransfer*>(user);
+    const size_t bytes = size * count;
+    if (transfer->written + bytes > transfer->limit) {
+        transfer->tooLarge = true;
+        return 0;
+    }
+    if (bytes > 0 && std::fwrite(data, 1, bytes, transfer->file) != bytes) {
+        transfer->writeFailed = true;
+        return 0;
+    }
+    transfer->written += bytes;
+    return bytes;
+}
+
+int reportDownloadProgress(void* user, int64_t total, int64_t now, int64_t, int64_t) {
+    DownloadTransfer* transfer = static_cast<DownloadTransfer*>(user);
+    if (transfer->progress && *transfer->progress && now >= 0) {
+        if (!(*transfer->progress)(static_cast<unsigned long long>(now), total > 0 ? static_cast<unsigned long long>(total) : 0)) {
+            transfer->cancelled = true;
+            return 1;
+        }
     }
     return 0;
 }
@@ -284,6 +320,86 @@ bool httpGet(const std::string& url, HttpResult& result, const ProgressFn& progr
     if (result.status != 200) {
         result.error = "HTTP " + std::to_string(result.status);
         return false;
+    }
+    return true;
+}
+
+bool httpDownload(const std::string& url, const std::string& destinationUtf8, unsigned long long maxBytes, const DownloadProgressFn& progress, DownloadResult& result) {
+    result = DownloadResult{};
+    if (url.rfind("https://", 0) != 0) {
+        result.error = "Only secure (https) addresses are allowed";
+        return false;
+    }
+    CurlApi api;
+    if (!acquireCurl(api, result.error)) {
+        return false;
+    }
+    std::FILE* file = std::fopen(destinationUtf8.c_str(), "wb");
+    if (!file) {
+        result.error = "The target file cannot be created";
+        return false;
+    }
+    void* easy = api.init();
+    if (!easy) {
+        std::fclose(file);
+        std::remove(destinationUtf8.c_str());
+        result.error = "Opening the connection failed";
+        return false;
+    }
+    DownloadTransfer transfer;
+    transfer.file = file;
+    transfer.progress = &progress;
+    transfer.limit = maxBytes;
+    char errorText[256] = {0};
+    api.setopt(easy, kOptUrl, url.c_str());
+    api.setopt(easy, kOptUserAgent, "NyrexVJ-FFmpegSetup");
+    api.setopt(easy, kOptFollow, 1L);
+    api.setopt(easy, kOptMaxRedirects, 8L);
+    api.setopt(easy, kOptProtocols, 2L);
+    api.setopt(easy, kOptRedirProtocols, 2L);
+    api.setopt(easy, kOptConnectTimeout, 15L);
+    api.setopt(easy, kOptLowSpeedLimit, 1L);
+    api.setopt(easy, kOptLowSpeedTime, 30L);
+    api.setopt(easy, kOptNoSignal, 1L);
+    api.setopt(easy, kOptWriteFunction, &writeFile);
+    api.setopt(easy, kOptWriteData, &transfer);
+    api.setopt(easy, kOptNoProgress, 0L);
+    api.setopt(easy, kOptXferFunction, &reportDownloadProgress);
+    api.setopt(easy, kOptXferData, &transfer);
+    api.setopt(easy, kOptErrorBuffer, errorText);
+    const int code = api.perform(easy);
+    long status = 0;
+    if (code == 0) {
+        api.getinfo(easy, kInfoResponseCode, &status);
+    }
+    api.cleanup(easy);
+    const bool flushed = std::fclose(file) == 0;
+    result.bytes = transfer.written;
+    result.status = static_cast<int>(status);
+    auto fail = [&](const std::string& message) {
+        std::remove(destinationUtf8.c_str());
+        result.error = message;
+        return false;
+    };
+    if (transfer.cancelled) {
+        result.cancelled = true;
+        return fail("Cancelled");
+    }
+    if (code != 0) {
+        if (transfer.tooLarge) {
+            return fail("The download is larger than expected");
+        }
+        if (transfer.writeFailed) {
+            return fail("The file could not be written (disk full?)");
+        }
+        const char* text = errorText[0] ? errorText : (api.strerror ? api.strerror(code) : nullptr);
+        return fail(std::string("Download failed: ") + (text ? text : "unknown error"));
+    }
+    if (status != 200) {
+        return fail("HTTP " + std::to_string(status));
+    }
+    if (!flushed) {
+        return fail("The file could not be written (disk full?)");
     }
     return true;
 }

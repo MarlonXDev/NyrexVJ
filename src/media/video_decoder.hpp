@@ -13,6 +13,7 @@ struct VideoSupport {
     bool compiled = false;
     bool loaded = false;
     std::string folder;
+    std::string loadedFrom;
     std::vector<std::string> files;
     std::string problem;
 };

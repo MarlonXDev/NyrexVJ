@@ -27,6 +27,12 @@ bool httpGet(const std::string&, HttpResult& result, const ProgressFn&) {
     return false;
 }
 
+bool httpDownload(const std::string&, const std::string&, unsigned long long, const DownloadProgressFn&, DownloadResult& result) {
+    result = DownloadResult{};
+    result.error = "Downloads are only available on Windows and Linux";
+    return false;
+}
+
 std::string currentExePath() {
     std::error_code ec;
     std::filesystem::path path = std::filesystem::read_symlink("/proc/self/exe", ec);

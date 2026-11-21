@@ -12,6 +12,7 @@
 #include "core/log.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <cwchar>
 #include <filesystem>
 #include <fstream>
@@ -270,6 +271,127 @@ bool httpGet(const std::string& url, HttpResult& result, const ProgressFn& progr
     if (result.status != 200) {
         result.error = "HTTP " + std::to_string(result.status);
         return false;
+    }
+    return true;
+}
+
+bool httpDownload(const std::string& url, const std::string& destinationUtf8, unsigned long long maxBytes, const DownloadProgressFn& progress, DownloadResult& result) {
+    result = DownloadResult{};
+    if (url.rfind("https://", 0) != 0) {
+        result.error = "Only secure (https) addresses are allowed";
+        return false;
+    }
+    std::wstring wideUrl = widen(url);
+    wchar_t host[256];
+    wchar_t path[2048];
+    wchar_t extra[2048];
+    URL_COMPONENTS parts{};
+    parts.dwStructSize = sizeof(parts);
+    parts.lpszHostName = host;
+    parts.dwHostNameLength = 256;
+    parts.lpszUrlPath = path;
+    parts.dwUrlPathLength = 2048;
+    parts.lpszExtraInfo = extra;
+    parts.dwExtraInfoLength = 2048;
+    if (!WinHttpCrackUrl(wideUrl.c_str(), static_cast<DWORD>(wideUrl.size()), 0, &parts)) {
+        result.error = lastError("Reading the address");
+        return false;
+    }
+    std::wstring hostName(host, parts.dwHostNameLength);
+    std::wstring objectName = std::wstring(path, parts.dwUrlPathLength) + std::wstring(extra, parts.dwExtraInfoLength);
+
+    Handle session;
+    session.value = WinHttpOpen(L"NyrexVJ-FFmpegSetup", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!session.value) {
+        session.value = WinHttpOpen(L"NyrexVJ-FFmpegSetup", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    }
+    if (!session.value) {
+        result.error = lastError("Opening the connection");
+        return false;
+    }
+    WinHttpSetTimeouts(session.value, 15000, 15000, 30000, 30000);
+
+    Handle connection;
+    connection.value = WinHttpConnect(session.value, hostName.c_str(), parts.nPort, 0);
+    if (!connection.value) {
+        result.error = lastError("Connecting");
+        return false;
+    }
+    Handle request;
+    request.value = WinHttpOpenRequest(connection.value, L"GET", objectName.c_str(), nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+    if (!request.value) {
+        result.error = lastError("Creating the request");
+        return false;
+    }
+    if (!WinHttpSendRequest(request.value, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
+        result.error = lastError("Sending the request");
+        return false;
+    }
+    if (!WinHttpReceiveResponse(request.value, nullptr)) {
+        result.error = lastError("Receiving the answer");
+        return false;
+    }
+    DWORD status = 0;
+    DWORD statusSize = sizeof(status);
+    WinHttpQueryHeaders(request.value, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize, WINHTTP_NO_HEADER_INDEX);
+    result.status = static_cast<int>(status);
+    if (status != 200) {
+        result.error = "HTTP " + std::to_string(status);
+        return false;
+    }
+    unsigned long long total = 0;
+    {
+        wchar_t lengthText[32] = {0};
+        DWORD lengthSize = sizeof(lengthText);
+        if (WinHttpQueryHeaders(request.value, WINHTTP_QUERY_CONTENT_LENGTH, WINHTTP_HEADER_NAME_BY_INDEX, lengthText, &lengthSize, WINHTTP_NO_HEADER_INDEX)) {
+            total = _wcstoui64(lengthText, nullptr, 10);
+        }
+    }
+    const std::filesystem::path target(widen(destinationUtf8));
+    std::ofstream out(target, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        result.error = "The target file cannot be created";
+        return false;
+    }
+    std::vector<unsigned char> buffer(256 * 1024);
+    auto fail = [&](const std::string& message) {
+        out.close();
+        std::error_code ec;
+        std::filesystem::remove(target, ec);
+        result.error = message;
+        return false;
+    };
+    for (;;) {
+        DWORD available = 0;
+        if (!WinHttpQueryDataAvailable(request.value, &available)) {
+            return fail(lastError("Reading the data"));
+        }
+        if (available == 0) {
+            break;
+        }
+        if (available > buffer.size()) {
+            available = static_cast<DWORD>(buffer.size());
+        }
+        DWORD read = 0;
+        if (!WinHttpReadData(request.value, buffer.data(), available, &read)) {
+            return fail(lastError("Reading the data"));
+        }
+        if (result.bytes + read > maxBytes) {
+            return fail("The download is larger than expected");
+        }
+        out.write(reinterpret_cast<const char*>(buffer.data()), static_cast<std::streamsize>(read));
+        if (!out) {
+            return fail("The file could not be written (disk full?)");
+        }
+        result.bytes += read;
+        if (progress && !progress(result.bytes, total)) {
+            result.cancelled = true;
+            return fail("Cancelled");
+        }
+    }
+    out.close();
+    if (!out) {
+        return fail("The file could not be written (disk full?)");
     }
     return true;
 }

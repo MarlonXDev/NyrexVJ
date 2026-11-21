@@ -1,5 +1,6 @@
 #include "app/app.hpp"
 #include "app/bench.hpp"
+#include "app/bench_convert.hpp"
 #include "app/output_selftest.hpp"
 #include "core/frame_pacer.hpp"
 #include "core/frame_stats.hpp"
@@ -33,6 +34,9 @@ struct Options {
     std::string dumpOutputs;
     std::string benchScene;
     std::string benchVideo;
+    std::string benchConvert;
+    std::string convertFormat;
+    std::string convertKeep;
     std::string benchSwitch;
     std::string benchLive;
     bool liveSelfTest = false;
@@ -85,6 +89,12 @@ Options parseOptions(int argc, char** argv) {
             options.frameReport = std::atof(argv[++i]);
         } else if (arg == "--bench-video" && hasValue) {
             options.benchVideo = argv[++i];
+        } else if (arg == "--bench-convert" && hasValue) {
+            options.benchConvert = argv[++i];
+        } else if (arg == "--convert-format" && hasValue) {
+            options.convertFormat = argv[++i];
+        } else if (arg == "--convert-keep" && hasValue) {
+            options.convertKeep = argv[++i];
         } else if (arg == "--bench-switch" && hasValue) {
             options.benchSwitch = argv[++i];
         } else if (arg == "--bench-live" && hasValue) {
@@ -260,6 +270,10 @@ int main(int argc, char** argv) {
     nvj::platform::cleanupOldBinary();
     nvj::logInit();
     nvj::logLine(std::string("NyrexVJ ") + NYREXVJ_VERSION);
+
+    if (!options.benchConvert.empty()) {
+        return nvj::runConvertBenchmark(options.benchConvert, options.convertFormat, options.convertKeep, options.benchOut);
+    }
 
     glfwSetErrorCallback(onGlfwError);
     if (!glfwInit()) {

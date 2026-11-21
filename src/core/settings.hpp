@@ -28,6 +28,10 @@ struct Settings {
     bool hapDirect = true;
     bool videoGpuConvert = true;
     bool prewarmNext = true;
+    std::string convertMode = "ask";
+    std::string convertFormat = "auto";
+    int convertCacheMb = 4096;
+    bool ffmpegHintDismissed = false;
     bool openOutputOnStart = false;
     bool showStatusBar = true;
     int perfBudgetFps = 60;

@@ -1,5 +1,7 @@
 #include "core/sha256.hpp"
 
+#include <fstream>
+
 #include <cstring>
 
 namespace nvj {
@@ -123,6 +125,33 @@ std::string sha256Hex(const std::string& text) {
 
 std::string sha256Hex(const std::vector<unsigned char>& data) {
     return sha256Hex(data.data(), data.size());
+}
+
+bool sha256FileHex(const std::filesystem::path& file, std::string& hex, const std::function<bool(unsigned long long)>& progress) {
+    std::ifstream in(file, std::ios::binary);
+    if (!in) {
+        return false;
+    }
+    Sha256 hash;
+    std::vector<unsigned char> buffer(1024 * 1024);
+    unsigned long long done = 0;
+    while (in) {
+        in.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
+        const std::streamsize got = in.gcount();
+        if (got <= 0) {
+            break;
+        }
+        hash.update(buffer.data(), static_cast<size_t>(got));
+        done += static_cast<unsigned long long>(got);
+        if (progress && !progress(done)) {
+            return false;
+        }
+    }
+    if (in.bad()) {
+        return false;
+    }
+    hex = hash.finalHex();
+    return true;
 }
 
 }

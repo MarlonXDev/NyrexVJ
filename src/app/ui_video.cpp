@@ -233,6 +233,9 @@ void App::drawVideoMonitor() {
             if (!detail.empty()) {
                 ImGui::TextDisabled("%s", detail.c_str());
             }
+            if (status.convertedCopy) {
+                ImGui::TextColored(kGood, "%s", tr("Converted HAP copy of the original video"));
+            }
             if (explained) {
                 ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetFontSize() * 22.0f);
                 ImGui::TextDisabled("%s: %s", tr("Why"), trMessage(status.fallbackReason).c_str());

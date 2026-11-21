@@ -61,6 +61,21 @@ bool loadSettings(Settings& settings) {
     result.hapDirect = boolean("hapDirect", true);
     result.videoGpuConvert = boolean("videoGpuConvert", true);
     result.prewarmNext = boolean("prewarmNext", true);
+    auto convertMode = doc.find("convertMode");
+    if (convertMode != doc.end() && convertMode->is_string()) {
+        const std::string value = convertMode->get<std::string>();
+        result.convertMode = (value == "off" || value == "ask" || value == "automatic") ? value : "ask";
+    }
+    auto convertFormat = doc.find("convertFormat");
+    if (convertFormat != doc.end() && convertFormat->is_string()) {
+        const std::string value = convertFormat->get<std::string>();
+        result.convertFormat = (value == "auto" || value == "hap" || value == "hap_alpha" || value == "hap_q") ? value : "auto";
+    }
+    auto convertCache = doc.find("convertCacheMb");
+    if (convertCache != doc.end() && convertCache->is_number_integer()) {
+        result.convertCacheMb = std::clamp(convertCache->get<int>(), 256, 204800);
+    }
+    result.ffmpegHintDismissed = boolean("ffmpegHintDismissed", false);
     result.openOutputOnStart = boolean("openOutputOnStart", false);
     result.showStatusBar = boolean("showStatusBar", true);
     result.showTimings = boolean("showTimings", true);
@@ -248,6 +263,10 @@ bool saveSettings(const Settings& settings) {
     doc["hapDirect"] = settings.hapDirect;
     doc["videoGpuConvert"] = settings.videoGpuConvert;
     doc["prewarmNext"] = settings.prewarmNext;
+    doc["convertMode"] = settings.convertMode;
+    doc["convertFormat"] = settings.convertFormat;
+    doc["convertCacheMb"] = settings.convertCacheMb;
+    doc["ffmpegHintDismissed"] = settings.ffmpegHintDismissed;
     doc["openOutputOnStart"] = settings.openOutputOnStart;
     doc["showStatusBar"] = settings.showStatusBar;
     doc["showTimings"] = settings.showTimings;

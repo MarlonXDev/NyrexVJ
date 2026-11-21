@@ -30,7 +30,8 @@ Every library below is optional. When one is missing, only the matching feature 
 | Audio capture | Windows audio (WASAPI), part of Windows | `libpulse-simple.so.0` and `libpulse.so.0` (PulseAudio, or PipeWire with its PulseAudio server) | `NYREXVJ_PULSE_LIB` |
 | MIDI input, MIDI clock and MTC | Windows multimedia (WinMM), part of Windows | `libasound.so.2` (ALSA sequencer) | `NYREXVJ_ALSA_LIB` |
 | LTC timecode input | Windows audio (WASAPI), part of Windows | the same PulseAudio libraries as audio capture | `NYREXVJ_PULSE_LIB` |
-| Update download | WinHTTP, part of Windows | `libcurl.so.4` | none |
+| Update download and FFmpeg setup download (v0.28.0) | WinHTTP, part of Windows | `libcurl.so.4` | none |
+| Unpacking the FFmpeg download (v0.28.0) | NyrexVJ's own zip reader, nothing to install | NyrexVJ's own zip reader, and `liblzma.so.5` for the `tar.xz` archive | none |
 | Plugins (v0.26.0) | the library of each plugin, loaded with `LoadLibrary` | the library of each plugin, loaded with `dlopen` | none |
 | Open a web page or folder | Windows shell | `xdg-open` | none |
 

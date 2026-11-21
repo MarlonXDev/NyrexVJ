@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.27.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.28.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -162,6 +162,12 @@ set(NYREXVJ_CORE_SOURCES
     src/core/render_policy.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
+    src/media/ffmpeg_setup.cpp
+    src/media/frame_convert.cpp
+    src/media/hap_convert.cpp
+    src/media/convert_cache.cpp
+    src/media/convert_manager.cpp
+    src/media/video_redirect.cpp
     src/media/camera_capture.cpp
     src/media/hap.cpp
     src/media/media_image.cpp
@@ -181,6 +187,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/live_source.cpp
     src/core/settings.cpp
     src/core/sha256.cpp
+    src/core/archive.cpp
     src/control/control_system.cpp
     src/control/djlink_input.cpp
     src/control/sync_system.cpp
@@ -245,6 +252,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/app.cpp
     src/app/fonts.cpp
     src/app/bench.cpp
+    src/app/bench_convert.cpp
     src/app/output_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
@@ -254,6 +262,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_nodes.cpp
     src/app/ui_settings.cpp
     src/app/ui_video.cpp
+    src/app/ui_convert.cpp
     src/app/ui_profile.cpp
     src/app/ui_panels.cpp
     src/app/ui_live.cpp
@@ -352,6 +361,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_media_tests PRIVATE tests)
     target_compile_definitions(nvj_media_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
     add_test(NAME nvj_media_tests COMMAND nvj_media_tests)
+    add_executable(nvj_convert_tests tests/test_convert.cpp)
+    target_link_libraries(nvj_convert_tests PRIVATE nvj_core)
+    target_include_directories(nvj_convert_tests PRIVATE tests)
+    target_compile_definitions(nvj_convert_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
+    add_test(NAME nvj_convert_tests COMMAND nvj_convert_tests)
     add_executable(nvj_output_tests tests/test_outputs.cpp)
     target_link_libraries(nvj_output_tests PRIVATE nvj_core)
     target_include_directories(nvj_output_tests PRIVATE tests)

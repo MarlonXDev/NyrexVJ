@@ -286,6 +286,10 @@ void App::drawMediaControls(MediaPlayer& player) {
                 }
                 ImGui::TextDisabled("%s", support.folder.c_str());
                 ImGui::PopTextWrapPos();
+                if (ui::accentButton(trId("Set up FFmpeg", "mediaSetupFfmpeg"), true)) {
+                    openSettings(SettingsPerformance);
+                }
+                ImGui::SameLine();
                 if (ImGui::SmallButton(tr("Open FFmpeg folder"))) {
                     std::error_code ec;
                     std::filesystem::create_directories(pathFromUtf8(support.folder), ec);

@@ -1,6 +1,8 @@
 #include "check.hpp"
 
+#include "media/ffmpeg_setup.hpp"
 #include "media/hap.hpp"
+#include "media/hap_convert.hpp"
 #include "media/media_image.hpp"
 #include "media/playback_driver.hpp"
 #include "media/video_decoder.hpp"
@@ -1366,6 +1368,220 @@ void testManyDecoders() {
     decoders.clear();
 }
 
+bool converterAvailable() {
+    return nvj::ffmpeg_setup::checkCapabilities().ready();
+}
+
+void testTargetChoice() {
+    using namespace nvj::hapconv;
+    bool alpha = false;
+    CHECK(chooseTarget(Variant::Dxt1, TargetFormat::Auto, alpha) == TargetFormat::Hap && !alpha);
+    CHECK(chooseTarget(Variant::Dxt5, TargetFormat::Auto, alpha) == TargetFormat::HapAlpha && alpha);
+    CHECK(chooseTarget(Variant::Ycg6, TargetFormat::Auto, alpha) == TargetFormat::HapQ && !alpha);
+    CHECK(chooseTarget(Variant::Yg10, TargetFormat::Auto, alpha) == TargetFormat::HapAlpha && alpha);
+    CHECK(chooseTarget(Variant::Unknown, TargetFormat::Auto, alpha) == TargetFormat::HapAlpha && alpha);
+    CHECK(chooseTarget(Variant::Dxt1, TargetFormat::HapQ, alpha) == TargetFormat::HapQ && !alpha);
+    CHECK(chooseTarget(Variant::Dxt1, TargetFormat::HapAlpha, alpha) == TargetFormat::HapAlpha && !alpha);
+    CHECK(chooseTarget(Variant::Ycg6, TargetFormat::Hap, alpha) == TargetFormat::Hap && !alpha);
+    CHECK(chooseTarget(Variant::Dxt5, TargetFormat::Hap, alpha) == TargetFormat::HapAlpha && alpha);
+    CHECK(chooseTarget(Variant::Dxt5, TargetFormat::HapQ, alpha) == TargetFormat::HapAlpha && alpha);
+    CHECK(chooseTarget(Variant::Yg10, TargetFormat::HapQ, alpha) == TargetFormat::HapAlpha && alpha);
+    CHECK(chooseTarget(Variant::Yg10, TargetFormat::Hap, alpha) == TargetFormat::HapAlpha && alpha);
+    CHECK(!variantHasAlpha(Variant::Dxt1) && variantHasAlpha(Variant::Dxt5) && !variantHasAlpha(Variant::Ycg6) && variantHasAlpha(Variant::Yg10));
+    CHECK(!variantIsHighQuality(Variant::Dxt1) && !variantIsHighQuality(Variant::Dxt5) && variantIsHighQuality(Variant::Ycg6) && variantIsHighQuality(Variant::Yg10));
+    const uint8_t dxt1[] = {'1', 'T', 'X', 'D', 4, 0, 0, 0};
+    const uint8_t dxt5[] = {'5', 'T', 'X', 'D', 4, 0, 0, 0};
+    const uint8_t ycg6[] = {'6', 'G', 'C', 'Y', 4, 0, 0, 0};
+    const uint8_t yg10[] = {'0', '1', 'G', 'Y', 4, 0, 0, 0};
+    const uint8_t other[] = {'a', 'b', 'c', 'd'};
+    CHECK(variantFromPacket(dxt1, sizeof(dxt1)) == Variant::Dxt1);
+    CHECK(variantFromPacket(dxt5, sizeof(dxt5)) == Variant::Dxt5);
+    CHECK(variantFromPacket(ycg6, sizeof(ycg6)) == Variant::Ycg6);
+    CHECK(variantFromPacket(yg10, sizeof(yg10)) == Variant::Yg10);
+    CHECK(variantFromPacket(other, sizeof(other)) == Variant::Unknown);
+    CHECK(variantFromPacket(dxt1, 3) == Variant::Unknown && variantFromPacket(nullptr, 8) == Variant::Unknown);
+    CHECK(targetFromName("hap") == TargetFormat::Hap && targetFromName("hap_alpha") == TargetFormat::HapAlpha && targetFromName("hap_q") == TargetFormat::HapQ && targetFromName("auto") == TargetFormat::Auto && targetFromName("junk") == TargetFormat::Auto);
+    CHECK(targetKey(TargetFormat::HapQ) == "hap_q" && targetKey(TargetFormat::Auto) == "auto");
+    CHECK(std::string(encoderFormat(TargetFormat::HapQ)) == "hap_q" && std::string(encoderFormat(TargetFormat::HapAlpha)) == "hap_alpha" && std::string(encoderFormat(TargetFormat::Hap)) == "hap");
+}
+
+nvj::VideoOptions hapGpuOptions() {
+    nvj::VideoOptions options;
+    options.hapDirect = true;
+    options.compressedTextures = true;
+    options.gpuConversion = false;
+    options.mode = nvj::VideoDecodeMode::ForceSoftware;
+    return options;
+}
+
+std::shared_ptr<const nvj::VideoFrame> frameOf(const std::string& path, const nvj::VideoOptions& options, double time, nvj::VideoStatus* status = nullptr) {
+    static std::vector<std::unique_ptr<nvj::VideoDecoder>> keep;
+    keep.push_back(std::make_unique<nvj::VideoDecoder>());
+    std::string error;
+    if (!keep.back()->open(path, error, options)) {
+        return nullptr;
+    }
+    const std::shared_ptr<const nvj::VideoFrame> frame = waitForFrame(*keep.back(), time, time - 0.011, time + 0.011);
+    if (status != nullptr) {
+        *status = keep.back()->status();
+    }
+    return frame;
+}
+
+void testConverter(const fs::path& scratch) {
+    using namespace nvj::hapconv;
+    const std::string dxv = (kData / "test_dxv_dxt1.mov").string();
+    const SourceInfo info = inspectSource(dxv);
+    CHECK(info.ok && info.isDxv && info.variant == Variant::Dxt1);
+    CHECK(info.width == 128 && info.height == 72 && std::abs(info.fps - 25.0) < 0.01 && info.frames == 12);
+    CHECK(info.duration > 0.45 && info.duration < 0.52);
+    const SourceInfo h264 = inspectSource((kData / "test_h264.mp4").string());
+    CHECK(!h264.ok && !h264.isDxv && !h264.error.empty());
+    CHECK(inspectSource((kData / "test_h264.mp4").string(), true).ok);
+    CHECK(!inspectSource((kData / "missing.mov").string()).ok);
+    CHECK(!inspectSource((kData / "test_alpha.png").string()).ok);
+
+    const fs::path directory = scratch / "convert";
+    std::error_code ec;
+    fs::create_directories(directory, ec);
+    const std::string output = (directory / "dxv_to_hap.mov").string();
+    std::vector<int> steps;
+    Options options;
+    const Result result = convertFile(dxv, output, options, [&](int done, int total) {
+        steps.push_back(done);
+        CHECK(total == 0 || total >= done);
+        return true;
+    });
+    CHECK(result.ok);
+    CHECK(result.frames == 12 && result.width == 128 && result.height == 72 && std::abs(result.fps - 25.0) < 0.01);
+    CHECK(result.variant == Variant::Dxt1 && result.format == TargetFormat::Hap && !result.alphaKept && result.snappy);
+    CHECK(steps.size() == 12 && steps.front() == 1 && steps.back() == 12);
+    CHECK(result.bytes > 0 && fs::exists(output) && result.sourceBytes == fs::file_size(dxv));
+    std::string verifyError;
+    CHECK(verifyOutput(output, result, verifyError));
+
+    nvj::VideoStatus hapStatus;
+    const std::shared_ptr<const nvj::VideoFrame> hapFrame = frameOf(output, hapGpuOptions(), 0.2, &hapStatus);
+    const std::shared_ptr<const nvj::VideoFrame> dxvFrame = frameOf(dxv, legacyOptions(), 0.2);
+    CHECK(hapFrame != nullptr && dxvFrame != nullptr);
+    if (hapFrame && dxvFrame) {
+        CHECK(hapFrame->layout == nvj::VideoLayout::Compressed && hapFrame->compressed == nvj::CompressedFormat::Dxt1);
+        CHECK(hapStatus.path == nvj::DecodePath::HapGpu && hapStatus.codec == "hap");
+        CHECK(hapFrame->width == 128 && hapFrame->height == 72 && std::abs(hapFrame->time - dxvFrame->time) < 0.001);
+        const Difference diff = compare(pictureOf(*dxvFrame), pictureOf(*hapFrame));
+        std::printf("DXV DXT1 to HAP: mean error %.2f worst %d alpha %.2f\n", diff.mean, diff.worst, diff.alphaMean);
+        CHECK(diff.sameSize && diff.mean < 1.5 && diff.worst <= 12 && diff.alphaMean < 0.5);
+    }
+    nvj::VideoStatus dxvStatus;
+    frameOf(dxv, nvj::VideoOptions(), 0.0, &dxvStatus);
+    CHECK(dxvStatus.codec == "dxv" && dxvStatus.path == nvj::DecodePath::Software && dxvStatus.softwareOnly);
+
+    nvj::VideoDecoder timing;
+    std::string error;
+    CHECK(timing.open(output, error, nvj::VideoOptions()));
+    CHECK(timing.info().width == 128 && timing.info().height == 72 && std::abs(timing.info().fps - 25.0) < 0.5);
+    CHECK(timing.info().duration > 0.45 && timing.info().duration < 0.52);
+    nvj::VideoDecoder original;
+    CHECK(original.open(dxv, error, nvj::VideoOptions()));
+    CHECK(std::abs(timing.info().duration - original.info().duration) < 0.045);
+
+    const double ratio = static_cast<double>(result.bytes) / static_cast<double>(result.sourceBytes);
+    std::printf("DXV %llu bytes, HAP %llu bytes (%.2fx), convert %.3f s (decode %.3f s, encode %.3f s)\n", result.sourceBytes, result.bytes, ratio, result.seconds, result.decodeSeconds, result.encodeSeconds);
+
+    {
+        Options q;
+        q.preference = TargetFormat::HapQ;
+        const std::string path = (directory / "dxv_to_hapq.mov").string();
+        const Result r = convertFile(dxv, path, q, nullptr);
+        CHECK(r.ok && r.format == TargetFormat::HapQ && !r.alphaKept);
+        const std::shared_ptr<const nvj::VideoFrame> frame = frameOf(path, hapGpuOptions(), 0.2);
+        const std::shared_ptr<const nvj::VideoFrame> reference = frameOf(dxv, legacyOptions(), 0.2);
+        CHECK(frame != nullptr && reference != nullptr);
+        if (frame && reference) {
+            CHECK(frame->layout == nvj::VideoLayout::Compressed && frame->compressed == nvj::CompressedFormat::YcoCgDxt5);
+            const Difference diff = compare(pictureOf(*reference), pictureOf(*frame));
+            std::printf("DXV DXT1 to HAP Q: mean error %.2f worst %d\n", diff.mean, diff.worst);
+            CHECK(diff.sameSize && diff.mean < 3.0 && diff.worst <= 24);
+        }
+    }
+    {
+        Options a;
+        a.preference = TargetFormat::HapAlpha;
+        const std::string path = (directory / "dxv_to_hapalpha.mov").string();
+        const Result r = convertFile(dxv, path, a, nullptr);
+        CHECK(r.ok && r.format == TargetFormat::HapAlpha && !r.alphaKept);
+        const std::shared_ptr<const nvj::VideoFrame> frame = frameOf(path, hapGpuOptions(), 0.2);
+        CHECK(frame != nullptr && frame->compressed == nvj::CompressedFormat::Dxt5);
+    }
+    {
+        Options plain;
+        plain.snappy = false;
+        const std::string path = (directory / "dxv_to_hap_raw.mov").string();
+        const Result r = convertFile(dxv, path, plain, nullptr);
+        CHECK(r.ok && !r.snappy && r.bytes > result.bytes);
+    }
+    {
+        int calls = 0;
+        const std::string path = (directory / "cancelled.mov").string();
+        const Result r = convertFile(dxv, path, Options(), [&](int, int) { return ++calls < 4; });
+        CHECK(!r.ok && r.cancelled && !fs::exists(path) && calls == 4);
+    }
+    {
+        const Result r = convertFile(dxv, (directory / "missing_folder" / "x.mov").string(), Options(), nullptr);
+        CHECK(!r.ok && !r.cancelled && !r.error.empty());
+        const Result notDxv = convertFile((kData / "test_h264.mp4").string(), (directory / "notdxv.mov").string(), Options(), nullptr);
+        CHECK(!notDxv.ok && notDxv.error.find("not DXV") != std::string::npos && !fs::exists(directory / "notdxv.mov"));
+        const Result missing = convertFile((kData / "missing.mov").string(), (directory / "missing.mov").string(), Options(), nullptr);
+        CHECK(!missing.ok && !fs::exists(directory / "missing.mov"));
+        Options any;
+        any.allowAnyCodec = true;
+        const Result odd = convertFile((kData / "test_odd_size.avi").string(), (directory / "odd.mov").string(), any, nullptr);
+        CHECK(!odd.ok && odd.error.find("multiple of 4") != std::string::npos && !fs::exists(directory / "odd.mov"));
+    }
+    {
+        Options any;
+        any.allowAnyCodec = true;
+        const std::string path = (directory / "ycocg_to_hapq.mov").string();
+        const Result r = convertFile((kData / "test_ycocg.mkv").string(), path, any, nullptr);
+        CHECK(r.ok && r.variant == Variant::Ycg6 && r.format == TargetFormat::HapQ && !r.alphaKept);
+        if (r.ok) {
+            const std::shared_ptr<const nvj::VideoFrame> frame = frameOf(path, hapGpuOptions(), 0.0);
+            CHECK(frame != nullptr);
+            if (frame) {
+                CHECK(frame->compressed == nvj::CompressedFormat::YcoCgDxt5 && frame->width == 64 && frame->height == 64);
+                const Picture picture = pictureOf(*frame);
+                const size_t middle = (static_cast<size_t>(picture.height / 2) * static_cast<size_t>(picture.width) + static_cast<size_t>(picture.width / 2)) * 4u;
+                std::printf("YCoCg to HAP Q centre pixel: %d %d %d (expected 188 100 124)\n", picture.pixels[middle], picture.pixels[middle + 1], picture.pixels[middle + 2]);
+                CHECK(std::abs(picture.pixels[middle] - 188) <= 6);
+                CHECK(std::abs(picture.pixels[middle + 1] - 100) <= 6);
+                CHECK(std::abs(picture.pixels[middle + 2] - 124) <= 6);
+            }
+        }
+    }
+    {
+        Options any;
+        any.allowAnyCodec = true;
+        const std::string path = (directory / "alpha_to_hapalpha.mov").string();
+        const Result r = convertFile((kData / "test_prores_alpha.mov").string(), path, any, nullptr);
+        CHECK(r.ok && r.format == TargetFormat::HapAlpha && r.alphaKept);
+        if (r.ok) {
+            const std::shared_ptr<const nvj::VideoFrame> frame = frameOf(path, hapGpuOptions(), 0.0);
+            const std::shared_ptr<const nvj::VideoFrame> reference = frameOf((kData / "test_prores_alpha.mov").string(), legacyOptions(), 0.0);
+            CHECK(frame != nullptr && reference != nullptr);
+            if (frame && reference) {
+                CHECK(frame->compressed == nvj::CompressedFormat::Dxt5);
+                const Difference diff = compare(pictureOf(*reference), pictureOf(*frame));
+                std::printf("ProRes alpha to HAP Alpha: mean error %.2f alpha error %.2f\n", diff.mean, diff.alphaMean);
+                CHECK(diff.sameSize && diff.alphaMean < 1.5 && diff.mean < 6.0);
+            }
+        }
+        Options noAlpha = any;
+        noAlpha.preference = TargetFormat::HapQ;
+        const Result forced = convertFile((kData / "test_prores_alpha.mov").string(), (directory / "alpha_forced.mov").string(), noAlpha, nullptr);
+        CHECK(forced.ok && forced.format == TargetFormat::HapAlpha && forced.alphaKept);
+    }
+}
+
 }
 
 int main() {
@@ -1402,6 +1618,12 @@ int main() {
         testTransportModes();
         testPrerollReady();
         testManyDecoders();
+    }
+    testTargetChoice();
+    if (videoAvailable() && converterAvailable()) {
+        testConverter(scratch);
+    } else {
+        std::printf("converter tests skipped: FFmpeg with DXV decoder and HAP encoder is not available\n");
     }
     return testing::finish();
 }

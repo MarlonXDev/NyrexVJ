@@ -13,6 +13,7 @@ public:
     UdpSocket& operator=(const UdpSocket&) = delete;
 
     bool open(int port, bool allowRemote, std::string& error);
+    bool openShared(int port, std::string& error);
     void close();
     bool isOpen() const;
     int receive(unsigned char* buffer, int capacity);

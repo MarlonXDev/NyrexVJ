@@ -48,6 +48,35 @@ bool UdpSocket::open(int port, bool allowRemote, std::string& error) {
     return true;
 }
 
+bool UdpSocket::openShared(int port, std::string& error) {
+    close();
+    if (port < 1 || port > 65535) {
+        error = "The network port must be between 1 and 65535";
+        return false;
+    }
+    const int handle = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (handle < 0) {
+        error = "Could not create the network socket";
+        return false;
+    }
+    const int enable = 1;
+    ::setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    ::setsockopt(handle, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable));
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(static_cast<unsigned short>(port));
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (::bind(handle, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+        ::close(handle);
+        error = "Could not open the network port, it may be in use";
+        return false;
+    }
+    const int flags = ::fcntl(handle, F_GETFL, 0);
+    ::fcntl(handle, F_SETFL, flags | O_NONBLOCK);
+    impl_->handle = handle;
+    return true;
+}
+
 void UdpSocket::close() {
     if (impl_->handle >= 0) {
         ::close(impl_->handle);

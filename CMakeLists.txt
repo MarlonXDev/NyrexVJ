@@ -135,6 +135,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/venue_setup.cpp
     src/core/timecode.cpp
     src/core/ltc.cpp
+    src/core/djlink.cpp
     src/core/beat_clock.cpp
     src/core/ndi_runtime.cpp
     src/core/ndi_receiver.cpp
@@ -166,6 +167,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/settings.cpp
     src/core/sha256.cpp
     src/control/control_system.cpp
+    src/control/djlink_input.cpp
     src/control/control_targets.cpp
     src/control/midi_map.cpp
     src/control/osc.cpp
@@ -341,6 +343,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_timecode_tests PRIVATE nvj_core)
     target_include_directories(nvj_timecode_tests PRIVATE tests)
     add_test(NAME nvj_timecode_tests COMMAND nvj_timecode_tests)
+    add_executable(nvj_djlink_tests tests/test_djlink.cpp)
+    target_link_libraries(nvj_djlink_tests PRIVATE nvj_core)
+    target_include_directories(nvj_djlink_tests PRIVATE tests)
+    add_test(NAME nvj_djlink_tests COMMAND nvj_djlink_tests)
     add_executable(nvj_venue_tests tests/test_venues.cpp)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)

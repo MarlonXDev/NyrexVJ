@@ -1,8 +1,10 @@
 #include "app/output_selftest.hpp"
 
+#include "core/frame_lock.hpp"
 #include "core/log.hpp"
 #include "core/output_map.hpp"
 #include "render/output_manager.hpp"
+#include "render/texture_history.hpp"
 
 #include <glad/gl.h>
 
@@ -32,6 +34,7 @@ constexpr Rgb kGreen{0, 255, 0};
 constexpr Rgb kBlue{0, 0, 255};
 constexpr Rgb kYellow{255, 255, 0};
 constexpr Rgb kBlack{0, 0, 0};
+constexpr Rgb kWhiteColor{255, 255, 255};
 
 std::string describe(const Rgb& c) {
     return "(" + std::to_string(c.r) + "," + std::to_string(c.g) + "," + std::to_string(c.b) + ")";
@@ -98,6 +101,44 @@ public:
             logLine("Output self test: capture failed");
         }
         return ok;
+    }
+
+    void setSolid(const Rgb& color) {
+        std::vector<uint8_t> pixels(64u * 36u * 4u, 255);
+        for (size_t i = 0; i < 64u * 36u; ++i) {
+            pixels[i * 4u] = static_cast<uint8_t>(color.r);
+            pixels[i * 4u + 1u] = static_cast<uint8_t>(color.g);
+            pixels[i * 4u + 2u] = static_cast<uint8_t>(color.b);
+        }
+        glBindTexture(GL_TEXTURE_2D, texture_);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 64, 36, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glFinish();
+    }
+
+    void setSpec(const OutputSpec& spec) {
+        specs_[0] = spec;
+        specs_[0].enabled = true;
+        specs_[0].fullscreen = false;
+        specs_[0].map.fill = true;
+    }
+
+    void render() { manager_.render(texture_, 64, 36); }
+
+    OutputManager& manager() { return manager_; }
+    std::array<OutputSpec, kMaxOutputs>& specs() { return specs_; }
+
+    bool openSecond() {
+        specs_[1].enabled = true;
+        specs_[1].fullscreen = false;
+        specs_[1].map.fill = true;
+        return manager_.open(1, share_);
+    }
+
+    void closeSecond() {
+        manager_.close(1);
+        specs_[1].enabled = false;
+        specs_[1].delayFrames = 0;
     }
 
     Rgb at(float fx, float fy) const {
@@ -319,6 +360,158 @@ void caseWarp(Runner& run) {
     run.expect("far corners stay, bottom right", 0.9f, 0.9f, kYellow);
 }
 
+int decodeBars(Runner& run, float fy) {
+    int value = 0;
+    for (int column = 0; column < kSyncBarBits; ++column) {
+        const Rgb c = run.at((static_cast<float>(column) + 0.5f) / static_cast<float>(kSyncBarBits), fy);
+        value = (value << 1) | (c.r > 128 ? 1 : 0);
+    }
+    return value;
+}
+
+void checkSyncBars(Runner& run, const char* label, int delay) {
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.delayFrames = delay;
+    run.setSpec(spec);
+    for (int i = 0; i < 7; ++i) {
+        run.render();
+    }
+    run.draw(spec);
+    const int expected = syncBarValue(run.manager().frameCount(), delay);
+    run.condition((std::string(label) + " counter bits").c_str(), decodeBars(run, 0.125f) == expected);
+    const int flash = (expected & 1) != 0 ? 255 : 0;
+    run.expect((std::string(label) + " flash").c_str(), 0.3f, 0.375f, {flash, flash, flash});
+    const int cell = expected % 60;
+    run.expect((std::string(label) + " moving bar").c_str(), (static_cast<float>(cell) + 0.5f) / 60.0f, 0.625f, kWhiteColor);
+    run.expectRange((std::string(label) + " moving bar background").c_str(), (static_cast<float>((cell + 30) % 60) + 0.5f) / 60.0f, 0.625f, 0, 0, 40);
+}
+
+void caseSyncBars(Runner& run) {
+    run.manager().setSyncBars(true);
+    checkSyncBars(run, "sync bars", 0);
+    checkSyncBars(run, "sync bars with delay", 3);
+    run.manager().setSyncBars(false);
+    OutputSpec spec = defaultOutputSpec(0);
+    run.draw(spec);
+    quadrants(run, "after sync bars", kRed, kGreen, kBlue, kYellow);
+}
+
+void caseDelay(Runner& run) {
+    OutputSpec spec = defaultOutputSpec(0);
+    run.setSpec(spec);
+    run.setSolid(kBlack);
+    run.render();
+    run.condition("no history without delay", !run.manager().historyActive() && run.manager().historyBytes() == 0);
+
+    spec.delayFrames = 2;
+    run.setSpec(spec);
+    run.setSolid(kRed);
+    run.render();
+    run.condition("history allocated", run.manager().historyActive());
+    run.condition("history size", run.manager().historyBytes() == 3u * 64u * 36u * 4u);
+    run.draw(spec);
+    run.expect("delay 2 first frame uses the oldest", 0.5f, 0.5f, kRed);
+
+    run.setSolid(kGreen);
+    run.render();
+    run.draw(spec);
+    run.expect("delay 2 second frame", 0.5f, 0.5f, kRed);
+
+    run.setSolid(kBlue);
+    run.render();
+    run.draw(spec);
+    run.expect("delay 2", 0.5f, 0.5f, kRed);
+    spec.delayFrames = 1;
+    run.draw(spec);
+    run.expect("delay 1", 0.5f, 0.5f, kGreen);
+    spec.delayFrames = 0;
+    run.draw(spec);
+    run.expect("delay 0", 0.5f, 0.5f, kBlue);
+
+    spec.delayFrames = 2;
+    run.setSpec(spec);
+    run.setSolid(kYellow);
+    run.render();
+    run.draw(spec);
+    run.expect("delay 2 after wrap", 0.5f, 0.5f, kGreen);
+    spec.delayFrames = 1;
+    run.draw(spec);
+    run.expect("delay 1 after wrap", 0.5f, 0.5f, kBlue);
+
+    spec.delayFrames = 0;
+    run.setSpec(spec);
+    run.render();
+    run.condition("history released", !run.manager().historyActive() && run.manager().historyBytes() == 0);
+    run.setSolid(kBlack);
+    run.setSolid(kBlack);
+}
+
+void caseFrameLock(Runner& run) {
+    run.condition("second output opens", run.openSecond());
+    if (!run.manager().isOpen(1)) {
+        return;
+    }
+    run.specs()[1].delayFrames = 3;
+    run.render();
+    run.condition("history follows the longest delay", run.manager().historyActive() && run.manager().historyBytes() == 4u * 64u * 36u * 4u);
+    run.specs()[1].delayFrames = 0;
+    run.render();
+    run.condition("history released again", !run.manager().historyActive());
+
+    auto average = [&run](bool lock, int frames, int& samples) {
+        run.manager().setFrameLock(lock);
+        run.manager().resetSkew();
+        for (int i = 0; i < frames; ++i) {
+            run.render();
+        }
+        samples = run.manager().skew().count();
+        return run.manager().skew().average();
+    };
+    int lockedSamples = 0;
+    int sequentialSamples = 0;
+    average(true, 5, lockedSamples);
+    const double locked = average(true, 60, lockedSamples);
+    average(false, 5, sequentialSamples);
+    const double sequential = average(false, 60, sequentialSamples);
+    run.manager().setFrameLock(true);
+    run.condition("swap skew sampled with two outputs", lockedSamples >= 50 && sequentialSamples >= 50);
+    run.condition("locked swaps are closer together than sequential ones", locked < sequential);
+    logLine("Output self test swap skew: locked " + std::to_string(locked) + " ms, one by one " + std::to_string(sequential) + " ms");
+    run.closeSecond();
+    run.manager().resetSkew();
+    run.render();
+    run.condition("no skew with one output", run.manager().skew().count() == 0);
+}
+
+void measureHistory() {
+    const int width = 1920;
+    const int height = 1080;
+    GLuint source = 0;
+    glGenTextures(1, &source);
+    glBindTexture(GL_TEXTURE_2D, source);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    TextureHistory history;
+    for (int i = 0; i < 4; ++i) {
+        history.update(source, width, height, 2);
+    }
+    glFinish();
+    const int runs = 30;
+    const auto begin = std::chrono::steady_clock::now();
+    for (int i = 0; i < runs; ++i) {
+        history.update(source, width, height, 2);
+        glFinish();
+    }
+    const double copyMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / runs;
+    char text[256];
+    std::snprintf(text, sizeof(text), "Output self test numbers: delay history at 1920x1080 with 2 frames of delay, %.2f ms per frame for the copy (software OpenGL), %.1f MiB of video memory", copyMs, static_cast<double>(history.gpuBytes()) / (1024.0 * 1024.0));
+    logLine(text);
+    history.release();
+    glDeleteTextures(1, &source);
+}
+
 void measure(Runner& run) {
     OutputSpec spec = defaultOutputSpec(0);
     run.draw(spec);
@@ -423,6 +616,10 @@ int runOutputSelfTest(GLFWwindow* share) {
     caseColor(run);
     caseBlackLevel(run);
     caseWarp(run);
+    caseSyncBars(run);
+    caseDelay(run);
+    caseFrameLock(run);
+    measureHistory();
     measure(run);
     logLine("Output self test: " + std::to_string(run.checks()) + " checks, " + std::to_string(run.failures()) + " failed");
     return run.failures() == 0 ? 0 : 1;

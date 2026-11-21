@@ -11,7 +11,12 @@ struct MidiMessage {
     int status = 0;
     int data1 = 0;
     int data2 = 0;
+    double time = 0.0;
 };
+
+inline bool isSystemMidi(const MidiMessage& message) {
+    return message.status >= 0xF0;
+}
 
 enum class MidiKind { ControlChange, Note };
 

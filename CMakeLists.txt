@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.23.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.24.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -133,6 +133,12 @@ set(NYREXVJ_CORE_SOURCES
     src/core/modulation.cpp
     src/core/output_map.cpp
     src/core/venue_setup.cpp
+    src/core/timecode.cpp
+    src/core/ltc.cpp
+    src/core/djlink.cpp
+    src/core/midi_clock.cpp
+    src/core/cue_list.cpp
+    src/core/beat_clock.cpp
     src/core/ndi_runtime.cpp
     src/core/ndi_receiver.cpp
     src/core/ndi_sender.cpp
@@ -140,6 +146,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/stage_json.cpp
     src/core/edit_history.cpp
     src/core/frame_pacer.cpp
+    src/core/frame_lock.cpp
     src/core/render_policy.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
@@ -163,6 +170,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/settings.cpp
     src/core/sha256.cpp
     src/control/control_system.cpp
+    src/control/djlink_input.cpp
+    src/control/sync_system.cpp
     src/control/control_targets.cpp
     src/control/midi_map.cpp
     src/control/osc.cpp
@@ -240,11 +249,13 @@ set(NYREXVJ_APP_SOURCES
     src/render/gpu_profiler.cpp
     src/render/gl_util.cpp
     src/render/output_window.cpp
+    src/render/texture_history.cpp
     src/render/output_manager.cpp
     src/render/ndi_output.cpp
     src/render/dmx_strip.cpp
     src/app/ui_outputs.cpp
     src/app/ui_stage.cpp
+    src/app/ui_sync.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
     src/render/video_gpu.cpp
@@ -330,6 +341,30 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_output_tests PRIVATE nvj_core)
     target_include_directories(nvj_output_tests PRIVATE tests)
     add_test(NAME nvj_output_tests COMMAND nvj_output_tests)
+    add_executable(nvj_beat_clock_tests tests/test_beat_clock.cpp)
+    target_link_libraries(nvj_beat_clock_tests PRIVATE nvj_core)
+    target_include_directories(nvj_beat_clock_tests PRIVATE tests)
+    add_test(NAME nvj_beat_clock_tests COMMAND nvj_beat_clock_tests)
+    add_executable(nvj_timecode_tests tests/test_timecode.cpp)
+    target_link_libraries(nvj_timecode_tests PRIVATE nvj_core)
+    target_include_directories(nvj_timecode_tests PRIVATE tests)
+    add_test(NAME nvj_timecode_tests COMMAND nvj_timecode_tests)
+    add_executable(nvj_frame_lock_tests tests/test_frame_lock.cpp)
+    target_link_libraries(nvj_frame_lock_tests PRIVATE nvj_core)
+    target_include_directories(nvj_frame_lock_tests PRIVATE tests)
+    add_test(NAME nvj_frame_lock_tests COMMAND nvj_frame_lock_tests)
+    add_executable(nvj_djlink_tests tests/test_djlink.cpp)
+    target_link_libraries(nvj_djlink_tests PRIVATE nvj_core)
+    target_include_directories(nvj_djlink_tests PRIVATE tests)
+    add_test(NAME nvj_djlink_tests COMMAND nvj_djlink_tests)
+    add_executable(nvj_midi_clock_tests tests/test_midi_clock.cpp)
+    target_link_libraries(nvj_midi_clock_tests PRIVATE nvj_core)
+    target_include_directories(nvj_midi_clock_tests PRIVATE tests)
+    add_test(NAME nvj_midi_clock_tests COMMAND nvj_midi_clock_tests)
+    add_executable(nvj_sync_system_tests tests/test_sync_system.cpp)
+    target_link_libraries(nvj_sync_system_tests PRIVATE nvj_core)
+    target_include_directories(nvj_sync_system_tests PRIVATE tests)
+    add_test(NAME nvj_sync_system_tests COMMAND nvj_sync_system_tests)
     add_executable(nvj_venue_tests tests/test_venues.cpp)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)

@@ -29,6 +29,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0013](adr/0013-media-control.md) | Media control: play head, reverse playback, exact seeking, in and out points, loop modes, beat sync, pre-rolled switching | Accepted (2026-11-20), implemented in v0.21.0 |
 | [0014](adr/0014-live-sources.md) | Live sources: NDI input with discovery, cameras and capture cards, reconnecting, a cheap upload path | Accepted (2026-11-20), implemented in v0.22.0 |
 | [0015](adr/0015-advanced-output.md) | Advanced output: slices, polygon masks, colour per output, black level in blend zones, warp grids up to 17 x 17, venue setups | Accepted (2026-11-21), implemented in v0.23.0 |
+| [0016](adr/0016-show-sync.md) | Show sync: one beat clock, timecode (LTC, MTC), MIDI clock, passive Pro DJ Link, cues, output frame lock | Accepted (2026-11-21), implemented in v0.24.0 |
 
 ## New ADR template
 

@@ -32,6 +32,12 @@ constexpr int kProgram = 11;
 constexpr int kChannelPress = 12;
 constexpr int kPitchBend = 13;
 constexpr int kClock = 36;
+constexpr int kStart = 30;
+constexpr int kContinue = 31;
+constexpr int kStop = 32;
+constexpr int kSongPosition = 20;
+constexpr int kQuarterFrame = 22;
+constexpr int kTick = 37;
 
 void useFake() {
     setenv("NYREXVJ_ALSA_LIB", NYREXVJ_FAKE_ALSA_PATH, 1);
@@ -136,17 +142,63 @@ void testTranslation() {
     fake_alsa_push(kPitchBend, 1, 0, 0, 8191);
     fake_alsa_push(kProgram, 3, 0, 0, 5);
     fake_alsa_push(kChannelPress, 4, 0, 0, 90);
-    const std::vector<nvj::MidiMessage> messages = collect(*input, 8, 2000);
-    CHECK(messages.size() == 8);
-    if (messages.size() == 8) {
+    const std::vector<nvj::MidiMessage> messages = collect(*input, 9, 2000);
+    CHECK(messages.size() == 9);
+    if (messages.size() == 9) {
         CHECK(messages[0].status == 0x92 && messages[0].data1 == 60 && messages[0].data2 == 100);
         CHECK(messages[1].status == 0x82 && messages[1].data1 == 60 && messages[1].data2 == 0);
         CHECK(messages[2].status == 0xB0 && messages[2].data1 == 7 && messages[2].data2 == 64);
-        CHECK(messages[3].status == 0xB5 && messages[3].data1 == 1 && messages[3].data2 == 127);
-        CHECK(messages[4].status == 0xE1 && messages[4].data1 == 0 && messages[4].data2 == 0);
-        CHECK(messages[5].status == 0xE1 && messages[5].data1 == 127 && messages[5].data2 == 127);
-        CHECK(messages[6].status == 0xC3 && messages[6].data1 == 5);
-        CHECK(messages[7].status == 0xD4 && messages[7].data1 == 90);
+        CHECK(messages[3].status == 0xF8);
+        CHECK(messages[4].status == 0xB5 && messages[4].data1 == 1 && messages[4].data2 == 127);
+        CHECK(messages[5].status == 0xE1 && messages[5].data1 == 0 && messages[5].data2 == 0);
+        CHECK(messages[6].status == 0xE1 && messages[6].data1 == 127 && messages[6].data2 == 127);
+        CHECK(messages[7].status == 0xC3 && messages[7].data1 == 5);
+        CHECK(messages[8].status == 0xD4 && messages[8].data1 == 90);
+    }
+    input->stop();
+}
+
+void testSystemMessages() {
+    useFake();
+    std::unique_ptr<nvj::MidiInput> input = nvj::createMidiInput();
+    std::string error;
+    CHECK(input->start("Test Controller:Test Controller MIDI 1", error));
+    const double before = nvj::midiNow();
+    fake_alsa_push(kStart, 0, 0, 0, 0);
+    fake_alsa_push(kClock, 0, 0, 0, 0);
+    fake_alsa_push(kTick, 0, 0, 0, 0);
+    fake_alsa_push(kStop, 0, 0, 0, 0);
+    fake_alsa_push(kContinue, 0, 0, 0, 0);
+    fake_alsa_push(kSongPosition, 0, 0, 0, 300);
+    fake_alsa_push(kSongPosition, 0, 0, 0, 99999);
+    fake_alsa_push(kQuarterFrame, 0, 0, 0, 0x35);
+    fake_alsa_push(kQuarterFrame, 0, 0, 0, 0x7A);
+    fake_alsa_push(kNoteOn, 1, 64, 90, 0);
+    const std::vector<nvj::MidiMessage> messages = collect(*input, 9, 2000);
+    const double after = nvj::midiNow();
+    CHECK(messages.size() == 9);
+    if (messages.size() == 9) {
+        CHECK(messages[0].status == 0xFA);
+        CHECK(messages[1].status == 0xF8);
+        CHECK(messages[2].status == 0xFC);
+        CHECK(messages[3].status == 0xFB);
+        CHECK(messages[4].status == 0xF2 && messages[4].data1 == (300 & 0x7F) && messages[4].data2 == ((300 >> 7) & 0x7F));
+        CHECK(messages[5].status == 0xF2 && messages[5].data1 == 0x7F && messages[5].data2 == 0x7F);
+        CHECK(messages[6].status == 0xF1 && messages[6].data1 == 0x35);
+        CHECK(messages[7].status == 0xF1 && messages[7].data1 == 0x7A);
+        CHECK(messages[8].status == 0x91 && messages[8].data1 == 64);
+        bool stamped = true;
+        double previous = before;
+        for (const nvj::MidiMessage& message : messages) {
+            if (message.time < previous || message.time > after) {
+                stamped = false;
+            }
+            previous = message.time;
+        }
+        CHECK(stamped);
+        for (const nvj::MidiMessage& message : messages) {
+            CHECK(nvj::isSystemMidi(message) == (message.status >= 0xF0));
+        }
     }
     input->stop();
 }
@@ -194,6 +246,7 @@ int main() {
     testFirstDeviceWhenEmpty();
     testUnknownDevice();
     testTranslation();
+    testSystemMessages();
     testLateEvent();
     testRestartAndDestructor();
     return testing::finish();

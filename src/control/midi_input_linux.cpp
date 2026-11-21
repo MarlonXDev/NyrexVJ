@@ -36,6 +36,12 @@ constexpr int kEventController = 10;
 constexpr int kEventProgram = 11;
 constexpr int kEventChannelPress = 12;
 constexpr int kEventPitchBend = 13;
+constexpr int kEventSongPosition = 20;
+constexpr int kEventQuarterFrame = 22;
+constexpr int kEventStart = 30;
+constexpr int kEventContinue = 31;
+constexpr int kEventStop = 32;
+constexpr int kEventClock = 36;
 constexpr size_t kMaxQueue = 4096;
 constexpr int kPollMilliseconds = 20;
 
@@ -254,6 +260,30 @@ bool translate(const SeqEvent& event, MidiMessage& out) {
         out.data2 = (bend >> 7) & 0x7F;
         return true;
     }
+    case kEventSongPosition: {
+        const int position = std::clamp(static_cast<int>(value), 0, 16383);
+        out.status = 0xF2;
+        out.data1 = position & 0x7F;
+        out.data2 = (position >> 7) & 0x7F;
+        return true;
+    }
+    case kEventQuarterFrame:
+        out.status = 0xF1;
+        out.data1 = std::clamp(static_cast<int>(value), 0, 127);
+        out.data2 = 0;
+        return true;
+    case kEventStart:
+        out.status = 0xFA;
+        return true;
+    case kEventContinue:
+        out.status = 0xFB;
+        return true;
+    case kEventStop:
+        out.status = 0xFC;
+        return true;
+    case kEventClock:
+        out.status = 0xF8;
+        return true;
     default:
         return false;
     }
@@ -386,6 +416,7 @@ private:
                 if (!translate(*event, message)) {
                     continue;
                 }
+                message.time = midiNow();
                 std::lock_guard<std::mutex> lock(mutex_);
                 if (queue_.size() < kMaxQueue) {
                     queue_.push_back(message);

@@ -1,6 +1,7 @@
 #include "app/app.hpp"
 
 #include "app/ui_common.hpp"
+#include "app/ui_targets.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -78,6 +79,8 @@ std::string itemName(const ControlTarget& target) {
     return "";
 }
 
+}
+
 std::string targetLabel(const ControlTarget& target) {
     std::string prefix;
     if (target.layer >= 0) {
@@ -95,6 +98,8 @@ std::string targetLabelById(const std::string& id) {
     }
     return targetLabel(controlTargets()[static_cast<size_t>(index)]);
 }
+
+namespace {
 
 const char* kindLabel(ControlKind kind) {
     switch (kind) {

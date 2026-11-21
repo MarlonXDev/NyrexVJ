@@ -90,6 +90,7 @@ private:
         midi.status = static_cast<int>(param1 & 0xFF);
         midi.data1 = static_cast<int>((param1 >> 8) & 0xFF);
         midi.data2 = static_cast<int>((param1 >> 16) & 0xFF);
+        midi.time = midiNow();
         std::lock_guard<std::mutex> lock(self->mutex_);
         if (self->queue_.size() < 4096) {
             self->queue_.push_back(midi);

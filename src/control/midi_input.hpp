@@ -2,11 +2,16 @@
 
 #include "control/midi_map.hpp"
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace nvj {
+
+inline double midiNow() {
+    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 class MidiInput {
 public:

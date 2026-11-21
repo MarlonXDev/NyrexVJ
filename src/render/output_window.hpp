@@ -34,6 +34,8 @@ public:
     int monitorIndex() const { return monitorIndex_; }
     void setFullscreen(bool fullscreen, int monitorIndex);
     void render(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, OutputCapture* capture = nullptr);
+    bool draw(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, int syncValue, OutputCapture* capture = nullptr);
+    void swap(bool restoreContext);
     size_t gpuBytes() const;
 
     static std::vector<std::string> monitorNames();
@@ -80,6 +82,8 @@ private:
     GLint shapeLocation_ = -1;
     GLint brightnessLocation_ = -1;
     GLint patternLocation_ = -1;
+    GLint syncLocation_ = -1;
+    bool pendingSwap_ = false;
     bool fullscreen_ = false;
     int monitorIndex_ = 0;
     int windowedX_ = 100;

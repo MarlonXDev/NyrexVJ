@@ -15,6 +15,7 @@ The compatibility rules in the last column are the behaviour of the code today a
 | --- | --- | --- | --- |
 | OSC input, UDP port 9010 (off by default), addresses `/nyrex/<control id>` | Documented | README (OSC), Settings, Control lists every address | No version number. The addresses are the control target ids. Adding a target is compatible, renaming or removing one breaks senders. A message without a value fires a trigger or flips a switch, a number is read as 0 to 1. |
 | OSC output, UDP default `127.0.0.1:9011`, addresses `/nyrex/out/...` | Versioned (schema 1) | [ADR 0008](adr/0008-osc-output-protocol.md), [UNREAL.md](UNREAL.md) | Schema number in `hello` and `bye`. Inside a schema new addresses and appended arguments only, anything else raises the number. Receivers ignore what they do not know. |
+| Pro DJ Link beat packets, UDP port 50001, listen only (off by default, opened shared) | Documented (external protocol) | [SYNC.md](SYNC.md), [ADR 0016](adr/0016-show-sync.md) | Follows the public analysis of the protocol by Deep Symmetry. NyrexVJ sends nothing and does not announce itself. Only beat packets are used. |
 | Art-Net output, ArtDmx on UDP 6454 | Documented (external standard) | [DMX.md](DMX.md) | Follows Art-Net 4. Universe mapping and rate are settings. |
 | VRChat avatar parameters over OSC, `/avatar/parameters/<name>` | Documented (external protocol) | [DMX.md](DMX.md) | Defined by VRChat, NyrexVJ only sends floats, ints and bools. |
 | Spout output and Spout input (four slots) | Documented (external protocol) | [OUTPUTS.md](OUTPUTS.md), [UNREAL.md](UNREAL.md), [ADR 0007](adr/0007-spout-receiver.md) | Spout 2.007 shared textures, Windows only. Sender names are chosen by the user. |
@@ -35,6 +36,7 @@ All user data lives under the data folder (Windows `%APPDATA%\NyrexVJ`, elsewher
 | Shader clips, `shaders/*.glsl`, `*.frag`, `*.fs` | Documented | [SHADERS.md](SHADERS.md) | Two styles, NyrexVJ and Shadertoy. The list of uniforms is the contract, new uniforms may be added. |
 | Media, `media/`, 3D models `models/`, clip folder `clips/` | Documented | [MEDIA.md](MEDIA.md), [SCENE3D.md](SCENE3D.md) | Plain files in common formats, nothing NyrexVJ specific. |
 | Program settings, `settings.json` | Internal | none | Read tolerantly, may gain and lose keys in any release. Do not edit by script. The video keys `videoDecoder` (`auto`, `hardware`, `software`), `hapDirect`, `videoGpuConvert` and `fpsLimit` (30, 60, 90, 120, 144 or 0 for unlimited) came with v0.18.0, an unknown decoder value is repaired to `auto` and an unlisted limit to the nearest listed one. `renderQuality` (0 Full, 1 Balanced, 2 Performance, 3 Automatic) came with v0.19.0, a missing key means 0 and an out-of-range value is clamped. |
+| Cue list, `cues.json` | Versioned (`"version": 1`) | [SYNC.md](SYNC.md), [ADR 0016](adr/0016-show-sync.md) | `cues` holds `seconds`, `target` (a control id, so the control id rule applies) and `value`. A damaged file loads no cues and changes nothing. At most 512 cues. |
 | Recovery data, `recovery/` | Internal | none | Used for crash recovery only. |
 
 ## Integration code in this repository

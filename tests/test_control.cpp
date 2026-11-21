@@ -559,6 +559,38 @@ void testLearnAndFiles() {
         system.startLearn(-1, "master/level");
         system.cancelLearn();
         CHECK(!system.learning());
+        const unsigned long long midiBefore = system.midiCount();
+        system.startLearn(0, "layer/1/opacity");
+        MidiMessage clock;
+        clock.status = 0xF8;
+        clock.time = 12.5;
+        system.injectMidi(clock);
+        system.injectMidi({0xFA, 0, 0});
+        system.injectMidi({0xF2, 5, 1});
+        system.injectMidi({0xF1, 0x35, 0});
+        system.update(0.016);
+        CHECK(system.learning());
+        system.cancelLearn();
+        CHECK(system.midiCount() == midiBefore);
+        std::vector<MidiMessage> sync;
+        system.takeSyncMessages(sync);
+        CHECK(sync.size() == 4);
+        if (sync.size() == 4) {
+            CHECK(sync[0].status == 0xF8 && near(static_cast<float>(sync[0].time), 12.5f));
+            CHECK(sync[1].status == 0xFA);
+            CHECK(sync[2].status == 0xF2 && sync[2].data1 == 5 && sync[2].data2 == 1);
+            CHECK(sync[3].status == 0xF1 && sync[3].data1 == 0x35);
+        }
+        std::vector<MidiMessage> again;
+        system.takeSyncMessages(again);
+        CHECK(again.empty());
+        for (int i = 0; i < 20000; ++i) {
+            system.injectMidi(clock);
+        }
+        system.update(0.016);
+        std::vector<MidiMessage> flood;
+        system.takeSyncMessages(flood);
+        CHECK(flood.size() == 8192);
         system.markDirty();
         system.update(1.0);
     }
@@ -578,6 +610,28 @@ void testLearnAndFiles() {
     Settings loaded;
     CHECK(loadSettings(loaded));
     CHECK(loaded.oscEnabled && loaded.oscPort == 12345 && loaded.oscAllowRemote && loaded.midiDevice == "Test Pad");
+    CHECK(loaded.syncMode == "manual" && loaded.syncLatencyMs == 0.0f && loaded.syncBarAlign && !loaded.djLinkEnabled && loaded.djLinkPlayer == 0 && loaded.ltcDevice.empty() && loaded.cuesEnabled);
+
+    settings.syncMode = "djlink";
+    settings.syncLatencyMs = -35.5f;
+    settings.syncBarAlign = false;
+    settings.djLinkEnabled = true;
+    settings.djLinkPlayer = 4;
+    settings.ltcDevice = "alsa:ltc";
+    settings.cuesEnabled = false;
+    CHECK(saveSettings(settings));
+    Settings synced;
+    CHECK(loadSettings(synced));
+    CHECK(synced.syncMode == "djlink" && std::fabs(synced.syncLatencyMs + 35.5f) < 1.0e-4f && !synced.syncBarAlign);
+    CHECK(synced.djLinkEnabled && synced.djLinkPlayer == 4 && synced.ltcDevice == "alsa:ltc" && !synced.cuesEnabled);
+
+    settings.syncMode = "nonsense";
+    settings.syncLatencyMs = 900.0f;
+    settings.djLinkPlayer = 99;
+    CHECK(saveSettings(settings));
+    Settings clamped;
+    CHECK(loadSettings(clamped));
+    CHECK(clamped.syncMode == "manual" && clamped.syncLatencyMs == 500.0f && clamped.djLinkPlayer == 6);
 }
 
 #ifndef _WIN32

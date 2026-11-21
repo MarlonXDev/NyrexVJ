@@ -1180,12 +1180,36 @@ void Engine::setAudio(const AudioFeatures& features) {
 }
 
 float Engine::sourceValue(int source) const {
-    return modulationSource(source, audio_, comp.modulators, beat_, comp.beatsPerBar);
+    return modulationSource(source, audio_, comp.modulators, beat_, comp.beatsPerBar, timecodeValid_ ? timecodeSeconds_ : -1.0);
 }
 
 void Engine::shiftBeat(double beats) {
     if (std::isfinite(beats)) {
-        beat_ += beats;
+        pushCompTempo();
+        beatClock_.shift(beats);
+        beat_ = beatClock_.beat();
+    }
+}
+
+void Engine::setTimecode(bool valid, double seconds) {
+    timecodeValid_ = valid && std::isfinite(seconds) && seconds >= 0.0;
+    timecodeSeconds_ = timecodeValid_ ? seconds : 0.0;
+}
+
+void Engine::pushCompTempo() {
+    if (!clockStarted_ || static_cast<double>(comp.bpm) != lastCompBpm_) {
+        beatClock_.setTempo(static_cast<double>(comp.bpm));
+        clockStarted_ = true;
+        lastCompBpm_ = static_cast<double>(comp.bpm);
+        lastClockBpm_ = beatClock_.bpm();
+    }
+}
+
+void Engine::pullClockTempo() {
+    if (beatClock_.bpm() != lastClockBpm_) {
+        lastClockBpm_ = beatClock_.bpm();
+        comp.bpm = static_cast<float>(std::clamp(lastClockBpm_, 40.0, 240.0));
+        lastCompBpm_ = static_cast<double>(comp.bpm);
     }
 }
 
@@ -1433,7 +1457,10 @@ void Engine::update(double dt) {
     clock_ += std::max(dt, 0.0);
     const double step = paused ? 0.0 : dt;
     time_ += step;
-    beat_ += step * static_cast<double>(comp.bpm) / 60.0;
+    pushCompTempo();
+    beatClock_.advance(dt, !paused);
+    beat_ = beatClock_.beat();
+    pullClockTempo();
     if (transition_.active) {
         transition_.elapsed += static_cast<float>(dt);
         if (transition_.elapsed >= transition_.duration) {
@@ -1583,9 +1610,9 @@ void Engine::loadLook(const Composition& look) {
 }
 
 void Engine::nudgeBeat(float amount) {
-    const double fraction = beat_ - std::floor(beat_);
-    const double delta = fraction < 0.5 ? -fraction : 1.0 - fraction;
-    beat_ += delta * static_cast<double>(std::clamp(amount, 0.0f, 1.0f));
+    pushCompTempo();
+    beatClock_.nudge(static_cast<double>(amount));
+    beat_ = beatClock_.beat();
 }
 
 void Engine::uploadAudio() {
@@ -1639,24 +1666,16 @@ void Engine::clearLayer(int layer) {
 }
 
 void Engine::tap() {
-    if (!taps_.empty() && time_ - taps_.back() > 2.0) {
-        taps_.clear();
-    }
-    taps_.push_back(time_);
-    while (taps_.size() > 5) {
-        taps_.pop_front();
-    }
-    if (taps_.size() >= 2) {
-        double interval = (taps_.back() - taps_.front()) / static_cast<double>(taps_.size() - 1);
-        if (interval > 0.0) {
-            comp.bpm = static_cast<float>(std::clamp(60.0 / interval, 40.0, 240.0));
-        }
-    }
-    beat_ = std::floor(beat_ + 0.5);
+    pushCompTempo();
+    beatClock_.tap();
+    beat_ = beatClock_.beat();
+    pullClockTempo();
 }
 
 void Engine::resync() {
-    beat_ = 0.0;
+    pushCompTempo();
+    beatClock_.resync();
+    beat_ = beatClock_.beat();
 }
 
 GLuint Engine::clipThumbnail(int clip) const {

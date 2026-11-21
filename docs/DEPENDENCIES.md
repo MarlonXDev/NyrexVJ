@@ -28,7 +28,8 @@ Every library below is optional. When one is missing, only the matching feature 
 | Cameras and capture cards (FFmpeg device library, needs the video libraries above) | `avdevice-62.dll` and `avfilter-11.dll` next to the other FFmpeg DLLs | `libavdevice.so.62` and `libavfilter.so.11` next to the other FFmpeg libraries | the same as for video, `NYREXVJ_FFMPEG_DIR` (Linux) |
 | NDI input and output | NDI runtime (`Processing.NDI.Lib.x64.dll`) | `libndi.so.6`, `libndi.so.5` or `libndi.so`, also from `NDI_RUNTIME_DIR_V6` and `NDI_RUNTIME_DIR_V5` | `NYREXVJ_NDI_LIB` |
 | Audio capture | Windows audio (WASAPI), part of Windows | `libpulse-simple.so.0` and `libpulse.so.0` (PulseAudio, or PipeWire with its PulseAudio server) | `NYREXVJ_PULSE_LIB` |
-| MIDI input | Windows multimedia (WinMM), part of Windows | `libasound.so.2` (ALSA sequencer) | `NYREXVJ_ALSA_LIB` |
+| MIDI input, MIDI clock and MTC | Windows multimedia (WinMM), part of Windows | `libasound.so.2` (ALSA sequencer) | `NYREXVJ_ALSA_LIB` |
+| LTC timecode input | Windows audio (WASAPI), part of Windows | the same PulseAudio libraries as audio capture | `NYREXVJ_PULSE_LIB` |
 | Update download | WinHTTP, part of Windows | `libcurl.so.4` | none |
 | Open a web page or folder | Windows shell | `xdg-open` | none |
 

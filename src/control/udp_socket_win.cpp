@@ -72,6 +72,41 @@ bool UdpSocket::open(int port, bool allowRemote, std::string& error) {
     return true;
 }
 
+bool UdpSocket::openShared(int port, std::string& error) {
+    close();
+    if (port < 1 || port > 65535) {
+        error = "The network port must be between 1 and 65535";
+        return false;
+    }
+    if (!acquireWinsock()) {
+        error = "Could not start the network layer";
+        return false;
+    }
+    SOCKET handle = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (handle == INVALID_SOCKET) {
+        releaseWinsock();
+        error = "Could not create the network socket";
+        return false;
+    }
+    const BOOL enable = TRUE;
+    ::setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&enable), sizeof(enable));
+    ::setsockopt(handle, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&enable), sizeof(enable));
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(static_cast<u_short>(port));
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (::bind(handle, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+        ::closesocket(handle);
+        releaseWinsock();
+        error = "Could not open the network port, it may be in use";
+        return false;
+    }
+    u_long nonBlocking = 1;
+    ::ioctlsocket(handle, FIONBIO, &nonBlocking);
+    impl_->handle = handle;
+    return true;
+}
+
 void UdpSocket::close() {
     if (impl_->handle != INVALID_SOCKET) {
         ::closesocket(impl_->handle);

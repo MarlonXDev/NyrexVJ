@@ -194,6 +194,26 @@ bool loadSettings(Settings& settings) {
     result.cameraWidth = cameraValue("cameraWidth", 1280, 160, 7680);
     result.cameraHeight = cameraValue("cameraHeight", 720, 120, 4320);
     result.cameraFps = cameraValue("cameraFps", 30, 1, 240);
+    auto syncMode = doc.find("syncMode");
+    if (syncMode != doc.end() && syncMode->is_string()) {
+        const std::string mode = syncMode->get<std::string>();
+        if (mode == "auto" || mode == "manual" || mode == "audio" || mode == "midiclock" || mode == "timecode" || mode == "djlink") {
+            result.syncMode = mode;
+        }
+    }
+    result.syncLatencyMs = number("syncLatencyMs", 0.0f, -500.0f, 500.0f);
+    result.syncBarAlign = boolean("syncBarAlign", true);
+    result.djLinkEnabled = boolean("djLinkEnabled", false);
+    auto djPlayer = doc.find("djLinkPlayer");
+    if (djPlayer != doc.end() && djPlayer->is_number_integer()) {
+        result.djLinkPlayer = std::clamp(djPlayer->get<int>(), 0, 6);
+    }
+    auto ltcDevice = doc.find("ltcDevice");
+    if (ltcDevice != doc.end() && ltcDevice->is_string()) {
+        result.ltcDevice = ltcDevice->get<std::string>().substr(0, 256);
+    }
+    result.cuesEnabled = boolean("cuesEnabled", true);
+    result.outputFrameLock = boolean("outputFrameLock", true);
     result.outputs = defaultOutputs();
     result.outputs[0].monitor = legacyMonitor;
     auto outputs = doc.find("outputs");
@@ -250,6 +270,14 @@ bool saveSettings(const Settings& settings) {
     doc["oscPort"] = settings.oscPort;
     doc["oscAllowRemote"] = settings.oscAllowRemote;
     doc["midiDevice"] = settings.midiDevice;
+    doc["syncMode"] = settings.syncMode;
+    doc["syncLatencyMs"] = settings.syncLatencyMs;
+    doc["syncBarAlign"] = settings.syncBarAlign;
+    doc["djLinkEnabled"] = settings.djLinkEnabled;
+    doc["djLinkPlayer"] = settings.djLinkPlayer;
+    doc["ltcDevice"] = settings.ltcDevice;
+    doc["cuesEnabled"] = settings.cuesEnabled;
+    doc["outputFrameLock"] = settings.outputFrameLock;
     doc["oscOutEnabled"] = settings.oscOutEnabled;
     doc["oscOutHost"] = settings.oscOutHost;
     doc["oscOutPort"] = settings.oscOutPort;

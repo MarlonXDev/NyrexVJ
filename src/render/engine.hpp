@@ -1,6 +1,7 @@
 #pragma once
 
 #include "audio/audio_features.hpp"
+#include "core/beat_clock.hpp"
 #include "core/composition.hpp"
 #include "core/settings.hpp"
 #include "render/clip_library.hpp"
@@ -72,6 +73,11 @@ public:
     int width() const { return out_.width; }
     int height() const { return out_.height; }
     double beat() const { return beat_; }
+    BeatClock& beatClock() { return beatClock_; }
+    const BeatClock& beatClock() const { return beatClock_; }
+    void setTimecode(bool valid, double seconds);
+    bool timecodeValid() const { return timecodeValid_; }
+    double timecodeSeconds() const { return timecodeSeconds_; }
     double time() const { return time_; }
     GLuint clipThumbnail(int clip) const;
     bool isSceneClip(int clip) const;
@@ -248,6 +254,8 @@ private:
     bool ensureEffect(size_t index);
     void uploadAudio();
     void computeEffective();
+    void pushCompTempo();
+    void pullClockTempo();
     void computeEffectiveFor(const std::array<Layer, kLayerCount>& layers, const Master& master, std::array<Effective, kLayerCount>& effective, float& level, ColorGrade& grade) const;
     bool ensureTransitionTargets();
     void updateQuality();
@@ -370,7 +378,12 @@ private:
     int currentResolution_ = -1;
     double time_ = 0.0;
     double beat_ = 0.0;
-    std::deque<double> taps_;
+    BeatClock beatClock_;
+    double lastCompBpm_ = 0.0;
+    double lastClockBpm_ = 0.0;
+    bool clockStarted_ = false;
+    bool timecodeValid_ = false;
+    double timecodeSeconds_ = 0.0;
     AudioFeatures audioInput_;
     AudioFeatures audio_;
     GLuint audioTexture_ = 0;

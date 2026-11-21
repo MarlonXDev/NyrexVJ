@@ -36,6 +36,7 @@ uniform vec4 uBlend;
 uniform vec2 uShape;
 uniform float uBrightness;
 uniform int uPattern;
+uniform int uSync;
 uniform vec4 uGain;
 uniform vec4 uTone;
 uniform vec2 uBlack;
@@ -68,6 +69,23 @@ vec3 pattern(vec2 uv) {
     return c;
 }
 
+vec3 syncBars(vec2 uv) {
+    int column = clamp(int(floor(uv.x * 12.0)), 0, 11);
+    int band = clamp(int(floor((1.0 - uv.y) * 4.0)), 0, 3);
+    float gap = step(0.46, abs(fract(uv.x * 12.0) - 0.5));
+    vec3 c = vec3(0.0);
+    if (band == 0) {
+        c = mix(vec3(float((uSync >> (11 - column)) & 1)), vec3(0.35), gap);
+    } else if (band == 1) {
+        c = vec3(float(uSync & 1));
+    } else if (band == 2) {
+        c = vec3(floor(uv.x * 60.0) == float(uSync % 60) ? 1.0 : 0.08);
+    } else {
+        c = vec3(0.10, 0.55, 0.30) * (1.0 - gap);
+    }
+    return c;
+}
+
 vec3 correct(vec3 c) {
     c *= uGain.rgb;
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -93,8 +111,8 @@ float blendZone(vec2 p) {
 }
 
 void main() {
-    vec3 c = uPattern == 1 ? pattern(vUv) : texture(uTex, vUv).rgb;
-    if (uPattern != 1 && uTone.w > 0.5) c = correct(c);
+    vec3 c = uPattern == 2 ? syncBars(vUv) : (uPattern == 1 ? pattern(vUv) : texture(uTex, vUv).rgb);
+    if (uPattern == 0 && uTone.w > 0.5) c = correct(c);
     float f = 1.0;
     if (uBlend.x > 0.0) f *= ramp(vOut.x / uBlend.x);
     if (uBlend.y > 0.0) f *= ramp((1.0 - vOut.x) / uBlend.y);
@@ -193,6 +211,7 @@ void OutputWindow::close() {
     glfwDestroyWindow(window_);
     window_ = nullptr;
     fullscreen_ = false;
+    pendingSwap_ = false;
     logLine("Output window closed");
 }
 
@@ -211,6 +230,7 @@ bool OutputWindow::createResources() {
     shapeLocation_ = glGetUniformLocation(program_, "uShape");
     brightnessLocation_ = glGetUniformLocation(program_, "uBrightness");
     patternLocation_ = glGetUniformLocation(program_, "uPattern");
+    syncLocation_ = glGetUniformLocation(program_, "uSync");
     gainLocation_ = glGetUniformLocation(program_, "uGain");
     toneLocation_ = glGetUniformLocation(program_, "uTone");
     blackLocation_ = glGetUniformLocation(program_, "uBlack");
@@ -393,15 +413,37 @@ void OutputWindow::onKey(GLFWwindow* window, int key, int, int action, int) {
 }
 
 void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, OutputCapture* capture) {
-    if (!window_) {
+    if (draw(texture, textureWidth, textureHeight, spec, testPattern, -1, capture)) {
+        swap(true);
+    }
+}
+
+void OutputWindow::swap(bool restoreContext) {
+    if (!window_ || !pendingSwap_) {
         return;
+    }
+    pendingSwap_ = false;
+    GLFWwindow* previous = glfwGetCurrentContext();
+    if (previous != window_) {
+        glfwMakeContextCurrent(window_);
+    }
+    glfwSwapBuffers(window_);
+    if (restoreContext && previous != window_) {
+        glfwMakeContextCurrent(previous);
+    }
+}
+
+bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, int syncValue, OutputCapture* capture) {
+    if (!window_) {
+        return false;
     }
     if (glfwWindowShouldClose(window_)) {
         close();
-        return;
+        return false;
     }
-    if ((!texture || textureWidth <= 0 || textureHeight <= 0) && !testPattern) {
-        return;
+    const bool patternOn = testPattern || syncValue >= 0;
+    if ((!texture || textureWidth <= 0 || textureHeight <= 0) && !patternOn) {
+        return false;
     }
     if (textureWidth <= 0 || textureHeight <= 0) {
         textureWidth = 16;
@@ -450,7 +492,8 @@ void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, c
         glUniform1i(textureLocation_, 0);
         glUniform1i(maskLocation_, 1);
         glUniform4f(rectLocation_, rect[0], rect[1], rect[2], rect[3]);
-        glUniform1i(patternLocation_, testPattern ? 1 : 0);
+        glUniform1i(patternLocation_, syncValue >= 0 ? 2 : (testPattern ? 1 : 0));
+        glUniform1i(syncLocation_, std::max(syncValue, 0));
         glUniform4f(gainLocation_, color.red, color.green, color.blue, color.saturation);
         glUniform4f(toneLocation_, color.contrast, 1.0f / color.gamma, color.black, colorOn ? 1.0f : 0.0f);
 
@@ -505,8 +548,10 @@ void OutputWindow::render(GLuint texture, int textureWidth, int textureHeight, c
             glReadPixels(0, 0, frameWidth, frameHeight, GL_RGB, GL_UNSIGNED_BYTE, capture->rgb.data());
         }
     }
-    glfwSwapBuffers(window_);
+    glFlush();
     glfwMakeContextCurrent(previous);
+    pendingSwap_ = true;
+    return true;
 }
 
 }

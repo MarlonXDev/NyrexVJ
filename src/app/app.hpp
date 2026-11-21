@@ -6,6 +6,7 @@
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
 #include "control/stage_out.hpp"
+#include "control/sync_system.hpp"
 #include "core/edit_history.hpp"
 #include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
@@ -41,6 +42,7 @@ enum SettingsPage {
     SettingsOutput,
     SettingsControl,
     SettingsStage,
+    SettingsSync,
     SettingsUpdates,
     SettingsShortcuts,
     SettingsPerformance,
@@ -145,6 +147,13 @@ private:
     void drawUpdateSection();
     void drawControlPage();
     void drawStagePage();
+    void drawSyncPage();
+    void drawSyncClockSection();
+    void drawSyncMidiSection();
+    void drawSyncTimecodeSection();
+    void drawSyncDjLinkSection();
+    void drawSyncCueSection();
+    void updateSync(double dt);
     void drawOscSection();
     void drawOscOutSection();
     void drawMidiSection();
@@ -197,6 +206,12 @@ private:
     ControlSystem control_{engine_.comp, controlHost_};
     OscSender oscOut_;
     StageOutput stage_;
+    SyncSystem sync_;
+    int ltcDeviceListedFrame_ = -1;
+    char cueTimeBuffer_[24] = {};
+    int cueTargetPick_ = -1;
+    int cueEditRow_ = -1;
+    char cueFilter_[64] = {};
     bool stageDirty_ = false;
     double shaderPoll_ = 0.0;
     Settings settings_;

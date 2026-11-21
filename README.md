@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.22.0. Windows and Linux builds, clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, NDI input and cameras or capture cards with automatic reconnecting (see [docs/LIVE.md](docs/LIVE.md)), up to four output windows with projection mapping, warping and edge blending (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)) with reverse playback, scrubbing, in and out points, loop modes, clip speed, a clip length in beats and next clips prepared in the background, a render pass profiler, hidden layers that cost nothing and an optional reduced layer resolution (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
+> Status: v0.23.0. Windows and Linux builds, clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, NDI input and cameras or capture cards with automatic reconnecting (see [docs/LIVE.md](docs/LIVE.md)), up to four output windows with up to eight slices each, polygon masks, colour correction, projection mapping, warping, edge blending with black level and saved venue setups (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)) with reverse playback, scrubbing, in and out points, loop modes, clip speed, a clip length in beats and next clips prepared in the background, a render pass profiler, hidden layers that cost nothing and an optional reduced layer resolution (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
 
 ## Download
 
@@ -124,7 +124,7 @@ Eight clips show a live picture: NDI Input 1 to 4 (the picture of another progra
 
 ## Outputs, mapping and NDI
 
-Settings, Output has a tab for each of up to four output windows. Every output has its own display, picture area, corner handles and warp grid (drag them in the live canvas), edge blending, brightness and a test pattern, and Arrange outputs sets up a grid of overlapping projectors in one click. NDI sends the main picture to OBS, Resolume or vMix over the network; the NDI library is not shipped, install the free NDI Tools. Everything is explained in [docs/OUTPUTS.md](docs/OUTPUTS.md), including what is and is not tested (no real projectors, multi-monitor setup or NDI runtime yet).
+Settings, Output has a tab for each of up to four output windows. Every output has its own display and up to eight slices, each with its own part of the picture, corner handles, a warp grid up to 17 x 17 (drag them in the live canvas), edge blending with a black level, brightness, a polygon mask with a soft edge and a test pattern, and one colour correction for the whole output (gain per channel, saturation, contrast, gamma, black lift). Arrange outputs sets up a grid of overlapping projectors in one click. The outputs can be saved as a venue setup, a small JSON file per venue that can be loaded, duplicated, exported, imported (also by dropping the file on the window) or loaded at start with `--venue`. NDI sends the main picture to OBS, Resolume or vMix over the network; the NDI library is not shipped, install the free NDI Tools. Everything is explained in [docs/OUTPUTS.md](docs/OUTPUTS.md), including what is and is not tested (no real projectors, multi-monitor setup or NDI runtime yet).
 
 ## Stage control: DMX, VRSL strip and VRChat
 
@@ -328,6 +328,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--output` | Open the output window(s) on start |
 | `--output-pattern` | Show the test pattern on all outputs |
 | `--select-output N` | With `--settings`, show the tab of output N (1 to 4) |
+| `--venue NAME\|PATH` | Load a saved venue setup (by name from the venues folder, or by file path) on start |
 | `--ndi NAME` | Start the NDI sender with this name |
 | `--lang CODE` | Start in this language: `en`, `de`, `es`, `fr` or the code of a language file |
 | `--audio-demo` | Use the demo audio signal |
@@ -349,6 +350,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--bench-switch SECONDS:CLIP1,CLIP2,...` | Switch between the listed video clips (at least two) in layer 1 and count empty frames and the time to the first picture, then exit (`--bench-out` writes JSON) |
 | `--no-prewarm` | Do not prepare the next clip of each layer in the background for this run |
 | `--live-selftest` | Play a test source through the live path (conversion on the graphics card, colour, release after the idle time) and exit with code 1 on an error |
+| `--output-selftest` | Draw a test picture through the real output window (slices, masks, colour, black level, warp) and check the pixels, exit with code 1 on an error |
 | `--bench-live SECONDS:camera:SOURCE` | Measure a camera (a device such as `/dev/video0`, or `lavfi:testsrc2=size=1280x720:rate=30` for a test source) for SECONDS: source rate, upload time, latency, processor time and video memory, then exit (`--bench-out` writes JSON). `SECONDS:ndi:NAME` measures an NDI source |
 | `--video-selftest FOLDER` | Play every video of FOLDER through the graphics card path and the processor path and compare the pictures, exit code 1 on a difference |
 | `--video-mode auto\|hardware\|software` | Choose the video decoder for this run |

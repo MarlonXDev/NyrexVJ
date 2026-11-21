@@ -240,7 +240,11 @@ void testCuePersistence() {
     std::error_code ec;
     std::filesystem::remove_all(dir, ec);
     std::filesystem::create_directories(dir, ec);
+#ifdef _WIN32
+    _putenv_s("NYREXVJ_DATA_DIR", dir.string().c_str());
+#else
     setenv("NYREXVJ_DATA_DIR", dir.string().c_str(), 1);
+#endif
     {
         nvj::SyncSystem system;
         CHECK(!system.loadCues());

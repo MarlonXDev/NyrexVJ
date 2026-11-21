@@ -13,7 +13,7 @@ The folder `site/` holds a small static website for NyrexVJ: plain HTML and CSS,
 | `site/de/*.html` | The same four pages in German |
 | `site/assets/` | One stylesheet, the icon and the pictures (WebP) |
 
-Links to documents, the changelog, the roadmap and the downloads point to `github.com`, so the site never has to be updated when a document changes. All colours are variables at the top of `site/assets/style.css`; the accent colour is `--accent`.
+Links to documents, the changelog, the roadmap and the downloads point to `github.com`, so the site never has to be updated when a document changes. All colours are variables at the top of `site/assets/style.css`; the two accent colours (orange and cyan, taken from the NyrexVJ icon and interface) are `--accent` and `--accent-2`.
 
 ## Publishing
 
@@ -37,7 +37,7 @@ The site is built so that it needs as little legal text as possible:
 - No cookies, no tracking, no analytics, no forms, no comments, no embedded content, no web fonts or scripts from other servers (the `referrer` is switched off as well).
 - The only links that leave the site point to GitHub, which also serves the pages.
 - No names, addresses or contact data are published. Questions go through GitHub issues.
-- The privacy note says what GitHub Pages does as the host. The footer says that the project is not affiliated with Resolume, because the design follows the general look of other VJ software websites.
+- The privacy note says what GitHub Pages does as the host. The footer says that the project is not affiliated with Resolume, because the start page names Resolume Arena as the program NyrexVJ is modelled on.
 
 This is a design decision, not legal advice. In Germany the duty to publish a legal notice (Impressum) depends on whether a site is a "geschäftsmäßiges" telemedia service; a purely private, non-commercial site without income is generally treated differently, but the owner is responsible for judging his own case. If the site ever gets a shop, ads, donations, a newsletter, comments or analytics, the notice and the privacy statement have to be revisited first.
 

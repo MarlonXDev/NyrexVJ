@@ -135,6 +135,20 @@ public:
         }
     }
 
+    double frameMilliseconds(const OutputSpec& spec, int frames) {
+        specs_[0] = spec;
+        specs_[0].enabled = true;
+        specs_[0].fullscreen = false;
+        specs_[0].map.fill = true;
+        manager_.render(texture_, 64, 36);
+        manager_.render(texture_, 64, 36);
+        const auto begin = std::chrono::steady_clock::now();
+        for (int i = 0; i < frames; ++i) {
+            manager_.render(texture_, 64, 36);
+        }
+        return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / frames;
+    }
+
     size_t gpuBytes() const { return manager_.gpuBytes(); }
     int checks() const { return checks_; }
     int failures() const { return failures_; }
@@ -356,12 +370,43 @@ void measure(Runner& run) {
     run.draw(spec);
     const size_t after = run.gpuBytes();
 
+    constexpr int kFrames = 60;
+    OutputSpec plainSpec = defaultOutputSpec(0);
+    OutputSpec maskedSpec = defaultOutputSpec(0);
+    maskedSpec.map.mask = plain;
+    OutputSpec softSpec = defaultOutputSpec(0);
+    softSpec.map.mask = soft;
+    OutputSpec colourSpec = defaultOutputSpec(0);
+    colourSpec.color.saturation = 0.8f;
+    colourSpec.color.gamma = 1.2f;
+    OutputSpec fourSpec = defaultOutputSpec(0);
+    for (int i = 0; i < 3; ++i) {
+        addSlice(fourSpec);
+        fourSpec.slices[static_cast<size_t>(i)].map.mask = plain;
+    }
+    OutputSpec eightSpec = defaultOutputSpec(0);
+    resizeWarp(eightSpec.map, 17, 17);
+    eightSpec.map.mask = soft;
+    while (addSlice(eightSpec)) {
+    }
+    for (OutputSlice& slice : eightSpec.slices) {
+        resizeWarp(slice.map, 17, 17);
+        slice.map.mask = soft;
+    }
+    const double plainFrame = run.frameMilliseconds(plainSpec, kFrames);
+    const double maskedFrame = run.frameMilliseconds(maskedSpec, kFrames);
+    const double softFrame = run.frameMilliseconds(softSpec, kFrames);
+    const double colourFrame = run.frameMilliseconds(colourSpec, kFrames);
+    const double fourFrame = run.frameMilliseconds(fourSpec, kFrames);
+    const double eightFrame = run.frameMilliseconds(eightSpec, kFrames);
     run.condition("gpu memory returns to the baseline", after == baseline);
     run.condition("a hard mask costs one 1024x576 byte texture", withHardMask == baseline + static_cast<size_t>(kMaskWidth) * static_cast<size_t>(kMaskHeight));
     run.condition("a soft mask costs one 512x288 byte texture", withSoftMask == baseline + static_cast<size_t>(kMaskWidth / 2) * static_cast<size_t>(kMaskHeight / 2));
     logLine("Output self test numbers: default " + std::to_string(baseline) + " B, one hard mask " + std::to_string(withHardMask) + " B, one soft mask " + std::to_string(withSoftMask) + " B, eight masked 17x17 slices " + std::to_string(heavy) + " B");
-    char text[160];
+    char text[400];
     std::snprintf(text, sizeof(text), "Output self test numbers: mask build %.2f ms hard (1024x576), %.2f ms feathered at 1024x576, %.2f ms feathered at 512x288 (used)", plainMs, softMs, halfMs);
+    logLine(text);
+    std::snprintf(text, sizeof(text), "Output self test numbers: frame (1280x720 window, software OpenGL) default %.2f ms, hard mask %.2f, soft mask %.2f, colour %.2f, 4 masked slices %.2f, 8 soft masked 17x17 slices %.2f", plainFrame, maskedFrame, softFrame, colourFrame, fourFrame, eightFrame);
     logLine(text);
 }
 

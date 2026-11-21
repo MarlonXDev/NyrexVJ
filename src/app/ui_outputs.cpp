@@ -2,7 +2,10 @@
 
 #include "app/ui_common.hpp"
 #include "core/output_map.hpp"
+#include "core/venue_setup.hpp"
+#include "platform/platform.hpp"
 #include "render/output_window.hpp"
+#include "scene3d/scene_pack.hpp"
 
 #include <algorithm>
 #include <cfloat>
@@ -32,11 +35,28 @@ std::string outputLabel(int index) {
     return std::string(tr("Output")) + " " + std::to_string(index + 1);
 }
 
+float distanceToSegmentSquared(const Vec2f& p, const Vec2f& a, const Vec2f& b) {
+    const float dx = b.x - a.x;
+    const float dy = b.y - a.y;
+    const float lengthSquared = dx * dx + dy * dy;
+    float t = lengthSquared > 0.0f ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared : 0.0f;
+    t = std::clamp(t, 0.0f, 1.0f);
+    const float ex = a.x + t * dx - p.x;
+    const float ey = a.y + t * dy - p.y;
+    return ex * ex + ey * ey;
+}
+
+bool sliceActive(const OutputSpec& spec, int index) {
+    return index == 0 || spec.slices[static_cast<size_t>(index - 1)].enabled;
+}
+
 }
 
 void App::drawMappingCanvas(OutputSpec& spec, int index) {
     (void)index;
-    OutputMapping& map = spec.map;
+    selectedSlice_ = std::clamp(selectedSlice_, 0, sliceCount(spec) - 1);
+    OutputMapping& map = sliceMapping(spec, selectedSlice_);
+    const bool maskMode = canvasMode_ == 1;
     const float width = std::max(160.0f, std::min(ImGui::GetContentRegionAvail().x, 560.0f));
     const ImVec2 size(width, width * 9.0f / 16.0f);
     const ImVec2 origin = ImGui::GetCursorScreenPos();
@@ -59,6 +79,30 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
             const MeshVertex& d = mesh[static_cast<size_t>((j + 1) * (kDiv + 1) + i)];
             draw->AddImageQuad(texture, screen({a.x, a.y}), screen({b.x, b.y}), screen({c.x, c.y}), screen({d.x, d.y}), ImVec2(a.u, a.v), ImVec2(b.u, b.v), ImVec2(c.u, c.v), ImVec2(d.u, d.v), IM_COL32(255, 255, 255, 230));
         }
+    }
+
+    for (int k = 0; k < sliceCount(spec); ++k) {
+        if (k == selectedSlice_ || !sliceActive(spec, k)) {
+            continue;
+        }
+        const OutputMapping& other = sliceMapping(spec, k);
+        const ImVec2 outline[4] = {screen(mapPoint(other, 0.0f, 0.0f)), screen(mapPoint(other, 1.0f, 0.0f)), screen(mapPoint(other, 1.0f, 1.0f)), screen(mapPoint(other, 0.0f, 1.0f))};
+        draw->AddPolyline(outline, 4, IM_COL32(120, 160, 255, 170), ImDrawFlags_Closed, 1.0f);
+        const std::string otherName = sliceName(spec, k);
+        draw->AddText(ImVec2(outline[0].x + 4.0f, outline[0].y + 2.0f), IM_COL32(150, 185, 255, 220), otherName.c_str());
+    }
+
+    const SliceMask& shown = map.mask;
+    if (!shown.points.empty()) {
+        std::vector<ImVec2> outline;
+        outline.reserve(shown.points.size());
+        for (const Vec2f& point : shown.points) {
+            outline.push_back(screen(point));
+        }
+        if (maskUsable(shown)) {
+            draw->AddConcavePolyFilled(outline.data(), static_cast<int>(outline.size()), shown.invert ? IM_COL32(255, 70, 70, 55) : IM_COL32(70, 255, 120, 45));
+        }
+        draw->AddPolyline(outline.data(), static_cast<int>(outline.size()), shown.enabled ? IM_COL32(90, 255, 140, 235) : IM_COL32(150, 150, 150, 200), ImDrawFlags_Closed, 1.5f);
     }
 
     const ImU32 blendColor = IM_COL32(80, 200, 255, 200);
@@ -102,27 +146,39 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
     const ImVec2 mouse = ImGui::GetIO().MousePos;
     int hot = -1;
     int hotWarp = -1;
+    int hotMask = -1;
     float best = 14.0f * 14.0f;
-    for (int k = 0; k < 4; ++k) {
-        const ImVec2 p = screen(map.corners[static_cast<size_t>(k)]);
-        const float d2 = (p.x - mouse.x) * (p.x - mouse.x) + (p.y - mouse.y) * (p.y - mouse.y);
-        if (d2 < best) {
-            best = d2;
-            hot = k;
-            hotWarp = -1;
-        }
-    }
-    for (int r = 0; r < rows; ++r) {
-        for (int c = 0; c < columns; ++c) {
-            if (isCorner(r, c)) {
-                continue;
-            }
-            const ImVec2 p = nodes[static_cast<size_t>(r) * static_cast<size_t>(columns) + static_cast<size_t>(c)];
+    if (maskMode) {
+        for (size_t k = 0; k < map.mask.points.size(); ++k) {
+            const ImVec2 p = screen(map.mask.points[k]);
             const float d2 = (p.x - mouse.x) * (p.x - mouse.x) + (p.y - mouse.y) * (p.y - mouse.y);
             if (d2 < best) {
                 best = d2;
-                hot = -1;
-                hotWarp = r * columns + c;
+                hotMask = static_cast<int>(k);
+            }
+        }
+    } else {
+        for (int k = 0; k < 4; ++k) {
+            const ImVec2 p = screen(map.corners[static_cast<size_t>(k)]);
+            const float d2 = (p.x - mouse.x) * (p.x - mouse.x) + (p.y - mouse.y) * (p.y - mouse.y);
+            if (d2 < best) {
+                best = d2;
+                hot = k;
+                hotWarp = -1;
+            }
+        }
+        for (int r = 0; r < rows; ++r) {
+            for (int c = 0; c < columns; ++c) {
+                if (isCorner(r, c)) {
+                    continue;
+                }
+                const ImVec2 p = nodes[static_cast<size_t>(r) * static_cast<size_t>(columns) + static_cast<size_t>(c)];
+                const float d2 = (p.x - mouse.x) * (p.x - mouse.x) + (p.y - mouse.y) * (p.y - mouse.y);
+                if (d2 < best) {
+                    best = d2;
+                    hot = -1;
+                    hotWarp = r * columns + c;
+                }
             }
         }
     }
@@ -130,12 +186,45 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         draggedPoint_ = hot;
         draggedWarp_ = hotWarp;
+        draggedMask_ = hotMask;
     }
     if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         draggedPoint_ = -1;
         draggedWarp_ = -1;
+        draggedMask_ = -1;
     }
-    if (draggedPoint_ >= 0) {
+    if (maskMode && hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && hotMask >= 0) {
+        maskRemovePoint(map.mask, hotMask);
+        draggedMask_ = -1;
+        hotMask = -1;
+    }
+    if (maskMode && hovered && hotMask < 0 && draggedMask_ < 0 && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && map.mask.points.size() < static_cast<size_t>(kMaxMaskPoints)) {
+        Vec2f p = toCanvas(mouse, origin, size);
+        p.x = std::clamp(p.x, -0.5f, 1.5f);
+        p.y = std::clamp(p.y, -0.5f, 1.5f);
+        std::vector<Vec2f>& points = map.mask.points;
+        size_t insertAt = points.size();
+        if (points.size() >= 2) {
+            float nearest = FLT_MAX;
+            for (size_t k = 0; k < points.size(); ++k) {
+                const float d = distanceToSegmentSquared(p, points[k], points[(k + 1) % points.size()]);
+                if (d < nearest) {
+                    nearest = d;
+                    insertAt = k + 1;
+                }
+            }
+        }
+        points.insert(points.begin() + static_cast<std::ptrdiff_t>(insertAt), p);
+        if (points.size() >= static_cast<size_t>(kMinMaskPoints)) {
+            map.mask.enabled = true;
+        }
+    }
+    if (draggedMask_ >= 0 && draggedMask_ < static_cast<int>(map.mask.points.size())) {
+        Vec2f p = toCanvas(mouse, origin, size);
+        p.x = std::clamp(p.x, -0.5f, 1.5f);
+        p.y = std::clamp(p.y, -0.5f, 1.5f);
+        map.mask.points[static_cast<size_t>(draggedMask_)] = p;
+    } else if (draggedPoint_ >= 0) {
         Vec2f p = toCanvas(mouse, origin, size);
         p.x = std::clamp(p.x, -0.5f, 1.5f);
         p.y = std::clamp(p.y, -0.5f, 1.5f);
@@ -150,35 +239,203 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
         map.warp[static_cast<size_t>(draggedWarp_)] = {std::clamp(p.x - base.x, -0.5f, 0.5f), std::clamp(p.y - base.y, -0.5f, 0.5f)};
     }
 
-    for (int r = 0; r < rows; ++r) {
-        for (int c = 0; c < columns; ++c) {
-            if (isCorner(r, c)) {
-                continue;
-            }
-            const ImVec2 p = nodes[static_cast<size_t>(r) * static_cast<size_t>(columns) + static_cast<size_t>(c)];
-            const bool active = draggedWarp_ == r * columns + c || (draggedWarp_ < 0 && draggedPoint_ < 0 && hotWarp == r * columns + c && hovered);
-            draw->AddCircleFilled(p, active ? 6.0f : 4.5f, active ? IM_COL32(255, 255, 255, 255) : IM_COL32(255, 200, 120, 255));
-            draw->AddCircle(p, active ? 6.0f : 4.5f, IM_COL32(0, 0, 0, 255));
+    if (maskMode) {
+        for (size_t k = 0; k < map.mask.points.size(); ++k) {
+            const ImVec2 p = screen(map.mask.points[k]);
+            const bool active = draggedMask_ == static_cast<int>(k) || (draggedMask_ < 0 && hotMask == static_cast<int>(k) && hovered);
+            const float half = active ? 6.5f : 5.0f;
+            draw->AddCircleFilled(p, half, active ? IM_COL32(255, 255, 255, 255) : IM_COL32(90, 255, 140, 255));
+            draw->AddCircle(p, half, IM_COL32(0, 0, 0, 255));
         }
-    }
-    for (int k = 0; k < 4; ++k) {
-        const ImVec2 p = screen(map.corners[static_cast<size_t>(k)]);
-        const bool active = draggedPoint_ == k || (draggedPoint_ < 0 && draggedWarp_ < 0 && hot == k && hovered);
-        const float half = active ? 8.0f : 6.0f;
-        draw->AddRectFilled(ImVec2(p.x - half, p.y - half), ImVec2(p.x + half, p.y + half), active ? IM_COL32(255, 255, 255, 255) : ImGui::ColorConvertFloat4ToU32(ui::kAccent));
-        draw->AddRect(ImVec2(p.x - half, p.y - half), ImVec2(p.x + half, p.y + half), IM_COL32(0, 0, 0, 255));
+    } else {
+        for (int r = 0; r < rows; ++r) {
+            for (int c = 0; c < columns; ++c) {
+                if (isCorner(r, c)) {
+                    continue;
+                }
+                const ImVec2 p = nodes[static_cast<size_t>(r) * static_cast<size_t>(columns) + static_cast<size_t>(c)];
+                const bool active = draggedWarp_ == r * columns + c || (draggedWarp_ < 0 && draggedPoint_ < 0 && hotWarp == r * columns + c && hovered);
+                draw->AddCircleFilled(p, active ? 6.0f : 4.5f, active ? IM_COL32(255, 255, 255, 255) : IM_COL32(255, 200, 120, 255));
+                draw->AddCircle(p, active ? 6.0f : 4.5f, IM_COL32(0, 0, 0, 255));
+            }
+        }
+        for (int k = 0; k < 4; ++k) {
+            const ImVec2 p = screen(map.corners[static_cast<size_t>(k)]);
+            const bool active = draggedPoint_ == k || (draggedPoint_ < 0 && draggedWarp_ < 0 && hot == k && hovered);
+            const float half = active ? 8.0f : 6.0f;
+            draw->AddRectFilled(ImVec2(p.x - half, p.y - half), ImVec2(p.x + half, p.y + half), active ? IM_COL32(255, 255, 255, 255) : ImGui::ColorConvertFloat4ToU32(ui::kAccent));
+            draw->AddRect(ImVec2(p.x - half, p.y - half), ImVec2(p.x + half, p.y + half), IM_COL32(0, 0, 0, 255));
+        }
     }
     draw->PopClipRect();
     draw->AddRect(origin, end, IM_COL32(90, 90, 100, 255));
 }
 
+void App::drawOutputSlices(OutputSpec& spec) {
+    ImGui::SeparatorText(tr("Slices"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("A slice shows a part of the picture in a part of this output. Add slices to feed several surfaces from one output. Later slices are drawn on top of earlier ones."));
+    ImGui::PopTextWrapPos();
+    selectedSlice_ = std::clamp(selectedSlice_, 0, sliceCount(spec) - 1);
+    const int count = sliceCount(spec);
+    const float available = ImGui::GetContentRegionAvail().x;
+    float used = 0.0f;
+    for (int i = 0; i < count; ++i) {
+        const std::string label = sliceName(spec, i);
+        const float width = ImGui::CalcTextSize(label.c_str()).x + 18.0f;
+        if (i > 0 && used + width + ImGui::GetStyle().ItemSpacing.x <= available) {
+            ImGui::SameLine();
+            used += width + ImGui::GetStyle().ItemSpacing.x;
+        } else {
+            used = width;
+        }
+        const bool hidden = !sliceActive(spec, i);
+        ImGui::PushID(i);
+        if (hidden) {
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+        }
+        if (ImGui::Selectable(label.c_str(), selectedSlice_ == i, 0, ImVec2(width, 0.0f))) {
+            selectedSlice_ = i;
+            draggedPoint_ = -1;
+            draggedWarp_ = -1;
+            draggedMask_ = -1;
+        }
+        if (hidden) {
+            ImGui::PopStyleVar();
+        }
+        ImGui::PopID();
+    }
+    ImGui::BeginDisabled(count >= kMaxSlices);
+    if (ImGui::SmallButton(tr("Add slice")) && addSlice(spec)) {
+        selectedSlice_ = sliceCount(spec) - 1;
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Duplicate")) && duplicateSlice(spec, selectedSlice_)) {
+        selectedSlice_ = sliceCount(spec) - 1;
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::BeginDisabled(count <= 1);
+    if (ImGui::SmallButton(tr("Remove")) && removeSlice(spec, selectedSlice_)) {
+        selectedSlice_ = std::clamp(selectedSlice_, 0, sliceCount(spec) - 1);
+    }
+    ImGui::EndDisabled();
+    if (selectedSlice_ > 0) {
+        OutputSlice& slice = spec.slices[static_cast<size_t>(selectedSlice_ - 1)];
+        char buffer[48];
+        std::snprintf(buffer, sizeof(buffer), "%s", slice.name.c_str());
+        ImGui::SetNextItemWidth(170.0f);
+        if (ImGui::InputText("##slicename", buffer, sizeof(buffer))) {
+            slice.name = buffer;
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox(tr("Show this slice"), &slice.enabled);
+    }
+}
+
+void App::drawSliceMask(OutputMapping& map) {
+    ImGui::SeparatorText(tr("Mask"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Cuts the slice to a shape, for example around a screen or a pillar. Choose Mask above the canvas, then drag the green points, double-click to add a point and right-click a point to remove it."));
+    ImGui::PopTextWrapPos();
+    SliceMask& mask = map.mask;
+    const auto preset = [&](const SliceMask& shape) {
+        const float feather = mask.feather;
+        const bool invert = mask.invert;
+        mask = shape;
+        mask.feather = feather;
+        mask.invert = invert;
+        mask.enabled = true;
+        canvasMode_ = 1;
+    };
+    bool enabled = mask.enabled;
+    if (ImGui::Checkbox(tr("Use mask"), &enabled)) {
+        if (enabled && mask.points.size() < static_cast<size_t>(kMinMaskPoints)) {
+            preset(maskRectangle(0.1f, 0.1f, 0.9f, 0.9f));
+        }
+        mask.enabled = enabled;
+        if (enabled) {
+            canvasMode_ = 1;
+        }
+    }
+    ImGui::SameLine();
+    ImGui::Checkbox(tr("Invert"), &mask.invert);
+    ImGui::SetItemTooltip("%s", tr("Hides the inside of the shape and shows the rest"));
+    if (ImGui::SmallButton(tr("Rectangle"))) {
+        preset(maskRectangle(0.1f, 0.1f, 0.9f, 0.9f));
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Ellipse"))) {
+        preset(maskEllipse(0.5f, 0.5f, 0.45f, 0.45f, 32));
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(mask.points.size() >= static_cast<size_t>(kMaxMaskPoints));
+    if (ImGui::SmallButton(tr("Add point"))) {
+        maskInsertPoint(mask);
+        canvasMode_ = 1;
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Clear"))) {
+        mask.points.clear();
+        mask.enabled = false;
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("%d / %d", static_cast<int>(mask.points.size()), kMaxMaskPoints);
+    ImGui::TextUnformatted(tr("Soft edge"));
+    ImGui::SameLine(90.0f);
+    percentSlider("##maskFeather", mask.feather, 0.0f, kMaxMaskFeather);
+    ImGui::SetItemTooltip("%s", tr("Softens the edge of the mask, in percent of the picture height"));
+    normalizeMask(mask);
+}
+
+void App::drawOutputColor(OutputSpec& spec) {
+    OutputColor& color = spec.color;
+    ImGui::SeparatorText(tr("Colour of this output"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Matches the colour of this projector to its neighbours. It applies to all slices of this output but not to the test pattern."));
+    ImGui::PopTextWrapPos();
+    ImGui::PushID("outputColor");
+    ImGui::TextUnformatted(tr("Red"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cr", color.red, 0.0f, 1.5f);
+    ImGui::TextUnformatted(tr("Green"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cg", color.green, 0.0f, 1.5f);
+    ImGui::TextUnformatted(tr("Blue"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cb", color.blue, 0.0f, 1.5f);
+    ImGui::TextUnformatted(tr("Saturation"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cs", color.saturation, 0.0f, 2.0f);
+    ImGui::TextUnformatted(tr("Contrast"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cc", color.contrast, 0.25f, 2.0f);
+    ImGui::TextUnformatted(tr("Gamma"));
+    ImGui::SameLine(110.0f);
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    ImGui::SliderFloat("##cgm", &color.gamma, 0.4f, 2.5f, "%.2f");
+    ImGui::TextUnformatted(tr("Black lift"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##ck", color.black, 0.0f, 0.3f);
+    ImGui::SetItemTooltip("%s", tr("Raises black to match a projector that cannot show a deep black"));
+    ImGui::PopID();
+    ImGui::BeginDisabled(isDefaultColor(color));
+    if (ImGui::SmallButton(tr("Reset colour"))) {
+        color = OutputColor{};
+    }
+    ImGui::EndDisabled();
+    normalizeColor(color);
+}
+
 void App::drawOutputMapping(int index) {
     OutputSpec& spec = outputs_.specs()[static_cast<size_t>(index)];
-    OutputMapping& map = spec.map;
+    drawOutputSlices(spec);
+    OutputMapping& map = sliceMapping(spec, selectedSlice_);
 
     ImGui::SeparatorText(tr("Picture area"));
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextDisabled("%s", tr("Which part of the composition this output shows. Use it to split one picture over several projectors."));
+    ImGui::TextDisabled("%s", tr("Which part of the composition this slice shows. Use it to split one picture over several projectors."));
     ImGui::PopTextWrapPos();
     if (ImGui::SmallButton(tr("Whole picture"))) {
         map.slice = {0.0f, 0.0f, 1.0f, 1.0f};
@@ -186,22 +443,30 @@ void App::drawOutputMapping(int index) {
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Left half"))) {
         map.slice = {0.0f, 0.0f, 0.5f, 1.0f};
-        map.fill = true;
+        if (selectedSlice_ == 0) {
+            map.fill = true;
+        }
     }
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Right half"))) {
         map.slice = {0.5f, 0.0f, 0.5f, 1.0f};
-        map.fill = true;
+        if (selectedSlice_ == 0) {
+            map.fill = true;
+        }
     }
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Top half"))) {
         map.slice = {0.0f, 0.0f, 1.0f, 0.5f};
-        map.fill = true;
+        if (selectedSlice_ == 0) {
+            map.fill = true;
+        }
     }
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Bottom half"))) {
         map.slice = {0.0f, 0.5f, 1.0f, 0.5f};
-        map.fill = true;
+        if (selectedSlice_ == 0) {
+            map.fill = true;
+        }
     }
     ImGui::PushID("slice");
     ImGui::TextUnformatted(tr("Left"));
@@ -217,9 +482,11 @@ void App::drawOutputMapping(int index) {
     ImGui::SameLine(90.0f);
     percentSlider("##sh", map.slice[3], 0.02f, 1.0f);
     ImGui::PopID();
-    ImGui::Checkbox(tr("Fill the whole window"), &map.fill);
-    ImGui::SetItemTooltip("%s", tr("Off: the picture keeps its proportions and gets black bars. On: it is stretched over the whole window, which is right for projectors."));
-    ImGui::SameLine();
+    if (selectedSlice_ == 0) {
+        ImGui::Checkbox(tr("Fill the whole window"), &map.fill);
+        ImGui::SetItemTooltip("%s", tr("Off: the picture keeps its proportions and gets black bars. On: it is stretched over the whole window, which is right for projectors."));
+        ImGui::SameLine();
+    }
     ImGui::Checkbox(tr("Mirror horizontally"), &map.flipX);
     ImGui::SameLine();
     ImGui::Checkbox(tr("Mirror vertically"), &map.flipY);
@@ -228,6 +495,9 @@ void App::drawOutputMapping(int index) {
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Drag the orange squares to fit the picture onto the surface. Drag the round points to bend it."));
     ImGui::PopTextWrapPos();
+    ImGui::RadioButton(tr("Corners and warp"), &canvasMode_, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton(tr("Mask"), &canvasMode_, 1);
     drawMappingCanvas(spec, index);
     ImGui::SetNextItemWidth(120.0f);
     if (ImGui::BeginCombo(tr("Warp points"), (std::to_string(map.warpColumns) + " x " + std::to_string(map.warpRows)).c_str())) {
@@ -247,6 +517,8 @@ void App::drawOutputMapping(int index) {
     if (ImGui::SmallButton(tr("Reset warp"))) {
         resetWarp(map);
     }
+
+    drawSliceMask(map);
 
     ImGui::SeparatorText(tr("Edge blending"));
     ImGui::PushTextWrapPos(0.0f);
@@ -273,19 +545,183 @@ void App::drawOutputMapping(int index) {
     ImGui::SameLine(90.0f);
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::SliderFloat("##bg", &map.blend.gamma, 1.0f, 3.0f, "%.2f");
+    ImGui::TextUnformatted(tr("Black level"));
+    ImGui::SameLine(90.0f);
+    percentSlider("##bk", map.blend.blackLevel, 0.0f, 0.3f);
+    ImGui::SetItemTooltip("%s", tr("Projectors never show a true black, so the overlap looks brighter. This lifts the rest of the slice to the same level. It only works together with edge blending."));
     ImGui::PopID();
 
     ImGui::SeparatorText(tr("Brightness"));
     percentSlider("##brightness", map.brightness, 0.0f, 1.0f);
     ImGui::SetItemTooltip("%s", tr("Lower it to match this projector to a darker neighbour"));
-    if (ImGui::SmallButton(tr("Reset everything for this output"))) {
-        const std::string name = spec.name;
-        const bool enabled = spec.enabled;
-        map = OutputMapping{};
-        spec.name = name;
-        spec.enabled = enabled;
-    }
     normalizeMapping(map);
+
+    drawOutputColor(spec);
+
+    if (ImGui::SmallButton(tr("Reset everything for this output"))) {
+        spec.map = OutputMapping{};
+        spec.slices.clear();
+        spec.color = OutputColor{};
+        selectedSlice_ = 0;
+        draggedPoint_ = -1;
+        draggedWarp_ = -1;
+        draggedMask_ = -1;
+    }
+}
+
+void App::applyVenue(const std::array<OutputSpec, kMaxOutputs>& set) {
+    std::array<OutputSpec, kMaxOutputs>& specs = outputs_.specs();
+    for (int i = 0; i < kMaxOutputs; ++i) {
+        const bool wasOpen = outputs_.isOpen(i);
+        specs[static_cast<size_t>(i)] = set[static_cast<size_t>(i)];
+        if (i == 0) {
+            specs[0].enabled = true;
+        }
+        if (wasOpen) {
+            if (!specs[static_cast<size_t>(i)].enabled) {
+                outputs_.close(i);
+            } else {
+                outputs_.setFullscreen(i, specs[static_cast<size_t>(i)].fullscreen);
+            }
+        }
+    }
+    selectedSlice_ = 0;
+    draggedPoint_ = -1;
+    draggedWarp_ = -1;
+    draggedMask_ = -1;
+}
+
+bool App::importDroppedVenue(const std::string& path) {
+    std::string imported;
+    std::string error;
+    if (!importVenue(venuesDirectory(), pathFromUtf8(path), imported, error)) {
+        toast(trMessage(error));
+        return false;
+    }
+    venueListDirty_ = true;
+    toast(std::string(tr("Venue setup imported: ")) + imported);
+    return true;
+}
+
+void App::drawVenueControls() {
+    ImGui::SeparatorText(tr("Venue setups"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Saves the whole layout of all outputs (displays, slices, masks, warp, blending and colour) under a name so you can switch between venues. You can also drop a venue file onto the window to import it."));
+    ImGui::PopTextWrapPos();
+    const std::filesystem::path directory = venuesDirectory();
+    if (venueListDirty_) {
+        venueList_ = listVenues(directory);
+        venueListDirty_ = false;
+    }
+    if (selectedVenue_ >= static_cast<int>(venueList_.size())) {
+        selectedVenue_ = -1;
+    }
+    const std::string preview = selectedVenue_ >= 0 ? venueList_[static_cast<size_t>(selectedVenue_)] : std::string(tr("(none saved)"));
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::BeginCombo("##venues", preview.c_str())) {
+        for (int i = 0; i < static_cast<int>(venueList_.size()); ++i) {
+            if (ImGui::Selectable(venueList_[static_cast<size_t>(i)].c_str(), i == selectedVenue_)) {
+                selectedVenue_ = i;
+                std::snprintf(venueName_, sizeof(venueName_), "%s", venueList_[static_cast<size_t>(i)].c_str());
+            }
+        }
+        ImGui::EndCombo();
+    }
+    const std::string chosen = selectedVenue_ >= 0 ? venueList_[static_cast<size_t>(selectedVenue_)] : std::string();
+    ImGui::BeginDisabled(selectedVenue_ < 0);
+    if (ImGui::Button(tr("Load"))) {
+        std::array<OutputSpec, kMaxOutputs> set;
+        std::string error;
+        if (loadVenue(directory, chosen, set, error)) {
+            applyVenue(set);
+            toast(std::string(tr("Venue setup loaded: ")) + chosen);
+        } else {
+            toast(trMessage(error));
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Duplicate"))) {
+        std::string error;
+        if (duplicateVenue(directory, chosen, std::string(), error)) {
+            venueListDirty_ = true;
+            toast(std::string(tr("Venue setup duplicated: ")) + chosen);
+        } else {
+            toast(trMessage(error));
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Delete"))) {
+        ImGui::OpenPopup("deleteVenue");
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Open folder"))) {
+        platform::openFolder(pathToUtf8(directory));
+    }
+    if (ImGui::BeginPopupModal("deleteVenue", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("%s", tr("Delete this venue setup?"));
+        ImGui::TextDisabled("%s", chosen.c_str());
+        if (ImGui::Button(tr("Delete"))) {
+            std::string error;
+            if (deleteVenue(directory, chosen, error)) {
+                selectedVenue_ = -1;
+                venueListDirty_ = true;
+                toast(std::string(tr("Venue setup deleted: ")) + chosen);
+            } else {
+                toast(trMessage(error));
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Cancel"))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    ImGui::SetNextItemWidth(220.0f);
+    ImGui::InputTextWithHint("##venueName", tr("Name"), venueName_, sizeof(venueName_));
+    ImGui::SameLine();
+    const bool exists = venueExists(directory, venueName_);
+    if (ImGui::Button(exists ? tr("Overwrite") : tr("Save as"))) {
+        std::string error;
+        if (saveVenue(directory, venueName_, outputs_.specs(), error)) {
+            venueListDirty_ = true;
+            toast(std::string(tr("Venue setup saved: ")) + sanitizeVenueName(venueName_));
+            venueList_ = listVenues(directory);
+            venueListDirty_ = false;
+            const std::string saved = sanitizeVenueName(venueName_);
+            selectedVenue_ = -1;
+            for (size_t i = 0; i < venueList_.size(); ++i) {
+                if (venueList_[i] == saved) {
+                    selectedVenue_ = static_cast<int>(i);
+                }
+            }
+        } else {
+            toast(trMessage(error));
+        }
+    }
+
+    ImGui::SetNextItemWidth(-130.0f);
+    ImGui::InputTextWithHint("##venuePath", tr("File path"), venuePath_, sizeof(venuePath_));
+    ImGui::SetItemTooltip("%s", tr("Where to export the selected venue setup to, or which venue file to import"));
+    ImGui::SameLine();
+    ImGui::BeginDisabled(selectedVenue_ < 0 || venuePath_[0] == '\0');
+    if (ImGui::Button(tr("Export"))) {
+        std::string error;
+        if (exportVenue(directory, chosen, pathFromUtf8(venuePath_), error)) {
+            toast(tr("Venue setup exported"));
+        } else {
+            toast(trMessage(error));
+        }
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::BeginDisabled(venuePath_[0] == '\0');
+    if (ImGui::Button(tr("Import"))) {
+        importDroppedVenue(venuePath_);
+    }
+    ImGui::EndDisabled();
 }
 
 void App::drawOutputControls() {
@@ -421,6 +857,8 @@ void App::drawOutputControls() {
         layoutGrid(gridColumns_, gridRows_, gridOverlap_, maps);
         for (size_t i = 0; i < maps.size() && i < specs.size(); ++i) {
             OutputMapping keep = specs[i].map;
+            maps[i].mask = keep.mask;
+            maps[i].blend.blackLevel = keep.blend.blackLevel;
             maps[i].corners = keep.corners;
             maps[i].warpColumns = keep.warpColumns;
             maps[i].warpRows = keep.warpRows;
@@ -439,6 +877,8 @@ void App::drawOutputControls() {
         }
         toast(tr("Outputs arranged"));
     }
+
+    drawVenueControls();
 
     if (!ImGui::IsMouseDown(ImGuiMouseButton_Left) && settings_.outputs != savedOutputs_) {
         saveSettings(settings_);

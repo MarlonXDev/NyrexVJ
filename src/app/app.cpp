@@ -5,10 +5,12 @@
 #include "core/crash_handler.hpp"
 #include "core/log.hpp"
 #include "core/preset.hpp"
+#include "core/venue_setup.hpp"
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
 #include "scene3d/builtin_docs.hpp"
+#include "scene3d/scene_pack.hpp"
 #include "update/changelog.hpp"
 
 #include <GLFW/glfw3.h>
@@ -246,6 +248,20 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         }
     }
 
+    if (!options.venue.empty()) {
+        std::array<OutputSpec, kMaxOutputs> set;
+        std::string name;
+        std::string error;
+        std::error_code ec;
+        const std::filesystem::path asPath = pathFromUtf8(options.venue);
+        const bool loaded = std::filesystem::is_regular_file(asPath, ec) ? loadVenueFile(asPath, name, set, error) : loadVenue(venuesDirectory(), options.venue, set, error);
+        if (loaded) {
+            applyVenue(set);
+            logLine("Venue setup loaded: " + options.venue);
+        } else {
+            logLine("Venue setup could not be loaded: " + error);
+        }
+    }
     if (options.selectOutput >= 0 && options.selectOutput < kMaxOutputs) {
         selectedOutput_ = options.selectOutput;
         outputTabForce_ = 4;
@@ -345,7 +361,15 @@ void App::autosaveTick(double dt) {
 }
 
 void App::queueDroppedFiles(const std::vector<std::string>& paths) {
-    pendingImports_.insert(pendingImports_.end(), paths.begin(), paths.end());
+    for (const std::string& path : paths) {
+        std::string extension = pathFromUtf8(path).extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (extension == ".json") {
+            importDroppedVenue(path);
+        } else {
+            pendingImports_.push_back(path);
+        }
+    }
 }
 
 void App::serviceImports() {

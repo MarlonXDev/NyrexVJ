@@ -70,6 +70,7 @@ struct StartOptions {
     bool openOutput = false;
     bool outputPattern = false;
     std::string ndiName;
+    std::string venue;
     int selectOutput = -1;
     bool openCreator = false;
     bool fresh = false;
@@ -170,6 +171,12 @@ private:
     void drawOutputControls();
     void drawOutputMapping(int index);
     void drawMappingCanvas(OutputSpec& spec, int index);
+    void drawOutputSlices(OutputSpec& spec);
+    void drawSliceMask(OutputMapping& map);
+    void drawOutputColor(OutputSpec& spec);
+    void drawVenueControls();
+    void applyVenue(const std::array<OutputSpec, kMaxOutputs>& set);
+    bool importDroppedVenue(const std::string& path);
     bool captureOutput(int index, OutputCapture& out);
     void drawSpoutControls();
     void drawNdiControls();
@@ -242,6 +249,14 @@ private:
     float gridOverlap_ = 0.1f;
     int draggedPoint_ = -1;
     int draggedWarp_ = -1;
+    int draggedMask_ = -1;
+    int selectedSlice_ = 0;
+    int canvasMode_ = 0;
+    std::vector<std::string> venueList_;
+    bool venueListDirty_ = true;
+    int selectedVenue_ = -1;
+    char venueName_[64] = {};
+    char venuePath_[512] = {};
     bool mappingFollowsTexture_ = true;
     char presetName_[64] = {};
     char spoutName_[64] = {};

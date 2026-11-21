@@ -4,3 +4,5 @@
 *.ico binary
 *.sh text eol=lf
 *.py text eol=lf
+*.webp binary
+site/ export-ignore

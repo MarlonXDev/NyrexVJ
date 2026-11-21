@@ -213,6 +213,7 @@ bool loadSettings(Settings& settings) {
         result.ltcDevice = ltcDevice->get<std::string>().substr(0, 256);
     }
     result.cuesEnabled = boolean("cuesEnabled", true);
+    result.outputFrameLock = boolean("outputFrameLock", true);
     result.outputs = defaultOutputs();
     result.outputs[0].monitor = legacyMonitor;
     auto outputs = doc.find("outputs");
@@ -276,6 +277,7 @@ bool saveSettings(const Settings& settings) {
     doc["djLinkPlayer"] = settings.djLinkPlayer;
     doc["ltcDevice"] = settings.ltcDevice;
     doc["cuesEnabled"] = settings.cuesEnabled;
+    doc["outputFrameLock"] = settings.outputFrameLock;
     doc["oscOutEnabled"] = settings.oscOutEnabled;
     doc["oscOutHost"] = settings.oscOutHost;
     doc["oscOutPort"] = settings.oscOutPort;

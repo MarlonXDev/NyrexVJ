@@ -828,8 +828,50 @@ void App::drawOutputControls() {
         }
     }
 
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(tr("Delay"));
+    ImGui::SameLine(90.0f);
+    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SliderInt("##delayFrames", &spec.delayFrames, 0, kMaxDelayFrames, "%d");
+    spec.delayFrames = clampDelay(spec.delayFrames);
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s", tr("frames"));
+    ImGui::SetItemTooltip("%s", tr("Delays this output by whole frames to match outputs that show their picture later, for example projectors with more processing delay. While a delay is set, extra graphics memory is used."));
+    if (outputs_.historyActive()) {
+        char memory[64];
+        std::snprintf(memory, sizeof(memory), "%.1f MiB", static_cast<double>(outputs_.historyBytes()) / (1024.0 * 1024.0));
+        ImGui::TextDisabled("%s: %s", tr("Delay memory"), memory);
+    }
+
     drawOutputMapping(index);
     ImGui::EndDisabled();
+
+    ImGui::SeparatorText(tr("Frame lock"));
+    if (ImGui::Checkbox(trId("Show the same frame on all outputs", "frameLock"), &settings_.outputFrameLock)) {
+        saveSettings(settings_);
+    }
+    ImGui::SetItemTooltip("%s", tr("Draws all output windows first and then swaps them one right after the other, so they change their picture at nearly the same time. Turn this off to swap each window right after drawing it."));
+    bool bars = outputs_.syncBars();
+    if (ImGui::Checkbox(trId("Sync bars", "syncBars"), &bars)) {
+        outputs_.setSyncBars(bars);
+    }
+    ImGui::SetItemTooltip("%s", tr("Shows a frame counter, a flash and a moving bar on every open output instead of the picture. Film several screens at once to see how far apart they are. The counter includes the delay of each output."));
+    const SkewTracker& skew = outputs_.skew();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Swap skew (last / average / longest)"));
+    ImGui::SameLine();
+    if (outputs_.openCount() < 2) {
+        ImGui::TextDisabled("%s", tr("Open two or more outputs to measure it."));
+    } else if (skew.count() == 0) {
+        ImGui::TextUnformatted("-");
+    } else {
+        char values[96];
+        std::snprintf(values, sizeof(values), "%.2f / %.2f / %.2f ms", skew.last(), skew.average(), skew.maximum());
+        ImGui::TextUnformatted(values);
+    }
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Measured when the swap is handed to the graphics driver. Delay inside projectors and screens is not included."));
+    ImGui::PopTextWrapPos();
 
     ImGui::SeparatorText(tr("Several projectors"));
     ImGui::PushTextWrapPos(0.0f);

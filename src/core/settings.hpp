@@ -74,6 +74,7 @@ struct Settings {
     int djLinkPlayer = 0;
     std::string ltcDevice;
     bool cuesEnabled = true;
+    bool outputFrameLock = true;
 };
 
 bool loadSettings(Settings& settings);

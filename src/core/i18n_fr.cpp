@@ -1221,6 +1221,17 @@ const Translation kFrench[] = {
     {"TC second", "Seconde TC"},
     {"Could not create the network socket", "Impossible de créer le socket réseau"},
     {"Could not open the network port, it may be in use", "Impossible d'ouvrir le port réseau, il est peut-être déjà utilisé"},
+    {"Delay", "Retard"},
+    {"Delay memory", "Mémoire du retard"},
+    {"Delays this output by whole frames to match outputs that show their picture later, for example projectors with more processing delay. While a delay is set, extra graphics memory is used.", "Retarde cette sortie d'images entières pour la faire correspondre aux sorties qui affichent leur image plus tard, par exemple des projecteurs avec plus de traitement. Tant qu'un retard est réglé, de la mémoire graphique supplémentaire est utilisée."},
+    {"Draws all output windows first and then swaps them one right after the other, so they change their picture at nearly the same time. Turn this off to swap each window right after drawing it.", "Dessine d'abord toutes les fenêtres de sortie puis les échange l'une après l'autre, pour qu'elles changent d'image presque en même temps. Désactivez pour échanger chaque fenêtre juste après l'avoir dessinée."},
+    {"Frame lock", "Verrouillage d'images"},
+    {"Measured when the swap is handed to the graphics driver. Delay inside projectors and screens is not included.", "Mesuré au moment où l'échange est remis au pilote graphique. Le retard à l'intérieur des projecteurs et écrans n'est pas inclus."},
+    {"Open two or more outputs to measure it.", "Ouvrez deux sorties ou plus pour le mesurer."},
+    {"Show the same frame on all outputs", "Afficher la même image sur toutes les sorties"},
+    {"Shows a frame counter, a flash and a moving bar on every open output instead of the picture. Film several screens at once to see how far apart they are. The counter includes the delay of each output.", "Affiche sur chaque sortie ouverte un compteur d'images, un flash et une barre mobile à la place de l'image. Filmez plusieurs écrans à la fois pour voir leur écart. Le compteur tient compte du retard de chaque sortie."},
+    {"Swap skew (last / average / longest)", "Décalage d'échange (dernier / moyenne / maximum)"},
+    {"Sync bars", "Barres de synchro"},
 };
 
 }

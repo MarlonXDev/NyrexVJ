@@ -1,5 +1,7 @@
 #include "core/output_map.hpp"
 
+#include "core/frame_lock.hpp"
+
 #include "core/output_map_json.hpp"
 
 #include <algorithm>
@@ -248,6 +250,7 @@ bool duplicateSlice(OutputSpec& spec, int index) {
 }
 
 void normalizeSpec(OutputSpec& spec) {
+    spec.delayFrames = clampDelay(spec.delayFrames);
     normalizeMapping(spec.map);
     normalizeColor(spec.color);
     if (spec.slices.size() > static_cast<size_t>(kMaxSlices - 1)) {
@@ -683,6 +686,7 @@ nlohmann::json outputToJson(const OutputSpec& spec) {
     doc["enabled"] = spec.enabled;
     doc["monitor"] = spec.monitor;
     doc["fullscreen"] = spec.fullscreen;
+    doc["delayFrames"] = spec.delayFrames;
     doc["color"] = colorToJson(spec.color);
     nlohmann::json slices = nlohmann::json::array();
     for (const OutputSlice& slice : spec.slices) {
@@ -832,6 +836,8 @@ bool outputFromJson(const nlohmann::json& doc, OutputSpec& spec) {
         result.monitor = std::clamp(monitor->get<int>(), 0, 15);
     }
     result.fullscreen = readBool(doc, "fullscreen", result.fullscreen);
+    auto delay = doc.find("delayFrames");
+    result.delayFrames = delay != doc.end() && delay->is_number_integer() ? clampDelay(delay->get<int>()) : 0;
     mappingFromJson(doc, result.map);
     result.color = OutputColor{};
     auto color = doc.find("color");

@@ -1221,6 +1221,17 @@ const Translation kGerman[] = {
     {"TC second", "TC-Sekunde"},
     {"Could not create the network socket", "Netzwerk-Socket konnte nicht erstellt werden"},
     {"Could not open the network port, it may be in use", "Netzwerk-Port konnte nicht geöffnet werden, er wird vielleicht schon benutzt"},
+    {"Delay", "Verzögerung"},
+    {"Delay memory", "Speicher für Verzögerung"},
+    {"Delays this output by whole frames to match outputs that show their picture later, for example projectors with more processing delay. While a delay is set, extra graphics memory is used.", "Verzögert diesen Ausgang um ganze Frames, damit er zu Ausgängen passt, die ihr Bild später zeigen, zum Beispiel Beamer mit längerer Bildverarbeitung. Solange eine Verzögerung eingestellt ist, wird zusätzlicher Grafikspeicher belegt."},
+    {"Draws all output windows first and then swaps them one right after the other, so they change their picture at nearly the same time. Turn this off to swap each window right after drawing it.", "Zeichnet zuerst alle Ausgabefenster und tauscht sie dann direkt nacheinander, damit sie ihr Bild fast gleichzeitig wechseln. Schalte das aus, um jedes Fenster gleich nach dem Zeichnen zu tauschen."},
+    {"Frame lock", "Frame-Lock"},
+    {"Measured when the swap is handed to the graphics driver. Delay inside projectors and screens is not included.", "Gemessen, wenn der Tausch an den Grafiktreiber übergeben wird. Verzögerungen in Beamern und Bildschirmen sind nicht enthalten."},
+    {"Open two or more outputs to measure it.", "Öffne zwei oder mehr Ausgänge, um es zu messen."},
+    {"Show the same frame on all outputs", "Auf allen Ausgängen dasselbe Bild zeigen"},
+    {"Shows a frame counter, a flash and a moving bar on every open output instead of the picture. Film several screens at once to see how far apart they are. The counter includes the delay of each output.", "Zeigt auf jedem offenen Ausgang statt des Bildes einen Bildzähler, ein Blitzfeld und einen wandernden Balken. Filme mehrere Bildschirme gleichzeitig, um zu sehen, wie weit sie auseinanderliegen. Der Zähler berücksichtigt die Verzögerung jedes Ausgangs."},
+    {"Swap skew (last / average / longest)", "Tausch-Versatz (letzter / Mittel / längster)"},
+    {"Sync bars", "Sync-Balken"},
 };
 
 }

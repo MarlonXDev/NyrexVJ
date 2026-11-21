@@ -591,6 +591,7 @@ void App::frame(double dt) {
     if (ndi_.active()) {
         ndi_.send(engine_.outputTexture(), engine_.width(), engine_.height());
     }
+    outputs_.setFrameLock(settings_.outputFrameLock);
     outputs_.render(engine_.outputTexture(), engine_.width(), engine_.height());
 
     if (rescanModels_) {

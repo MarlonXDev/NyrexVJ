@@ -1221,6 +1221,17 @@ const Translation kSpanish[] = {
     {"TC second", "Segundo TC"},
     {"Could not create the network socket", "No se pudo crear el socket de red"},
     {"Could not open the network port, it may be in use", "No se pudo abrir el puerto de red, quizá esté en uso"},
+    {"Delay", "Retardo"},
+    {"Delay memory", "Memoria del retardo"},
+    {"Delays this output by whole frames to match outputs that show their picture later, for example projectors with more processing delay. While a delay is set, extra graphics memory is used.", "Retrasa esta salida en fotogramas completos para que coincida con salidas que muestran su imagen más tarde, por ejemplo proyectores con más retardo de proceso. Mientras haya un retardo, se usa memoria gráfica adicional."},
+    {"Draws all output windows first and then swaps them one right after the other, so they change their picture at nearly the same time. Turn this off to swap each window right after drawing it.", "Dibuja primero todas las ventanas de salida y luego las intercambia una tras otra, para que cambien su imagen casi al mismo tiempo. Desactívalo para intercambiar cada ventana justo después de dibujarla."},
+    {"Frame lock", "Bloqueo de fotogramas"},
+    {"Measured when the swap is handed to the graphics driver. Delay inside projectors and screens is not included.", "Se mide cuando el intercambio se entrega al controlador gráfico. El retardo dentro de proyectores y pantallas no está incluido."},
+    {"Open two or more outputs to measure it.", "Abre dos o más salidas para medirlo."},
+    {"Show the same frame on all outputs", "Mostrar el mismo fotograma en todas las salidas"},
+    {"Shows a frame counter, a flash and a moving bar on every open output instead of the picture. Film several screens at once to see how far apart they are. The counter includes the delay of each output.", "Muestra en cada salida abierta un contador de fotogramas, un destello y una barra móvil en lugar de la imagen. Filma varias pantallas a la vez para ver cuánto se separan. El contador incluye el retardo de cada salida."},
+    {"Swap skew (last / average / longest)", "Desfase de intercambio (último / media / máximo)"},
+    {"Sync bars", "Barras de sincronía"},
 };
 
 }

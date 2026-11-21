@@ -146,6 +146,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/stage_json.cpp
     src/core/edit_history.cpp
     src/core/frame_pacer.cpp
+    src/core/frame_lock.cpp
     src/core/render_policy.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
@@ -248,6 +249,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/gpu_profiler.cpp
     src/render/gl_util.cpp
     src/render/output_window.cpp
+    src/render/texture_history.cpp
     src/render/output_manager.cpp
     src/render/ndi_output.cpp
     src/render/dmx_strip.cpp
@@ -347,6 +349,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_timecode_tests PRIVATE nvj_core)
     target_include_directories(nvj_timecode_tests PRIVATE tests)
     add_test(NAME nvj_timecode_tests COMMAND nvj_timecode_tests)
+    add_executable(nvj_frame_lock_tests tests/test_frame_lock.cpp)
+    target_link_libraries(nvj_frame_lock_tests PRIVATE nvj_core)
+    target_include_directories(nvj_frame_lock_tests PRIVATE tests)
+    add_test(NAME nvj_frame_lock_tests COMMAND nvj_frame_lock_tests)
     add_executable(nvj_djlink_tests tests/test_djlink.cpp)
     target_link_libraries(nvj_djlink_tests PRIVATE nvj_core)
     target_include_directories(nvj_djlink_tests PRIVATE tests)

@@ -82,6 +82,7 @@ struct OutputSpec {
     bool enabled = false;
     int monitor = 0;
     bool fullscreen = false;
+    int delayFrames = 0;
     OutputMapping map;
     OutputColor color;
     std::vector<OutputSlice> slices;

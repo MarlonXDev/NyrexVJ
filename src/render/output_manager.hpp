@@ -1,7 +1,9 @@
 #pragma once
 
+#include "core/frame_lock.hpp"
 #include "core/output_map.hpp"
 #include "render/output_window.hpp"
+#include "render/texture_history.hpp"
 
 #include <array>
 
@@ -31,13 +33,29 @@ public:
     void render(GLuint texture, int width, int height);
     bool capture(int index, GLuint texture, int width, int height, OutputCapture& out);
     size_t gpuBytes() const;
+    void setFrameLock(bool on);
+    bool frameLock() const { return frameLock_; }
+    void setSyncBars(bool on) { syncBars_ = on; }
+    bool syncBars() const { return syncBars_; }
+    const SkewTracker& skew() const { return skew_; }
+    void resetSkew() { skew_.reset(); }
+    long long frameCount() const { return frame_; }
+    bool historyActive() const { return history_.active(); }
+    size_t historyBytes() const { return history_.gpuBytes(); }
 
 private:
     static bool valid(int index) { return index >= 0 && index < kMaxOutputs; }
+    GLuint sourceFor(int index, GLuint texture) const;
+    int syncValueFor(int index) const;
 
     std::array<OutputSpec, kMaxOutputs>* specs_ = nullptr;
     std::array<OutputWindow, kMaxOutputs> windows_;
     std::array<bool, kMaxOutputs> patterns_{};
+    TextureHistory history_;
+    SkewTracker skew_;
+    long long frame_ = 0;
+    bool frameLock_ = true;
+    bool syncBars_ = false;
 };
 
 }

@@ -3,6 +3,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -26,5 +28,6 @@ private:
 std::string sha256Hex(const unsigned char* data, size_t size);
 std::string sha256Hex(const std::string& text);
 std::string sha256Hex(const std::vector<unsigned char>& data);
+bool sha256FileHex(const std::filesystem::path& file, std::string& hex, const std::function<bool(unsigned long long)>& progress = nullptr);
 
 }

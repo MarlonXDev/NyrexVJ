@@ -10,6 +10,8 @@ extern "C" {
 #include <libavutil/dict.h>
 #include <libavutil/error.h>
 #include <libavutil/hwcontext.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/opt.h>
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
 }
@@ -60,7 +62,27 @@ extern "C" {
     X(sws_scale) \
     X(sws_freeContext) \
     X(sws_setColorspaceDetails) \
-    X(sws_getCoefficients)
+    X(sws_getCoefficients) \
+    X(avcodec_find_encoder_by_name) \
+    X(avcodec_send_frame) \
+    X(avcodec_receive_packet) \
+    X(avcodec_parameters_from_context) \
+    X(avcodec_license) \
+    X(avcodec_configuration) \
+    X(av_opt_set) \
+    X(av_frame_get_buffer) \
+    X(av_frame_make_writable) \
+    X(av_packet_rescale_ts) \
+    X(av_rescale_q) \
+    X(av_version_info) \
+    X(avformat_alloc_output_context2) \
+    X(avformat_new_stream) \
+    X(avformat_write_header) \
+    X(av_interleaved_write_frame) \
+    X(av_write_trailer) \
+    X(avio_open) \
+    X(avio_closep) \
+    X(avformat_free_context)
 
 namespace nvj {
 

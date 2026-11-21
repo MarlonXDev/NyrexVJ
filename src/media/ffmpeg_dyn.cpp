@@ -46,6 +46,10 @@ std::vector<Library> libraries() {
     };
 }
 
+#ifdef NYREXVJ_SWRESAMPLE_MAJOR
+const Library kSwresample{"swresample", NYREXVJ_SWRESAMPLE_MAJOR};
+#endif
+
 std::string libraryFile(const Library& library) {
 #ifdef _WIN32
     return std::string(library.base) + "-" + std::to_string(library.major) + ".dll";
@@ -134,11 +138,11 @@ bool load(FfmpegApi& api, std::string& problem) {
         problem = "disabled by NYREXVJ_NO_FFMPEG";
         return false;
     }
-    std::vector<Handle> handles(4, nullptr);
+    const std::vector<Library> list = libraries();
+    std::vector<Handle> handles(list.size(), nullptr);
     bool found = false;
     for (const fs::path& folder : searchFolders()) {
         std::fill(handles.begin(), handles.end(), nullptr);
-        const std::vector<Library> list = libraries();
         bool all = true;
         for (size_t i = 0; i < list.size(); ++i) {
             handles[i] = openLibrary(folder, libraryFile(list[i]));
@@ -146,6 +150,11 @@ bool load(FfmpegApi& api, std::string& problem) {
                 all = false;
                 break;
             }
+#ifdef NYREXVJ_SWRESAMPLE_MAJOR
+            if (i == 0) {
+                openLibrary(folder, libraryFile(kSwresample));
+            }
+#endif
         }
         if (all) {
             found = true;
@@ -277,15 +286,14 @@ VideoSupport videoSupport() {
         support.files.push_back(libraryFile(library));
     }
 #ifdef NYREXVJ_SWRESAMPLE_MAJOR
-#ifdef _WIN32
-    support.files.push_back("swresample-" + std::to_string(NYREXVJ_SWRESAMPLE_MAJOR) + ".dll");
-#else
-    support.files.push_back("libswresample.so." + std::to_string(NYREXVJ_SWRESAMPLE_MAJOR));
-#endif
+    support.files.push_back(libraryFile(kSwresample));
 #endif
     std::string problem;
     support.loaded = ffmpegApi(problem) != nullptr;
     support.problem = problem;
+    if (support.loaded) {
+        support.loadedFrom = usedFolder().empty() ? std::string() : fs::path(usedFolder()).string();
+    }
     return support;
 }
 

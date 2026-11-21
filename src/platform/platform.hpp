@@ -14,8 +14,18 @@ struct HttpResult {
 
 using ProgressFn = std::function<void(size_t received, size_t total)>;
 
+struct DownloadResult {
+    int status = 0;
+    unsigned long long bytes = 0;
+    bool cancelled = false;
+    std::string error;
+};
+
+using DownloadProgressFn = std::function<bool(unsigned long long received, unsigned long long total)>;
+
 bool updatesSupported();
 bool httpGet(const std::string& url, HttpResult& result, const ProgressFn& progress = nullptr);
+bool httpDownload(const std::string& url, const std::string& destinationUtf8, unsigned long long maxBytes, const DownloadProgressFn& progress, DownloadResult& result);
 std::string currentExePath();
 enum class ReplaceMode { InPlace, Deferred };
 

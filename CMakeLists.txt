@@ -162,6 +162,9 @@ set(NYREXVJ_CORE_SOURCES
     src/core/render_policy.cpp
     src/core/frame_stats.cpp
     src/media/ffmpeg_dyn.cpp
+    src/media/ffmpeg_setup.cpp
+    src/media/frame_convert.cpp
+    src/media/hap_convert.cpp
     src/media/camera_capture.cpp
     src/media/hap.cpp
     src/media/media_image.cpp
@@ -181,6 +184,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/live_source.cpp
     src/core/settings.cpp
     src/core/sha256.cpp
+    src/core/archive.cpp
     src/control/control_system.cpp
     src/control/djlink_input.cpp
     src/control/sync_system.cpp
@@ -352,6 +356,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_media_tests PRIVATE tests)
     target_compile_definitions(nvj_media_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
     add_test(NAME nvj_media_tests COMMAND nvj_media_tests)
+    add_executable(nvj_convert_tests tests/test_convert.cpp)
+    target_link_libraries(nvj_convert_tests PRIVATE nvj_core)
+    target_include_directories(nvj_convert_tests PRIVATE tests)
+    target_compile_definitions(nvj_convert_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
+    add_test(NAME nvj_convert_tests COMMAND nvj_convert_tests)
     add_executable(nvj_output_tests tests/test_outputs.cpp)
     target_link_libraries(nvj_output_tests PRIVATE nvj_core)
     target_include_directories(nvj_output_tests PRIVATE tests)

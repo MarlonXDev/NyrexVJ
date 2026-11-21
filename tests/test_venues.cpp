@@ -174,6 +174,25 @@ void testFiles() {
     fs::remove_all(dir, ec);
 }
 
+void testUnicodeNames() {
+    const fs::path dir = scratchDirectory("nyrexvj_venue_unicode");
+    const nvj::OutputSet set = sampleSet();
+    std::string error;
+    const std::string name = "Caf\xC3\xA9 Z\xC3\xBCrich \xE2\x80\x93 Halle 2";
+    CHECK(nvj::sanitizeVenueName(name) == name);
+    CHECK(nvj::saveVenue(dir, name, set, error));
+    const std::vector<std::string> names = nvj::listVenues(dir);
+    CHECK(names.size() == 1 && names[0] == name);
+    CHECK(nvj::venueExists(dir, name));
+    nvj::OutputSet loaded;
+    CHECK(nvj::loadVenue(dir, names[0], loaded, error) && loaded == set);
+    CHECK(nvj::duplicateVenue(dir, name, std::string(), error));
+    CHECK(nvj::listVenues(dir).size() == 2);
+    CHECK(nvj::deleteVenue(dir, name, error) && nvj::listVenues(dir).size() == 1);
+    std::error_code ec;
+    fs::remove_all(dir, ec);
+}
+
 void testExportImport() {
     const fs::path dir = scratchDirectory("nyrexvj_venue_library");
     const fs::path other = scratchDirectory("nyrexvj_venue_exchange");
@@ -249,6 +268,7 @@ int main() {
     testJsonRoundTrip();
     testRejects();
     testFiles();
+    testUnicodeNames();
     testExportImport();
     testDamagedFiles();
     return testing::finish();

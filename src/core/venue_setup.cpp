@@ -29,8 +29,17 @@ bool reservedName(const std::string& name) {
     return false;
 }
 
+fs::path utf8Path(const std::string& text) {
+    return fs::path(std::u8string(text.begin(), text.end()));
+}
+
+std::string utf8String(const fs::path& path) {
+    const std::u8string text = path.u8string();
+    return std::string(text.begin(), text.end());
+}
+
 fs::path venuePath(const fs::path& directory, const std::string& name) {
-    return directory / (sanitizeVenueName(name) + ".json");
+    return directory / utf8Path(sanitizeVenueName(name) + ".json");
 }
 
 }
@@ -120,7 +129,7 @@ bool venueFromJson(const nlohmann::json& doc, std::string& name, OutputSet& outp
 }
 
 fs::path venuesDirectory() {
-    fs::path directory = fs::path(userDataDir()) / "venues";
+    fs::path directory = utf8Path(userDataDir()) / "venues";
     std::error_code ec;
     fs::create_directories(directory, ec);
     return directory;
@@ -131,7 +140,7 @@ std::vector<std::string> listVenues(const fs::path& directory) {
     std::error_code ec;
     for (const fs::directory_entry& entry : fs::directory_iterator(directory, ec)) {
         if (entry.is_regular_file(ec) && entry.path().extension() == ".json") {
-            names.push_back(entry.path().stem().string());
+            names.push_back(utf8String(entry.path().stem()));
         }
     }
     std::sort(names.begin(), names.end(), [](const std::string& a, const std::string& b) {
@@ -213,7 +222,7 @@ bool loadVenueFile(const fs::path& file, std::string& name, OutputSet& outputs, 
     if (!venueFromJson(doc, readName, outputs, error)) {
         return false;
     }
-    name = readName.empty() ? sanitizeVenueName(file.stem().string()) : readName;
+    name = readName.empty() ? sanitizeVenueName(utf8String(file.stem())) : readName;
     return true;
 }
 
@@ -262,7 +271,7 @@ bool exportVenue(const fs::path& directory, const std::string& name, const fs::p
     fs::path target = destination;
     std::error_code ec;
     if (fs::is_directory(target, ec)) {
-        target /= sanitizeVenueName(name) + ".json";
+        target /= utf8Path(sanitizeVenueName(name) + ".json");
     }
     if (target.extension().empty()) {
         target += ".json";

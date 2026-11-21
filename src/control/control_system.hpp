@@ -27,6 +27,7 @@ public:
     void configure(const ControlConfig& config);
     void update(double dt);
     void injectMidi(const MidiMessage& message);
+    void takeSyncMessages(std::vector<MidiMessage>& out);
     void refreshMidiDevices();
 
     bool handleOsc(const OscMessage& message);
@@ -66,6 +67,7 @@ private:
     std::vector<std::string> midiDevices_;
     std::vector<MidiBinding> bindings_;
     std::vector<MidiMessage> injected_;
+    std::vector<MidiMessage> sync_;
     std::string oscError_;
     std::string midiError_;
     std::string lastOsc_;

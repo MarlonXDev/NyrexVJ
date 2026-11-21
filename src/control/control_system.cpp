@@ -14,6 +14,7 @@ namespace {
 constexpr const char* kOscPrefix = "/nyrex/";
 constexpr int kMaxPacketsPerUpdate = 512;
 constexpr double kSaveDelay = 0.5;
+constexpr size_t kMaxSyncMessages = 8192;
 
 std::filesystem::path bindingsPath() {
     return std::filesystem::path(userDataDir()) / "controls.json";
@@ -93,6 +94,11 @@ void ControlSystem::injectMidi(const MidiMessage& message) {
     injected_.push_back(message);
 }
 
+void ControlSystem::takeSyncMessages(std::vector<MidiMessage>& out) {
+    out.insert(out.end(), sync_.begin(), sync_.end());
+    sync_.clear();
+}
+
 void ControlSystem::startLearn(int bindingIndex, const std::string& target) {
     learning_ = true;
     learnIndex_ = bindingIndex;
@@ -147,7 +153,13 @@ void ControlSystem::update(double dt) {
     messages.swap(injected_);
     midi_->drain(messages);
     for (const MidiMessage& message : messages) {
-        handleMidi(message);
+        if (isSystemMidi(message)) {
+            if (sync_.size() < kMaxSyncMessages) {
+                sync_.push_back(message);
+            }
+        } else {
+            handleMidi(message);
+        }
     }
 
     if (socket_.isOpen()) {

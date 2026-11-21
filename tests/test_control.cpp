@@ -559,6 +559,38 @@ void testLearnAndFiles() {
         system.startLearn(-1, "master/level");
         system.cancelLearn();
         CHECK(!system.learning());
+        const unsigned long long midiBefore = system.midiCount();
+        system.startLearn(0, "layer/1/opacity");
+        MidiMessage clock;
+        clock.status = 0xF8;
+        clock.time = 12.5;
+        system.injectMidi(clock);
+        system.injectMidi({0xFA, 0, 0});
+        system.injectMidi({0xF2, 5, 1});
+        system.injectMidi({0xF1, 0x35, 0});
+        system.update(0.016);
+        CHECK(system.learning());
+        system.cancelLearn();
+        CHECK(system.midiCount() == midiBefore);
+        std::vector<MidiMessage> sync;
+        system.takeSyncMessages(sync);
+        CHECK(sync.size() == 4);
+        if (sync.size() == 4) {
+            CHECK(sync[0].status == 0xF8 && near(static_cast<float>(sync[0].time), 12.5f));
+            CHECK(sync[1].status == 0xFA);
+            CHECK(sync[2].status == 0xF2 && sync[2].data1 == 5 && sync[2].data2 == 1);
+            CHECK(sync[3].status == 0xF1 && sync[3].data1 == 0x35);
+        }
+        std::vector<MidiMessage> again;
+        system.takeSyncMessages(again);
+        CHECK(again.empty());
+        for (int i = 0; i < 20000; ++i) {
+            system.injectMidi(clock);
+        }
+        system.update(0.016);
+        std::vector<MidiMessage> flood;
+        system.takeSyncMessages(flood);
+        CHECK(flood.size() == 8192);
         system.markDirty();
         system.update(1.0);
     }

@@ -136,6 +136,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/timecode.cpp
     src/core/ltc.cpp
     src/core/djlink.cpp
+    src/core/midi_clock.cpp
     src/core/beat_clock.cpp
     src/core/ndi_runtime.cpp
     src/core/ndi_receiver.cpp
@@ -347,6 +348,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_djlink_tests PRIVATE nvj_core)
     target_include_directories(nvj_djlink_tests PRIVATE tests)
     add_test(NAME nvj_djlink_tests COMMAND nvj_djlink_tests)
+    add_executable(nvj_midi_clock_tests tests/test_midi_clock.cpp)
+    target_link_libraries(nvj_midi_clock_tests PRIVATE nvj_core)
+    target_include_directories(nvj_midi_clock_tests PRIVATE tests)
+    add_test(NAME nvj_midi_clock_tests COMMAND nvj_midi_clock_tests)
     add_executable(nvj_venue_tests tests/test_venues.cpp)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)

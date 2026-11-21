@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.24.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.25.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -133,6 +133,10 @@ set(NYREXVJ_CORE_SOURCES
     src/core/modulation.cpp
     src/core/output_map.cpp
     src/core/venue_setup.cpp
+    src/core/node_graph.cpp
+    src/core/node_catalogue.cpp
+    src/core/node_compile.cpp
+    src/core/node_files.cpp
     src/core/timecode.cpp
     src/core/ltc.cpp
     src/core/djlink.cpp
@@ -238,6 +242,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_deck.cpp
     src/app/ui_control.cpp
     src/app/ui_creator.cpp
+    src/app/ui_nodes.cpp
     src/app/ui_settings.cpp
     src/app/ui_video.cpp
     src/app/ui_profile.cpp
@@ -369,6 +374,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)
     add_test(NAME nvj_venue_tests COMMAND nvj_venue_tests)
+    add_executable(nvj_node_tests tests/test_nodes.cpp)
+    target_link_libraries(nvj_node_tests PRIVATE nvj_core)
+    target_include_directories(nvj_node_tests PRIVATE tests)
+    add_test(NAME nvj_node_tests COMMAND nvj_node_tests)
     add_library(fake_ndi SHARED tests/fake_ndi.cpp)
     set_target_properties(fake_ndi PROPERTIES CXX_VISIBILITY_PRESET hidden PREFIX "")
     add_executable(nvj_ndi_tests tests/test_ndi.cpp)

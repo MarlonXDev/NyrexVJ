@@ -54,6 +54,8 @@ The Linux release is built with Wayland support switched off (`-DGLFW_BUILD_WAYL
 
 Bundled in the repository: glad (OpenGL loader), stb_image, stb_image_write and nlohmann/json.
 
+The node effect editor (v0.25.0) adds no dependency: the editor is drawn with the Dear ImGui draw list, the document uses the bundled nlohmann/json, and the graph is compiled to GLSL by the program itself. Node effect files are data and need no library to read.
+
 ## Rules for new dependencies
 
 1. Prefer loading a library at run time with a small self-declared interface over linking it, so the program starts without it.

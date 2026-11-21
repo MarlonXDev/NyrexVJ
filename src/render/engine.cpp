@@ -4,6 +4,8 @@
 #include "render/effect_library.hpp"
 #include "core/log.hpp"
 #include "core/modulation.hpp"
+#include "core/node_compile.hpp"
+#include "core/node_graph.hpp"
 #include "scene3d/procedural.hpp"
 #include "scene3d/scene_pack.hpp"
 
@@ -511,6 +513,70 @@ void Engine::reloadShaderClips(const std::vector<size_t>& indices) {
     }
 }
 
+void Engine::syncEffects() {
+    const size_t size = effectLibrary().size();
+    if (effects_.size() < size) {
+        effects_.resize(size);
+    }
+}
+
+void Engine::reloadNodeEffects(const std::vector<size_t>& indices) {
+    const std::vector<EffectDef>& library = effectLibrary();
+    for (size_t index : indices) {
+        if (index >= effects_.size() || index >= library.size()) {
+            continue;
+        }
+        if (!library[index].error.empty() && effects_[index].id) {
+            continue;
+        }
+        if (effects_[index].id) {
+            glDeleteProgram(effects_[index].id);
+        }
+        effects_[index] = EffectProgram{};
+    }
+}
+
+std::string Engine::effectError(int effect) const {
+    const std::vector<EffectDef>& library = effectLibrary();
+    if (effect < 0 || static_cast<size_t>(effect) >= library.size()) {
+        return std::string();
+    }
+    return library[static_cast<size_t>(effect)].error;
+}
+
+int Engine::checkNodeCatalogue(std::string& report) {
+    int failed = 0;
+    const auto test = [&](const GraphDocument& graph, const std::string& label) {
+        const CompiledGraph compiled = compileGraph(graph);
+        if (!compiled.ok) {
+            ++failed;
+            report += "node graph " + label + ": " + compiled.firstError() + "\n";
+            return;
+        }
+        std::string error;
+        const GLuint program = buildProgram(clipVertexSource(), assembleEffectSource(compiled.glsl), &error);
+        if (!program) {
+            ++failed;
+            report += "node graph " + label + ": " + error + "\n";
+            return;
+        }
+        glDeleteProgram(program);
+    };
+    int graphs = 0;
+    for (const NodeSpec& spec : nodeCatalogue()) {
+        for (const GraphDocument& graph : catalogueGraphs(spec)) {
+            test(graph, graph.name);
+            ++graphs;
+        }
+    }
+    for (const ExampleGraph& example : exampleGraphs()) {
+        test(example.build(), example.name);
+        ++graphs;
+    }
+    logLine("Node catalogue: " + std::to_string(graphs) + " graphs compiled, " + std::to_string(failed) + " failed");
+    return failed;
+}
+
 std::string Engine::clipError(int clip) const {
     if (clip < 0 || static_cast<size_t>(clip) >= clips_.size()) {
         return std::string();
@@ -917,6 +983,10 @@ bool Engine::ensureEffect(size_t index) {
     }
     effect.tried = true;
     const EffectDef& def = effectLibrary()[index];
+    if (def.isGraph && !def.error.empty()) {
+        logLine("Node effect '" + def.name + "' has an error: " + def.error);
+        return false;
+    }
     std::string error;
     GLuint program = buildProgram(clipVertexSource(), effectFragmentSource(static_cast<int>(index)), &error);
     if (!program) {
@@ -935,6 +1005,7 @@ bool Engine::ensureEffect(size_t index) {
     effect.kick = glGetUniformLocation(program, "uKick");
     effect.audioTex = glGetUniformLocation(program, "uAudioTex");
     effect.mix = glGetUniformLocation(program, "uMix");
+    effect.macros = def.usesMacros ? glGetUniformLocation(program, "uMacros") : -1;
     effect.usesPrevious = def.usesPrevious;
     return true;
 }
@@ -953,11 +1024,15 @@ int Engine::prepareAll(std::string& report) {
         }
     }
     for (size_t i = 0; i < effects_.size(); ++i) {
+        if (effectLibrary()[i].isGraph) {
+            continue;
+        }
         if (!ensureEffect(i)) {
             ++failed;
             report += "effect " + effectLibrary()[i].name + "\n";
         }
     }
+    failed += checkNodeCatalogue(report);
     renderClipThumbnails(static_cast<int>(clips_.size()));
     return failed;
 }
@@ -1951,6 +2026,9 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         }
         glUniform1f(effect.mix, mixAmount);
         glUniform4f(effect.params, params[0], params[1], params[2], params[3]);
+        if (effect.macros >= 0) {
+            glUniform1fv(effect.macros, kMacroCount, comp.modulators.macros.data());
+        }
         setAudioUniforms(effect.audio, effect.kick, effect.audioTex);
         glUniform1f(effect.time, static_cast<float>(time_));
         glUniform1f(effect.beat, static_cast<float>(beat_));

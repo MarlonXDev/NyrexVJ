@@ -1,8 +1,12 @@
 #include "render/effect_library.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <deque>
 
+#include "core/node_compile.hpp"
+#include "core/node_files.hpp"
 #include "render/effect_library_extra.hpp"
 
 namespace nvj {
@@ -414,9 +418,153 @@ int EffectDef::paramCount() const {
     return count;
 }
 
-const std::vector<EffectDef>& effectLibrary() {
-    static const std::vector<EffectDef> library = buildLibrary();
+namespace {
+
+std::vector<EffectDef>& mutableLibrary() {
+    static std::vector<EffectDef> library = buildLibrary();
     return library;
+}
+
+std::deque<std::array<std::string, kParamCount>>& graphNames() {
+    static std::deque<std::array<std::string, kParamCount>> names;
+    return names;
+}
+
+void applyGraphControls(EffectDef& def, const GraphDocument& graph) {
+    std::array<std::string, kParamCount>& names = graphNames()[static_cast<size_t>(def.graphSlot)];
+    for (int i = 0; i < kParamCount; ++i) {
+        const GraphControl& control = graph.controls[static_cast<size_t>(i)];
+        names[static_cast<size_t>(i)] = control.label;
+        def.paramNames[static_cast<size_t>(i)] = control.label.empty() ? nullptr : names[static_cast<size_t>(i)].c_str();
+        def.defaults[static_cast<size_t>(i)] = control.value;
+    }
+}
+
+void clearGraphControls(EffectDef& def) {
+    std::array<std::string, kParamCount>& names = graphNames()[static_cast<size_t>(def.graphSlot)];
+    for (int i = 0; i < kParamCount; ++i) {
+        names[static_cast<size_t>(i)].clear();
+        def.paramNames[static_cast<size_t>(i)] = nullptr;
+        def.defaults[static_cast<size_t>(i)] = 0.5f;
+    }
+}
+
+bool fillGraphDef(EffectDef& def, const GraphFileInfo& file) {
+    const unsigned long long oldHash = def.hash;
+    const std::string oldError = def.error;
+    def.stamp = file.stamp;
+    def.bytes = file.bytes;
+    GraphDocument graph;
+    std::string error;
+    if (!readGraphFile(file.path, graph, error)) {
+        def.error = error;
+        def.body.clear();
+        def.hash = 0;
+        def.usesPrevious = false;
+        def.usesMacros = false;
+        def.textureReads = 0;
+        clearGraphControls(def);
+        return oldHash != 0 || oldError != def.error;
+    }
+    applyGraphControls(def, graph);
+    const CompiledGraph compiled = compileGraph(graph);
+    if (!compiled.ok) {
+        def.error = compiled.firstError();
+        for (const GraphError& item : compiled.errors) {
+            const GraphNode* node = graph.find(item.node);
+            if (node) {
+                const NodeSpec* spec = findNodeSpec(node->type);
+                def.error = std::string(spec ? spec->title : node->type.c_str()) + ": " + item.message;
+                break;
+            }
+        }
+        def.body.clear();
+        def.hash = 0;
+        def.usesPrevious = false;
+        def.usesMacros = false;
+        def.textureReads = 0;
+        return oldHash != 0 || oldError != def.error;
+    }
+    def.error.clear();
+    def.body = compiled.glsl;
+    def.hash = compiled.hash;
+    def.usesPrevious = compiled.usesPrevious;
+    def.usesMacros = compiled.usesMacros;
+    def.textureReads = compiled.textureReads;
+    return oldHash != def.hash || !oldError.empty();
+}
+
+}
+
+const std::vector<EffectDef>& effectLibrary() {
+    return mutableLibrary();
+}
+
+NodeScan refreshNodeEffects(const std::string& forceName) {
+    NodeScan scan;
+    std::vector<EffectDef>& library = mutableLibrary();
+    const std::vector<GraphFileInfo> files = scanGraphFiles(graphsFolder());
+    for (size_t i = 0; i < library.size(); ++i) {
+        EffectDef& def = library[i];
+        if (!def.isGraph) {
+            continue;
+        }
+        const GraphFileInfo* match = nullptr;
+        for (const GraphFileInfo& file : files) {
+            if (graphEffectName(file.stem) == def.name) {
+                match = &file;
+                break;
+            }
+        }
+        if (!match) {
+            if (def.error != "The effect file is gone") {
+                def.error = "The effect file is gone";
+                def.body.clear();
+                def.hash = 0;
+                def.usesPrevious = false;
+                def.usesMacros = false;
+                scan.changed.push_back(i);
+            }
+            continue;
+        }
+        if (match->stamp == def.stamp && match->bytes == def.bytes && def.error != "The effect file is gone" && def.name != forceName) {
+            continue;
+        }
+        def.path = match->path.string();
+        if (fillGraphDef(def, *match)) {
+            scan.changed.push_back(i);
+        }
+    }
+    size_t count = 0;
+    for (const EffectDef& def : library) {
+        count += def.isGraph ? 1 : 0;
+    }
+    for (const GraphFileInfo& file : files) {
+        const std::string name = graphEffectName(file.stem);
+        bool known = false;
+        for (const EffectDef& def : library) {
+            if (def.isGraph && def.name == name) {
+                known = true;
+                break;
+            }
+        }
+        if (known || count >= kMaxNodeEffects) {
+            continue;
+        }
+        EffectDef def;
+        def.name = name;
+        def.paramNames = {nullptr, nullptr, nullptr, nullptr};
+        def.defaults = {0.5f, 0.5f, 0.5f, 0.5f};
+        def.isGraph = true;
+        def.path = file.path.string();
+        graphNames().emplace_back();
+        def.graphSlot = static_cast<int>(graphNames().size()) - 1;
+        fillGraphDef(def, file);
+        library.push_back(std::move(def));
+        ++count;
+        ++scan.added;
+    }
+    return scan;
 }
 
 int effectIndexByName(const std::string& name) {
@@ -444,16 +592,38 @@ void setEffect(EffectSlot& slot, int effectIndex) {
     slot.params = library[static_cast<size_t>(effectIndex)].defaults;
 }
 
+int registerEffect(const std::string& name, const std::string& body, bool usesPrevious, const std::array<float, kParamCount>& defaults, bool usesMacros) {
+    std::vector<EffectDef>& library = mutableLibrary();
+    EffectDef def;
+    def.name = name;
+    def.paramNames = {nullptr, nullptr, nullptr, nullptr};
+    def.defaults = defaults;
+    def.body = body;
+    def.usesPrevious = usesPrevious;
+    def.usesMacros = usesMacros;
+    library.push_back(std::move(def));
+    return static_cast<int>(library.size()) - 1;
+}
+
+std::string assembleEffectSource(const std::string& body) {
+    return std::string(kEffectHeader) + kGrade + kEffectFooter + body;
+}
+
 const std::string& effectFragmentSource(int effectIndex) {
     static std::vector<std::string> cache;
+    static std::vector<unsigned long long> stamps;
     const std::vector<EffectDef>& library = effectLibrary();
-    if (cache.empty()) {
-        cache.reserve(library.size());
-        for (const EffectDef& def : library) {
-            cache.push_back(std::string(kEffectHeader) + kGrade + kEffectFooter + def.body);
-        }
+    if (cache.size() < library.size()) {
+        cache.resize(library.size());
+        stamps.resize(library.size(), 0);
     }
-    return cache[static_cast<size_t>(effectIndex)];
+    const size_t index = static_cast<size_t>(effectIndex);
+    const unsigned long long stamp = library[index].isGraph ? library[index].hash + 2 : 1;
+    if (stamps[index] != stamp) {
+        cache[index] = assembleEffectSource(library[index].body);
+        stamps[index] = stamp;
+    }
+    return cache[index];
 }
 
 const char* gradeGlsl() {

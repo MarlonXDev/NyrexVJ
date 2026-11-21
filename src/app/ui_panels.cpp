@@ -1,6 +1,8 @@
 #include "app/app.hpp"
 
 #include "app/ui_common.hpp"
+
+#include "core/node_graph.hpp"
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
@@ -176,6 +178,17 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
         }
         if (slot.effect >= 0) {
             const EffectDef& def = library[static_cast<size_t>(slot.effect)];
+            if (def.isGraph) {
+                if (!def.error.empty()) {
+                    ImGui::PushTextWrapPos(0.0f);
+                    ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.45f, 1.0f), "%s", def.error.c_str());
+                    ImGui::PopTextWrapPos();
+                }
+                std::string stem;
+                if (graphStemFromEffectName(def.name, stem) && ImGui::SmallButton(tr("Edit nodes"))) {
+                    openNodeEditor(stem);
+                }
+            }
             ImGui::BeginDisabled(!slot.enabled);
             for (int p = 0; p < kParamCount; ++p) {
                 if (!def.paramNames[static_cast<size_t>(p)]) {

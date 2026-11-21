@@ -49,6 +49,7 @@ struct Options {
     bool profile = false;
     bool benchMemory = false;
     int benchShaders = 0;
+    int benchNodes = 0;
     std::string benchOut;
     std::vector<std::pair<int, int>> switches;
     std::vector<std::pair<int, std::string>> dumps;
@@ -105,6 +106,8 @@ Options parseOptions(int argc, char** argv) {
             options.benchComp = std::atoi(argv[++i]);
         } else if (arg == "--bench-budget" && hasValue) {
             options.benchBudget = std::atof(argv[++i]);
+        } else if (arg == "--bench-nodes" && hasValue) {
+            options.benchNodes = std::atoi(argv[++i]);
         } else if (arg == "--bench-shaders" && hasValue) {
             options.benchShaders = std::atoi(argv[++i]);
         } else if (arg == "--bench-memory") {
@@ -192,6 +195,11 @@ Options parseOptions(int argc, char** argv) {
             options.start.openCreator = true;
             if (hasValue && argv[i + 1][0] != '-') {
                 options.start.creator = argv[++i];
+            }
+        } else if (arg == "--node-editor") {
+            options.start.openNodes = true;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.start.nodeEffect = argv[++i];
             }
         } else if (arg == "--spout-test-pattern") {
             nvj::SpoutInput::setTestPattern(true);
@@ -309,7 +317,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.outputSelfTest || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchMemory) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.outputSelfTest || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -328,6 +336,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runMemoryBenchmark(app.engine(), options.benchOut);
         } else if (options.benchShaders > 0) {
             benchExit = nvj::runShaderBenchmark(app.engine(), options.benchShaders, options.benchOut);
+        } else if (options.benchNodes > 0) {
+            benchExit = nvj::runNodeBenchmark(app.engine(), options.benchNodes, options.benchOut);
         } else if (!options.benchScene.empty()) {
             benchExit = nvj::runSceneBenchmark(app.engine(), options.benchScene, options.benchOut);
         } else if (!options.benchVideo.empty()) {

@@ -67,6 +67,10 @@ public:
     int prepareAll(std::string& report);
     bool thumbnailsReady() const { return nextThumb_ >= clips_.size() && deferredThumbs_.empty() && reloadThumbs_.empty(); }
     void reloadShaderClips(const std::vector<size_t>& indices);
+    void syncEffects();
+    void reloadNodeEffects(const std::vector<size_t>& indices);
+    int checkNodeCatalogue(std::string& report);
+    std::string effectError(int effect) const;
     std::string clipError(int clip) const;
 
     GLuint outputTexture() const { return out_.texture; }
@@ -158,6 +162,7 @@ private:
         GLint kick = -1;
         GLint audioTex = -1;
         GLint mix = -1;
+        GLint macros = -1;
         bool usesPrevious = false;
     };
 

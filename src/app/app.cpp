@@ -4,6 +4,7 @@
 #include "app/ui_common.hpp"
 #include "core/crash_handler.hpp"
 #include "core/log.hpp"
+#include "core/node_files.hpp"
 #include "core/preset.hpp"
 #include "core/venue_setup.hpp"
 #include "platform/platform.hpp"
@@ -86,6 +87,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         }
     }
 
+    refreshNodeEffects();
     if (!engine_.init()) {
         logLine("Engine initialisation failed");
         return false;
@@ -278,6 +280,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.settingsPage >= 0) {
         openSettings(options.settingsPage);
     }
+    if (options.openNodes) {
+        openNodeEditor(options.nodeEffect);
+    }
     if (options.openCreator) {
         if (options.creator.empty()) {
             openCreator();
@@ -361,12 +366,26 @@ void App::autosaveTick(double dt) {
     }
 }
 
+void App::syncNodeEffects(const std::string& forceName) {
+    const NodeScan scan = refreshNodeEffects(forceName);
+    if (scan.added > 0) {
+        engine_.syncEffects();
+        assetsDirty_ = true;
+    }
+    if (!scan.changed.empty()) {
+        engine_.reloadNodeEffects(scan.changed);
+        assetsDirty_ = true;
+    }
+}
+
 void App::queueDroppedFiles(const std::vector<std::string>& paths) {
     for (const std::string& path : paths) {
         std::string extension = pathFromUtf8(path).extension().string();
         std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         if (extension == ".json") {
             importDroppedVenue(path);
+        } else if (extension == ".nyxfx") {
+            importNodeGraph(path);
         } else {
             pendingImports_.push_back(path);
         }
@@ -613,6 +632,7 @@ void App::frame(double dt) {
         if (!scan.changed.empty()) {
             engine_.reloadShaderClips(scan.changed);
         }
+        syncNodeEffects();
     }
 
     drawMenuBar();
@@ -632,6 +652,7 @@ void App::frame(double dt) {
     drawBrowser();
     creatorHasFocus_ = false;
     drawCreator();
+    drawNodeEditor();
     drawSettingsWindow();
     drawUpdateCard();
     drawWelcome();
@@ -699,7 +720,7 @@ void App::handleShortcuts() {
             }
         }
     }
-    if (io.KeyCtrl && !creatorHasFocus_) {
+    if (io.KeyCtrl && !creatorHasFocus_ && !nodesHasFocus_) {
         if (ImGui::IsKeyPressed(ImGuiKey_Z, false)) {
             if (io.KeyShift) {
                 redoEdit();
@@ -851,6 +872,17 @@ void App::drawMenuBar() {
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Open scenes folder"))) {
             platform::openFolder(clipsDirectory());
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem(tr("Node effect editor"), nullptr, nodesOpen_)) {
+            if (nodesOpen_) {
+                nodesOpen_ = false;
+            } else {
+                openNodeEditor(std::string());
+            }
+        }
+        if (ImGui::MenuItem(tr("Open node effects folder"))) {
+            platform::openFolder(graphsFolder().string());
         }
         ImGui::EndMenu();
     }

@@ -1,6 +1,8 @@
 #include "app/app.hpp"
 
 #include "app/ui_common.hpp"
+
+#include "core/node_graph.hpp"
 #include "core/log.hpp"
 #include "core/novelty.hpp"
 #include "core/preset.hpp"
@@ -797,9 +799,17 @@ void App::drawLibraryEffects() {
         }
         ImGui::PushID(i);
         const ImVec2 rowStart = ImGui::GetCursorScreenPos();
+        const bool broken = !effect.error.empty();
+        if (broken) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.45f, 0.45f, 1.0f));
+        }
         if (ImGui::Selectable(effect.name.c_str(), selectedLibraryEffect_ == i)) {
             selectedLibraryEffect_ = i;
             addEffectToLayer(i, selectedLayer_);
+        }
+        if (broken) {
+            ImGui::PopStyleColor();
+            ImGui::SetItemTooltip("%s", effect.error.c_str());
         }
         if (isNewEffect(effect.name)) {
             ui::newTag(rowStart, effect.name.c_str(), ImGui::GetTextLineHeight());
@@ -817,6 +827,13 @@ void App::drawLibraryEffects() {
         if (ImGui::BeginPopupContextItem("effectmenu")) {
             ImGui::TextDisabled("%s", effect.name.c_str());
             ImGui::Separator();
+            std::string graphStem;
+            if (effect.isGraph && graphStemFromEffectName(effect.name, graphStem)) {
+                if (ImGui::MenuItem(tr("Edit in the node editor"))) {
+                    openNodeEditor(graphStem);
+                }
+                ImGui::Separator();
+            }
             for (int l = kLayerCount - 1; l >= 0; --l) {
                 const std::string label = std::string(tr("Add to layer ")) + std::to_string(l + 1);
                 if (ImGui::MenuItem(label.c_str())) {

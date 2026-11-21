@@ -4,6 +4,8 @@
 #include "core/frame_stats.hpp"
 #include "core/live_source.hpp"
 #include "core/log.hpp"
+#include "core/node_compile.hpp"
+#include "core/node_graph.hpp"
 #include "core/preset.hpp"
 #include "media/camera_capture.hpp"
 #include "platform/platform.hpp"
@@ -961,6 +963,310 @@ int runShaderBenchmark(Engine& engine, int frames, const std::string& outputPath
         out << text << '\n';
     }
     return 0;
+}
+
+
+namespace {
+
+struct NodePair {
+    const char* example;
+    bool feedback;
+    const char* body;
+};
+
+const char* const kHandWavy = R"glsl(
+vec3 handHue(vec3 c, float h) {
+    const mat3 toYiq = mat3(0.299, 0.596, 0.211, 0.587, -0.274, -0.523, 0.114, -0.322, 0.312);
+    const mat3 toRgb = mat3(1.0, 1.0, 1.0, 0.956, -0.272, -1.106, 0.621, -0.647, 1.703);
+    vec3 yiq = toYiq * c;
+    float a = h * 6.28318;
+    float cs = cos(a);
+    float sn = sin(a);
+    yiq.yz = vec2(yiq.y * cs - yiq.z * sn, yiq.y * sn + yiq.z * cs);
+    return clamp(toRgb * yiq, 0.0, 1.0);
+}
+
+vec4 effect(vec2 uv, vec4 p) {
+    float amount = clamp(p.x, 0.0, 1.0) * 0.08;
+    float density = clamp(p.y, 0.0, 1.0) * 16.0;
+    vec2 q = uv + vec2(sin(uv.y * density + uTime), cos(uv.x * density + uTime)) * amount;
+    vec4 c = texture(uTex, clamp(q, 0.0, 1.0));
+    float f = fract(uBeat * 0.25);
+    float h = (0.5 - 0.5 * cos(f * 6.2831853)) * p.z;
+    return vec4(handHue(c.rgb, h), 1.0);
+}
+)glsl";
+
+const char* const kHandSwirl = R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec2 m = uv;
+    m.x = 0.5 - abs(0.5 - m.x);
+    float strength = mix(-1.0, 1.0, clamp(p.x, 0.0, 1.0));
+    float radius = mix(0.05, 1.0, clamp(p.y, 0.0, 1.0));
+    vec2 c = (m - 0.5) * vec2(uAspect, 1.0);
+    float k = (1.0 - smoothstep(0.0, max(radius, 0.01), length(c))) * strength * 6.2831853;
+    c = rot(k) * c;
+    return texture(uTex, clamp(c / vec2(uAspect, 1.0) + 0.5, 0.0, 1.0));
+}
+)glsl";
+
+const char* const kHandKick = R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    float k = uKick * p.x + 1.0;
+    vec2 q = (uv - 0.5) / max(k, 0.01) + 0.5;
+    return texture(uTex, clamp(q, 0.0, 1.0));
+}
+)glsl";
+
+const char* const kHandTrails = R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    float decay = mix(0.7, 0.98, clamp(p.x, 0.0, 1.0));
+    return max(texture(uPrev, uv) * decay, texture(uTex, uv));
+}
+)glsl";
+
+const NodePair kNodePairs[] = {
+    {"Wavy Rainbow", false, kHandWavy},
+    {"Mirror Swirl", false, kHandSwirl},
+    {"Kick Pulse", false, kHandKick},
+    {"Trails", true, kHandTrails},
+};
+
+std::vector<unsigned char> readOutput(Engine& engine) {
+    std::vector<unsigned char> pixels(static_cast<size_t>(engine.width()) * static_cast<size_t>(engine.height()) * 3);
+    glFinish();
+    glBindTexture(GL_TEXTURE_2D, engine.outputTexture());
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return pixels;
+}
+
+}
+
+int runNodeBenchmark(Engine& engine, int frames, const std::string& outputPath) {
+    frames = std::clamp(frames, 5, 100000);
+    engine.setGpuTiming(false);
+    engine.setProfiling(true);
+
+    Composition blank;
+    blank.resolution = engine.comp.resolution;
+    engine.applyComposition(blank);
+
+    const auto step = [&]() {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(1.0 / 60.0);
+        engine.render();
+    };
+    const auto measure = [&](double& effectMs, double& totalMs) {
+        for (int i = 0; i < 6; ++i) {
+            step();
+        }
+        glFinish();
+        PassAverages passes;
+        for (int i = 0; i < frames; ++i) {
+            step();
+            glFinish();
+            engine.profileFlush();
+            passes.add(engine.profiler().lastSamples());
+        }
+        effectMs = passes.averageMs(PassKind::Effect);
+        totalMs = passes.totalMs();
+    };
+
+    int clipIndex = -1;
+    const std::vector<ClipDef>& clips = clipLibrary();
+    for (size_t c = 0; c < clips.size(); ++c) {
+        const ClipDef& clip = clips[c];
+        if (clip.isScene() || clip.isMedia() || clip.kind == ClipKind::SpoutSource || !clip.error.empty()) {
+            continue;
+        }
+        if (clip.name == "Plasma") {
+            clipIndex = static_cast<int>(c);
+            break;
+        }
+        if (clipIndex < 0) {
+            clipIndex = static_cast<int>(c);
+        }
+    }
+    if (clipIndex < 0) {
+        logLine("Node benchmark: no clip available");
+        return 1;
+    }
+    Layer& layer = engine.comp.layers[0];
+    layer.fx = {};
+    layer.cells[0] = clipIndex;
+    layer.activeColumn = -1;
+    engine.trigger(0, 0);
+
+    json report;
+    report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
+    report["frames"] = frames;
+    report["clip"] = clips[static_cast<size_t>(clipIndex)].name;
+
+    json compile = json::array();
+    for (const ExampleGraph& example : exampleGraphs()) {
+        const GraphDocument graph = example.build();
+        const int rounds = 300;
+        const auto start = std::chrono::steady_clock::now();
+        const unsigned long long hash = compileGraph(graph).hash;
+        bool stable = true;
+        for (int i = 0; i < rounds; ++i) {
+            stable = stable && compileGraph(graph).hash == hash;
+        }
+        const double micros = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count() / rounds;
+        json item;
+        item["name"] = example.name;
+        item["nodes"] = graph.nodes.size();
+        item["compileMicroseconds"] = micros;
+        item["hashStable"] = stable;
+        compile.push_back(std::move(item));
+        logLine(std::string("Graph ") + example.name + ": compile " + std::to_string(micros) + " us");
+    }
+    report["graphCompile"] = std::move(compile);
+
+    json pairs = json::array();
+    int failed = 0;
+    for (const NodePair& pair : kNodePairs) {
+        GraphDocument graph;
+        bool found = false;
+        for (const ExampleGraph& example : exampleGraphs()) {
+            if (std::string(example.name) == pair.example) {
+                graph = example.build();
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            ++failed;
+            continue;
+        }
+        const CompiledGraph compiled = compileGraph(graph);
+        if (!compiled.ok) {
+            ++failed;
+            logLine(std::string("Node benchmark: ") + pair.example + " does not compile");
+            continue;
+        }
+        std::array<float, kParamCount> defaults{};
+        for (int i = 0; i < kParamCount; ++i) {
+            defaults[static_cast<size_t>(i)] = graph.controls[static_cast<size_t>(i)].value;
+        }
+        const int graphEffect = registerEffect(std::string("Bench graph ") + pair.example, compiled.glsl, compiled.usesPrevious, defaults);
+        const int handEffect = registerEffect(std::string("Bench hand ") + pair.example, pair.body, pair.feedback, defaults);
+        engine.syncEffects();
+
+        json item;
+        item["name"] = pair.example;
+        item["feedback"] = pair.feedback;
+        item["textureReads"] = compiled.textureReads;
+        double graphMs = 0.0;
+        double handMs = 0.0;
+        double graphTotal = 0.0;
+        double handTotal = 0.0;
+        for (int round = 0; round < 2; ++round) {
+            layer.fx = {};
+            setEffect(layer.fx[0], graphEffect);
+            measure(graphMs, graphTotal);
+            layer.fx = {};
+            setEffect(layer.fx[0], handEffect);
+            measure(handMs, handTotal);
+        }
+        item["graphEffectMs"] = graphMs;
+        item["handEffectMs"] = handMs;
+        item["graphFrameMs"] = graphTotal;
+        item["handFrameMs"] = handTotal;
+        item["ratio"] = handMs > 0.0 ? graphMs / handMs : 0.0;
+
+        if (!pair.feedback) {
+            layer.fx = {};
+            setEffect(layer.fx[0], graphEffect);
+            step();
+            const std::vector<unsigned char> first = readOutput(engine);
+            layer.fx = {};
+            setEffect(layer.fx[0], handEffect);
+            engine.render();
+            const std::vector<unsigned char> second = readOutput(engine);
+            int maxDiff = 0;
+            double sum = 0.0;
+            for (size_t i = 0; i < first.size() && i < second.size(); ++i) {
+                const int diff = std::abs(static_cast<int>(first[i]) - static_cast<int>(second[i]));
+                maxDiff = std::max(maxDiff, diff);
+                sum += diff;
+            }
+            item["maxPixelDifference"] = maxDiff;
+            item["meanPixelDifference"] = first.empty() ? 0.0 : sum / static_cast<double>(first.size());
+            if (maxDiff > 2) {
+                ++failed;
+                logLine(std::string("Node benchmark: ") + pair.example + " differs from the hand written effect by " + std::to_string(maxDiff));
+            }
+        }
+        logLine(std::string("Node benchmark ") + pair.example + ": graph " + std::to_string(graphMs) + " ms, hand written " + std::to_string(handMs) + " ms");
+        pairs.push_back(std::move(item));
+    }
+    layer.fx = {};
+    report["pairs"] = std::move(pairs);
+
+    {
+        GraphDocument graph = newGraph("Macro check");
+        int pictureId = 0;
+        int outputId = 0;
+        for (const GraphNode& node : graph.nodes) {
+            pictureId = node.type == "picture" ? node.id : pictureId;
+            outputId = node.type == "output" ? node.id : outputId;
+        }
+        const int hueId = graph.addNode("hue", 0.0f, 0.0f);
+        const int macroId = graph.addNode("macro", 0.0f, 0.0f);
+        graph.disconnect(outputId, 0);
+        const std::string linkError = graph.connect(pictureId, 0, hueId, 0) + graph.connect(macroId, 0, hueId, 1) + graph.connect(hueId, 0, outputId, 0);
+        const CompiledGraph compiled = compileGraph(graph);
+        json check;
+        if (!linkError.empty() || !compiled.ok || !compiled.usesMacros) {
+            ++failed;
+            check["ok"] = false;
+            logLine("Node benchmark: the macro check graph is not valid");
+        } else {
+            const int effect = registerEffect("Bench macro check", compiled.glsl, false, {0.5f, 0.5f, 0.5f, 0.5f}, true);
+            engine.syncEffects();
+            const float savedMacro = engine.comp.modulators.macros[0];
+            const auto difference = [](const std::vector<unsigned char>& a, const std::vector<unsigned char>& b) {
+                int most = 0;
+                for (size_t i = 0; i < a.size() && i < b.size(); ++i) {
+                    most = std::max(most, std::abs(static_cast<int>(a[i]) - static_cast<int>(b[i])));
+                }
+                return most;
+            };
+            layer.fx = {};
+            step();
+            const std::vector<unsigned char> plain = readOutput(engine);
+            setEffect(layer.fx[0], effect);
+            engine.comp.modulators.macros[0] = 0.0f;
+            engine.render();
+            const std::vector<unsigned char> atZero = readOutput(engine);
+            engine.comp.modulators.macros[0] = 0.5f;
+            engine.render();
+            const std::vector<unsigned char> atHalf = readOutput(engine);
+            engine.comp.modulators.macros[0] = savedMacro;
+            layer.fx = {};
+            const int baseline = difference(plain, atZero);
+            const int shifted = difference(atZero, atHalf);
+            check["ok"] = baseline <= 3 && shifted >= 20;
+            check["differenceAtZero"] = baseline;
+            check["differenceAtHalf"] = shifted;
+            logLine("Node benchmark macro check: " + std::to_string(baseline) + " at 0, " + std::to_string(shifted) + " at 0.5");
+            if (baseline > 3 || shifted < 20) {
+                ++failed;
+            }
+        }
+        report["macroCheck"] = std::move(check);
+    }
+    engine.setProfiling(false);
+    const std::string text = report.dump(2);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return failed > 0 ? 1 : 0;
 }
 
 

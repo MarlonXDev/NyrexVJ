@@ -31,6 +31,7 @@ Only maintainers should change a decision to Accepted, Rejected, or Superseded f
 | [0015](adr/0015-advanced-output.md) | Advanced output: slices, polygon masks, colour per output, black level in blend zones, warp grids up to 17 x 17, venue setups | Accepted (2026-11-21), implemented in v0.23.0 |
 | [0016](adr/0016-show-sync.md) | Show sync: one beat clock, timecode (LTC, MTC), MIDI clock, passive Pro DJ Link, cues, output frame lock | Accepted (2026-11-21), implemented in v0.24.0 |
 | [0017](adr/0017-node-effect-editor.md) | Node effect editor: graph document, graph to GLSL compiler, `.nyxfx` files, editor on the ImGui draw list | Accepted (2026-11-21), implemented in v0.25.0 |
+| [0018](adr/0018-plugin-system.md) | Plugin system: C interface for modulation and image sources, manifest checked before code, time budget on a thread of its own, crash marker and safe mode | Accepted (2026-11-21), implemented in v0.26.0 |
 
 ## New ADR template
 

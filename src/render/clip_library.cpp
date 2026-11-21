@@ -243,6 +243,14 @@ void appendLiveClips(std::vector<ClipDef>& clips) {
         def.sceneIndex = slot;
         clips.push_back(std::move(def));
     }
+    for (int slot = 0; slot < kLiveInputSlots; ++slot) {
+        ClipDef def;
+        def.name = "Plugin Source " + std::to_string(slot + 1);
+        def.body = "const int kSlot = " + std::to_string(slot + 1) + ";\n" + kSpoutPlaceholder;
+        def.kind = ClipKind::PluginSource;
+        def.sceneIndex = slot;
+        clips.push_back(std::move(def));
+    }
 }
 
 void appendSceneClips(std::vector<ClipDef>& clips) {

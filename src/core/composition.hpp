@@ -54,8 +54,18 @@ enum AudioBand {
     BandBar,
     BandTimecodeSecond,
     BandTimecodeMinute,
+    BandPlugin1,
+    BandPlugin2,
+    BandPlugin3,
+    BandPlugin4,
+    BandPlugin5,
+    BandPlugin6,
+    BandPlugin7,
+    BandPlugin8,
     AudioBandCount
 };
+
+constexpr int kPluginBandCount = 8;
 
 constexpr int kLfoCount = 4;
 constexpr int kMacroCount = 8;

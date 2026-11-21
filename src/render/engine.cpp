@@ -6,6 +6,7 @@
 #include "core/modulation.hpp"
 #include "core/node_compile.hpp"
 #include "core/node_graph.hpp"
+#include "core/plugin_host.hpp"
 #include "scene3d/procedural.hpp"
 #include "scene3d/scene_pack.hpp"
 
@@ -1255,6 +1256,9 @@ void Engine::setAudio(const AudioFeatures& features) {
 }
 
 float Engine::sourceValue(int source) const {
+    if (source >= BandPlugin1 && source <= BandPlugin8) {
+        return plugins_ != nullptr ? std::clamp(plugins_->modulation(source - BandPlugin1), 0.0f, 1.0f) : 0.0f;
+    }
     return modulationSource(source, audio_, comp.modulators, beat_, comp.beatsPerBar, timecodeValid_ ? timecodeSeconds_ : -1.0);
 }
 
@@ -1460,8 +1464,21 @@ void Engine::resetLiveLatency() {
     }
 }
 
+namespace {
+
+static_assert(kPluginFrameSlots == kLiveInputSlots, "plugin frame slots must match live input slots");
+
+LiveKind liveKindOf(ClipKind kind) {
+    if (kind == ClipKind::NdiSource) {
+        return LiveKind::Ndi;
+    }
+    return kind == ClipKind::PluginSource ? LiveKind::Plugin : LiveKind::Camera;
+}
+
+}
+
 void Engine::prepareLive(const ClipDef& def) {
-    const LiveKind kind = def.kind == ClipKind::NdiSource ? LiveKind::Ndi : LiveKind::Camera;
+    const LiveKind kind = liveKindOf(def.kind);
     const size_t index = liveIndex(kind, def.sceneIndex);
     LiveInput* input = liveSlot(kind, def.sceneIndex);
     if (input == nullptr) {
@@ -1477,6 +1494,11 @@ void Engine::prepareLive(const ClipDef& def) {
     if (kind == LiveKind::Ndi) {
         config.source = liveNdi_[static_cast<size_t>(def.sceneIndex)];
         config.excluded = liveExcluded_;
+    } else if (kind == LiveKind::Plugin) {
+        config.plugins = plugins_;
+        if (plugins_ != nullptr && def.sceneIndex >= 0 && def.sceneIndex < kPluginFrameSlots) {
+            config.source = plugins_->config().frames[static_cast<size_t>(def.sceneIndex)];
+        }
     } else {
         config.source = liveCamera_[static_cast<size_t>(def.sceneIndex)];
         config.camera = liveMode_;
@@ -1487,7 +1509,7 @@ void Engine::prepareLive(const ClipDef& def) {
 }
 
 bool Engine::drawLive(const ClipDef& def, float scale) {
-    const LiveKind kind = def.kind == ClipKind::NdiSource ? LiveKind::Ndi : LiveKind::Camera;
+    const LiveKind kind = liveKindOf(def.kind);
     const LiveInput* input = liveInput(kind, def.sceneIndex);
     if (input == nullptr || !input->hasPicture() || input->texture() == 0 || input->width() <= 0 || input->height() <= 0) {
         return false;

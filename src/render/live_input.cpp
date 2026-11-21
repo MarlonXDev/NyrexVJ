@@ -1,6 +1,7 @@
 #include "render/live_input.hpp"
 
 #include "core/ndi_receiver.hpp"
+#include "core/plugin_host.hpp"
 
 #include <algorithm>
 
@@ -21,6 +22,9 @@ bool LiveInput::sameConfig(const LiveInputConfig& a, const LiveInputConfig& b, L
     }
     if (kind == LiveKind::Ndi) {
         return a.excluded == b.excluded;
+    }
+    if (kind == LiveKind::Plugin) {
+        return true;
     }
     return a.camera.width == b.camera.width && a.camera.height == b.camera.height && a.camera.fps == b.camera.fps;
 }
@@ -82,6 +86,20 @@ void LiveInput::update(const LiveInputConfig& config, double now) {
                 return;
             }
             source_ = std::move(receiver);
+        } else if (kind_ == LiveKind::Plugin) {
+            std::string error;
+            std::unique_ptr<LiveSource> plugin;
+            if (config.plugins != nullptr) {
+                plugin = config.plugins->openFrameSource(config.source, error);
+            } else {
+                error = "plugins are not available";
+            }
+            if (!plugin) {
+                startError_ = error;
+                retryAt_ = now + 3.0;
+                return;
+            }
+            source_ = std::move(plugin);
         } else {
             std::unique_ptr<CameraCapture> camera = std::make_unique<CameraCapture>();
             if (!camera->start(config.source, config.camera, config.policy)) {

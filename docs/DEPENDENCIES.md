@@ -31,6 +31,7 @@ Every library below is optional. When one is missing, only the matching feature 
 | MIDI input, MIDI clock and MTC | Windows multimedia (WinMM), part of Windows | `libasound.so.2` (ALSA sequencer) | `NYREXVJ_ALSA_LIB` |
 | LTC timecode input | Windows audio (WASAPI), part of Windows | the same PulseAudio libraries as audio capture | `NYREXVJ_PULSE_LIB` |
 | Update download | WinHTTP, part of Windows | `libcurl.so.4` | none |
+| Plugins (v0.26.0) | the library of each plugin, loaded with `LoadLibrary` | the library of each plugin, loaded with `dlopen` | none |
 | Open a web page or folder | Windows shell | `xdg-open` | none |
 
 The device library number is the same as the number of `avformat`. `libavdevice` itself needs `libavfilter`, so both files have to be in the same folder; the LGPL shared builds of FFmpeg contain them. Cameras need the device library on top of the video libraries; without it video clips still work.
@@ -55,6 +56,8 @@ The Linux release is built with Wayland support switched off (`-DGLFW_BUILD_WAYL
 Bundled in the repository: glad (OpenGL loader), stb_image, stb_image_write and nlohmann/json.
 
 The node effect editor (v0.25.0) adds no dependency: the editor is drawn with the Dear ImGui draw list, the document uses the bundled nlohmann/json, and the graph is compiled to GLSL by the program itself. Node effect files are data and need no library to read.
+
+The plugin system (v0.26.0) adds no dependency either: a plugin library is opened with the system's own `LoadLibrary` or `dlopen`, the interface is a C header in the repository (`plugins/include/nyrexvj_plugin.h`, MIT like the rest) and the example plugin needs only a C compiler and the math library. NyrexVJ ships no plugin and no plugin is loaded unless the person enables it; a plugin brings its own licence, see [PLUGINS.md](PLUGINS.md).
 
 ## Rules for new dependencies
 

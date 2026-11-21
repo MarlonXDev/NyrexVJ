@@ -103,10 +103,13 @@ void App::drawLiveInputControls(const ClipDef& def) {
         return;
     }
     const bool ndi = def.kind == ClipKind::NdiSource;
-    ImGui::SeparatorText(ndi ? tr("NDI input") : tr("Camera or capture card"));
+    const bool plugin = def.kind == ClipKind::PluginSource;
+    ImGui::SeparatorText(plugin ? tr("Plugin source") : (ndi ? tr("NDI input") : tr("Camera or capture card")));
     auto persist = [this]() { saveSettings(settings_); };
 
-    if (ndi) {
+    if (plugin) {
+        drawPluginFrameSlot(slot);
+    } else if (ndi) {
         if (!ndi::available()) {
             ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", tr("NDI runtime not found"));
             ImGui::PushTextWrapPos(0.0f);
@@ -248,7 +251,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
         ImGui::PopTextWrapPos();
     }
 
-    drawStatus(engine_.liveInfo(ndi ? LiveKind::Ndi : LiveKind::Camera, slot));
+    drawStatus(engine_.liveInfo(plugin ? LiveKind::Plugin : (ndi ? LiveKind::Ndi : LiveKind::Camera), slot));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("The source is closed three seconds after no layer shows this clip, so it costs nothing while unused."));
     ImGui::PopTextWrapPos();

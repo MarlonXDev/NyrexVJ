@@ -16,7 +16,8 @@ enum class ClipKind {
     VideoFile,
     ShaderFile,
     NdiSource,
-    CameraSource
+    CameraSource,
+    PluginSource
 };
 
 struct ClipDef {
@@ -34,7 +35,7 @@ struct ClipDef {
     bool isShaderFile() const { return kind == ClipKind::ShaderFile; }
     bool isScene() const { return kind == ClipKind::BuiltinScene || kind == ClipKind::ModelFile || kind == ClipKind::ScenePack; }
     bool isMedia() const { return kind == ClipKind::ImageFile || kind == ClipKind::VideoFile; }
-    bool isLive() const { return kind == ClipKind::NdiSource || kind == ClipKind::CameraSource; }
+    bool isLive() const { return kind == ClipKind::NdiSource || kind == ClipKind::CameraSource || kind == ClipKind::PluginSource; }
 };
 
 constexpr size_t kMaxModelClips = 64;

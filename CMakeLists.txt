@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.25.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.26.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -137,6 +137,10 @@ set(NYREXVJ_CORE_SOURCES
     src/core/node_catalogue.cpp
     src/core/node_compile.cpp
     src/core/node_files.cpp
+    src/core/plugin_manifest.cpp
+    src/core/plugin_config.cpp
+    src/core/dynlib.cpp
+    src/core/plugin_host.cpp
     src/core/timecode.cpp
     src/core/ltc.cpp
     src/core/djlink.cpp
@@ -217,7 +221,7 @@ if(NYREXVJ_VIDEO)
         message(STATUS "Video clips: FFmpeg headers not found, video support is left out of this build")
     endif()
 endif()
-target_include_directories(nvj_core PUBLIC src)
+target_include_directories(nvj_core PUBLIC src plugins/include)
 target_include_directories(nvj_core SYSTEM PUBLIC third_party/json)
 target_include_directories(nvj_core SYSTEM PRIVATE third_party/stb)
 target_compile_definitions(nvj_core PUBLIC
@@ -248,6 +252,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_profile.cpp
     src/app/ui_panels.cpp
     src/app/ui_live.cpp
+    src/app/ui_plugins.cpp
     src/app/ui_welcome.cpp
     src/app/ui_recovery.cpp
     src/render/engine.cpp
@@ -422,6 +427,34 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_shader_tests PRIVATE nvj_core)
     target_include_directories(nvj_shader_tests PRIVATE tests)
     add_test(NAME nvj_shader_tests COMMAND nvj_shader_tests)
+    function(nyrexvj_plugin_module target source output_name output_dir)
+        add_library(${target} MODULE ${source})
+        target_include_directories(${target} PRIVATE plugins/include)
+        set_target_properties(${target} PROPERTIES PREFIX "" OUTPUT_NAME ${output_name} C_STANDARD 99 C_VISIBILITY_PRESET hidden LIBRARY_OUTPUT_DIRECTORY "$<1:${output_dir}>" RUNTIME_OUTPUT_DIRECTORY "$<1:${output_dir}>")
+        if(NOT WIN32)
+            target_link_libraries(${target} PRIVATE m)
+        endif()
+    endfunction()
+    nyrexvj_plugin_module(nyrexvj_example_plugin plugins/example/example_plugin.c nyrexvj_example ${CMAKE_BINARY_DIR}/plugins/nyrexvj-example)
+    add_custom_command(TARGET nyrexvj_example_plugin POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/plugins/example/plugin.json $<TARGET_FILE_DIR:nyrexvj_example_plugin>/plugin.json)
+    set(NYREXVJ_BROKEN_PLUGINS slow:1 hang:2 fail:3 crash:4 range:5 createfail:6 entryfail:7 noentry:8 duplicate:9 mismatch:10 loadslow:11 overflow:12 imagechanged:13 slowframe:14 toomany:15 idmismatch:16 nomodulation:17 crashcreate:18 crashload:19 logspam:20)
+    add_executable(nvj_plugin_tests tests/test_plugins.cpp)
+    target_link_libraries(nvj_plugin_tests PRIVATE nvj_core)
+    target_include_directories(nvj_plugin_tests PRIVATE tests)
+    foreach(entry ${NYREXVJ_BROKEN_PLUGINS})
+        string(REPLACE ":" ";" parts ${entry})
+        list(GET parts 0 broken_name)
+        list(GET parts 1 broken_mode)
+        nyrexvj_plugin_module(nvj_broken_${broken_name} tests/plugins/broken_plugin.c broken_${broken_name} ${CMAKE_BINARY_DIR}/test_plugins)
+        target_compile_definitions(nvj_broken_${broken_name} PRIVATE NVJ_BROKEN_MODE=${broken_mode})
+        string(TOUPPER ${broken_name} broken_upper)
+        target_compile_definitions(nvj_plugin_tests PRIVATE "NVJ_PLUGIN_${broken_upper}=\"$<TARGET_FILE:nvj_broken_${broken_name}>\"")
+        add_dependencies(nvj_plugin_tests nvj_broken_${broken_name})
+    endforeach()
+    target_compile_definitions(nvj_plugin_tests PRIVATE "NVJ_PLUGIN_EXAMPLE=\"$<TARGET_FILE:nyrexvj_example_plugin>\"" "NVJ_PLUGIN_EXAMPLE_MANIFEST=\"${CMAKE_SOURCE_DIR}/plugins/example/plugin.json\"")
+    add_dependencies(nvj_plugin_tests nyrexvj_example_plugin)
+    add_test(NAME nvj_plugin_tests COMMAND nvj_plugin_tests)
+    set_tests_properties(nvj_plugin_tests PROPERTIES TIMEOUT 300)
     if(WIN32)
         add_executable(nvj_update_tests tests/test_update_replace.cpp)
         target_link_libraries(nvj_update_tests PRIVATE nvj_core)

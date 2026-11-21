@@ -79,6 +79,23 @@ Measured with `--output-selftest` (software OpenGL, llvmpipe, 1280 x 720 window,
 
 Command line: `--output-selftest` runs the check and prints the numbers above.
 
+## What is new in 0.24.0: show sync
+
+The sync system ([SYNC.md](SYNC.md), [ADR 0016](adr/0016-show-sync.md)) is built so that a show that uses none of it pays almost nothing, and one that uses it pays in small steps:
+
+- **No cost when unused.** Every source is off by default. The timecode audio input is opened only while an input device is chosen, the Pro DJ Link socket (UDP 50001) only while Listen for Pro DJ Link beats is on, and both are closed again when switched off. MIDI clock uses the MIDI input of the Control page and adds no device of its own. An unused source has no socket, no audio device and no buffer.
+- **One small update a frame.** The beat clock takes the observations that arrived since the last frame, merges them and advances the beat. Measured with a micro benchmark over two million frames (optimised build, one core): 0.04 microseconds a frame while no source delivers anything, 0.08 microseconds with eight MIDI clock ticks arriving every frame. That is well below a hundred-thousandth of a frame at 60 Hz.
+- **Time stamps and threads.** MIDI clock ticks are time stamped in the MIDI input thread, so the frame rate adds no jitter to them. Pro DJ Link needs no thread: a non-blocking socket is read once a frame (at most 256 datagrams), and a beat is stamped when it is read, so its time is accurate to one frame. A decoded timecode frame is placed by the number of samples that followed it in the same block, not by the time of the read.
+- **Timecode decoding is a small loop over the new samples.** The audio input collects samples in its own capture thread; the sync update drains them once a frame and decodes them in the same call, so the render thread does the decoding. One block of 800 samples (one frame at 60 Hz and 48 kHz) takes 4 microseconds, which is 0.25 ms of processor time for each second of audio (a 25 fps signal, 600 s measured twice, optimised build). The audio input runs only while a timecode device is chosen.
+- **Cues are scanned, not indexed.** With no cue list, nothing runs. With a list (at most 512 cues, sorted when it changes) a frame compares the time window since the last frame with every cue, at most 512 comparisons, and only while a timecode source is valid.
+- **Output frame lock.** With frame lock on and two or more outputs open, the outputs are drawn first and swapped together afterwards. Swapping one by one cost 4.5 to 5.1 ms of CPU time between the first and the last swap of two 1280 x 720 windows, with the frame lock it is 0.34 to 0.35 ms (software OpenGL, three runs). With a single output, or with the lock off, the path is as before.
+- **Output delay costs memory only while used.** The delay ring is shared by all outputs and exists only while at least one open output has a delay above 0. At 1920 x 1080 with a delay of 2 it holds three pictures, 23.7 MiB of video memory, and costs 0.57 to 0.62 ms a frame for the copy (software OpenGL). With no delay set, nothing is allocated and nothing is copied.
+- **Render loop.** Layers, effects and compositing are not touched. The default composition is unchanged.
+
+Not measured: the cost of the sync system while VRChat runs, any real timecode source, DJ player or projector, and the swap skew on real graphics cards.
+
+Command line: `--output-selftest` checks the frame lock, the delay and the sync bars and prints the numbers above for the output side.
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

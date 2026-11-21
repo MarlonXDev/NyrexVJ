@@ -62,6 +62,10 @@ A venue setup stores the whole layout of all four outputs under a name: which ou
 - `NyrexVJ --venue NAME` (or a path to a file) loads a setup at start; a problem is only written to the log.
 - Displays are saved by number. A venue made on another computer may point to a display that is not there; the output then uses the last display, check the display list after loading.
 
+## Frame lock and delay
+
+Several output windows have their own graphics context. With Frame lock on (default, Settings, Output) all open outputs are drawn first and swapped one right after the other, and the swap skew is measured and shown. Every output also has a Delay of 0 to 8 frames to match a projector or a path that shows its picture later; the delay copies pictures into a ring that exists only while a delay is set (23.7 MiB at 1920 x 1080 with a delay of 2). The test pattern can be switched to Sync bars, a frame counter that shows with one camera how many frames apart two outputs are. This is not a hardware genlock. Details, numbers and limits: [SYNC.md](SYNC.md).
+
 ## Test pattern
 
 Test pattern replaces the picture of one output by a grid with diagonals, a circle, a cross and a gradient, drawn with the same slices, corners, warp, masks and blending (but without the colour of the output). Use it to line up projectors before the doors open. `--output-pattern` starts with it on.

@@ -4,6 +4,7 @@
 #include "core/log.hpp"
 #include "core/output_map.hpp"
 #include "render/output_manager.hpp"
+#include "render/texture_history.hpp"
 
 #include <glad/gl.h>
 
@@ -482,6 +483,35 @@ void caseFrameLock(Runner& run) {
     run.condition("no skew with one output", run.manager().skew().count() == 0);
 }
 
+void measureHistory() {
+    const int width = 1920;
+    const int height = 1080;
+    GLuint source = 0;
+    glGenTextures(1, &source);
+    glBindTexture(GL_TEXTURE_2D, source);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    TextureHistory history;
+    for (int i = 0; i < 4; ++i) {
+        history.update(source, width, height, 2);
+    }
+    glFinish();
+    const int runs = 30;
+    const auto begin = std::chrono::steady_clock::now();
+    for (int i = 0; i < runs; ++i) {
+        history.update(source, width, height, 2);
+        glFinish();
+    }
+    const double copyMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / runs;
+    char text[256];
+    std::snprintf(text, sizeof(text), "Output self test numbers: delay history at 1920x1080 with 2 frames of delay, %.2f ms per frame for the copy (software OpenGL), %.1f MiB of video memory", copyMs, static_cast<double>(history.gpuBytes()) / (1024.0 * 1024.0));
+    logLine(text);
+    history.release();
+    glDeleteTextures(1, &source);
+}
+
 void measure(Runner& run) {
     OutputSpec spec = defaultOutputSpec(0);
     run.draw(spec);
@@ -589,6 +619,7 @@ int runOutputSelfTest(GLFWwindow* share) {
     caseSyncBars(run);
     caseDelay(run);
     caseFrameLock(run);
+    measureHistory();
     measure(run);
     logLine("Output self test: " + std::to_string(run.checks()) + " checks, " + std::to_string(run.failures()) + " failed");
     return run.failures() == 0 ? 0 : 1;

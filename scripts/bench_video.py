@@ -26,6 +26,7 @@ SCENARIOS = [
 def prepare(videos: Path, data: Path, needed):
     media = data / "media"
     media.mkdir(parents=True, exist_ok=True)
+    needed = [n for n in needed if not n.startswith("dxv_")]
     for name in needed:
         stem, _, copy = name.partition("#")
         source = next((p for p in videos.iterdir() if p.stem == stem), None)
@@ -34,6 +35,29 @@ def prepare(videos: Path, data: Path, needed):
         target = media / f"{stem}{('_' + copy) if copy else ''}{source.suffix}"
         if not target.exists():
             target.symlink_to(source.resolve())
+
+
+def prepare_dxv(exe: Path, dxv: Path, data: Path, runs: int, extra, report: Path):
+    media = data / "media"
+    media.mkdir(parents=True, exist_ok=True)
+    original = media / ("dxv_original" + dxv.suffix)
+    if not original.exists():
+        original.symlink_to(dxv.resolve())
+    staging = data / "convert_input"
+    staging.mkdir(parents=True, exist_ok=True)
+    source = staging / "dxv_source.mov"
+    if not source.exists():
+        source.symlink_to(dxv.resolve())
+    env = dict(os.environ)
+    env["NYREXVJ_DATA_DIR"] = str(data)
+    command = [str(exe), "--bench-convert", f"{runs}:{source}", "--convert-keep", str(media), "--bench-out", str(report)] + extra
+    subprocess.run(command, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3600, check=False)
+    if not report.exists():
+        raise SystemExit("the conversion measurement failed (FFmpeg with DXV decoder and HAP encoder needed)")
+    entry = json.loads(report.read_text())["files"][0]
+    if entry.get("failed"):
+        raise SystemExit("the conversion measurement failed: " + entry["failed"])
+    return entry
 
 
 def clip_name(name: str) -> str:
@@ -64,15 +88,22 @@ def main():
     parser.add_argument("--only", default="")
     parser.add_argument("--json", default="")
     parser.add_argument("--arg", action="append", default=[])
+    parser.add_argument("--dxv", default="")
+    parser.add_argument("--convert-runs", type=int, default=3)
     args = parser.parse_args()
 
     videos = Path(args.videos)
     chosen = [s for s in SCENARIOS if not args.only or args.only.lower() in s[0].lower()]
+    if args.dxv:
+        chosen = [("1x DXV original", ["dxv_original"]), ("1x DXV as HAP copy", ["dxv_source_hap"])] if args.only == "dxv" else chosen + [("1x DXV original", ["dxv_original"]), ("1x DXV as HAP copy", ["dxv_source_hap"])]
     needed = sorted({n for _, names in chosen for n in names})
     results = []
+    conversion = None
     with tempfile.TemporaryDirectory(prefix="nvj_bench_") as scratch:
         data = Path(scratch) / "data"
         prepare(videos, data, needed)
+        if args.dxv:
+            conversion = prepare_dxv(Path(args.exe), Path(args.dxv), data, args.convert_runs, args.arg, Path(scratch) / "convert.json")
         for title, names in chosen:
             out = Path(scratch) / "result.json"
             if out.exists():
@@ -95,8 +126,13 @@ def main():
         media = r.get("memory", {}).get("mediaBytes", 0) / 1048576.0
         resident = r.get("memory", {}).get("processResidentBytes", 0) / 1048576.0
         print(f"| {r['scenario']} | {r.get('cpuWithoutRasterizerPercentOfOneCore', 0):.1f} | {r['processCpuPercentOfOneCore']:.1f} | {media:.1f} | {resident:.0f} |")
+    if conversion is not None:
+        print()
+        print("| DXV source | Variant | Target | Size | Frames | Conversion (s) | Decode (s) | Encode (s) | Frames per second | Faster than playback | Size ratio |")
+        print("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|")
+        print(f"| {Path(args.dxv).name} | {conversion['variant']} | {conversion['target']} | {conversion['width']}x{conversion['height']} | {conversion['frames']} | {conversion['medianWallSeconds']:.3f} | {conversion['medianDecodeSeconds']:.3f} | {conversion['medianEncodeSeconds']:.3f} | {conversion['framesPerSecond']:.0f} | {conversion['speedVersusPlayback']:.1f}x | {conversion['sizeRatio']:.2f} |")
     if args.json:
-        Path(args.json).write_text(json.dumps(results, indent=2))
+        Path(args.json).write_text(json.dumps({"scenarios": results, "conversion": conversion}, indent=2))
 
 
 if __name__ == "__main__":

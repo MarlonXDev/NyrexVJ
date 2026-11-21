@@ -479,21 +479,31 @@ void testPresetFiles() {
     settings.videoDecoder = "hardware";
     settings.hapDirect = false;
     settings.videoGpuConvert = false;
+    settings.convertMode = "automatic";
+    settings.convertFormat = "hap_q";
+    settings.convertCacheMb = 2048;
+    settings.ffmpegHintDismissed = true;
     CHECK(nvj::saveSettings(settings));
     nvj::Settings back;
     CHECK(nvj::loadSettings(back));
+    CHECK(back.convertMode == "automatic" && back.convertFormat == "hap_q" && back.convertCacheMb == 2048 && back.ffmpegHintDismissed);
     CHECK(!back.checkUpdates && back.channel == nvj::UpdateChannel::Stable && back.outputs[0].monitor == 2);
     CHECK(!back.autoInstall && !back.vsync && back.openOutputOnStart && !back.showStatusBar && back.uiScale == 1.25f);
     CHECK(back.fpsLimit == 90 && back.videoDecoder == "hardware" && !back.hapDirect && !back.videoGpuConvert);
 
     nvj::Settings defaults;
     CHECK(defaults.fpsLimit == 60 && defaults.videoDecoder == "auto" && defaults.hapDirect && defaults.videoGpuConvert);
+    CHECK(defaults.convertMode == "ask" && defaults.convertFormat == "auto" && defaults.convertCacheMb == 4096 && !defaults.ffmpegHintDismissed);
     settings.videoDecoder = "nonsense";
     settings.fpsLimit = 77;
+    settings.convertMode = "sometimes";
+    settings.convertFormat = "dxv";
+    settings.convertCacheMb = 5;
     CHECK(nvj::saveSettings(settings));
     nvj::Settings repaired;
     CHECK(nvj::loadSettings(repaired));
     CHECK(repaired.videoDecoder == "auto" && repaired.fpsLimit == 90);
+    CHECK(repaired.convertMode == "ask" && repaired.convertFormat == "auto" && repaired.convertCacheMb == 256);
 
     CHECK(defaults.design == 1 && defaults.theme == "studio");
     {

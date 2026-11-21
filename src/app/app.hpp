@@ -15,6 +15,8 @@
 #include "core/recovery.hpp"
 #include "core/settings.hpp"
 #include "media/camera_capture.hpp"
+#include "media/convert_manager.hpp"
+#include "media/ffmpeg_setup.hpp"
 #include "media/video_hardware.hpp"
 #include "render/asset_import.hpp"
 #include "render/engine.hpp"
@@ -137,6 +139,16 @@ private:
     void updatePlugins();
     void drawFrameRateLimit();
     void drawVideoSettings();
+    void drawConversionSettings();
+    void drawFfmpegSection();
+    void drawConversionCards();
+    void initConversion();
+    void shutdownConversion();
+    void serviceConversion();
+    void applyConvertSettings();
+    void offerLibraryVideos(bool manual);
+    void startFfmpegCheck();
+    void startFfmpegInstall();
     void drawVideoMonitor();
     void drawPassProfiler();
     void redoEdit();
@@ -216,6 +228,19 @@ private:
     void openWelcome(bool firstRun);
 
     std::unique_ptr<PluginHost> plugins_;
+    std::unique_ptr<hapjobs::Manager> convert_;
+    std::future<ffmpeg_setup::Capabilities> ffmpegCheck_;
+    ffmpeg_setup::Capabilities ffmpegCaps_;
+    bool ffmpegCapsKnown_ = false;
+    ffmpeg_setup::Installer ffmpegInstaller_;
+    ffmpeg_setup::Package ffmpegPackage_;
+    bool ffmpegPackageKnown_ = false;
+    std::string ffmpegPackageReason_;
+    bool ffmpegInstallSeen_ = false;
+    bool ffmpegManualOpen_ = false;
+    bool convertScanPending_ = false;
+    double convertListRefresh_ = 0.0;
+    std::string convertCacheText_;
     Engine engine_;
     EngineControlHost controlHost_{engine_};
     ControlSystem control_{engine_.comp, controlHost_};

@@ -66,6 +66,7 @@ struct VideoStatus {
     std::string fallbackDetail;
     bool hardwareWanted = false;
     bool softwareOnly = false;
+    bool convertedCopy = false;
     int threads = 1;
     double decodeMs = 0.0;
     unsigned long long decoded = 0;

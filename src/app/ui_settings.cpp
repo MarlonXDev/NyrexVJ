@@ -610,6 +610,7 @@ void App::drawPerformancePage() {
     }
 
     drawVideoSettings();
+    drawConversionSettings();
     drawVideoMonitor();
 
     ImGui::SeparatorText(tr("Frame budget"));

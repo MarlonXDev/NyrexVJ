@@ -4,6 +4,7 @@
 #include "media/media_image.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 
 namespace nvj {
@@ -20,6 +21,9 @@ MediaPlayer::~MediaPlayer() {
     }
     if (videoLoad_.valid()) {
         videoLoad_.wait();
+    }
+    if (upgradeLoad_.valid()) {
+        upgradeLoad_.wait();
     }
     decoder_.reset();
     uploader_.reset();
@@ -79,28 +83,53 @@ void MediaPlayer::createTexture(int width, int height, const uint8_t* pixels, bo
     mipmaps_ = mipmaps;
 }
 
+VideoOptions MediaPlayer::effectiveOptions() const {
+    VideoOptions options = options_;
+    if (hardwareRetired_) {
+        options.mode = VideoDecodeMode::ForceSoftware;
+        options.hardwareFailure = hardwareFailure_;
+    }
+    if (safeUpload_ || gpu_ == nullptr || !gpu_->caps().conversion) {
+        options.gpuConversion = false;
+    }
+    if (safeUpload_ || gpu_ == nullptr || !gpu_->caps().compressedTextures) {
+        options.hapDirect = false;
+        options.compressedTextures = false;
+    }
+    return options;
+}
+
+void MediaPlayer::retireConverted(const std::string& reason) {
+    if (convertedRetired_) {
+        return;
+    }
+    convertedRetired_ = true;
+    logLine("Video clip '" + label_ + "': the converted HAP copy is not used (" + reason + "), the original plays instead");
+    redirect::markBad(path_, reason);
+}
+
 void MediaPlayer::start() {
     state_ = MediaState::Loading;
     error_.clear();
-    const std::string path = path_;
+    std::string path = path_;
+    openPath_ = path_;
+    convertedActive_ = false;
+    if (video_ && !convertedRetired_ && redirect::installed()) {
+        const std::string converted = redirect::lookup(path_);
+        if (!converted.empty()) {
+            path = converted;
+            openPath_ = converted;
+            convertedActive_ = true;
+        }
+    }
+    redirectGeneration_ = redirect::generation();
     if (video_) {
         if (!uploader_) {
             error_ = "Video playback is not available because the video renderer is missing";
             state_ = MediaState::Failed;
             return;
         }
-        VideoOptions options = options_;
-        if (hardwareRetired_) {
-            options.mode = VideoDecodeMode::ForceSoftware;
-            options.hardwareFailure = hardwareFailure_;
-        }
-        if (safeUpload_ || gpu_ == nullptr || !gpu_->caps().conversion) {
-            options.gpuConversion = false;
-        }
-        if (safeUpload_ || gpu_ == nullptr || !gpu_->caps().compressedTextures) {
-            options.hapDirect = false;
-            options.compressedTextures = false;
-        }
+        const VideoOptions options = effectiveOptions();
         videoLoad_ = std::async(std::launch::async, [path, options] {
             VideoLoad load;
             load.decoder = std::make_unique<VideoDecoder>();
@@ -128,6 +157,11 @@ MediaState MediaPlayer::poll() {
             return state_;
         }
         VideoLoad load = videoLoad_.get();
+        if (!load.ok && convertedActive_) {
+            retireConverted("it cannot be opened: " + load.error);
+            start();
+            return state_;
+        }
         if (!load.ok) {
             error_ = load.error;
             state_ = MediaState::Failed;
@@ -227,6 +261,15 @@ bool MediaPlayer::update(double clock, double beat) {
         return true;
     }
     if (decoder_->failed()) {
+        if (convertedActive_) {
+            retireConverted(decoder_->failure());
+            uploader_->release();
+            decoder_.reset();
+            driver_.reset();
+            state_ = MediaState::Idle;
+            lastFrame_ = 0;
+            return false;
+        }
         if (!hardwareRetired_ && decoder_->status().path == DecodePath::Hardware) {
             hardwareRetired_ = true;
             hardwareFailure_ = decoder_->failure();
@@ -243,11 +286,60 @@ bool MediaPlayer::update(double clock, double beat) {
         logLine("Video clip '" + label_ + "' stopped: " + error_);
         return false;
     }
+    serviceUpgrade();
     double seconds = clock;
     if (!driver_.drive(*decoder_, info_, clock, beat, seconds)) {
         return false;
     }
     return present(seconds);
+}
+
+void MediaPlayer::serviceUpgrade() {
+    if (upgradeLoad_.valid()) {
+        if (upgradeLoad_.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+            return;
+        }
+        VideoLoad load = upgradeLoad_.get();
+        const std::string path = upgradePath_;
+        upgradePath_.clear();
+        if (!load.ok) {
+            retireConverted("it cannot be opened: " + load.error);
+            return;
+        }
+        const VideoInfo next = load.decoder->info();
+        const double tolerance = std::max(0.1, framePeriod() * 2.0);
+        if (next.width != info_.width || next.height != info_.height || std::abs(next.duration - info_.duration) > tolerance) {
+            retireConverted("its size or length differs from the original");
+            return;
+        }
+        decoder_ = std::move(load.decoder);
+        info_ = next;
+        lastFrame_ = 0;
+        openPath_ = path;
+        convertedActive_ = true;
+        logLine("Video clip '" + label_ + "': switched to the converted HAP copy");
+        return;
+    }
+    if (convertedRetired_ || !redirect::installed() || !uploader_) {
+        return;
+    }
+    const std::uint64_t generation = redirect::generation();
+    if (generation == redirectGeneration_) {
+        return;
+    }
+    redirectGeneration_ = generation;
+    const std::string converted = redirect::lookup(path_);
+    if (converted.empty() || converted == openPath_) {
+        return;
+    }
+    upgradePath_ = converted;
+    const VideoOptions options = effectiveOptions();
+    upgradeLoad_ = std::async(std::launch::async, [converted, options] {
+        VideoLoad load;
+        load.decoder = std::make_unique<VideoDecoder>();
+        load.ok = load.decoder->open(converted, load.error, options);
+        return load;
+    });
 }
 
 void MediaPlayer::touch() {
@@ -267,6 +359,11 @@ void MediaPlayer::release() {
         videoLoad_.wait();
         videoLoad_ = std::future<VideoLoad>();
     }
+    if (upgradeLoad_.valid()) {
+        upgradeLoad_.wait();
+        upgradeLoad_ = std::future<VideoLoad>();
+        upgradePath_.clear();
+    }
     decoder_.reset();
     if (uploader_) {
         uploader_->release();
@@ -281,6 +378,7 @@ void MediaPlayer::retry() {
     release();
     thumbnailDone = false;
     safeUpload_ = false;
+    convertedRetired_ = false;
     error_.clear();
 }
 
@@ -296,6 +394,7 @@ VideoStatus MediaPlayer::status() const {
     if (safeUpload_ && status.fallbackReason.empty()) {
         status.fallbackReason = "GPU upload failed, using the CPU path";
     }
+    status.convertedCopy = convertedActive_;
     return status;
 }
 

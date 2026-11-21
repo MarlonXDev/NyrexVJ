@@ -420,7 +420,7 @@ bool prepareTarget(const fs::path& destination, const std::string& relative, fs:
     std::error_code ec;
     fs::create_directories(target.parent_path(), ec);
     if (ec) {
-        error = "The folder " + target.parent_path().string() + " cannot be created";
+        error = "The folder cannot be created: " + target.parent_path().string();
         return false;
     }
     return true;
@@ -605,7 +605,7 @@ private:
                 fs::remove(target, ec);
                 output_.open(target, std::ios::binary | std::ios::trunc);
                 if (!output_) {
-                    result_.error = "The file " + target.string() + " cannot be created";
+                    result_.error = "The file cannot be created: " + target.string();
                     return false;
                 }
                 kind_ = Kind::File;
@@ -629,7 +629,7 @@ private:
                 fs::remove(target, ec);
                 fs::create_symlink(fs::path(link), target, ec);
                 if (ec) {
-                    result_.error = "The link " + relative + " cannot be created";
+                    result_.error = "The link cannot be created: " + relative;
                     return false;
                 }
                 result_.files.push_back(relative);
@@ -652,7 +652,7 @@ private:
         if (kind_ == Kind::File) {
             output_.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
             if (!output_) {
-                result_.error = "The file " + currentTarget_.string() + " cannot be written (disk full?)";
+                result_.error = "The file cannot be written (disk full?): " + currentTarget_.string();
                 return false;
             }
             result_.bytes += size;
@@ -666,7 +666,7 @@ private:
         if (kind_ == Kind::File) {
             output_.close();
             if (!output_) {
-                result_.error = "The file " + currentTarget_.string() + " cannot be written (disk full?)";
+                result_.error = "The file cannot be written (disk full?): " + currentTarget_.string();
                 return false;
             }
             std::error_code ec;
@@ -1045,7 +1045,7 @@ Result extractZip(const fs::path& archive, const fs::path& destination, const Op
         fs::remove(target, ec);
         std::ofstream out(target, std::ios::binary | std::ios::trunc);
         if (!out) {
-            result.error = "The file " + target.string() + " cannot be created";
+            result.error = "The file cannot be created: " + target.string();
             return result;
         }
         in.seekg(static_cast<std::streamoff>(dataStart));
@@ -1108,7 +1108,7 @@ Result extractZip(const fs::path& archive, const fs::path& destination, const Op
             return result;
         }
         if (!writeOk) {
-            result.error = "The file " + target.string() + " cannot be written (disk full?)";
+            result.error = "The file cannot be written (disk full?): " + target.string();
             return result;
         }
         if (!ok) {
@@ -1116,7 +1116,7 @@ Result extractZip(const fs::path& archive, const fs::path& destination, const Op
             return result;
         }
         if (written != entry.size || crc != entry.crc) {
-            result.error = "The file " + entry.relative + " is damaged (checksum mismatch)";
+            result.error = "The file is damaged (checksum mismatch): " + entry.relative;
             return result;
         }
         result.bytes += written;

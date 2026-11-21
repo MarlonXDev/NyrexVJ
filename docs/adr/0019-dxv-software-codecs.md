@@ -2,6 +2,7 @@
 
 - **Status:** Accepted (2026-11-21, requested by MarlonXDev), implemented in v0.26.1. Issue [#62](https://github.com/MarlonXDev/NyrexVJ/issues/62).
 - **Date:** 2026-11-21
+- **Update:** [ADR 0021](0021-dxv-hap-conversion-and-ffmpeg-setup.md) adds the conversion of DXV videos to HAP in the background. The decisions below (no own DXV decoder, no direct DXV upload, the processor decoder as the fallback) are unchanged.
 - **Owners:** Maintainers (pending assignment)
 - **Related:** [MEDIA.md](../MEDIA.md), [ADR 0010](0010-video-decode-pipeline.md), [PERFORMANCE.md](../PERFORMANCE.md)
 

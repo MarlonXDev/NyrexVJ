@@ -119,7 +119,7 @@ bool loadCurlLocked(CurlState& state) {
         state.error.clear();
         return true;
     }
-    state.error = "The update download needs libcurl (libcurl.so.4), which was not found on this computer";
+    state.error = "Downloads need libcurl (libcurl.so.4), which was not found on this computer";
     return false;
 }
 

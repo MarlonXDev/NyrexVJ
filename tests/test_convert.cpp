@@ -2,18 +2,25 @@
 
 #include "core/archive.hpp"
 #include "core/sha256.hpp"
+#include "media/convert_cache.hpp"
+#include "media/convert_manager.hpp"
+#include "media/hap_convert.hpp"
+#include "media/video_redirect.hpp"
 #include "media/ffmpeg_setup.hpp"
 #include "media/video_decoder.hpp"
 #include "scene3d/scene_pack.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -519,6 +526,754 @@ void testCapabilitiesWithoutLibraries() {
 
 }
 
+void writeBytes(const fs::path& path, size_t size, unsigned char seed) {
+    fs::create_directories(path.parent_path());
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    std::vector<char> block(size);
+    for (size_t i = 0; i < size; ++i) {
+        block[i] = static_cast<char>((i * 31u + seed * 7u + (i >> 8)) & 0xff);
+    }
+    out.write(block.data(), static_cast<std::streamsize>(size));
+}
+
+std::string u8(const fs::path& path) {
+    const std::u8string text = path.u8string();
+    return std::string(text.begin(), text.end());
+}
+
+void poke(const fs::path& path, size_t offset) {
+    std::fstream io(path, std::ios::binary | std::ios::in | std::ios::out);
+    io.seekg(static_cast<std::streamoff>(offset));
+    char value = 0;
+    io.read(&value, 1);
+    value = static_cast<char>(value ^ 0x5a);
+    io.seekp(static_cast<std::streamoff>(offset));
+    io.write(&value, 1);
+}
+
+nvj::hapcache::Entry makeEntry(nvj::hapcache::Cache& cache, const std::string& name, unsigned long long bytes, std::int64_t lastUsed) {
+    nvj::hapcache::Entry entry;
+    entry.key = nvj::hapcache::keyFor("fingerprint-" + name, "tag");
+    entry.source = "/videos/" + name + ".mov";
+    entry.fingerprint = "fingerprint-" + name;
+    entry.tag = "tag";
+    entry.bytes = bytes;
+    entry.created = lastUsed;
+    entry.lastUsed = lastUsed;
+    entry.format = "hap";
+    writeBytes(cache.dataPath(entry.key), static_cast<size_t>(bytes), 3);
+    CHECK(cache.commit(entry));
+    return entry;
+}
+
+void testCache(const fs::path& scratch) {
+    using namespace nvj::hapcache;
+    const fs::path root = scratch / "cache_unit";
+    std::error_code ec;
+    fs::remove_all(root, ec);
+
+    writeBytes(root / "small.bin", 1000, 1);
+    fs::copy_file(root / "small.bin", root / "small_copy.bin");
+    std::string a, b, error;
+    CHECK(fingerprintOf(u8(root / "small.bin"), a, error) && fingerprintOf(u8(root / "small_copy.bin"), b, error));
+    CHECK(a == b && a.size() == 64);
+    poke(root / "small_copy.bin", 10);
+    CHECK(fingerprintOf(u8(root / "small_copy.bin"), b, error) && a != b);
+    writeBytes(root / "small_other.bin", 1001, 1);
+    CHECK(fingerprintOf(u8(root / "small_other.bin"), b, error) && a != b);
+
+    writeBytes(root / "big.bin", 3 * 1024 * 1024, 2);
+    std::string big, changed;
+    CHECK(fingerprintOf(u8(root / "big.bin"), big, error));
+    poke(root / "big.bin", 1536 * 1024);
+    CHECK(fingerprintOf(u8(root / "big.bin"), changed, error) && changed == big);
+    poke(root / "big.bin", 0);
+    CHECK(fingerprintOf(u8(root / "big.bin"), changed, error) && changed != big);
+    poke(root / "big.bin", 0);
+    CHECK(fingerprintOf(u8(root / "big.bin"), changed, error));
+    poke(root / "big.bin", 3 * 1024 * 1024 - 1);
+    std::string lastChanged;
+    CHECK(fingerprintOf(u8(root / "big.bin"), lastChanged, error) && lastChanged != changed);
+    CHECK(!fingerprintOf(u8(root / "missing.bin"), a, error) && !error.empty());
+
+    const SourceStamp stamp = stampOf(u8(root / "small.bin"));
+    CHECK(stamp.ok && stamp.bytes == 1000);
+    fs::last_write_time(root / "small.bin", fs::file_time_type::clock::now() - std::chrono::hours(5));
+    CHECK(stampOf(u8(root / "small.bin")).mtime != stamp.mtime);
+    CHECK(!stampOf(u8(root / "missing.bin")).ok);
+
+    const std::string tag = settingsTag("auto", true);
+    CHECK(tag != settingsTag("auto", false) && tag != settingsTag("hap_q", true));
+    const std::string key = keyFor("abc", tag);
+    CHECK(key.size() == 32 && key.find_first_not_of("0123456789abcdef") == std::string::npos);
+    CHECK(key != keyFor("abd", tag) && key != keyFor("abc", settingsTag("hap", true)) && key == keyFor("abc", tag));
+
+    Entry full;
+    full.key = key;
+    full.source = "C:\\Videos\\Mein Clip\nmit Zeilenumbruch.mov";
+    full.fingerprint = "f";
+    full.tag = tag;
+    full.sourceBytes = 123456789012ull;
+    full.sourceMtime = 1700000000;
+    full.width = 1920;
+    full.height = 1080;
+    full.fps = 29.97;
+    full.frames = 900;
+    full.format = "hap_q";
+    full.alphaKept = true;
+    full.bytes = 987654321ull;
+    full.convertSeconds = 12.5;
+    full.created = 5;
+    full.lastUsed = 6;
+    full.bad = true;
+    full.badReason = "reason";
+    Entry parsed;
+    CHECK(parseEntry(serializeEntry(full), parsed));
+    CHECK(parsed.key == key && parsed.source == "C:\\Videos\\Mein Clip mit Zeilenumbruch.mov" && parsed.sourceBytes == 123456789012ull && parsed.sourceMtime == 1700000000);
+    CHECK(parsed.width == 1920 && parsed.height == 1080 && std::abs(parsed.fps - 29.97) < 1e-5 && parsed.frames == 900 && parsed.format == "hap_q" && parsed.alphaKept);
+    CHECK(parsed.bytes == 987654321ull && parsed.created == 5 && parsed.lastUsed == 6 && parsed.bad && parsed.badReason == "reason" && parsed.converter == kConverterVersion);
+    CHECK(!parseEntry("garbage", parsed) && !parseEntry("key=short\nbytes=1\n", parsed) && !parseEntry("", parsed));
+
+    Cache cache(root / "store");
+    Entry entry = makeEntry(cache, "one", 1000, 100);
+    Entry found;
+    CHECK(cache.find(entry.key, found) && found.bytes == 1000 && found.source == "/videos/one.mov" && !found.bad);
+    CHECK(!cache.find("nothex", found) && !cache.find(std::string(32, 'a'), found));
+    {
+        std::ofstream trunc(cache.dataPath(entry.key), std::ios::binary | std::ios::trunc);
+        trunc << "short";
+    }
+    CHECK(!cache.find(entry.key, found));
+    writeBytes(cache.dataPath(entry.key), 1000, 3);
+    CHECK(cache.find(entry.key, found));
+    Entry other = entry;
+    other.converter = 99;
+    CHECK(cache.commit(other) && !cache.find(entry.key, found));
+    CHECK(cache.commit(entry) && cache.find(entry.key, found));
+    CHECK(cache.touch(entry.key) && cache.find(entry.key, found) && found.lastUsed >= nowSeconds() - 5);
+    CHECK(cache.markBad(entry.key, "no good") && cache.find(entry.key, found) && found.bad && found.badReason == "no good");
+    CHECK(!cache.markBad(std::string(32, 'b'), "x"));
+    CHECK(cache.remove(entry.key) && !cache.find(entry.key, found));
+    CHECK(!fs::exists(cache.dataPath(entry.key)) && !fs::exists(cache.metaPath(entry.key)));
+
+    writeBytes(cache.directory() / "readme.meta", 20, 1);
+    {
+        Entry lonely;
+        lonely.key = keyFor("lonely", "tag");
+        lonely.bytes = 10;
+        CHECK(cache.commit(lonely));
+    }
+    CHECK(cache.list().empty());
+    fs::remove(cache.directory() / "readme.meta", ec);
+    fs::remove(cache.metaPath(keyFor("lonely", "tag")), ec);
+
+    const Entry k1 = makeEntry(cache, "k1", 1000, 100);
+    const Entry k2 = makeEntry(cache, "k2", 1000, 200);
+    const Entry k3 = makeEntry(cache, "k3", 1000, 300);
+    const Entry k4 = makeEntry(cache, "k4", 1000, 400);
+    CHECK(cache.list().size() == 4 && cache.totalBytes() == 4000);
+    CHECK(cache.markBad(k2.key, "bad"));
+    CHECK(cache.evict(5000, {}) == 0);
+    CHECK(cache.evict(2500, {k1.key}) == 2);
+    CHECK(!cache.find(k2.key, found) && cache.find(k1.key, found) && !cache.find(k3.key, found) && cache.find(k4.key, found));
+    CHECK(cache.totalBytes() == 2000);
+    CHECK(cache.clear({k4.key}) == 1 && cache.find(k4.key, found) && !cache.find(k1.key, found));
+
+    const Entry keep = makeEntry(cache, "keep", 500, 10);
+    const std::string oldPart = u8(cache.partPath(keyFor("part-old", "tag")));
+    const std::string freshPart = u8(cache.partPath(keyFor("part-fresh", "tag")));
+    const std::string activePart = u8(cache.partPath(keyFor("part-active", "tag")));
+    writeBytes(fs::path(std::u8string(oldPart.begin(), oldPart.end())), 100, 1);
+    writeBytes(fs::path(std::u8string(freshPart.begin(), freshPart.end())), 100, 1);
+    writeBytes(fs::path(std::u8string(activePart.begin(), activePart.end())), 100, 1);
+    const auto longAgo = fs::file_time_type::clock::now() - std::chrono::hours(48);
+    fs::last_write_time(fs::path(std::u8string(oldPart.begin(), oldPart.end())), longAgo);
+    fs::last_write_time(fs::path(std::u8string(activePart.begin(), activePart.end())), longAgo);
+    writeBytes(cache.dataPath(keyFor("orphan-data", "tag")), 100, 1);
+    {
+        Entry orphan;
+        orphan.key = keyFor("orphan-meta", "tag");
+        orphan.bytes = 50;
+        CHECK(cache.commit(orphan));
+    }
+    writeBytes(cache.directory() / (keyFor("tmp", "tag") + ".meta.tmp"), 10, 1);
+    writeBytes(cache.directory() / "dismissed.txt", 10, 1);
+    CHECK(cache.cleanStale(24 * 3600, {keyFor("part-active", "tag")}) == 4);
+    CHECK(!fs::exists(fs::path(std::u8string(oldPart.begin(), oldPart.end()))));
+    CHECK(fs::exists(fs::path(std::u8string(freshPart.begin(), freshPart.end()))));
+    CHECK(fs::exists(fs::path(std::u8string(activePart.begin(), activePart.end()))));
+    CHECK(fs::exists(cache.directory() / "dismissed.txt"));
+    CHECK(cache.find(keep.key, found));
+}
+
+void testRedirectHooks() {
+    namespace redirect = nvj::redirect;
+    redirect::uninstall();
+    CHECK(!redirect::installed() && redirect::lookup("a.mov").empty() && redirect::generation() == 0);
+    redirect::markBad("a.mov", "x");
+    int bad = 0;
+    std::string badSource;
+    redirect::Hooks hooks;
+    hooks.lookup = [](const std::string& path) { return path == "a.mov" ? std::string("a_hap.mov") : std::string(); };
+    hooks.markBad = [&](const std::string& path, const std::string& reason) {
+        ++bad;
+        badSource = path + ":" + reason;
+    };
+    hooks.generation = [] { return std::uint64_t(7); };
+    redirect::install(hooks);
+    CHECK(redirect::installed() && redirect::lookup("a.mov") == "a_hap.mov" && redirect::lookup("b.mov").empty() && redirect::generation() == 7);
+    redirect::markBad("a.mov", "broken");
+    CHECK(bad == 1 && badSource == "a.mov:broken");
+    redirect::uninstall();
+    CHECK(!redirect::installed() && redirect::lookup("a.mov").empty());
+}
+
+struct Fake {
+    std::atomic<int> converts{0};
+    std::atomic<int> inspects{0};
+    std::atomic<bool> hold{false};
+    std::atomic<bool> failNext{false};
+    unsigned long long outputBytes = 4096;
+    int frames = 5;
+};
+
+nvj::hapjobs::Backend fakeBackend(const std::shared_ptr<Fake>& fake) {
+    nvj::hapjobs::Backend backend;
+    backend.inspect = [fake](const std::string& path) {
+        ++fake->inspects;
+        nvj::hapconv::SourceInfo info;
+        if (path.find("plain") != std::string::npos) {
+            info.error = "The video is not DXV";
+            return info;
+        }
+        info.ok = true;
+        info.isDxv = true;
+        info.variant = nvj::hapconv::Variant::Dxt5;
+        info.width = 128;
+        info.height = 72;
+        info.fps = 25.0;
+        info.frames = fake->frames;
+        info.duration = fake->frames / 25.0;
+        return info;
+    };
+    backend.convert = [fake](const std::string& source, const std::string& output, const nvj::hapconv::Options&, const nvj::hapconv::ProgressFn& progress) {
+        ++fake->converts;
+        nvj::hapconv::Result result;
+        while (fake->hold.load()) {
+            if (!progress(1, fake->frames)) {
+                result.cancelled = true;
+                result.error = "cancelled";
+                return result;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        }
+        for (int frame = 1; frame <= fake->frames; ++frame) {
+            if (!progress(frame, fake->frames)) {
+                result.cancelled = true;
+                result.error = "cancelled";
+                return result;
+            }
+        }
+        if (fake->failNext.exchange(false)) {
+            result.error = "The encoder stopped";
+            return result;
+        }
+        writeBytes(fs::path(std::u8string(output.begin(), output.end())), static_cast<size_t>(fake->outputBytes), 9);
+        result.ok = true;
+        result.variant = nvj::hapconv::Variant::Dxt5;
+        result.format = nvj::hapconv::TargetFormat::HapAlpha;
+        result.alphaKept = true;
+        result.width = 128;
+        result.height = 72;
+        result.fps = 25.0;
+        result.frames = fake->frames;
+        result.bytes = fake->outputBytes;
+        result.seconds = 0.01;
+        (void)source;
+        return result;
+    };
+    return backend;
+}
+
+bool waitUntil(const std::function<bool()>& predicate, int milliseconds) {
+    const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
+    while (std::chrono::steady_clock::now() < end) {
+        if (predicate()) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+    return predicate();
+}
+
+int countFiles(const fs::path& directory, const std::string& extension) {
+    int count = 0;
+    std::error_code ec;
+    for (fs::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        if (u8(it->path().extension()) == extension) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+void testManagerLogic(const fs::path& scratch) {
+    using namespace nvj::hapjobs;
+    const fs::path root = scratch / "manager";
+    std::error_code ec;
+    fs::remove_all(root, ec);
+    int seed = 1;
+    auto source = [&](const std::string& name, size_t size = 3000) {
+        const fs::path path = root / "videos" / name;
+        writeBytes(path, size, static_cast<unsigned char>(seed++));
+        return u8(path);
+    };
+    Config automatic;
+    automatic.mode = ImportMode::Automatic;
+
+    CHECK(importModeFromName("ask") == ImportMode::Ask && importModeFromName("automatic") == ImportMode::Automatic && importModeFromName("off") == ImportMode::Off && importModeFromName("zzz") == ImportMode::Off);
+    CHECK(std::string(importModeName(ImportMode::Ask)) == "ask" && std::string(importModeName(ImportMode::Automatic)) == "automatic" && std::string(importModeName(ImportMode::Off)) == "off");
+    CHECK(isCandidatePath("C:/clips/a.mov") && isCandidatePath("a.MOV") && !isCandidatePath("a.mp4") && !isCandidatePath("a"));
+    CHECK(jobIsFinished(JobState::Done) && jobIsFinished(JobState::Failed) && !jobIsFinished(JobState::Waiting) && !jobIsFinished(JobState::Converting));
+
+    const std::string a = source("a.mov");
+    const std::string originalHash = [&] {
+        std::string hex;
+        nvj::sha256FileHex(fs::path(std::u8string(a.begin(), a.end())), hex);
+        return hex;
+    }();
+    {
+        auto fake = std::make_shared<Fake>();
+        Manager manager(root / "cache1");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(automatic);
+        manager.offer(a);
+        CHECK(manager.jobs().empty() && fake->inspects == 0);
+        manager.setReady(true);
+        const std::uint64_t before = manager.generation();
+        manager.offer(a);
+        CHECK(manager.waitIdle(5000));
+        std::vector<JobInfo> jobs = manager.jobs();
+        CHECK(jobs.size() == 1 && jobs[0].state == JobState::Done && jobs[0].framesDone == 5 && jobs[0].framesTotal == 5 && jobs[0].bytes == 4096 && jobs[0].name == "a.mov");
+        CHECK(jobs[0].format == "HAP Alpha" || jobs[0].format == "hap_alpha" || !jobs[0].format.empty());
+        CHECK(jobs[0].alphaKept && jobs[0].width == 128 && jobs[0].height == 72 && jobs[0].sourceBytes == 3000);
+        CHECK(manager.generation() > before);
+        const std::string converted = manager.convertedPathFor(a);
+        CHECK(!converted.empty() && fs::exists(fs::path(std::u8string(converted.begin(), converted.end()))) && fs::file_size(fs::path(std::u8string(converted.begin(), converted.end()))) == 4096);
+        CHECK(manager.convertedPathFor(u8(root / "videos" / "nothing.mov")).empty());
+        CacheStats stats = manager.cacheStats();
+        CHECK(stats.entries == 1 && stats.bytes == 4096 && stats.limitBytes == automatic.cacheLimitBytes);
+        CHECK(fake->converts == 1 && countFiles(root / "cache1", ".part") == 0);
+
+        manager.offer(a);
+        CHECK(manager.waitIdle(2000) && manager.jobs().size() == 1 && fake->converts == 1);
+
+        const std::string copy = u8(root / "videos" / "a_copy.mov");
+        fs::copy_file(fs::path(std::u8string(a.begin(), a.end())), fs::path(std::u8string(copy.begin(), copy.end())));
+        manager.offer(copy);
+        CHECK(manager.waitIdle(5000));
+        jobs = manager.jobs();
+        CHECK(jobs.size() == 2 && jobs[1].state == JobState::Cached && fake->converts == 1);
+        CHECK(manager.convertedPathFor(copy) == converted);
+
+        const auto soon = fs::file_time_type::clock::now() + std::chrono::hours(1);
+        fs::last_write_time(fs::path(std::u8string(a.begin(), a.end())), soon);
+        CHECK(manager.convertedPathFor(a).empty());
+        manager.clearFinished();
+        CHECK(manager.jobs().empty());
+        manager.offer(a);
+        CHECK(manager.waitIdle(5000));
+        jobs = manager.jobs();
+        CHECK(jobs.size() == 1 && jobs[0].state == JobState::Cached && fake->converts == 1);
+        CHECK(manager.convertedPathFor(a) == converted);
+
+        writeBytes(fs::path(std::u8string(a.begin(), a.end())), 3500, 77);
+        CHECK(manager.convertedPathFor(a).empty());
+        manager.offer(a);
+        CHECK(manager.waitIdle(5000) && fake->converts == 2 && !manager.convertedPathFor(a).empty() && manager.convertedPathFor(a) != converted);
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        Manager manager(root / "cache1");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(automatic);
+        manager.setReady(true);
+        CHECK(!manager.convertedPathFor(a).empty());
+        manager.offer(a);
+        CHECK(manager.waitIdle(2000) && manager.jobs().empty() && fake->inspects == 0);
+        CHECK(manager.cacheStats().entries == 2);
+        manager.offer(u8(root / "videos" / "a_copy.mov"));
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Cached && fake->converts == 0);
+        CHECK(!manager.convertedPathFor(u8(root / "videos" / "a_copy.mov")).empty());
+    }
+    {
+        std::string hex;
+        const std::string pristine = source("pristine.mov");
+        nvj::sha256FileHex(fs::path(std::u8string(pristine.begin(), pristine.end())), hex);
+        auto fake = std::make_shared<Fake>();
+        Manager manager(root / "cache_orig");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(automatic);
+        manager.setReady(true);
+        manager.offer(pristine);
+        CHECK(manager.waitIdle(5000));
+        std::string after;
+        nvj::sha256FileHex(fs::path(std::u8string(pristine.begin(), pristine.end())), after);
+        CHECK(after == hex && !hex.empty());
+        (void)originalHash;
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        Config off;
+        off.mode = ImportMode::Off;
+        Manager manager(root / "cache2");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(off);
+        manager.setReady(true);
+        const std::string c = source("c.mov");
+        manager.offer(c);
+        CHECK(manager.waitIdle(1000) && manager.jobs().empty() && fake->inspects == 0);
+        const int id = manager.request(c);
+        CHECK(id > 0 && manager.waitIdle(5000));
+        CHECK(manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Done && !manager.convertedPathFor(c).empty());
+        CHECK(manager.request(c, false) > 0);
+        CHECK(manager.waitIdle(5000));
+        const std::string manual = source("manual.mov");
+        manager.offer(manual, true);
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.jobs().back().source == manual && manager.jobs().back().state == JobState::Done && !manager.convertedPathFor(manual).empty());
+        const std::string manualPlain = source("manual_plain.mov");
+        manager.offer(manualPlain, true);
+        CHECK(manager.waitIdle(5000));
+        bool leftover = false;
+        for (const JobInfo& job : manager.jobs()) {
+            leftover = leftover || job.source == manualPlain;
+        }
+        CHECK(!leftover);
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        Config ask;
+        ask.mode = ImportMode::Ask;
+        const std::string d = source("d.mov");
+        const std::string e = source("e.mov");
+        const std::string f = source("f.mov");
+        const std::string g = source("g.mov");
+        {
+            Manager manager(root / "cache3");
+            manager.setBackend(fakeBackend(fake));
+            manager.configure(ask);
+            manager.setReady(true);
+            manager.offer(d);
+            CHECK(manager.waitIdle(5000));
+            CHECK(manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Waiting && manager.waitingCount() == 1 && !manager.busy() && fake->converts == 0);
+            CHECK(manager.convertedPathFor(d).empty());
+            manager.approve(manager.jobs()[0].id);
+            CHECK(manager.waitIdle(5000));
+            CHECK(manager.jobs()[0].state == JobState::Done && manager.waitingCount() == 0 && fake->converts == 1 && !manager.convertedPathFor(d).empty());
+            manager.clearFinished();
+
+            manager.offer(e);
+            CHECK(manager.waitIdle(5000) && manager.waitingCount() == 1);
+            manager.dismiss(manager.jobs()[0].id);
+            CHECK(manager.jobs().empty() && manager.waitingCount() == 0);
+            manager.offer(e);
+            CHECK(manager.waitIdle(1000) && manager.jobs().empty());
+
+            manager.offer(f);
+            manager.offer(g);
+            CHECK(manager.waitIdle(5000) && manager.waitingCount() == 2);
+            manager.dismissAll();
+            CHECK(manager.jobs().empty());
+            manager.offer(f, true);
+            CHECK(manager.waitIdle(5000) && manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Done);
+            manager.clearFinished();
+        }
+        {
+            Manager manager(root / "cache3");
+            manager.setBackend(fakeBackend(fake));
+            manager.configure(ask);
+            manager.setReady(true);
+            manager.offer(e);
+            manager.offer(f);
+            manager.offer(g);
+            CHECK(manager.waitIdle(2000) && manager.jobs().empty());
+            const std::string h = source("h.mov");
+            manager.offer(h);
+            CHECK(manager.waitIdle(5000) && manager.waitingCount() == 1);
+            Config automaticAgain = ask;
+            automaticAgain.mode = ImportMode::Automatic;
+            manager.configure(automaticAgain);
+            CHECK(manager.waitIdle(5000));
+            CHECK(manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Done);
+            const std::string i = source("i.mov");
+            manager.configure(ask);
+            manager.offer(i);
+            CHECK(manager.waitIdle(5000) && manager.waitingCount() == 1);
+            const int id = manager.jobs().back().id;
+            manager.cancel(id);
+            CHECK(manager.waitingCount() == 0 && manager.jobs().back().state == JobState::Cancelled);
+            Config off = ask;
+            off.mode = ImportMode::Off;
+            const std::string j = source("j.mov");
+            manager.configure(ask);
+            manager.offer(j);
+            CHECK(manager.waitIdle(5000) && manager.waitingCount() == 1);
+            manager.configure(off);
+            CHECK(manager.waitingCount() == 0 && manager.jobs().back().state == JobState::Cancelled);
+        }
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        Manager manager(root / "cache4");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(automatic);
+        manager.setReady(true);
+        const std::string plain = source("plain.mov");
+        manager.offer(plain);
+        CHECK(manager.waitIdle(5000) && manager.jobs().empty());
+        manager.request(plain);
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Failed && manager.jobs()[0].error.find("not DXV") != std::string::npos && fake->converts == 0);
+        manager.request(u8(root / "videos" / "does_not_exist.mov"));
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.jobs().back().state == JobState::Failed && !manager.jobs().back().error.empty());
+        manager.setReady(false);
+        const int id = manager.request(source("k.mov"));
+        CHECK(manager.waitIdle(2000));
+        bool seen = false;
+        for (const JobInfo& job : manager.jobs()) {
+            if (job.id == id) {
+                seen = job.state == JobState::Failed && job.error.find("FFmpeg") != std::string::npos;
+            }
+        }
+        CHECK(seen);
+        const int before = static_cast<int>(manager.jobs().size());
+        manager.offer(source("l.mov"));
+        CHECK(manager.waitIdle(1000) && static_cast<int>(manager.jobs().size()) == before);
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        fake->hold = true;
+        Manager manager(root / "cache5");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(automatic);
+        manager.setReady(true);
+        const std::string m = source("m.mov");
+        const std::string n = source("n.mov");
+        manager.offer(m);
+        CHECK(waitUntil([&] { const auto jobs = manager.jobs(); return !jobs.empty() && jobs[0].state == JobState::Converting && jobs[0].framesDone >= 1; }, 5000));
+        CHECK(manager.busy() && manager.activeCount() == 1);
+        manager.offer(n);
+        CHECK(manager.activeCount() == 2);
+        manager.cancel(manager.jobs()[0].id);
+        fake->hold = false;
+        CHECK(manager.waitIdle(5000));
+        const auto jobs = manager.jobs();
+        CHECK(jobs.size() == 2 && jobs[0].state == JobState::Cancelled && jobs[1].state == JobState::Done);
+        CHECK(manager.convertedPathFor(m).empty() && !manager.convertedPathFor(n).empty());
+        CHECK(manager.cacheStats().entries == 1 && countFiles(root / "cache5", ".part") == 0);
+        CHECK(!fs::exists(fs::path(std::u8string(m.begin(), m.end()))) == false);
+
+        const std::string o = source("o.mov");
+        const std::string p = source("p.mov");
+        fake->hold = true;
+        manager.offer(o);
+        manager.offer(p);
+        CHECK(waitUntil([&] { const auto list = manager.jobs(); return list.size() == 4 && list[2].state == JobState::Converting; }, 5000));
+        manager.cancelAll();
+        fake->hold = false;
+        CHECK(manager.waitIdle(5000));
+        const auto after = manager.jobs();
+        CHECK(after[2].state == JobState::Cancelled && after[3].state == JobState::Cancelled && manager.cacheStats().entries == 1);
+        manager.clearFinished();
+        CHECK(manager.jobs().empty());
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        fake->failNext = true;
+        Manager manager(root / "cache6");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(automatic);
+        manager.setReady(true);
+        const std::string q = source("q.mov");
+        manager.offer(q);
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Failed && manager.jobs()[0].error == "The encoder stopped");
+        CHECK(manager.cacheStats().entries == 0 && countFiles(root / "cache6", ".part") == 0 && countFiles(root / "cache6", ".mov") == 0);
+        manager.offer(q);
+        CHECK(manager.waitIdle(1000) && manager.jobs().size() == 1 && fake->converts == 1);
+        manager.request(q);
+        CHECK(manager.waitIdle(5000) && manager.jobs().back().state == JobState::Done && !manager.convertedPathFor(q).empty());
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        const std::string r = source("r.mov");
+        std::string converted;
+        {
+            Manager manager(root / "cache7");
+            manager.setBackend(fakeBackend(fake));
+            manager.configure(automatic);
+            manager.setReady(true);
+            manager.offer(r);
+            CHECK(manager.waitIdle(5000));
+            converted = manager.convertedPathFor(r);
+            CHECK(!converted.empty());
+            manager.markBad(r, "test failure");
+            CHECK(manager.convertedPathFor(r).empty());
+            manager.markBad(u8(root / "videos" / "unknown.mov"), "x");
+        }
+        Manager manager(root / "cache7");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(automatic);
+        manager.setReady(true);
+        CHECK(manager.convertedPathFor(r).empty());
+        const int converts = fake->converts;
+        manager.offer(r);
+        CHECK(manager.waitIdle(5000) && manager.jobs().empty() && fake->converts == converts);
+        manager.request(r);
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.jobs().size() == 1 && manager.jobs()[0].state == JobState::Failed && manager.jobs()[0].error.find("failed earlier") != std::string::npos);
+        manager.request(r, true);
+        CHECK(manager.waitIdle(5000) && fake->converts == converts + 1 && !manager.convertedPathFor(r).empty());
+        CHECK(manager.jobs().back().state == JobState::Done);
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        fake->outputBytes = 600 * 1024;
+        Config limited = automatic;
+        limited.cacheLimitBytes = 1024 * 1024;
+        Manager manager(root / "cache8");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(limited);
+        manager.setReady(true);
+        const std::string k1 = source("k1.mov");
+        const std::string k2 = source("k2.mov");
+        const std::string k3 = source("k3.mov");
+        manager.offer(k1);
+        CHECK(manager.waitIdle(5000));
+        manager.offer(k2);
+        CHECK(manager.waitIdle(5000));
+        manager.offer(k3);
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.cacheStats().entries == 1 && manager.cacheStats().bytes == 600 * 1024);
+        CHECK(manager.convertedPathFor(k1).empty() && manager.convertedPathFor(k2).empty() && !manager.convertedPathFor(k3).empty());
+        const std::uint64_t before = manager.generation();
+        CHECK(manager.clearCache() == 1 && manager.cacheStats().entries == 0 && manager.convertedPathFor(k3).empty() && manager.generation() > before);
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        fake->outputBytes = 600 * 1024;
+        Config limited = automatic;
+        limited.cacheLimitBytes = 1024 * 1024;
+        Manager manager(root / "cache9");
+        manager.setBackend(fakeBackend(fake));
+        manager.configure(limited);
+        manager.setReady(true);
+        const std::string s1 = source("s1.mov");
+        const std::string s2 = source("s2.mov");
+        manager.offer(s1);
+        CHECK(manager.waitIdle(5000));
+        CHECK(!manager.convertedPathFor(s1).empty());
+        manager.offer(s2);
+        CHECK(manager.waitIdle(5000));
+        CHECK(manager.cacheStats().entries == 2 && !manager.convertedPathFor(s1).empty() && !manager.convertedPathFor(s2).empty());
+        Config small = limited;
+        small.cacheLimitBytes = 100;
+        manager.configure(small);
+        CHECK(manager.trimCache() == 0 && manager.cacheStats().entries == 2);
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        fake->hold = true;
+        const auto start = std::chrono::steady_clock::now();
+        {
+            Manager manager(root / "cache10");
+            manager.setBackend(fakeBackend(fake));
+            manager.configure(automatic);
+            manager.setReady(true);
+            manager.offer(source("t.mov"));
+            CHECK(waitUntil([&] { const auto jobs = manager.jobs(); return !jobs.empty() && jobs[0].state == JobState::Converting; }, 5000));
+        }
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        CHECK(seconds < 3.0 && countFiles(root / "cache10", ".part") == 0);
+    }
+    {
+        auto fake = std::make_shared<Fake>();
+        Manager manager(root / "cache11");
+        manager.setBackend(fakeBackend(fake));
+        Config formatted = automatic;
+        formatted.format = nvj::hapconv::TargetFormat::HapQ;
+        manager.configure(formatted);
+        manager.setReady(true);
+        const std::string u = source("u.mov");
+        manager.offer(u);
+        CHECK(manager.waitIdle(5000) && fake->converts == 1);
+        const std::string first = manager.convertedPathFor(u);
+        formatted.format = nvj::hapconv::TargetFormat::Hap;
+        manager.configure(formatted);
+        manager.offer(u);
+        CHECK(manager.waitIdle(5000) && fake->converts == 2);
+        const std::string second = manager.convertedPathFor(u);
+        CHECK(!first.empty() && !second.empty() && first != second);
+        formatted.format = nvj::hapconv::TargetFormat::HapQ;
+        manager.configure(formatted);
+        manager.request(u);
+        CHECK(manager.waitIdle(5000) && fake->converts == 2 && manager.jobs().back().state == JobState::Cached && manager.convertedPathFor(u) == first);
+    }
+}
+
+void testManagerReal(const fs::path& scratch) {
+    using namespace nvj::hapjobs;
+    if (!nvj::ffmpeg_setup::checkCapabilities().ready()) {
+        std::printf("real conversion test skipped: FFmpeg with DXV decoder and HAP encoder is not available\n");
+        return;
+    }
+    const fs::path root = scratch / "manager_real";
+    std::error_code ec;
+    fs::remove_all(root, ec);
+    fs::create_directories(root / "videos", ec);
+    const fs::path original = root / "videos" / "real.mov";
+    fs::copy_file(kData / "test_dxv_dxt1.mov", original);
+    const std::string source = u8(original);
+    std::string before;
+    nvj::sha256FileHex(original, before);
+    Config config;
+    config.mode = ImportMode::Automatic;
+    Manager manager(root / "cache");
+    manager.configure(config);
+    manager.setReady(true);
+    manager.offer(source);
+    CHECK(manager.waitIdle(30000));
+    const std::vector<JobInfo> jobs = manager.jobs();
+    CHECK(jobs.size() == 1 && jobs[0].state == JobState::Done);
+    if (jobs.empty() || jobs[0].state != JobState::Done) {
+        std::printf("real conversion error: %s\n", jobs.empty() ? "no job" : jobs[0].error.c_str());
+        return;
+    }
+    CHECK(jobs[0].variant == nvj::hapconv::Variant::Dxt1 && jobs[0].framesDone == 12 && jobs[0].width == 128 && jobs[0].height == 72 && !jobs[0].alphaKept);
+    const std::string converted = manager.convertedPathFor(source);
+    CHECK(!converted.empty());
+    nvj::VideoDecoder decoder;
+    std::string error;
+    CHECK(decoder.open(converted, error, nvj::VideoOptions()));
+    CHECK(decoder.status().codec == "hap" && decoder.info().width == 128 && decoder.info().height == 72);
+    std::string after;
+    nvj::sha256FileHex(original, after);
+    CHECK(before == after && !before.empty());
+    CHECK(fs::file_size(original) == 19057);
+    std::printf("real manager conversion: %.3f s, %llu bytes -> %llu bytes\n", jobs[0].seconds, jobs[0].sourceBytes, jobs[0].bytes);
+
+    CHECK(nvj::hapcache::stampOf(source).ok);
+    Manager second(root / "cache");
+    second.configure(config);
+    second.setReady(true);
+    CHECK(second.convertedPathFor(source) == converted);
+    second.offer(source);
+    CHECK(second.waitIdle(5000) && second.jobs().empty());
+}
+
 int main() {
     const fs::path scratch = fs::temp_directory_path() / "nyrexvj_convert_test";
     std::error_code ec;
@@ -540,6 +1295,10 @@ int main() {
     testInstall(scratch);
     testRealArchives(scratch);
     testCapabilitiesWithoutLibraries();
+    testCache(scratch);
+    testRedirectHooks();
+    testManagerLogic(scratch);
+    testManagerReal(scratch);
     testNetworkInstall();
     return testing::finish();
 }

@@ -100,6 +100,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         engine_.setPluginHost(plugins_.get());
     }
 
+    initConversion();
     refreshNodeEffects();
     if (!engine_.init()) {
         logLine("Engine initialisation failed");
@@ -362,6 +363,7 @@ void App::shutdown() {
     outputs_.closeAll();
     shutdownCreator();
     engine_.shutdown();
+    shutdownConversion();
     if (plugins_) {
         plugins_->stopAll();
         plugins_->waitForThreads(plugins_->abandonedInstances() > 0 ? 0.1 : 1.0);
@@ -452,6 +454,7 @@ void App::serviceImports() {
             rescanLibrary();
             engine_.syncLibrary();
             assetsDirty_ = true;
+            convertScanPending_ = true;
         }
         std::string message;
         if (added == 1) {
@@ -673,9 +676,11 @@ void App::frame(double dt) {
         const int added = rescanLibrary();
         engine_.syncLibrary();
         assetsDirty_ = true;
+        convertScanPending_ = true;
         toast(added > 0 ? std::string(tr("New files found: ")) + std::to_string(added) : std::string(tr("No new files found")));
     }
     serviceImports();
+    serviceConversion();
     shaderPoll_ += dt;
     if (shaderPoll_ >= 1.0) {
         shaderPoll_ = 0.0;
@@ -710,6 +715,7 @@ void App::frame(double dt) {
     drawNodeEditor();
     drawSettingsWindow();
     drawUpdateCard();
+    drawConversionCards();
     drawWelcome();
     drawRecovery();
 

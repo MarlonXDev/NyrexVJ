@@ -395,7 +395,7 @@ InstallResult installFromArchive(const Package& package, const fs::path& archive
         std::error_code existsEc;
         const bool present = fs::is_regular_file(files / name, existsEc) && !existsEc;
         if (!present) {
-            return abort(failure("The download does not contain " + name));
+            return abort(failure("The download is missing this file: " + name));
         }
     }
     if (!licenseTextIsLgpl(readSmallFile(files / "LICENSE.txt", 8192))) {

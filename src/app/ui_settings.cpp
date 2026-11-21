@@ -44,6 +44,8 @@ const char* settingsPageTitle(int page) {
         return tr("Shortcuts");
     case SettingsPerformance:
         return tr("Performance");
+    case SettingsPlugins:
+        return tr("Plugins");
     default:
         return tr("About");
     }
@@ -71,6 +73,8 @@ const char* settingsPageHint(int page) {
         return tr("Keyboard shortcuts for live use.");
     case SettingsPerformance:
         return tr("Frame time, budget and memory.");
+    case SettingsPlugins:
+        return tr("Extra modulation sources and image sources from plugin files.");
     default:
         return tr("Version and links.");
     }
@@ -351,6 +355,8 @@ void App::drawSettingsPage(int page) {
         ImGui::SetItemTooltip("%s", tr("Puts all panels back to their default places."));
     } else if (page == SettingsPerformance) {
         drawPerformancePage();
+    } else if (page == SettingsPlugins) {
+        drawPluginsPage();
     } else if (page == SettingsShortcuts) {
         ImGui::SeparatorText(tr("Clips and tempo"));
         ImGui::BulletText("%s", tr("1 - 8  trigger a column"));

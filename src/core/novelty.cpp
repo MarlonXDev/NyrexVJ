@@ -42,6 +42,10 @@ constexpr Entry kClips[] = {
     {"Camera 2", 0, 22},
     {"Camera 3", 0, 22},
     {"Camera 4", 0, 22},
+    {"Plugin Source 1", 0, 26},
+    {"Plugin Source 2", 0, 26},
+    {"Plugin Source 3", 0, 26},
+    {"Plugin Source 4", 0, 26},
 };
 
 constexpr Entry kEffects[] = {

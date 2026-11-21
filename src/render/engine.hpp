@@ -60,6 +60,8 @@ public:
     void nudgeBeat(float amount);
     void shiftBeat(double beats);
     float sourceValue(int source) const;
+    void setPluginHost(PluginHost* host) { plugins_ = host; }
+    PluginHost* pluginHost() const { return plugins_; }
     void setAudio(const AudioFeatures& features);
     bool readOutput(std::vector<unsigned char>& rgba, int& width, int& height);
     void setDmxStrip(bool enabled, bool atTop, const std::uint8_t* grid);
@@ -285,7 +287,7 @@ private:
     bool drawLive(const ClipDef& def, float scale);
     void serviceLive();
     LiveInput* liveSlot(LiveKind kind, int slot);
-    static size_t liveIndex(LiveKind kind, int slot) { return static_cast<size_t>(kind == LiveKind::Ndi ? 0 : kLiveInputSlots) + static_cast<size_t>(slot); }
+    static size_t liveIndex(LiveKind kind, int slot) { return static_cast<size_t>(kind == LiveKind::Ndi ? 0 : (kind == LiveKind::Camera ? kLiveInputSlots : kLiveInputSlots * 2)) + static_cast<size_t>(slot); }
     void blit(const RenderTarget& source, const RenderTarget& target);
 
     std::vector<ClipProgram> clips_;
@@ -309,12 +311,13 @@ private:
     bool spoutFlip_ = false;
     std::array<double, kSpoutInputSlots> spoutLastUse_{};
     std::array<unsigned long long, kSpoutInputSlots> spoutFrame_{};
-    std::array<std::unique_ptr<LiveInput>, static_cast<size_t>(kLiveInputSlots) * 2> liveInputs_;
-    std::array<double, static_cast<size_t>(kLiveInputSlots) * 2> liveLastUse_{};
-    std::array<unsigned long long, static_cast<size_t>(kLiveInputSlots) * 2> liveFrame_{};
+    std::array<std::unique_ptr<LiveInput>, static_cast<size_t>(kLiveInputSlots) * 3> liveInputs_;
+    std::array<double, static_cast<size_t>(kLiveInputSlots) * 3> liveLastUse_{};
+    std::array<unsigned long long, static_cast<size_t>(kLiveInputSlots) * 3> liveFrame_{};
     std::array<std::string, kLiveInputSlots> liveNdi_;
     std::array<std::string, kLiveInputSlots> liveCamera_;
     std::string liveExcluded_;
+    PluginHost* plugins_ = nullptr;
     CameraMode liveMode_;
     unsigned long long frameId_ = 0;
     double clock_ = 0.0;

@@ -13,7 +13,9 @@ namespace nvj {
 
 constexpr double kLiveIdleSeconds = 3.0;
 
-enum class LiveKind { Ndi, Camera };
+class PluginHost;
+
+enum class LiveKind { Ndi, Camera, Plugin };
 
 struct LiveInputConfig {
     std::string source;
@@ -21,6 +23,7 @@ struct LiveInputConfig {
     CameraMode camera;
     ReconnectPolicy policy;
     int maxDimension = 1920;
+    PluginHost* plugins = nullptr;
 };
 
 struct LiveInputInfo {

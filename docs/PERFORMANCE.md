@@ -112,6 +112,21 @@ Not measured: node effects next to VRChat, on a real graphics card, the driver c
 
 Command line: `--bench-nodes FRAMES` runs the comparison and prints the numbers (`--bench-out` writes JSON); `--check-shaders` compiles 129 node graphs with the driver as well.
 
+## What is new in 0.26.0: plugins
+
+Plugins ([PLUGINS.md](PLUGINS.md), [ADR 0018](adr/0018-plugin-system.md)) are native code that gives modulation values or pictures. A show that uses no plugin pays nothing for them.
+
+- **No cost when unused.** Plugins are off until the person enables one. A plugin that is not enabled is never opened, no thread exists for it, and no code of it runs. The folder is scanned at start and on request (at most 16 manifests of at most 16 KiB).
+- **The render thread never runs plugin code.** Per frame it publishes a snapshot of audio and beat (a copy under a mutex), reads one atomic value for each plugin band that is used, takes the last picture of an image source the way it does for a camera, and runs a check of the clocks. A program that calls exactly this 200,000 times (not part of the repository, Linux, release build, five runs) needed 0.05 to 0.06 microseconds a frame with plugins off, 0.07 to 0.08 with all 8 slots read, 0.06 to 0.08 with plugins allowed and nothing enabled, and 0.16 to 0.21 with the example plugin running in two slots.
+- **A plugin that hangs does not stop the picture.** Every call has a time budget (modulation 20 ms, image 100 ms, create and destroy 500 ms, loading 1 s). A call that is over its budget is abandoned and the plugin is switched off for the session. The tests measure the longest `update()` plus `modulation()` call on the calling thread during a hang and during a slow load, and it stayed below 100 ms.
+- **Modulation sources run only when read.** A modulation plugin runs at about 60 calls a second and stops 3 seconds after the last read. The example plugin took 0.013 to 0.05 ms a call, so about 0.1 to 0.3 % of one core.
+- **Image sources are 1280 x 720 at 30 frames a second.** A running image source holds about four to five frame buffers of 3.5 MiB in system memory and one texture of the same size on the graphics card, and goes through the existing live path (upload on the graphics card, release after the idle time). The example plasma runs at the full 30 frames a second (30.5 reported by the runner under software OpenGL).
+- **Nothing else changes.** Layers, effects, compositing and the default composition are not touched.
+
+Not measured: a plugin that does real work, plugin sources next to VRChat, Windows at run time, and the processor time of the example image source on its own.
+
+Command line: `--plugin-selftest FOLDER` loads a plugin through the real engine and checks both source kinds (`--bench-out` writes JSON); `--no-plugins` switches plugins off for a run.
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

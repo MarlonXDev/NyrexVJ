@@ -3,6 +3,7 @@
 #include "app/theme.hpp"
 #include "app/ui_common.hpp"
 #include "core/crash_handler.hpp"
+#include "core/modulation.hpp"
 #include "core/log.hpp"
 #include "core/node_files.hpp"
 #include "core/preset.hpp"
@@ -85,6 +86,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         if (options.crashTest) {
             crashTestAt_ = 1.0;
         }
+        recordPluginCrashes(dataDir, previous_.crashReport, static_cast<long long>(std::time(nullptr)));
+        plugins_ = std::make_unique<PluginHost>(dataDir, !options.noPlugins);
+        engine_.setPluginHost(plugins_.get());
     }
 
     refreshNodeEffects();
@@ -309,6 +313,24 @@ void App::openWelcome(bool firstRun) {
     welcomeFirstRun_ = firstRun;
 }
 
+void App::updatePlugins() {
+    if (!plugins_) {
+        return;
+    }
+    const AudioFeatures& audio = engine_.audio();
+    PluginHostSnapshot snapshot;
+    snapshot.bass = audio.bass;
+    snapshot.mid = audio.mid;
+    snapshot.high = audio.high;
+    snapshot.level = audio.level;
+    snapshot.kick = audio.kick;
+    snapshot.beat = engine_.beat();
+    snapshot.bpm = engine_.comp.bpm;
+    snapshot.beatsPerBar = static_cast<unsigned>(clampBeatsPerBar(engine_.comp.beatsPerBar));
+    plugins_->publish(snapshot);
+    plugins_->update();
+}
+
 void App::shutdown() {
     if (shutDown_) {
         return;
@@ -331,6 +353,10 @@ void App::shutdown() {
     outputs_.closeAll();
     shutdownCreator();
     engine_.shutdown();
+    if (plugins_) {
+        plugins_->stopAll();
+        plugins_->waitForThreads(plugins_->abandonedInstances() > 0 ? 0.1 : 1.0);
+    }
     if (ownsSession_) {
         if (!recoveryPending()) {
             clearCreatorRecovery(userDataDir());
@@ -579,6 +605,7 @@ void App::frame(double dt) {
     engine_.prewarmNext = settings_.prewarmNext;
     engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
     engine_.update(dt);
+    updatePlugins();
     engine_.configureSpout(settings_.spoutInputs, spout_.active() ? std::string(spoutName_) : std::string(), settings_.spoutInputFlip);
     CameraMode cameraMode;
     cameraMode.width = settings_.cameraWidth;

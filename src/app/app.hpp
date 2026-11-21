@@ -11,6 +11,7 @@
 #include "core/edit_history.hpp"
 #include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
+#include "core/plugin_host.hpp"
 #include "core/recovery.hpp"
 #include "core/settings.hpp"
 #include "media/camera_capture.hpp"
@@ -47,6 +48,7 @@ enum SettingsPage {
     SettingsUpdates,
     SettingsShortcuts,
     SettingsPerformance,
+    SettingsPlugins,
     SettingsAbout,
     SettingsPageCount
 };
@@ -84,6 +86,7 @@ struct StartOptions {
     bool forceWelcome = false;
     bool skipWelcome = false;
     bool crashTest = false;
+    bool noPlugins = false;
 };
 
 class App {
@@ -128,6 +131,9 @@ private:
     bool creatorSave(bool copy, bool useAsClip);
     void undoEdit();
     void drawPerformancePage();
+    void drawPluginsPage();
+    void drawPluginFrameSlot(int slot);
+    void updatePlugins();
     void drawFrameRateLimit();
     void drawVideoSettings();
     void drawVideoMonitor();
@@ -208,6 +214,7 @@ private:
     void setLanguageAndSave(Language language);
     void openWelcome(bool firstRun);
 
+    std::unique_ptr<PluginHost> plugins_;
     Engine engine_;
     EngineControlHost controlHost_{engine_};
     ControlSystem control_{engine_.comp, controlHost_};

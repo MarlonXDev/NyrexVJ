@@ -10,7 +10,7 @@ namespace nvj {
 namespace {
 
 const char* const kBlendNames[BlendModeCount] = {"Normal", "Add", "Screen", "Multiply", "Subtract", "Difference", "Exclusion", "Overlay", "Soft Light", "Hard Light", "Lighten", "Darken", "Color Dodge", "Linear Burn"};
-const char* const kBandNames[AudioBandCount] = {"Off", "Bass", "Mid", "High", "Level", "Kick", "LFO 1", "LFO 2", "LFO 3", "LFO 4", "Macro 1", "Macro 2", "Macro 3", "Macro 4", "Macro 5", "Macro 6", "Macro 7", "Macro 8", "Beat", "Bar", "TC second", "TC minute"};
+const char* const kBandNames[AudioBandCount] = {"Off", "Bass", "Mid", "High", "Level", "Kick", "LFO 1", "LFO 2", "LFO 3", "LFO 4", "Macro 1", "Macro 2", "Macro 3", "Macro 4", "Macro 5", "Macro 6", "Macro 7", "Macro 8", "Beat", "Bar", "TC second", "TC minute", "Plugin 1", "Plugin 2", "Plugin 3", "Plugin 4", "Plugin 5", "Plugin 6", "Plugin 7", "Plugin 8"};
 const char* const kLfoShapeNames[LfoShapeCount] = {"Sine", "Triangle", "Saw", "Square", "Random", "Smooth random"};
 const char* const kLfoRateNames[kLfoRateCount] = {"1/4 beat", "1/2 beat", "1 beat", "2 beats", "4 beats", "8 beats", "16 beats", "32 beats"};
 const char* const kTargetNames[ModTargetCount] = {"Opacity", "Scale", "Speed", "Hue", "Brightness", "Saturation"};

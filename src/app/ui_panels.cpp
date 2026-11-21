@@ -18,12 +18,22 @@ namespace nvj {
 
 namespace {
 
-bool bandCombo(const char* id, int& band, float width) {
+bool pluginBandVisible(const PluginHost* plugins, int band, int current) {
+    if (band < BandPlugin1 || band > BandPlugin8 || band == current) {
+        return true;
+    }
+    return plugins != nullptr && !plugins->config().modulation[static_cast<size_t>(band - BandPlugin1)].empty();
+}
+
+bool bandCombo(const char* id, int& band, float width, const PluginHost* plugins) {
     bool changed = false;
     ImGui::SetNextItemWidth(width);
     if (ImGui::BeginCombo(id, tr(audioBandName(band)))) {
         for (int b = 0; b < AudioBandCount; ++b) {
-            if (b == BandLfo1 || b == BandMacro1 || b == BandBeat || b == BandTimecodeSecond) {
+            if (!pluginBandVisible(plugins, b, band)) {
+                continue;
+            }
+            if (b == BandLfo1 || b == BandMacro1 || b == BandBeat || b == BandTimecodeSecond || b == BandPlugin1) {
                 ImGui::Separator();
             }
             if (ImGui::Selectable(tr(audioBandName(b)), band == b)) {
@@ -52,7 +62,7 @@ void App::drawMods(std::array<AudioMod, kModSlots>& mods, bool master) {
     for (int i = 0; i < kModSlots; ++i) {
         AudioMod& mod = mods[static_cast<size_t>(i)];
         ImGui::PushID(i);
-        bandCombo("##band", mod.band, 84.0f);
+        bandCombo("##band", mod.band, 84.0f, plugins_.get());
         ImGui::SameLine();
         ImGui::SetNextItemWidth(104.0f);
         const bool level = master && mod.target == TargetOpacity;
@@ -203,7 +213,7 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             }
             slot.reactParam = std::clamp(slot.reactParam, 0, std::max(0, def.paramCount() - 1));
             ImGui::PushID("react");
-            bandCombo("##band", slot.reactBand, 78.0f);
+            bandCombo("##band", slot.reactBand, 78.0f, plugins_.get());
             if (slot.reactBand != BandOff) {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(92.0f);
@@ -339,6 +349,8 @@ void App::drawClipPanel() {
         ImGui::TextColored(ui::kAccent, "%s", tr("NDI input"));
     } else if (def.kind == ClipKind::CameraSource) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Camera or capture card"));
+    } else if (def.kind == ClipKind::PluginSource) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Plugin source"));
     } else if (engine_.isSceneClip(clip)) {
         ImGui::TextColored(ui::kAccent, "%s", def.kind == ClipKind::ModelFile ? tr("3D model file") : tr("3D scene"));
     } else if (def.kind == ClipKind::VideoFile) {

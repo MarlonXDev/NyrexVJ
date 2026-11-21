@@ -36,6 +36,7 @@ struct Options {
     std::string benchSwitch;
     std::string benchLive;
     bool liveSelfTest = false;
+    std::string pluginSelfTest;
     bool outputSelfTest = false;
     bool noPrewarm = false;
     std::string videoSelfTest;
@@ -88,6 +89,8 @@ Options parseOptions(int argc, char** argv) {
             options.benchSwitch = argv[++i];
         } else if (arg == "--bench-live" && hasValue) {
             options.benchLive = argv[++i];
+        } else if (arg == "--plugin-selftest" && hasValue) {
+            options.pluginSelfTest = argv[++i];
         } else if (arg == "--live-selftest") {
             options.liveSelfTest = true;
         } else if (arg == "--output-selftest") {
@@ -179,6 +182,8 @@ Options parseOptions(int argc, char** argv) {
             options.start.crashTest = true;
         } else if (arg == "--fresh") {
             options.start.fresh = true;
+        } else if (arg == "--no-plugins") {
+            options.start.noPlugins = true;
         } else if (arg == "--no-update-check") {
             options.start.skipUpdateCheck = true;
         } else if (arg == "--check-shaders") {
@@ -317,13 +322,15 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.outputSelfTest || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
         app.engine().prewarmNext = !options.noPrewarm;
         if (options.outputSelfTest) {
             benchExit = nvj::runOutputSelfTest(window);
+        } else if (!options.pluginSelfTest.empty()) {
+            benchExit = nvj::runPluginSelfTest(app.engine(), options.pluginSelfTest, options.benchOut);
         } else if (options.liveSelfTest) {
             benchExit = nvj::runLiveSelfTest(app.engine(), options.benchOut);
         } else if (!options.benchLive.empty()) {

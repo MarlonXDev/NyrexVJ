@@ -6,7 +6,9 @@
 #include "core/log.hpp"
 #include "core/node_compile.hpp"
 #include "core/node_graph.hpp"
+#include "core/plugin_host.hpp"
 #include "core/preset.hpp"
+#include "core/recovery.hpp"
 #include "media/camera_capture.hpp"
 #include "platform/platform.hpp"
 #include "render/asset_import.hpp"
@@ -1775,6 +1777,174 @@ int runLiveBenchmark(Engine& engine, const std::string& spec, const std::string&
         out << text << '\n';
     }
     return 0;
+}
+
+namespace {
+
+int finishPluginSelfTest(json& report, bool passed, const std::string& outputPath) {
+    report["passed"] = passed;
+    const std::string text = report.dump(2);
+    logLine("Plugin self test result:\n" + text);
+    if (!outputPath.empty()) {
+        std::ofstream out(outputPath);
+        out << text << '\n';
+    }
+    return passed ? 0 : 1;
+}
+
+}
+
+int runPluginSelfTest(Engine& engine, const std::string& folder, const std::string& outputPath) {
+    namespace fs = std::filesystem;
+    json report;
+    std::string manifestText;
+    if (!readWholeFile(fs::path(folder) / "plugin.json", manifestText)) {
+        report["error"] = "plugin.json was not found in " + folder;
+        return finishPluginSelfTest(report, false, outputPath);
+    }
+    const json manifest = json::parse(manifestText, nullptr, false);
+    const std::string id = manifest.is_object() ? manifest.value("id", std::string()) : std::string();
+    if (!validPluginId(id)) {
+        report["error"] = "plugin.json has no valid id";
+        return finishPluginSelfTest(report, false, outputPath);
+    }
+    report["plugin"] = id;
+    const fs::path temp = fs::temp_directory_path() / ("nvj_plugin_selftest_" + std::to_string(platform::currentProcessId()));
+    std::error_code ec;
+    fs::remove_all(temp, ec);
+    fs::create_directories(pluginsFolder(temp), ec);
+    fs::copy(fs::path(folder), pluginsFolder(temp) / id, fs::copy_options::recursive, ec);
+    if (ec) {
+        report["error"] = "the plugin folder could not be copied: " + ec.message();
+        return finishPluginSelfTest(report, false, outputPath);
+    }
+    PluginConfig config;
+    config.setEnabled(id, true);
+    writePluginConfig(temp, config);
+
+    bool passed = true;
+    int threadsLeft = 0;
+    int abandoned = 0;
+    {
+        PluginHost host(temp, true);
+        PluginHost* previous = engine.pluginHost();
+        engine.setPluginHost(&host);
+        const double period = 1.0 / 60.0;
+        const auto step = [&]() {
+            const AudioFeatures audio = virtualAudio(engine.beat(), engine.time());
+            engine.setAudio(audio);
+            PluginHostSnapshot snapshot;
+            snapshot.bass = audio.bass;
+            snapshot.mid = audio.mid;
+            snapshot.high = audio.high;
+            snapshot.level = audio.level;
+            snapshot.kick = audio.kick;
+            snapshot.beat = engine.beat();
+            snapshot.bpm = engine.comp.bpm;
+            host.publish(snapshot);
+            host.update();
+            engine.update(period);
+            engine.render();
+        };
+
+        const auto isLoading = [&]() {
+            const PluginInfo* current = host.find(id);
+            return current != nullptr && current->state == PluginState::Loading;
+        };
+        const auto loadStart = std::chrono::steady_clock::now();
+        while (isLoading() && std::chrono::steady_clock::now() - loadStart < std::chrono::seconds(5)) {
+            host.update();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        const PluginInfo* info = host.find(id);
+        const bool loaded = info != nullptr && info->state == PluginState::Loaded;
+        report["loaded"] = loaded;
+        passed = passed && loaded;
+        std::string modulationKey;
+        std::string frameKey;
+        if (loaded) {
+            for (const PluginSourceDesc& source : info->sources) {
+                if (source.kind == kPluginSourceKindModulation && modulationKey.empty()) {
+                    modulationKey = source.key;
+                } else if (source.kind == kPluginSourceKindFrame && frameKey.empty()) {
+                    frameKey = source.key;
+                }
+            }
+            report["sources"] = info->sources.size();
+        } else if (info != nullptr) {
+            report["error"] = info->message;
+        }
+
+        if (!modulationKey.empty()) {
+            host.assignModulation(0, modulationKey);
+            float low = 2.0f;
+            float high = -1.0f;
+            bool inRange = true;
+            const auto start = std::chrono::steady_clock::now();
+            while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(1500)) {
+                step();
+                const float value = engine.sourceValue(BandPlugin1);
+                if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(300)) {
+                    low = std::min(low, value);
+                    high = std::max(high, value);
+                }
+                inRange = inRange && std::isfinite(value) && value >= 0.0f && value <= 1.0f;
+                std::this_thread::sleep_for(std::chrono::milliseconds(8));
+            }
+            const PluginRunStats stats = host.modulationStats(0);
+            const bool modulationOk = inRange && !stats.failed && stats.calls > 10 && high - low > 0.02f && stats.maxCallMs < kPluginModulationBudget * 1000.0;
+            report["modulation"] = {{"source", modulationKey}, {"min", low}, {"max", high}, {"calls", stats.calls}, {"maxCallMs", stats.maxCallMs}, {"passed", modulationOk}};
+            passed = passed && modulationOk;
+        }
+
+        if (!frameKey.empty()) {
+            host.assignFrame(0, frameKey);
+            const int clip = clipIndexByName("Plugin Source 1");
+            engine.clearLayer(0);
+            if (clip >= 0) {
+                engine.comp.layers[0].cells[0] = clip;
+                engine.trigger(0, 0);
+            }
+            const auto start = std::chrono::steady_clock::now();
+            while (engine.liveInfo(LiveKind::Plugin, 0).uploaded < 5 && std::chrono::steady_clock::now() - start < std::chrono::seconds(15)) {
+                step();
+                glFinish();
+                std::this_thread::sleep_for(std::chrono::milliseconds(8));
+            }
+            for (int i = 0; i < 10; ++i) {
+                step();
+                glFinish();
+            }
+            const LiveInputInfo live = engine.liveInfo(LiveKind::Plugin, 0);
+            std::vector<unsigned char> rgba;
+            int width = 0;
+            int height = 0;
+            double lit = 0.0;
+            if (engine.readOutput(rgba, width, height) && width > 0 && height > 0) {
+                size_t count = 0;
+                for (size_t i = 0; i + 3 < rgba.size(); i += 4) {
+                    if (std::max({rgba[i], rgba[i + 1], rgba[i + 2]}) > 24) {
+                        ++count;
+                    }
+                }
+                lit = static_cast<double>(count) / (static_cast<double>(rgba.size()) / 4.0);
+            }
+            const bool frameOk = clip >= 0 && live.uploaded >= 5 && live.status.state == LiveState::Live && live.status.width == kPluginFrameWidth && live.status.height == kPluginFrameHeight && lit > 0.5;
+            report["frame"] = {{"source", frameKey}, {"uploaded", live.uploaded}, {"state", liveStateName(live.status.state)}, {"size", std::to_string(live.status.width) + "x" + std::to_string(live.status.height)}, {"fps", live.status.fps}, {"litFraction", lit}, {"startError", live.startError}, {"passed", frameOk}};
+            passed = passed && frameOk;
+            engine.clearLayer(0);
+        }
+
+        engine.setPluginHost(previous);
+        host.stopAll();
+        threadsLeft = host.waitForThreads(3.0);
+        abandoned = host.abandonedInstances();
+    }
+    report["threadsLeft"] = threadsLeft;
+    report["abandoned"] = abandoned;
+    passed = passed && threadsLeft == 0 && abandoned == 0;
+    fs::remove_all(temp, ec);
+    return finishPluginSelfTest(report, passed, outputPath);
 }
 
 }

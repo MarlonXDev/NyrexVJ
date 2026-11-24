@@ -571,6 +571,7 @@ void testExamplePlugin() {
 void setEnv(const char* name, const char* value) {
 #ifdef _WIN32
     _putenv_s(name, value);
+    SetEnvironmentVariableA(name, value[0] != '\0' ? value : nullptr);
 #else
     setenv(name, value, 1);
 #endif

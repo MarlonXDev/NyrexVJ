@@ -1,4 +1,5 @@
 #include "nyrexvj_plugin.h"
+#include "test_env.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -189,7 +190,8 @@ static int32_t frame(void* instance, double time, double delta, NvjImage* image)
 
 NYREXVJ_PLUGIN_EXPORT int32_t nyrexvj_plugin_entry(const NvjHost* host, NvjPlugin* plugin)
 {
-    const char* text = getenv("NVJ_FUZZ_SEED");
+    char seedBuffer[32];
+    const char* text = nvj_env_text("NVJ_FUZZ_SEED", seedBuffer, sizeof(seedBuffer));
     uint64_t r;
     uint64_t q;
     if (host == NULL || plugin == NULL) {

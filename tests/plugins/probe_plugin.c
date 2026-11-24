@@ -1,4 +1,5 @@
 #include "nyrexvj_plugin.h"
+#include "test_env.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -57,7 +58,8 @@ static void pause_ms(unsigned int ms)
 
 static unsigned int env_ms(const char* name)
 {
-    const char* text = getenv(name);
+    char buffer[32];
+    const char* text = nvj_env_text(name, buffer, sizeof(buffer));
     if (text == NULL || text[0] == '\0') {
         return 0u;
     }
@@ -162,7 +164,8 @@ static int32_t modulation(void* instance, double time, double delta, float* valu
     case SOURCE_FAIL_TEXT:
         if (self->calls >= 3u) {
             if (NYREXVJ_HAS_FIELD(self->host, NvjHost, set_error) && self->host->set_error != NULL) {
-                const char* longText = getenv("NVJ_PROBE_LONG_TEXT");
+                char flag[8];
+                const char* longText = nvj_env_text("NVJ_PROBE_LONG_TEXT", flag, sizeof(flag));
                 if (longText != NULL && longText[0] == '1') {
                     char text[700];
                     size_t i;

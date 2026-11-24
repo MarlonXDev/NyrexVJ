@@ -68,6 +68,9 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
         int uv = -1;
         int color = -1;
         int indices = -1;
+        int joints = -1;
+        int weights = -1;
+        std::vector<std::pair<int, int>> targets;
     };
     std::vector<MeshAccessors> accessors(scene.meshes.size());
     for (size_t i = 0; i < scene.meshes.size(); ++i) {
@@ -94,6 +97,31 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
             accessors[i].color = bin.addAccessor(mesh.colors.data(), mesh.colors.size() * 4, 34962, 5126, mesh.colors.size() / 4, "VEC4", nullptr, nullptr);
         }
         accessors[i].indices = bin.addAccessor(mesh.indices.data(), mesh.indices.size() * 4, 34963, 5125, mesh.indices.size(), "SCALAR", nullptr, nullptr);
+        if (!mesh.joints.empty()) {
+            accessors[i].joints = bin.addAccessor(mesh.joints.data(), mesh.joints.size() * 2, 34962, 5123, mesh.joints.size() / 4, "VEC4", nullptr, nullptr);
+            accessors[i].weights = bin.addAccessor(mesh.weights.data(), mesh.weights.size() * 4, 34962, 5126, mesh.weights.size() / 4, "VEC4", nullptr, nullptr);
+        }
+        for (const SceneMorphTarget& target : mesh.targets) {
+            std::pair<int, int> ids{-1, -1};
+            for (int kind = 0; kind < 2; ++kind) {
+                const std::vector<Vec3>& list = kind == 0 ? target.positions : target.normals;
+                if (list.empty()) {
+                    continue;
+                }
+                std::vector<float> deltas;
+                deltas.reserve(list.size() * 3);
+                std::vector<float> low(3, 3.4e38f);
+                std::vector<float> high(3, -3.4e38f);
+                for (const Vec3& d : list) {
+                    deltas.insert(deltas.end(), {d.x, d.y, d.z});
+                    low = {std::min(low[0], d.x), std::min(low[1], d.y), std::min(low[2], d.z)};
+                    high = {std::max(high[0], d.x), std::max(high[1], d.y), std::max(high[2], d.z)};
+                }
+                const int id = bin.addAccessor(deltas.data(), deltas.size() * 4, 34962, 5126, list.size(), "VEC3", kind == 0 ? &low : nullptr, kind == 0 ? &high : nullptr);
+                (kind == 0 ? ids.first : ids.second) = id;
+            }
+            accessors[i].targets.push_back(ids);
+        }
     }
 
     json doc;
@@ -111,6 +139,8 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
         if (m.alphaMode == AlphaMode::Mask) {
             material["alphaMode"] = "MASK";
             material["alphaCutoff"] = m.alphaCutoff;
+        } else if (m.alphaMode == AlphaMode::Blend) {
+            material["alphaMode"] = "BLEND";
         }
         if (m.doubleSided) {
             material["doubleSided"] = true;
@@ -141,6 +171,12 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
         if (!n.children.empty()) {
             node["children"] = n.children;
         }
+        if (n.skin >= 0) {
+            node["skin"] = n.skin;
+        }
+        if (!n.weights.empty()) {
+            node["weights"] = n.weights;
+        }
         const auto known = meshByContent.find(n.meshes);
         if (known != meshByContent.end()) {
             node["mesh"] = known->second;
@@ -156,7 +192,25 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
                 if (a.color >= 0) {
                     attributes["COLOR_0"] = a.color;
                 }
+                if (a.joints >= 0) {
+                    attributes["JOINTS_0"] = a.joints;
+                    attributes["WEIGHTS_0"] = a.weights;
+                }
                 json primitive = {{"attributes", attributes}, {"indices", a.indices}, {"mode", 4}};
+                if (!a.targets.empty()) {
+                    json targets = json::array();
+                    for (const auto& ids : a.targets) {
+                        json target = json::object();
+                        if (ids.first >= 0) {
+                            target["POSITION"] = ids.first;
+                        }
+                        if (ids.second >= 0) {
+                            target["NORMAL"] = ids.second;
+                        }
+                        targets.push_back(std::move(target));
+                    }
+                    primitive["targets"] = std::move(targets);
+                }
                 if (mesh.material >= 0) {
                     primitive["material"] = mesh.material;
                 }
@@ -169,6 +223,24 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
         nodes.push_back(std::move(node));
     }
     doc["nodes"] = std::move(nodes);
+    if (!scene.skins.empty()) {
+        json skins = json::array();
+        for (const SceneSkin& skin : scene.skins) {
+            std::vector<float> matrices;
+            matrices.reserve(skin.inverseBind.size() * 16);
+            for (const Mat4& m : skin.inverseBind) {
+                matrices.insert(matrices.end(), m.m.begin(), m.m.end());
+            }
+            json entry;
+            entry["joints"] = skin.joints;
+            entry["inverseBindMatrices"] = bin.addAccessor(matrices.data(), matrices.size() * 4, 0, 5126, skin.inverseBind.size(), "MAT4", nullptr, nullptr);
+            if (!skin.name.empty()) {
+                entry["name"] = skin.name;
+            }
+            skins.push_back(std::move(entry));
+        }
+        doc["skins"] = std::move(skins);
+    }
     if (!meshes.empty()) {
         doc["meshes"] = std::move(meshes);
     }
@@ -188,9 +260,10 @@ std::vector<uint8_t> writeGlb(const Scene& scene) {
                 const std::vector<float> hi{channel.times.back()};
                 const int input = bin.addAccessor(channel.times.data(), channel.times.size() * 4, 0, 5126, channel.times.size(), "SCALAR", &lo, &hi);
                 const bool rotation = channel.path == AnimPath::Rotation;
-                const int output = bin.addAccessor(channel.values.data(), channel.values.size() * 4, 0, 5126, channel.times.size(), rotation ? "VEC4" : "VEC3", nullptr, nullptr);
+                const bool weights = channel.path == AnimPath::Weights;
+                const int output = bin.addAccessor(channel.values.data(), channel.values.size() * 4, 0, 5126, weights ? channel.values.size() : channel.times.size(), weights ? "SCALAR" : (rotation ? "VEC4" : "VEC3"), nullptr, nullptr);
                 samplers.push_back({{"input", input}, {"output", output}, {"interpolation", channel.interp == AnimInterp::Step ? "STEP" : "LINEAR"}});
-                const char* path = channel.path == AnimPath::Translation ? "translation" : (rotation ? "rotation" : "scale");
+                const char* path = channel.path == AnimPath::Translation ? "translation" : (rotation ? "rotation" : (weights ? "weights" : "scale"));
                 channels.push_back({{"sampler", samplers.size() - 1}, {"target", {{"node", channel.node}, {"path", path}}}});
             }
             json entry = {{"samplers", std::move(samplers)}, {"channels", std::move(channels)}};

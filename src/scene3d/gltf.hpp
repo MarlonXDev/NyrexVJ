@@ -22,6 +22,11 @@ struct GltfLimits {
     int maxImageDimension = 4096;
     size_t maxImageBytes = 192u * 1024u * 1024u;
     int maxJsonDepth = 64;
+    size_t maxSkins = kSceneMaxSkins;
+    size_t maxBones = kSceneMaxBones;
+    size_t maxMorphTargets = kSceneMaxMorphTargets;
+    size_t maxMorphBytes = 128u * 1024u * 1024u;
+    size_t maxGpuBytes = kSceneMaxGpuBytes;
     double maxSeconds = 60.0;
     const std::atomic<bool>* cancel = nullptr;
 };

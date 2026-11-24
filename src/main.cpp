@@ -2,6 +2,7 @@
 #include "app/bench.hpp"
 #include "app/bench_convert.hpp"
 #include "app/output_selftest.hpp"
+#include "app/scene_selftest.hpp"
 #include "app/shader_selftest.hpp"
 #include "core/frame_pacer.hpp"
 #include "core/frame_stats.hpp"
@@ -48,6 +49,7 @@ struct Options {
     bool outputSelfTest = false;
     bool noPrewarm = false;
     std::string videoSelfTest;
+    std::string sceneSelfTest;
     std::string videoMode;
     bool noHapDirect = false;
     bool noGpuConvert = false;
@@ -118,6 +120,8 @@ Options parseOptions(int argc, char** argv) {
             options.noPrewarm = true;
         } else if (arg == "--video-selftest" && hasValue) {
             options.videoSelfTest = argv[++i];
+        } else if (arg == "--scene-selftest" && hasValue) {
+            options.sceneSelfTest = argv[++i];
         } else if (arg == "--video-mode" && hasValue) {
             options.videoMode = argv[++i];
         } else if (arg == "--no-hap-direct") {
@@ -345,7 +349,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.shaderSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.shaderSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -364,6 +368,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runSwitchBenchmark(app.engine(), options.benchSwitch, options.benchOut);
         } else if (!options.videoSelfTest.empty()) {
             benchExit = nvj::runVideoSelfTest(app.engine(), options.videoSelfTest, options.benchOut);
+        } else if (!options.sceneSelfTest.empty()) {
+            benchExit = nvj::runSceneSelfTest(app.engine(), options.sceneSelfTest, options.benchOut);
         } else if (options.benchMemory) {
             benchExit = nvj::runMemoryBenchmark(app.engine(), options.benchOut);
         } else if (options.benchShaders > 0) {

@@ -1,6 +1,7 @@
 #include "check.hpp"
 
 #include "scene3d/gltf.hpp"
+#include "scene3d/gltf_compression.hpp"
 #include "scene3d/procedural.hpp"
 #include "scene3d/scene_math.hpp"
 #include "scene3d/scene_model.hpp"
@@ -12,10 +13,14 @@
 
 #include <array>
 #include <atomic>
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <iterator>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -420,7 +425,18 @@ void testRejections() {
     Blob draco = triangleBlob();
     draco.doc["extensionsRequired"] = {"KHR_draco_mesh_compression"};
     const GltfResult dracoResult = loadBlob(draco);
-    CHECK(!dracoResult.ok && dracoResult.error.find("KHR_draco_mesh_compression") != std::string::npos);
+    CHECK(dracoResult.ok == dracoAvailable());
+    CHECK(dracoAvailable() || dracoResult.error.find("NYREXVJ_DRACO") != std::string::npos);
+
+    Blob meshopt = triangleBlob();
+    meshopt.doc["extensionsRequired"] = {"EXT_meshopt_compression"};
+    const GltfResult meshoptResult = loadBlob(meshopt);
+    CHECK(meshoptResult.ok == meshoptAvailable());
+    CHECK(meshoptAvailable() || meshoptResult.error.find("NYREXVJ_MESHOPT") != std::string::npos);
+
+    Blob unknownRequired = triangleBlob();
+    unknownRequired.doc["extensionsRequired"] = {"KHR_materials_sheen_of_doom"};
+    CHECK(!loadBlob(unknownRequired).ok);
 
     Blob cycle = triangleBlob();
     cycle.doc["nodes"] = json::array({{{"mesh", 0}, {"children", {1}}}, {{"children", {0}}}});
@@ -647,16 +663,25 @@ void testPbrMaterials() {
         CHECK(near(m.emissive[0], 1.0f) && near(m.emissive[1], 0.5f) && near(m.emissive[2], 0.0f));
         CHECK(near(m.emissiveStrength, 4.0f));
         CHECK(m.alphaMode == AlphaMode::Mask && near(m.alphaCutoff, 0.3f));
-        CHECK(result.scene.materials[1].alphaMode == AlphaMode::Opaque);
+        CHECK(result.scene.materials[1].alphaMode == AlphaMode::Blend);
         CHECK(near(result.scene.materials[1].metallic, 1.0f) && near(result.scene.materials[1].roughness, 1.0f));
         CHECK(near(result.scene.materials[2].metallic, 1.0f) && near(result.scene.materials[2].roughness, 0.0f));
         CHECK(result.scene.materials[2].emissive[0] == 1.0f);
     }
     bool blendWarning = false;
     for (const std::string& warning : result.warnings) {
-        blendWarning = blendWarning || warning.find("BLEND") != std::string::npos;
+        blendWarning = blendWarning || warning.find("alpha mode") != std::string::npos;
     }
-    CHECK(blendWarning);
+    CHECK(!blendWarning);
+
+    Blob unknownMode = blob;
+    unknownMode.doc["materials"][1]["alphaMode"] = "SMOKE";
+    const GltfResult unknown = loadBlob(unknownMode);
+    bool unknownWarning = false;
+    for (const std::string& warning : unknown.warnings) {
+        unknownWarning = unknownWarning || warning.find("SMOKE") != std::string::npos;
+    }
+    CHECK(unknown.ok && unknown.scene.materials[1].alphaMode == AlphaMode::Opaque && unknownWarning);
 
     Blob broken = blob;
     broken.doc["materials"][0]["normalTexture"] = {{"index", 99}};
@@ -725,7 +750,587 @@ void testDeterministicAndSmall() {
 
 }
 
+const std::filesystem::path kModels = std::filesystem::path(NYREXVJ_TEST_DATA) / "models";
+
+GltfResult loadModelFile(const std::string& name, const GltfLimits& limits = {}) {
+    return loadGltfFile(kModels / name, limits);
+}
+
+Blob splitGlb(const std::string& name) {
+    std::ifstream in(kModels / name, std::ios::binary);
+    const std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    Blob blob;
+    uint32_t jsonLength = 0;
+    std::memcpy(&jsonLength, bytes.data() + 12, 4);
+    blob.doc = json::parse(bytes.begin() + 20, bytes.begin() + 20 + jsonLength);
+    uint32_t binLength = 0;
+    std::memcpy(&binLength, bytes.data() + 20 + jsonLength, 4);
+    blob.bin.assign(bytes.begin() + 28 + jsonLength, bytes.begin() + 28 + jsonLength + binLength);
+    return blob;
+}
+
+std::vector<Vec3> worldVertices(const Scene& scene, int animation, float time) {
+    const SceneEval eval = evaluateSceneFull(scene, animation, time);
+    std::vector<Vec3> out;
+    for (const SceneInstance& instance : eval.instances) {
+        const std::vector<Vec3> posed = posedPositions(scene, scene.meshes[static_cast<size_t>(instance.mesh)], eval, instance);
+        for (const Vec3& p : posed) {
+            out.push_back(transformPoint(instance.world, p));
+        }
+    }
+    std::sort(out.begin(), out.end(), [](const Vec3& a, const Vec3& b) {
+        if (a.x != b.x) {
+            return a.x < b.x;
+        }
+        if (a.y != b.y) {
+            return a.y < b.y;
+        }
+        return a.z < b.z;
+    });
+    return out;
+}
+
+bool sameVertexSets(const std::vector<Vec3>& a, const std::vector<Vec3>& b, float eps) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+    std::vector<char> used(b.size(), 0);
+    for (const Vec3& p : a) {
+        bool found = false;
+        for (size_t i = 0; i < b.size(); ++i) {
+            if (!used[i] && nearVec(p, b[i], eps)) {
+                used[i] = 1;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool hasWarning(const GltfResult& result, const std::string& text) {
+    for (const std::string& warning : result.warnings) {
+        if (warning.find(text) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void testSkinning() {
+    const GltfResult result = loadModelFile("skin_arm.glb");
+    CHECK(result.ok);
+    if (!result.ok) {
+        return;
+    }
+    const Scene& scene = result.scene;
+    CHECK(result.warnings.empty());
+    CHECK(scene.skins.size() == 1 && scene.skins[0].joints.size() == 2);
+    CHECK(scene.skins[0].joints[0] == 1 && scene.skins[0].joints[1] == 2);
+    CHECK(near(scene.skins[0].inverseBind[1].m[13], -1.0f) && near(scene.skins[0].inverseBind[0].m[13], 0.0f));
+    CHECK(scene.nodes[0].skin == 0 && scene.nodes[1].skin == -1);
+    CHECK(scene.meshes.size() == 1 && scene.meshes[0].joints.size() == scene.meshes[0].positions.size() * 4);
+    const SceneStats stats = sceneStats(scene);
+    CHECK(stats.skins == 1 && stats.joints == 2 && stats.blendMaterials == 0);
+
+    const SceneEval bind = evaluateSceneFull(scene, 0, 0.0f);
+    CHECK(bind.instances.size() == 1 && bind.joints.size() == 2 && bind.skippedSkinned == 0);
+    CHECK(bind.instances[0].skin == 0 && bind.instances[0].jointCount == 2 && bind.instances[0].jointOffset == 0);
+    CHECK(nearVec(transformPoint(bind.instances[0].world, {1, 2, 3}), {1, 2, 3}));
+    const std::vector<Vec3> bindPose = posedPositions(scene, scene.meshes[0], bind, bind.instances[0]);
+    bool same = bindPose.size() == scene.meshes[0].positions.size();
+    for (size_t i = 0; same && i < bindPose.size(); ++i) {
+        same = nearVec(bindPose[i], scene.meshes[0].positions[i], 1e-4f);
+    }
+    CHECK(same);
+
+    const SceneEval bent = evaluateSceneFull(scene, 0, 1.0f);
+    const std::vector<Vec3> posed = posedPositions(scene, scene.meshes[0], bent, bent.instances[0]);
+    CHECK(nearVec(posed[16], {-1.0f, 1.1f, 0.1f}, 0.002f));
+    CHECK(nearVec(posed[0], scene.meshes[0].positions[0], 0.002f));
+    CHECK(nearVec(posed[8], {0.05f, 1.05f, 0.1f}, 0.002f));
+    const SceneBounds restBounds = sceneBounds(scene, 0, 0.0f);
+    const SceneBounds bentBounds = sceneBounds(scene, 0, 1.0f);
+    CHECK(restBounds.valid && bentBounds.valid);
+    CHECK(restBounds.max.y > 1.9f && restBounds.min.x > -0.2f);
+    CHECK(bentBounds.min.x < -0.9f && bentBounds.max.y < 1.3f);
+    const SceneSphere sphere = sceneSphere(scene, 0, 12);
+    CHECK(sphere.valid && sphere.radius > 1.0f);
+
+    Scene broken = scene;
+    broken.meshes[0].joints[0] = 5;
+    std::string error;
+    CHECK(!validateScene(broken, error) && error.find("joint") != std::string::npos);
+    broken = scene;
+    broken.meshes[0].weights[1] = -0.5f;
+    CHECK(!validateScene(broken, error));
+    broken = scene;
+    broken.meshes[0].weights.pop_back();
+    CHECK(!validateScene(broken, error));
+    broken = scene;
+    broken.skins[0].inverseBind.pop_back();
+    CHECK(!validateScene(broken, error));
+    broken = scene;
+    broken.skins[0].joints[1] = 99;
+    CHECK(!validateScene(broken, error));
+    broken = scene;
+    broken.nodes[0].skin = 4;
+    CHECK(!validateScene(broken, error));
+
+    Scene crowd = scene;
+    for (int i = 0; i < 600; ++i) {
+        SceneNode copy = scene.nodes[0];
+        copy.translation = {static_cast<float>(i), 0, 0};
+        crowd.nodes.push_back(copy);
+        crowd.roots.push_back(static_cast<int>(crowd.nodes.size()) - 1);
+    }
+    const SceneEval many = evaluateSceneFull(crowd, 0, 0.0f);
+    CHECK(many.joints.size() <= kSceneMaxJointsPerFrame);
+    CHECK(many.skippedSkinned > 0);
+    CHECK(many.instances.size() + many.skippedSkinned == 601);
+
+    GltfLimits oneBone;
+    oneBone.maxBones = 1;
+    const GltfResult tooManyBones = loadModelFile("skin_arm.glb", oneBone);
+    CHECK(!tooManyBones.ok && tooManyBones.error.find("joints") != std::string::npos);
+    GltfLimits noSkins;
+    noSkins.maxSkins = 0;
+    const GltfResult tooManySkins = loadModelFile("skin_arm.glb", noSkins);
+    CHECK(!tooManySkins.ok && tooManySkins.error.find("skins") != std::string::npos);
+    GltfLimits tinyGpu;
+    tinyGpu.maxGpuBytes = 1000;
+    const GltfResult tooBig = loadModelFile("skin_arm.glb", tinyGpu);
+    CHECK(!tooBig.ok && tooBig.error.find("graphics memory") != std::string::npos);
+
+    const std::vector<uint8_t> glb = writeGlb(scene);
+    const GltfResult again = loadGltfMemory(glb.data(), glb.size(), std::filesystem::path());
+    CHECK(again.ok && again.scene.skins.size() == 1 && again.scene.nodes[0].skin == 0);
+    CHECK(sameVertexSets(worldVertices(scene, 0, 1.0f), worldVertices(again.scene, 0, 1.0f), 1e-4f));
+    CHECK(sameVertexSets(worldVertices(scene, 0, 0.4f), worldVertices(again.scene, 0, 0.4f), 1e-4f));
+}
+
+void testReleasedGeometryStillSkins() {
+    for (const char* name : {"skin_arm.glb", "skin_morph.glb", "morph_cube.glb"}) {
+        const GltfResult result = loadModelFile(name);
+        CHECK(result.ok);
+        if (!result.ok) {
+            continue;
+        }
+        Scene scene = result.scene;
+        const SceneEval before = evaluateSceneFull(scene, 0, 1.0f);
+        for (SceneMesh& mesh : scene.meshes) {
+            mesh.rememberAnimationData();
+            std::vector<Vec3>().swap(mesh.positions);
+            std::vector<Vec3>().swap(mesh.normals);
+            std::vector<uint32_t>().swap(mesh.indices);
+            std::vector<uint16_t>().swap(mesh.joints);
+            std::vector<float>().swap(mesh.weights);
+            std::vector<SceneMorphTarget>().swap(mesh.targets);
+        }
+        const SceneEval after = evaluateSceneFull(scene, 0, 1.0f);
+        CHECK(after.instances.size() == before.instances.size());
+        CHECK(after.joints.size() == before.joints.size());
+        CHECK(after.weights.size() == before.weights.size());
+        for (size_t i = 0; i < before.instances.size() && i < after.instances.size(); ++i) {
+            CHECK(after.instances[i].skin == before.instances[i].skin);
+            CHECK(after.instances[i].jointCount == before.instances[i].jointCount);
+            CHECK(after.instances[i].weightCount == before.instances[i].weightCount);
+        }
+    }
+}
+
+void testSkinRejections() {
+    const auto reload = [](const std::function<void(json&)>& edit) {
+        Blob blob = splitGlb("skin_arm.glb");
+        edit(blob.doc);
+        return loadBlob(blob);
+    };
+    CHECK(reload([](json&) {}).ok);
+    CHECK(!reload([](json& d) { d["skins"][0]["joints"] = json::array(); }).ok);
+    CHECK(!reload([](json& d) { d["skins"][0]["joints"][1] = 40; }).ok);
+    CHECK(!reload([](json& d) { d["skins"][0]["joints"][1] = "elbow"; }).ok);
+    CHECK(!reload([](json& d) { d["nodes"][0]["skin"] = 3; }).ok);
+    CHECK(!reload([](json& d) { d["skins"][0]["inverseBindMatrices"] = 99; }).ok);
+    CHECK(!reload([](json& d) { d["skins"][0]["joints"] = json::array({1, 2, 1}); }).ok);
+    CHECK(!reload([](json& d) { d["meshes"][0]["primitives"][0]["attributes"]["JOINTS_0"] = d["meshes"][0]["primitives"][0]["attributes"]["POSITION"]; }).ok);
+    const GltfResult mismatch = reload([](json& d) { d["accessors"][d["meshes"][0]["primitives"][0]["attributes"]["JOINTS_0"].get<int>()]["count"] = 3; });
+    CHECK(mismatch.ok && mismatch.scene.meshes[0].joints.empty() && hasWarning(mismatch, "skinning is ignored"));
+    const GltfResult lonely = reload([](json& d) { d["meshes"][0]["primitives"][0]["attributes"].erase("WEIGHTS_0"); });
+    CHECK(lonely.ok && lonely.scene.meshes[0].joints.empty() && hasWarning(lonely, "WEIGHTS_0"));
+    const GltfResult more = reload([](json& d) {
+        d["meshes"][0]["primitives"][0]["attributes"]["JOINTS_1"] = d["meshes"][0]["primitives"][0]["attributes"]["JOINTS_0"];
+        d["meshes"][0]["primitives"][0]["attributes"]["WEIGHTS_1"] = d["meshes"][0]["primitives"][0]["attributes"]["WEIGHTS_0"];
+    });
+    CHECK(more.ok && hasWarning(more, "more than four"));
+    const GltfResult unskinnedNode = reload([](json& d) { d["nodes"][0].erase("skin"); });
+    CHECK(unskinnedNode.ok);
+    if (unskinnedNode.ok) {
+        const SceneEval eval = evaluateSceneFull(unskinnedNode.scene, -1, 0.0f);
+        CHECK(eval.instances.size() == 1 && eval.instances[0].skin == -1 && eval.joints.empty());
+        CHECK(nearVec(transformPoint(eval.instances[0].world, {0, 0, 0}), {5, 0, 0}));
+    }
+}
+
+void testMorphTargets() {
+    const GltfResult result = loadModelFile("morph_cube.glb");
+    CHECK(result.ok);
+    if (!result.ok) {
+        return;
+    }
+    const Scene& scene = result.scene;
+    CHECK(scene.meshes.size() == 1 && scene.meshes[0].targets.size() == 2);
+    CHECK(scene.meshes[0].targets[0].normals.empty() && scene.meshes[0].targets[1].normals.size() == 24);
+    CHECK(scene.nodes[0].weights.size() == 2 && near(scene.nodes[0].weights[0], 0.25f) && near(scene.nodes[0].weights[1], 0.0f));
+    const SceneStats stats = sceneStats(scene);
+    CHECK(stats.morphTargets == 2);
+    CHECK(scene.animations.size() == 1 && scene.animations[0].channels.size() == 1 && scene.animations[0].channels[0].path == AnimPath::Weights);
+
+    const auto weightsAt = [&](float t) { return evaluateSceneFull(scene, 0, t).weights; };
+    CHECK(near(weightsAt(0.0f)[0], 0.0f) && near(weightsAt(1.0f)[0], 1.0f) && near(weightsAt(1.0f)[1], 0.5f));
+    CHECK(near(weightsAt(0.5f)[0], 0.5f) && near(weightsAt(0.5f)[1], 0.25f) && near(weightsAt(1.5f)[0], 0.5f));
+    const SceneEval rest = evaluateSceneFull(scene, -1, 0.0f);
+    CHECK(rest.weights.size() >= 2 && near(rest.weights[0], 0.25f) && near(rest.weights[1], 0.0f));
+
+    const SceneEval full = evaluateSceneFull(scene, 0, 1.0f);
+    const std::vector<Vec3> posed = posedPositions(scene, scene.meshes[0], full, full.instances[0]);
+    float top = -10.0f;
+    float bottom = 10.0f;
+    for (const Vec3& p : posed) {
+        top = std::max(top, p.y);
+        bottom = std::min(bottom, p.y);
+    }
+    CHECK(near(top, 1.625f) && near(bottom, -0.625f));
+    const SceneBounds liftedBounds = sceneBounds(scene, 0, 1.0f);
+    const SceneBounds restBounds = sceneBounds(scene, 0, 0.0f);
+    CHECK(liftedBounds.max.y > 1.5f && restBounds.max.y < 0.8f);
+
+    const GltfResult sparse = loadModelFile("morph_sparse.glb");
+    CHECK(sparse.ok && sparse.scene.meshes[0].targets.size() == 2);
+    if (sparse.ok) {
+        bool identical = true;
+        for (size_t i = 0; i < scene.meshes[0].positions.size(); ++i) {
+            identical = identical && nearVec(sparse.scene.meshes[0].targets[0].positions[i], scene.meshes[0].targets[0].positions[i], 1e-6f);
+        }
+        CHECK(identical);
+    }
+
+    GltfLimits oneTarget;
+    oneTarget.maxMorphTargets = 1;
+    const GltfResult limited = loadModelFile("morph_cube.glb", oneTarget);
+    CHECK(!limited.ok && limited.error.find("morph targets") != std::string::npos);
+    GltfLimits tinyMorph;
+    tinyMorph.maxMorphBytes = 100;
+    const GltfResult memory = loadModelFile("morph_cube.glb", tinyMorph);
+    CHECK(!memory.ok && memory.error.find("morph") != std::string::npos);
+
+    const std::vector<uint8_t> glb = writeGlb(scene);
+    const GltfResult again = loadGltfMemory(glb.data(), glb.size(), std::filesystem::path());
+    CHECK(again.ok && again.scene.meshes[0].targets.size() == 2 && again.scene.nodes[0].weights.size() == 2);
+    CHECK(sameVertexSets(worldVertices(scene, 0, 1.0f), worldVertices(again.scene, 0, 1.0f), 1e-4f));
+
+    const auto reload = [](const std::function<void(json&)>& edit) {
+        Blob blob = splitGlb("morph_cube.glb");
+        edit(blob.doc);
+        return loadBlob(blob);
+    };
+    CHECK(!reload([](json& d) { d["accessors"][d["meshes"][0]["primitives"][0]["targets"][0]["POSITION"].get<int>()]["count"] = 5; }).ok);
+    CHECK(!reload([](json& d) { d["meshes"][0]["primitives"][0]["targets"][1]["POSITION"] = 77; }).ok);
+    CHECK(!reload([](json& d) { d["meshes"][0]["primitives"][0]["targets"][0] = 5; }).ok);
+    CHECK(!reload([](json& d) { d["animations"][0]["samplers"][0]["output"] = 0; }).ok);
+    const GltfResult fewer = reload([](json& d) { d["meshes"][0]["weights"] = json::array({0.5}); });
+    CHECK(fewer.ok && fewer.scene.nodes[0].weights.size() == 1);
+    const GltfResult overridden = reload([](json& d) { d["nodes"][0]["weights"] = json::array({0.9, 0.1}); });
+    CHECK(overridden.ok && near(overridden.scene.nodes[0].weights[0], 0.9f));
+    const GltfResult huge = reload([](json& d) {
+        json many = json::array();
+        for (int i = 0; i < 80; ++i) {
+            many.push_back(0.1);
+        }
+        d["nodes"][0]["weights"] = many;
+    });
+    CHECK(huge.ok && huge.scene.nodes[0].weights.size() <= kSceneMaxMorphTargets);
+}
+
+void testSkinAndMorphTogether() {
+    const GltfResult result = loadModelFile("skin_morph.glb");
+    CHECK(result.ok);
+    if (!result.ok) {
+        return;
+    }
+    const Scene& scene = result.scene;
+    CHECK(scene.skins.size() == 1 && scene.meshes[0].targets.size() == 1 && scene.animations[0].channels.size() == 2);
+    const SceneEval eval = evaluateSceneFull(scene, 0, 1.0f);
+    CHECK(eval.instances.size() == 1 && eval.instances[0].skin == 0 && eval.instances[0].weightCount == 1);
+    const std::vector<Vec3> posed = posedPositions(scene, scene.meshes[0], eval, eval.instances[0]);
+    CHECK(nearVec(posed[16], {-1.0f, 1.3f, 0.3f}, 0.002f));
+    CHECK(nearVec(posed[0], {0.3f, 0.0f, 0.3f}, 0.002f));
+    const std::vector<uint8_t> glb = writeGlb(scene);
+    const GltfResult again = loadGltfMemory(glb.data(), glb.size(), std::filesystem::path());
+    CHECK(again.ok && sameVertexSets(worldVertices(scene, 0, 0.7f), worldVertices(again.scene, 0, 0.7f), 1e-4f));
+}
+
+void testBlendAndFileLights() {
+    const GltfResult nearFirst = loadModelFile("blend_near_first.glb");
+    const GltfResult farFirst = loadModelFile("blend_far_first.glb");
+    CHECK(nearFirst.ok && farFirst.ok);
+    if (!nearFirst.ok || !farFirst.ok) {
+        return;
+    }
+    CHECK(nearFirst.warnings.empty());
+    CHECK(nearFirst.scene.materials.size() == 4 && nearFirst.scene.materials[0].alphaMode == AlphaMode::Blend && nearFirst.scene.materials[3].alphaMode == AlphaMode::Opaque);
+    CHECK(sceneStats(nearFirst.scene).blendMaterials == 3);
+    CHECK(nearFirst.scene.materials[1].doubleSided && !nearFirst.scene.materials[0].doubleSided);
+    CHECK(farFirst.scene.materials[3].alphaMode == AlphaMode::Opaque && farFirst.scene.materials[0].alphaMode == AlphaMode::Blend);
+    CHECK(near(nearFirst.scene.meshes[0].positions[0].z, 0.5f) && near(farFirst.scene.meshes[0].positions[0].z, -0.5f));
+    const std::vector<uint8_t> glb = writeGlb(nearFirst.scene);
+    const GltfResult again = loadGltfMemory(glb.data(), glb.size(), std::filesystem::path());
+    CHECK(again.ok && again.scene.materials[0].alphaMode == AlphaMode::Blend && again.scene.materials[2].alphaMode == AlphaMode::Blend);
+
+    const GltfResult lights = loadModelFile("lights_cameras.glb");
+    CHECK(lights.ok);
+    if (lights.ok) {
+        const Scene& scene = lights.scene;
+        CHECK(scene.lights.empty() && !scene.camera.authored && scene.cameras.empty());
+        CHECK(scene.fileLights.size() == 3 && scene.fileCameras.size() == 2);
+        CHECK(!scene.fileLights[0].point && nearVec(scene.fileLights[0].position, {0, 1, 0}, 1e-4f) && near(scene.fileLights[0].intensity, 3.0f));
+        CHECK(near(scene.fileLights[0].color[1], 0.95f));
+        CHECK(scene.fileLights[1].point && nearVec(scene.fileLights[1].position, {1, 2, 3}, 1e-4f) && near(scene.fileLights[1].intensity, 5.0f));
+        CHECK(scene.fileLights[2].point && nearVec(scene.fileLights[2].position, {-1, 1, 0}, 1e-4f));
+        CHECK(hasWarning(lights, "spot"));
+        CHECK(!scene.fileCameras[0].orthographic && near(scene.fileCameras[0].yfov, 0.6f) && near(scene.fileCameras[0].world.m[14], 5.0f));
+        CHECK(scene.fileCameras[1].orthographic && near(scene.fileCameras[1].xmag, 5.0f) && near(scene.fileCameras[1].ymag, 3.0f) && near(scene.fileCameras[1].world.m[13], 10.0f));
+        CHECK(scene.fileCameras[0].name == "main");
+        const SceneEval eval = evaluateSceneFull(scene, -1, 0.0f);
+        CHECK(eval.instances.size() == 1);
+    }
+    CHECK(loadModelFile("lights_required.glb").ok);
+
+    const auto reload = [](const std::function<void(json&)>& edit) {
+        Blob blob = splitGlb("lights_cameras.glb");
+        edit(blob.doc);
+        return loadBlob(blob);
+    };
+    const GltfResult brokenLight = reload([](json& d) { d["nodes"][1]["extensions"]["KHR_lights_punctual"]["light"] = 9; });
+    CHECK(brokenLight.ok && brokenLight.scene.fileLights.size() == 2);
+    const GltfResult brokenCamera = reload([](json& d) { d["cameras"][0]["perspective"]["yfov"] = -1.0; });
+    CHECK(brokenCamera.ok && brokenCamera.scene.fileCameras.size() == 1 && hasWarning(brokenCamera, "camera"));
+    const GltfResult manyLights = reload([](json& d) {
+        json nodes = d["nodes"];
+        for (int i = 0; i < 40; ++i) {
+            json copy = nodes[2];
+            copy["name"] = "extra " + std::to_string(i);
+            d["nodes"].push_back(copy);
+            d["scenes"][0]["nodes"].push_back(static_cast<int>(d["nodes"].size()) - 1);
+        }
+    });
+    CHECK(manyLights.ok && manyLights.scene.fileLights.size() == kSceneMaxFileLights);
+    const GltfResult unknownLight = reload([](json& d) { d["extensions"]["KHR_lights_punctual"]["lights"][1]["type"] = "area"; });
+    CHECK(unknownLight.ok && unknownLight.scene.fileLights.size() == 2 && hasWarning(unknownLight, "area"));
+}
+
+void testMeshoptModels() {
+    const char* const pairs[][2] = {{"skin_arm.glb", "meshopt_exact_skin_arm.glb"}, {"skin_morph.glb", "meshopt_exact_skin_morph.glb"}, {"morph_cube.glb", "meshopt_exact_morph_cube.glb"}, {"skin_arm.glb", "meshopt_quant_skin_arm.glb"}, {"skin_morph.glb", "meshopt_quant_skin_morph.glb"}, {"morph_cube.glb", "meshopt_quant_morph_cube.glb"}};
+    if (!meshoptAvailable()) {
+        const GltfResult refused = loadModelFile("meshopt_exact_skin_arm.glb");
+        CHECK(!refused.ok && refused.error.find("NYREXVJ_MESHOPT") != std::string::npos);
+        return;
+    }
+    for (const auto& pair : pairs) {
+        const GltfResult plain = loadModelFile(pair[0]);
+        const GltfResult packed = loadModelFile(pair[1]);
+        CHECK(plain.ok && packed.ok);
+        if (!plain.ok || !packed.ok) {
+            std::fprintf(stderr, "%s: %s\n", pair[1], packed.error.c_str());
+            continue;
+        }
+        const bool exact = std::string(pair[1]).find("exact") != std::string::npos;
+        const float animatedEps = 0.01f;
+        CHECK(packed.scene.skins.size() == plain.scene.skins.size());
+        CHECK(packed.scene.meshes[0].targets.size() == plain.scene.meshes[0].targets.size());
+        CHECK(sceneStats(packed.scene).triangles == sceneStats(plain.scene).triangles);
+        for (const float t : {0.0f, 0.5f, 1.0f, 1.7f}) {
+            const int plainAnimation = plain.scene.animations.empty() ? -1 : 0;
+            const int packedAnimation = packed.scene.animations.empty() ? -1 : 0;
+            const float eps = exact && t == 0.0f ? 1e-4f : animatedEps;
+            const bool match = sameVertexSets(worldVertices(plain.scene, plainAnimation, t), worldVertices(packed.scene, packedAnimation, t), eps);
+            CHECK(match);
+            if (!match) {
+                std::fprintf(stderr, "%s differs at t=%.1f\n", pair[1], static_cast<double>(t));
+            }
+        }
+    }
+}
+
+void testMeshoptFallback() {
+    const GltfResult plain = loadModelFile("skin_morph.glb");
+    const GltfResult withFallback = loadModelFile("meshopt_fallback_skin_morph.glb");
+    CHECK(plain.ok && withFallback.ok);
+    if (!plain.ok || !withFallback.ok) {
+        std::fprintf(stderr, "fallback model: %s\n", withFallback.error.c_str());
+        return;
+    }
+    CHECK(withFallback.scene.skins.size() == plain.scene.skins.size());
+    CHECK(withFallback.scene.meshes[0].targets.size() == plain.scene.meshes[0].targets.size());
+    for (const float t : {0.0f, 1.0f, 1.7f}) {
+        CHECK(sameVertexSets(worldVertices(plain.scene, 0, t), worldVertices(withFallback.scene, 0, t), 0.002f));
+    }
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "nvj_meshopt_fallback_test";
+    std::error_code error;
+    std::filesystem::remove_all(dir, error);
+    std::filesystem::create_directories(dir, error);
+    std::filesystem::copy_file(kModels / "meshopt_fallback_skin_morph.glb", dir / "alone.glb", error);
+    const GltfResult alone = loadGltfFile(dir / "alone.glb");
+    if (meshoptAvailable()) {
+        CHECK(alone.ok);
+    } else {
+        CHECK(!alone.ok);
+    }
+    std::filesystem::remove_all(dir, error);
+}
+
+void testMeshoptCorruption() {
+    if (!meshoptAvailable()) {
+        return;
+    }
+    const Blob original = splitGlb("meshopt_exact_skin_morph.glb");
+    CHECK(loadBlob(original).ok);
+    size_t start = std::numeric_limits<size_t>::max();
+    size_t end = 0;
+    for (const json& view : original.doc["bufferViews"]) {
+        if (view.contains("extensions")) {
+            const json& ext = view["extensions"]["EXT_meshopt_compression"];
+            start = std::min(start, ext.value("byteOffset", static_cast<size_t>(0)));
+            end = std::max(end, ext.value("byteOffset", static_cast<size_t>(0)) + ext.value("byteLength", static_cast<size_t>(0)));
+        }
+    }
+    CHECK(start < end && end <= original.bin.size());
+    uint32_t state = 12345;
+    const auto next = [&]() {
+        state = state * 1664525u + 1013904223u;
+        return state >> 8;
+    };
+    int rejected = 0;
+    int accepted = 0;
+    for (int round = 0; round < 300; ++round) {
+        Blob damaged = original;
+        const int flips = 1 + static_cast<int>(next() % 4);
+        for (int f = 0; f < flips; ++f) {
+            damaged.bin[start + next() % (end - start)] ^= static_cast<uint8_t>(1u << (next() % 8));
+        }
+        const GltfResult result = loadBlob(damaged);
+        (result.ok ? accepted : rejected)++;
+        if (result.ok) {
+            std::string error;
+            CHECK(validateScene(result.scene, error));
+        }
+    }
+    CHECK(rejected + accepted == 300 && rejected > 0);
+
+    Blob truncated = original;
+    truncated.bin.resize(start + (end - start) / 2);
+    truncated.doc["buffers"][0]["byteLength"] = truncated.bin.size();
+    CHECK(!loadBlob(truncated).ok);
+
+    Blob badMode = original;
+    for (json& view : badMode.doc["bufferViews"]) {
+        if (view.contains("extensions")) {
+            view["extensions"]["EXT_meshopt_compression"]["mode"] = "SPIRAL";
+            break;
+        }
+    }
+    CHECK(!loadBlob(badMode).ok);
+    Blob badCount = original;
+    for (json& view : badCount.doc["bufferViews"]) {
+        if (view.contains("extensions")) {
+            view["extensions"]["EXT_meshopt_compression"]["count"] = 1;
+            break;
+        }
+    }
+    CHECK(!loadBlob(badCount).ok);
+    GltfLimits tiny;
+    tiny.maxFileBytes = 1024;
+    CHECK(!loadModelFile("meshopt_exact_skin_morph.glb", tiny).ok);
+}
+
+void testDracoModels() {
+    const std::filesystem::path path = kModels / "draco_skin_morph.glb";
+    if (!std::filesystem::exists(path)) {
+        return;
+    }
+    if (!dracoAvailable()) {
+        const GltfResult refused = loadModelFile("draco_skin_morph.glb");
+        CHECK(!refused.ok && refused.error.find("NYREXVJ_DRACO") != std::string::npos);
+        return;
+    }
+    for (const char* name : {"skin_arm.glb", "skin_morph.glb", "morph_cube.glb"}) {
+        const std::string packedName = std::string("draco_") + name;
+        const GltfResult plain = loadModelFile(name);
+        const GltfResult packed = loadModelFile(packedName);
+        CHECK(plain.ok && packed.ok);
+        if (!plain.ok || !packed.ok) {
+            std::fprintf(stderr, "%s: %s\n", packedName.c_str(), packed.error.c_str());
+            continue;
+        }
+        CHECK(sceneStats(packed.scene).triangles == sceneStats(plain.scene).triangles);
+        CHECK(packed.scene.meshes[0].positions.size() == plain.scene.meshes[0].positions.size());
+        CHECK(packed.scene.skins.size() == plain.scene.skins.size());
+        CHECK(packed.scene.meshes[0].targets.size() == plain.scene.meshes[0].targets.size());
+        for (const float t : {0.0f, 1.0f}) {
+            const int plainAnimation = plain.scene.animations.empty() ? -1 : 0;
+            const int packedAnimation = packed.scene.animations.empty() ? -1 : 0;
+            CHECK(sameVertexSets(worldVertices(plain.scene, plainAnimation, t), worldVertices(packed.scene, packedAnimation, t), 0.01f));
+        }
+    }
+    const Blob original = splitGlb("draco_skin_morph.glb");
+    size_t start = std::numeric_limits<size_t>::max();
+    size_t end = 0;
+    for (const json& primitive : original.doc["meshes"][0]["primitives"]) {
+        const int viewIndex = primitive["extensions"]["KHR_draco_mesh_compression"]["bufferView"].get<int>();
+        const json& view = original.doc["bufferViews"][static_cast<size_t>(viewIndex)];
+        start = view.value("byteOffset", static_cast<size_t>(0));
+        end = start + view.value("byteLength", static_cast<size_t>(0));
+    }
+    uint32_t state = 777;
+    const auto next = [&]() {
+        state = state * 1664525u + 1013904223u;
+        return state >> 8;
+    };
+    int rejected = 0;
+    for (int round = 0; round < 200; ++round) {
+        Blob damaged = original;
+        const int flips = 1 + static_cast<int>(next() % 4);
+        for (int f = 0; f < flips; ++f) {
+            damaged.bin[start + next() % (end - start)] ^= static_cast<uint8_t>(1u << (next() % 8));
+        }
+        const GltfResult result = loadBlob(damaged);
+        if (!result.ok) {
+            ++rejected;
+        } else {
+            std::string error;
+            CHECK(validateScene(result.scene, error));
+        }
+    }
+    CHECK(rejected > 0);
+    Blob truncated = original;
+    truncated.bin.resize(start + (end - start) / 3);
+    truncated.doc["buffers"][0]["byteLength"] = truncated.bin.size();
+    CHECK(!loadBlob(truncated).ok);
+}
+
 int main() {
+    testSkinning();
+    testReleasedGeometryStillSkins();
+    testSkinRejections();
+    testMorphTargets();
+    testSkinAndMorphTogether();
+    testBlendAndFileLights();
+    testMeshoptModels();
+    testMeshoptFallback();
+    testMeshoptCorruption();
+    testDracoModels();
     testMath();
     testProcedural();
     testSphere();

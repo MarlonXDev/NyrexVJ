@@ -1,5 +1,6 @@
 #include "scene3d/gltf.hpp"
 
+#include "scene3d/gltf_compression.hpp"
 #include "scene3d/image_decode.hpp"
 
 #include <nlohmann/json.hpp>
@@ -276,6 +277,9 @@ int typeComponents(const std::string& type) {
     if (type == "VEC4") {
         return 4;
     }
+    if (type == "MAT4") {
+        return 16;
+    }
     return 0;
 }
 
@@ -357,16 +361,24 @@ public:
         checkAsset();
         loadBuffers(std::move(glbBinary));
         budget_.check();
+        decodeCompressedViews();
+        budget_.check();
         loadMaterials();
         budget_.check();
         loadMeshes();
         budget_.check();
+        loadSkins();
         loadNodes();
         loadAnimations();
+        loadFileLightsAndCameras();
         budget_.check();
         std::string error;
         if (!validateScene(scene(), error)) {
             fail(error);
+        }
+        const SceneStats stats = sceneStats(scene());
+        if (stats.gpuBytes > limits_.maxGpuBytes) {
+            fail("the scene needs about " + std::to_string(stats.gpuBytes / (1024 * 1024)) + " MiB of graphics memory, the limit is " + std::to_string(limits_.maxGpuBytes / (1024 * 1024)) + " MiB");
         }
     }
 
@@ -376,6 +388,13 @@ private:
     void warn(const std::string& message) {
         if (result_.warnings.size() < 32) {
             result_.warnings.push_back(message);
+        }
+    }
+
+    void warnOnce(bool& flag, const std::string& message) {
+        if (!flag) {
+            flag = true;
+            warn(message);
         }
     }
 
@@ -419,9 +438,21 @@ private:
         if (version.empty() || version[0] != '2') {
             fail("only glTF 2.x is supported");
         }
-        static const char* const supported[] = {"KHR_mesh_quantization", "KHR_materials_unlit", "KHR_texture_transform", "KHR_materials_emissive_strength"};
+        static const char* const supported[] = {"KHR_mesh_quantization", "KHR_materials_unlit", "KHR_texture_transform", "KHR_materials_emissive_strength", "KHR_lights_punctual"};
         for (const json& entry : arrayOf(doc_, "extensionsRequired")) {
             const std::string name = entry.is_string() ? entry.get<std::string>() : std::string();
+            if (name == "EXT_meshopt_compression") {
+                if (!meshoptAvailable()) {
+                    fail("the file needs EXT_meshopt_compression, which this build of NyrexVJ was made without (CMake option NYREXVJ_MESHOPT)");
+                }
+                continue;
+            }
+            if (name == "KHR_draco_mesh_compression") {
+                if (!dracoAvailable()) {
+                    fail("the file needs KHR_draco_mesh_compression, which this build of NyrexVJ was made without (CMake option NYREXVJ_DRACO)");
+                }
+                continue;
+            }
             if (std::none_of(std::begin(supported), std::end(supported), [&](const char* s) { return name == s; })) {
                 fail("required extension not supported: " + name);
             }
@@ -443,6 +474,16 @@ private:
             }
             std::vector<uint8_t> data;
             const auto uri = b.find("uri");
+            bool fallback = false;
+            if (b.contains("extensions") && b["extensions"].is_object()) {
+                const auto fb = b["extensions"].find("EXT_meshopt_compression");
+                fallback = fb != b["extensions"].end() && fb->is_object() && fb->value("fallback", false);
+            }
+            fallbackBuffers_.push_back(fallback);
+            if (fallback && (uri == b.end() || meshoptAvailable())) {
+                buffers_.emplace_back();
+                continue;
+            }
             if (uri == b.end()) {
                 if (i != 0 || glbBinary.empty()) {
                     fail("buffer has no data");
@@ -464,6 +505,86 @@ private:
         }
     }
 
+    void decodeCompressedViews() {
+        const json& views = arrayOf(doc_, "bufferViews");
+        size_t total = 0;
+        for (size_t i = 0; i < views.size(); ++i) {
+            const json& v = views[i];
+            if (!v.is_object() || !v.contains("extensions") || !v["extensions"].is_object()) {
+                continue;
+            }
+            const auto extension = v["extensions"].find("EXT_meshopt_compression");
+            if (extension == v["extensions"].end()) {
+                continue;
+            }
+            if (!meshoptAvailable()) {
+                const int64_t plain = integerOf(v, "buffer", -1);
+                if (plain >= 0 && plain < static_cast<int64_t>(buffers_.size()) && plain < static_cast<int64_t>(fallbackBuffers_.size()) && fallbackBuffers_[static_cast<size_t>(plain)] && !buffers_[static_cast<size_t>(plain)].empty()) {
+                    continue;
+                }
+                fail("the file needs EXT_meshopt_compression, which this build of NyrexVJ was made without (CMake option NYREXVJ_MESHOPT)");
+            }
+            budget_.check();
+            if (!extension->is_object()) {
+                fail("EXT_meshopt_compression entry is invalid");
+            }
+            const int bufferIndex = indexOf(*extension, "buffer", buffers_.size(), "compressed buffer");
+            const std::vector<uint8_t>& buffer = buffers_[static_cast<size_t>(bufferIndex)];
+            const int64_t offset = integerOf(*extension, "byteOffset", 0);
+            const int64_t length = integerOf(*extension, "byteLength", -1);
+            const int64_t stride = integerOf(*extension, "byteStride", 0);
+            const int64_t count = integerOf(*extension, "count", -1);
+            const std::string mode = extension->value("mode", std::string());
+            const std::string filter = extension->value("filter", std::string("NONE"));
+            if (offset < 0 || length <= 0 || count <= 0 || stride <= 0 || stride > 256 || static_cast<uint64_t>(offset) + static_cast<uint64_t>(length) > buffer.size()) {
+                fail("EXT_meshopt_compression range is invalid");
+            }
+            const uint64_t decodedBytes = static_cast<uint64_t>(count) * static_cast<uint64_t>(stride);
+            if (decodedBytes > limits_.maxFileBytes || total + decodedBytes > limits_.maxFileBytes) {
+                fail("decompressed data exceeds the size limit");
+            }
+            if (integerOf(v, "byteLength", -1) != static_cast<int64_t>(decodedBytes)) {
+                fail("EXT_meshopt_compression count and stride do not match the bufferView length");
+            }
+            MeshoptMode decodeMode;
+            if (mode == "ATTRIBUTES") {
+                decodeMode = MeshoptMode::Attributes;
+                if (stride % 4 != 0) {
+                    fail("Meshopt attribute stride must be a multiple of 4");
+                }
+            } else if (mode == "TRIANGLES") {
+                decodeMode = MeshoptMode::Triangles;
+                if ((stride != 2 && stride != 4) || count % 3 != 0) {
+                    fail("Meshopt triangle data is invalid");
+                }
+            } else if (mode == "INDICES") {
+                decodeMode = MeshoptMode::Indices;
+                if (stride != 2 && stride != 4) {
+                    fail("Meshopt index data is invalid");
+                }
+            } else {
+                fail("unknown Meshopt mode");
+            }
+            MeshoptFilter decodeFilter = MeshoptFilter::None;
+            if (filter == "OCTAHEDRAL") {
+                decodeFilter = MeshoptFilter::Octahedral;
+            } else if (filter == "QUATERNION") {
+                decodeFilter = MeshoptFilter::Quaternion;
+            } else if (filter == "EXPONENTIAL") {
+                decodeFilter = MeshoptFilter::Exponential;
+            } else if (filter != "NONE") {
+                fail("unknown Meshopt filter");
+            }
+            std::vector<uint8_t> out(static_cast<size_t>(decodedBytes));
+            const std::string error = meshoptDecode(out.data(), static_cast<size_t>(count), static_cast<size_t>(stride), decodeMode, decodeFilter, buffer.data() + offset, static_cast<size_t>(length));
+            if (!error.empty()) {
+                fail(error);
+            }
+            total += static_cast<size_t>(decodedBytes);
+            decodedViews_[static_cast<int>(i)] = std::move(out);
+        }
+    }
+
     std::vector<uint8_t> loadUri(const std::string& uri, size_t limit) {
         if (uri.rfind("data:", 0) == 0) {
             const size_t comma = uri.find(',');
@@ -475,15 +596,46 @@ private:
         return readFileLimited(resolveExternal(baseDirectory_, uri), limit, budget_);
     }
 
-    AccessorView accessor(int index) {
-        const json& accessors = arrayOf(doc_, "accessors");
-        if (index < 0 || static_cast<size_t>(index) >= accessors.size() || !accessors[static_cast<size_t>(index)].is_object()) {
-            fail("accessor index out of range");
+    struct ViewRange {
+        const uint8_t* base = nullptr;
+        size_t size = 0;
+        int64_t stride = 0;
+    };
+
+    ViewRange viewRange(int viewIndex) {
+        const json& views = arrayOf(doc_, "bufferViews");
+        if (viewIndex < 0 || static_cast<size_t>(viewIndex) >= views.size()) {
+            fail("bufferView index out of range");
         }
-        const json& a = accessors[static_cast<size_t>(index)];
-        if (a.contains("sparse")) {
-            fail("sparse accessors are not supported");
+        const json& v = views[static_cast<size_t>(viewIndex)];
+        if (!v.is_object()) {
+            fail("bufferView entry is invalid");
         }
+        const int64_t viewLength = integerOf(v, "byteLength", -1);
+        const int64_t viewStride = integerOf(v, "byteStride", 0);
+        if (viewLength < 0 || viewStride < 0 || viewStride > 252) {
+            fail("bufferView range is invalid");
+        }
+        const auto decoded = decodedViews_.find(viewIndex);
+        if (decoded != decodedViews_.end()) {
+            if (static_cast<uint64_t>(viewLength) > decoded->second.size()) {
+                fail("a decompressed bufferView is shorter than declared");
+            }
+            return {decoded->second.data(), static_cast<size_t>(viewLength), viewStride};
+        }
+        const int bufferIndex = indexOf(v, "buffer", buffers_.size(), "buffer");
+        const std::vector<uint8_t>& buffer = buffers_[static_cast<size_t>(bufferIndex)];
+        const int64_t viewOffset = integerOf(v, "byteOffset", 0);
+        if (viewOffset < 0) {
+            fail("bufferView range is invalid");
+        }
+        if (static_cast<uint64_t>(viewOffset) + static_cast<uint64_t>(viewLength) > buffer.size()) {
+            fail("bufferView exceeds its buffer");
+        }
+        return {buffer.data() + viewOffset, static_cast<size_t>(viewLength), viewStride};
+    }
+
+    AccessorView accessorOf(const json& a) {
         AccessorView view;
         const int64_t count = integerOf(a, "count", -1);
         if (count <= 0 || static_cast<uint64_t>(count) > kMaxAccessorCount) {
@@ -503,35 +655,109 @@ private:
         }
         const json& views = arrayOf(doc_, "bufferViews");
         const int viewIndex = indexOf(a, "bufferView", views.size(), "bufferView");
-        const json& v = views[static_cast<size_t>(viewIndex)];
-        if (!v.is_object()) {
-            fail("bufferView entry is invalid");
-        }
-        const int bufferIndex = indexOf(v, "buffer", buffers_.size(), "buffer");
-        const std::vector<uint8_t>& buffer = buffers_[static_cast<size_t>(bufferIndex)];
-        const int64_t viewOffset = integerOf(v, "byteOffset", 0);
-        const int64_t viewLength = integerOf(v, "byteLength", -1);
-        const int64_t viewStride = integerOf(v, "byteStride", 0);
+        const ViewRange range = viewRange(viewIndex);
         const int64_t accOffset = integerOf(a, "byteOffset", 0);
-        if (viewOffset < 0 || viewLength < 0 || viewStride < 0 || accOffset < 0 || viewStride > 252) {
+        if (accOffset < 0) {
             fail("bufferView range is invalid");
         }
-        if (static_cast<uint64_t>(viewOffset) + static_cast<uint64_t>(viewLength) > buffer.size()) {
-            fail("bufferView exceeds its buffer");
-        }
-        view.stride = viewStride == 0 ? view.elementSize : static_cast<size_t>(viewStride);
+        view.stride = range.stride == 0 ? view.elementSize : static_cast<size_t>(range.stride);
         if (view.stride < view.elementSize) {
             fail("byteStride is smaller than the element");
         }
         const uint64_t end = static_cast<uint64_t>(accOffset) + (static_cast<uint64_t>(count) - 1) * view.stride + view.elementSize;
-        if (end > static_cast<uint64_t>(viewLength)) {
+        if (end > range.size) {
             fail("accessor exceeds its bufferView");
         }
-        view.base = buffer.data() + viewOffset + accOffset;
+        view.base = range.base + accOffset;
         return view;
     }
 
+    AccessorView accessor(int index) {
+        const json& accessors = arrayOf(doc_, "accessors");
+        if (index < 0 || static_cast<size_t>(index) >= accessors.size() || !accessors[static_cast<size_t>(index)].is_object()) {
+            fail("accessor index out of range");
+        }
+        const json& a = accessors[static_cast<size_t>(index)];
+        if (a.contains("sparse")) {
+            fail("sparse accessors are only supported for attributes and animation data");
+        }
+        return accessorOf(a);
+    }
+
+    std::vector<float> readSparseFloats(const json& a, int expectedComponents) {
+        const int64_t count = integerOf(a, "count", -1);
+        if (count <= 0 || static_cast<uint64_t>(count) > kMaxAccessorCount) {
+            fail("accessor count is invalid");
+        }
+        const int componentType = static_cast<int>(integerOf(a, "componentType", 0));
+        const int compSize = componentSize(componentType);
+        const int components = typeComponents(a.value("type", std::string()));
+        if (compSize == 0 || components != expectedComponents) {
+            fail("accessor has an unexpected element type");
+        }
+        const bool normalized = a.value("normalized", false);
+        std::vector<float> out(static_cast<size_t>(count) * static_cast<size_t>(components), 0.0f);
+        if (a.contains("bufferView")) {
+            json dense = a;
+            dense.erase("sparse");
+            const AccessorView base = accessorOf(dense);
+            for (size_t i = 0; i < base.count; ++i) {
+                for (int c = 0; c < components; ++c) {
+                    out[i * static_cast<size_t>(components) + static_cast<size_t>(c)] = convertComponent(base.base + i * base.stride + static_cast<size_t>(c * compSize), componentType, normalized);
+                }
+            }
+        }
+        const json& sparse = a["sparse"];
+        if (!sparse.is_object() || !sparse.contains("indices") || !sparse.contains("values") || !sparse["indices"].is_object() || !sparse["values"].is_object()) {
+            fail("sparse accessor is invalid");
+        }
+        const int64_t sparseCount = integerOf(sparse, "count", -1);
+        if (sparseCount <= 0 || sparseCount > count) {
+            fail("sparse accessor count is invalid");
+        }
+        const json& indices = sparse["indices"];
+        const json& values = sparse["values"];
+        const int indexType = static_cast<int>(integerOf(indices, "componentType", 0));
+        if (indexType != 5121 && indexType != 5123 && indexType != 5125) {
+            fail("sparse accessor index type is invalid");
+        }
+        const size_t indexSize = static_cast<size_t>(componentSize(indexType));
+        const ViewRange indexView = viewRange(static_cast<int>(integerOf(indices, "bufferView", -1)));
+        const ViewRange valueView = viewRange(static_cast<int>(integerOf(values, "bufferView", -1)));
+        const int64_t indexOffset = integerOf(indices, "byteOffset", 0);
+        const int64_t valueOffset = integerOf(values, "byteOffset", 0);
+        const size_t elementSize = static_cast<size_t>(compSize) * static_cast<size_t>(components);
+        if (indexOffset < 0 || valueOffset < 0 || static_cast<uint64_t>(indexOffset) + static_cast<uint64_t>(sparseCount) * indexSize > indexView.size || static_cast<uint64_t>(valueOffset) + static_cast<uint64_t>(sparseCount) * elementSize > valueView.size) {
+            fail("sparse accessor exceeds its bufferView");
+        }
+        for (int64_t i = 0; i < sparseCount; ++i) {
+            const uint8_t* p = indexView.base + indexOffset + static_cast<size_t>(i) * indexSize;
+            uint32_t target = 0;
+            if (indexType == 5121) {
+                target = *p;
+            } else if (indexType == 5123) {
+                uint16_t v;
+                std::memcpy(&v, p, 2);
+                target = v;
+            } else {
+                target = readU32(p);
+            }
+            if (target >= static_cast<uint64_t>(count)) {
+                fail("sparse accessor index out of range");
+            }
+            const uint8_t* element = valueView.base + valueOffset + static_cast<size_t>(i) * elementSize;
+            for (int c = 0; c < components; ++c) {
+                out[static_cast<size_t>(target) * static_cast<size_t>(components) + static_cast<size_t>(c)] = convertComponent(element + c * compSize, componentType, normalized);
+            }
+        }
+        return out;
+    }
+
     std::vector<float> readFloats(int index, int expectedComponents) {
+        const json& accessorList = arrayOf(doc_, "accessors");
+        if (index >= 0 && static_cast<size_t>(index) < accessorList.size() && accessorList[static_cast<size_t>(index)].is_object() && accessorList[static_cast<size_t>(index)].contains("sparse")) {
+            return readSparseFloats(accessorList[static_cast<size_t>(index)], expectedComponents);
+        }
         const AccessorView view = accessor(index);
         if (view.components != expectedComponents) {
             fail("accessor has an unexpected element type");
@@ -653,6 +879,8 @@ private:
                 if (alphaMode == "MASK") {
                     material.alphaMode = AlphaMode::Mask;
                     material.alphaCutoff = std::clamp(finiteOr(m.value("alphaCutoff", json(0.5)), 0.5f), 0.0f, 1.0f);
+                } else if (alphaMode == "BLEND") {
+                    material.alphaMode = AlphaMode::Blend;
                 } else if (alphaMode != "OPAQUE") {
                     warn("alpha mode " + alphaMode + " is drawn opaque");
                 }
@@ -717,6 +945,14 @@ private:
             if (!mesh.is_object()) {
                 fail("mesh entry is invalid");
             }
+            std::vector<float> defaultWeights;
+            for (const json& w : arrayOf(mesh, "weights")) {
+                if (defaultWeights.size() >= limits_.maxMorphTargets) {
+                    break;
+                }
+                defaultWeights.push_back(finiteOr(w, 0.0f));
+            }
+            meshWeights_.push_back(std::move(defaultWeights));
             for (const json& primitive : arrayOf(mesh, "primitives")) {
                 if (!primitive.is_object()) {
                     fail("primitive entry is invalid");
@@ -734,6 +970,138 @@ private:
         }
     }
 
+    struct PrimitiveData {
+        std::vector<float> positions;
+        std::vector<float> normals;
+        std::vector<float> uvs;
+        std::vector<float> colors;
+        int colorComponents = 0;
+        std::vector<float> joints;
+        std::vector<float> weights;
+        std::vector<uint32_t> indices;
+        bool haveIndices = false;
+    };
+
+    bool accessorHasView(int index) {
+        const json& accessors = arrayOf(doc_, "accessors");
+        return index >= 0 && static_cast<size_t>(index) < accessors.size() && accessors[static_cast<size_t>(index)].is_object() && accessors[static_cast<size_t>(index)].contains("bufferView");
+    }
+
+    void readPlainAttributes(const json& primitive, const json& attributes, PrimitiveData& data) {
+        data.positions = readFloats(static_cast<int>(integerOf(attributes, "POSITION", -1)), 3);
+        const size_t vertexCount = data.positions.size() / 3;
+        if (attributes.contains("NORMAL")) {
+            std::vector<float> normals = readFloats(static_cast<int>(integerOf(attributes, "NORMAL", -1)), 3);
+            if (normals.size() == data.positions.size()) {
+                data.normals = std::move(normals);
+            }
+        }
+        if (attributes.contains("TEXCOORD_0")) {
+            std::vector<float> uvs = readFloats(static_cast<int>(integerOf(attributes, "TEXCOORD_0", -1)), 2);
+            if (uvs.size() == vertexCount * 2) {
+                data.uvs = std::move(uvs);
+            }
+        }
+        if (attributes.contains("COLOR_0")) {
+            const int colorIndex = static_cast<int>(integerOf(attributes, "COLOR_0", -1));
+            const int components = accessor(colorIndex).components;
+            if (components == 3 || components == 4) {
+                std::vector<float> colors = readFloats(colorIndex, components);
+                if (colors.size() == vertexCount * static_cast<size_t>(components)) {
+                    data.colors = std::move(colors);
+                    data.colorComponents = components;
+                }
+            }
+        }
+        if (attributes.contains("JOINTS_0") && attributes.contains("WEIGHTS_0")) {
+            const int jointIndex = static_cast<int>(integerOf(attributes, "JOINTS_0", -1));
+            const AccessorView jointView = accessor(jointIndex);
+            if (jointView.componentType != 5121 && jointView.componentType != 5123) {
+                fail("JOINTS_0 must use unsigned byte or unsigned short values");
+            }
+            std::vector<float> joints = readFloats(jointIndex, 4);
+            std::vector<float> weights = readFloats(static_cast<int>(integerOf(attributes, "WEIGHTS_0", -1)), 4);
+            if (joints.size() == vertexCount * 4 && weights.size() == vertexCount * 4) {
+                data.joints = std::move(joints);
+                data.weights = std::move(weights);
+            } else {
+                warn("the skin attributes of a primitive do not match its vertex count, skinning is ignored");
+            }
+        } else if (attributes.contains("JOINTS_0") != attributes.contains("WEIGHTS_0")) {
+            warn("a primitive has only one of JOINTS_0 and WEIGHTS_0, skinning is ignored");
+        }
+        if (attributes.contains("JOINTS_1") || attributes.contains("WEIGHTS_1")) {
+            warnOnce(skinInfluenceWarned_, "more than four bone influences per vertex are not supported, only JOINTS_0 and WEIGHTS_0 are used");
+        }
+        if (primitive.contains("indices")) {
+            data.indices = readIndices(static_cast<int>(integerOf(primitive, "indices", -1)));
+            data.haveIndices = true;
+        }
+    }
+
+    void readDracoAttributes(const json& dracoExtension, const json& attributes, size_t expectedCount, PrimitiveData& data) {
+        if (!dracoExtension.is_object() || !dracoExtension.contains("attributes") || !dracoExtension["attributes"].is_object()) {
+            fail("KHR_draco_mesh_compression entry is invalid");
+        }
+        const json& ids = dracoExtension["attributes"];
+        static const char* const names[] = {"POSITION", "NORMAL", "TEXCOORD_0", "COLOR_0", "JOINTS_0", "WEIGHTS_0"};
+        std::vector<int> wanted;
+        std::vector<std::string> wantedNames;
+        for (const char* name : names) {
+            if (ids.contains(name) && attributes.contains(name)) {
+                const int64_t id = integerOf(ids, name, -1);
+                if (id < 0 || id > 0xFFFF) {
+                    fail("a Draco attribute id is invalid");
+                }
+                wanted.push_back(static_cast<int>(id));
+                wantedNames.emplace_back(name);
+            }
+        }
+        if (wantedNames.empty() || wantedNames.front() != "POSITION") {
+            fail("a Draco primitive without POSITION");
+        }
+        const ViewRange range = viewRange(static_cast<int>(integerOf(dracoExtension, "bufferView", -1)));
+        if (range.size == 0) {
+            fail("the Draco bufferView is empty");
+        }
+        DracoMeshData mesh;
+        const size_t maxPoints = limits_.maxVertices > vertexTotal_ ? limits_.maxVertices - vertexTotal_ : 0;
+        const size_t maxIndices = limits_.maxIndices > indexTotal_ ? limits_.maxIndices - indexTotal_ : 0;
+        const std::string error = dracoDecode(range.base, range.size, wanted, maxPoints, maxIndices, mesh);
+        if (!error.empty()) {
+            fail(error);
+        }
+        if (mesh.points != expectedCount) {
+            fail("the Draco mesh has a different vertex count than the accessors declare");
+        }
+        data.indices = std::move(mesh.indices);
+        data.haveIndices = true;
+        for (size_t i = 0; i < wantedNames.size(); ++i) {
+            DracoAttributeData& attribute = mesh.attributes[i];
+            const std::string& name = wantedNames[i];
+            if (name == "POSITION" && attribute.components == 3) {
+                data.positions = std::move(attribute.values);
+            } else if (name == "NORMAL" && attribute.components == 3) {
+                data.normals = std::move(attribute.values);
+            } else if (name == "TEXCOORD_0" && attribute.components == 2) {
+                data.uvs = std::move(attribute.values);
+            } else if (name == "COLOR_0" && (attribute.components == 3 || attribute.components == 4)) {
+                data.colors = std::move(attribute.values);
+                data.colorComponents = attribute.components;
+            } else if (name == "JOINTS_0" && attribute.components == 4) {
+                data.joints = std::move(attribute.values);
+            } else if (name == "WEIGHTS_0" && attribute.components == 4) {
+                data.weights = std::move(attribute.values);
+            } else {
+                fail("a Draco attribute has an unexpected size");
+            }
+        }
+        if (data.joints.empty() != data.weights.empty()) {
+            data.joints.clear();
+            data.weights.clear();
+        }
+    }
+
     int buildPrimitive(const json& primitive) {
         const int64_t mode = integerOf(primitive, "mode", 4);
         if (mode != 4 && mode != 5 && mode != 6) {
@@ -744,53 +1112,94 @@ private:
         if (attributes == primitive.end() || !attributes->is_object() || !attributes->contains("POSITION")) {
             fail("primitive without POSITION");
         }
+        PrimitiveData data;
+        const int positionAccessor = static_cast<int>(integerOf(*attributes, "POSITION", -1));
+        const json* draco = nullptr;
+        if (primitive.contains("extensions") && primitive["extensions"].is_object()) {
+            const auto it = primitive["extensions"].find("KHR_draco_mesh_compression");
+            if (it != primitive["extensions"].end()) {
+                draco = &*it;
+            }
+        }
+        if (draco != nullptr && (dracoAvailable() || !accessorHasView(positionAccessor))) {
+            if (!dracoAvailable()) {
+                fail("the file uses KHR_draco_mesh_compression, which this build of NyrexVJ was made without (CMake option NYREXVJ_DRACO)");
+            }
+            if (mode != 4) {
+                warn("a Draco primitive with a strip or fan mode is skipped");
+                return -1;
+            }
+            const json& accessors = arrayOf(doc_, "accessors");
+            if (positionAccessor < 0 || static_cast<size_t>(positionAccessor) >= accessors.size() || !accessors[static_cast<size_t>(positionAccessor)].is_object()) {
+                fail("accessor index out of range");
+            }
+            const int64_t declared = integerOf(accessors[static_cast<size_t>(positionAccessor)], "count", -1);
+            if (declared <= 0 || static_cast<uint64_t>(declared) > kMaxAccessorCount) {
+                fail("accessor count is invalid");
+            }
+            readDracoAttributes(*draco, *attributes, static_cast<size_t>(declared), data);
+        } else {
+            readPlainAttributes(primitive, *attributes, data);
+        }
         SceneMesh mesh;
-        const std::vector<float> positions = readFloats(static_cast<int>(integerOf(*attributes, "POSITION", -1)), 3);
-        const size_t vertexCount = positions.size() / 3;
+        const size_t vertexCount = data.positions.size() / 3;
         vertexTotal_ += vertexCount;
         if (vertexTotal_ > limits_.maxVertices) {
             fail("vertex limit exceeded");
         }
         mesh.positions.resize(vertexCount);
         for (size_t i = 0; i < vertexCount; ++i) {
-            mesh.positions[i] = {positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]};
+            mesh.positions[i] = {data.positions[i * 3], data.positions[i * 3 + 1], data.positions[i * 3 + 2]};
         }
         bool haveNormals = false;
-        if (attributes->contains("NORMAL")) {
-            const std::vector<float> normals = readFloats(static_cast<int>(integerOf(*attributes, "NORMAL", -1)), 3);
-            if (normals.size() == positions.size()) {
-                mesh.normals.resize(vertexCount);
-                for (size_t i = 0; i < vertexCount; ++i) {
-                    mesh.normals[i] = normalize(Vec3{normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]});
+        if (data.normals.size() == data.positions.size() && !data.normals.empty()) {
+            mesh.normals.resize(vertexCount);
+            for (size_t i = 0; i < vertexCount; ++i) {
+                mesh.normals[i] = normalize(Vec3{data.normals[i * 3], data.normals[i * 3 + 1], data.normals[i * 3 + 2]});
+            }
+            haveNormals = true;
+        }
+        if (data.uvs.size() == vertexCount * 2) {
+            mesh.uvs = std::move(data.uvs);
+        }
+        if (data.colorComponents != 0 && data.colors.size() == vertexCount * static_cast<size_t>(data.colorComponents)) {
+            const size_t components = static_cast<size_t>(data.colorComponents);
+            mesh.colors.resize(vertexCount * 4);
+            for (size_t i = 0; i < vertexCount; ++i) {
+                for (size_t c = 0; c < 3; ++c) {
+                    mesh.colors[i * 4 + c] = data.colors[i * components + c];
                 }
-                haveNormals = true;
+                mesh.colors[i * 4 + 3] = components == 4 ? data.colors[i * 4 + 3] : 1.0f;
             }
         }
-        if (attributes->contains("TEXCOORD_0")) {
-            std::vector<float> uvs = readFloats(static_cast<int>(integerOf(*attributes, "TEXCOORD_0", -1)), 2);
-            if (uvs.size() == vertexCount * 2) {
-                mesh.uvs = std::move(uvs);
-            }
-        }
-        if (attributes->contains("COLOR_0")) {
-            const int colorIndex = static_cast<int>(integerOf(*attributes, "COLOR_0", -1));
-            const int components = accessor(colorIndex).components;
-            if (components == 3 || components == 4) {
-                const std::vector<float> colors = readFloats(colorIndex, components);
-                if (colors.size() == vertexCount * static_cast<size_t>(components)) {
-                    mesh.colors.resize(vertexCount * 4);
-                    for (size_t i = 0; i < vertexCount; ++i) {
-                        for (int c = 0; c < 3; ++c) {
-                            mesh.colors[i * 4 + static_cast<size_t>(c)] = colors[i * static_cast<size_t>(components) + static_cast<size_t>(c)];
-                        }
-                        mesh.colors[i * 4 + 3] = components == 4 ? colors[i * 4 + 3] : 1.0f;
+        if (!data.joints.empty()) {
+            mesh.joints.resize(vertexCount * 4);
+            mesh.weights.resize(vertexCount * 4);
+            for (size_t i = 0; i < vertexCount; ++i) {
+                float sum = 0.0f;
+                for (size_t k = 0; k < 4; ++k) {
+                    const float j = data.joints[i * 4 + k];
+                    const float w = data.weights[i * 4 + k];
+                    if (!(j >= 0.0f && j <= 65535.0f) || !std::isfinite(w) || w < 0.0f) {
+                        fail("a skin attribute is out of range");
                     }
+                    mesh.joints[i * 4 + k] = static_cast<uint16_t>(j);
+                    mesh.weights[i * 4 + k] = w;
+                    sum += w;
+                }
+                if (sum > 1e-6f) {
+                    for (size_t k = 0; k < 4; ++k) {
+                        mesh.weights[i * 4 + k] /= sum;
+                    }
+                } else {
+                    mesh.weights[i * 4] = 1.0f;
+                    mesh.joints[i * 4] = 0;
                 }
             }
         }
         std::vector<uint32_t> source;
-        if (primitive.contains("indices")) {
-            source = readIndices(static_cast<int>(integerOf(primitive, "indices", -1)));
+        if (data.haveIndices) {
+            source = std::move(data.indices);
         } else {
             source.resize(vertexCount);
             for (size_t i = 0; i < vertexCount; ++i) {
@@ -834,6 +1243,7 @@ private:
         if (!haveNormals) {
             smoothNormals(mesh);
         }
+        loadMorphTargets(primitive, vertexCount, mesh);
         const int64_t material = integerOf(primitive, "material", -1);
         if (material >= static_cast<int64_t>(scene().materials.size())) {
             fail("material index out of range");
@@ -841,6 +1251,197 @@ private:
         mesh.material = static_cast<int>(material);
         scene().meshes.push_back(std::move(mesh));
         return static_cast<int>(scene().meshes.size()) - 1;
+    }
+
+    void loadMorphTargets(const json& primitive, size_t vertexCount, SceneMesh& mesh) {
+        const json& targets = arrayOf(primitive, "targets");
+        if (targets.empty()) {
+            return;
+        }
+        if (targets.size() > limits_.maxMorphTargets) {
+            fail("a primitive has " + std::to_string(targets.size()) + " morph targets, the limit is " + std::to_string(limits_.maxMorphTargets));
+        }
+        for (const json& target : targets) {
+            if (!target.is_object()) {
+                fail("morph target entry is invalid");
+            }
+            budget_.check();
+            SceneMorphTarget out;
+            if (target.contains("POSITION")) {
+                const std::vector<float> values = readFloats(static_cast<int>(integerOf(target, "POSITION", -1)), 3);
+                if (values.size() != vertexCount * 3) {
+                    fail("a morph target has a different vertex count than its primitive");
+                }
+                out.positions.resize(vertexCount);
+                for (size_t i = 0; i < vertexCount; ++i) {
+                    out.positions[i] = {values[i * 3], values[i * 3 + 1], values[i * 3 + 2]};
+                }
+            }
+            if (target.contains("NORMAL")) {
+                const std::vector<float> values = readFloats(static_cast<int>(integerOf(target, "NORMAL", -1)), 3);
+                if (values.size() != vertexCount * 3) {
+                    fail("a morph target has a different vertex count than its primitive");
+                }
+                out.normals.resize(vertexCount);
+                for (size_t i = 0; i < vertexCount; ++i) {
+                    out.normals[i] = {values[i * 3], values[i * 3 + 1], values[i * 3 + 2]};
+                }
+            }
+            morphBytes_ += vertexCount * 2 * sizeof(Vec3);
+            if (morphBytes_ > limits_.maxMorphBytes) {
+                fail("the morph targets need more than " + std::to_string(limits_.maxMorphBytes / (1024 * 1024)) + " MiB");
+            }
+            mesh.targets.push_back(std::move(out));
+        }
+    }
+
+    void loadSkins() {
+        const json& skins = arrayOf(doc_, "skins");
+        if (skins.size() > limits_.maxSkins) {
+            fail("the file has " + std::to_string(skins.size()) + " skins, the limit is " + std::to_string(limits_.maxSkins));
+        }
+        const size_t nodeCount = arrayOf(doc_, "nodes").size();
+        for (const json& entry : skins) {
+            budget_.check();
+            if (!entry.is_object()) {
+                fail("skin entry is invalid");
+            }
+            SceneSkin skin;
+            skin.name = entry.value("name", std::string());
+            const json& joints = arrayOf(entry, "joints");
+            if (joints.empty()) {
+                fail("a skin has no joints");
+            }
+            if (joints.size() > limits_.maxBones) {
+                fail("a skin has " + std::to_string(joints.size()) + " joints, the limit is " + std::to_string(limits_.maxBones));
+            }
+            for (const json& joint : joints) {
+                if (!joint.is_number_integer() || joint.get<int64_t>() < 0 || static_cast<size_t>(joint.get<int64_t>()) >= nodeCount) {
+                    fail("a skin joint is out of range");
+                }
+                skin.joints.push_back(static_cast<int>(joint.get<int64_t>()));
+            }
+            skin.inverseBind.assign(skin.joints.size(), Mat4{});
+            if (entry.contains("inverseBindMatrices")) {
+                const std::vector<float> values = readFloats(static_cast<int>(integerOf(entry, "inverseBindMatrices", -1)), 16);
+                if (values.size() < skin.joints.size() * 16) {
+                    fail("a skin has too few inverse bind matrices");
+                }
+                for (size_t k = 0; k < skin.joints.size(); ++k) {
+                    for (size_t c = 0; c < 16; ++c) {
+                        skin.inverseBind[k].m[c] = values[k * 16 + c];
+                    }
+                }
+            }
+            scene().skins.push_back(std::move(skin));
+        }
+    }
+
+    void loadFileLightsAndCameras() {
+        const json* lightList = nullptr;
+        if (doc_.contains("extensions") && doc_["extensions"].is_object()) {
+            const auto it = doc_["extensions"].find("KHR_lights_punctual");
+            if (it != doc_["extensions"].end() && it->is_object()) {
+                const auto lights = it->find("lights");
+                if (lights != it->end() && lights->is_array()) {
+                    lightList = &*lights;
+                }
+            }
+        }
+        const json& cameraList = arrayOf(doc_, "cameras");
+        if (lightList == nullptr && cameraList.empty()) {
+            return;
+        }
+        const json& nodes = arrayOf(doc_, "nodes");
+        std::vector<Mat4> world(scene().nodes.size());
+        std::vector<std::pair<int, int>> stack;
+        for (auto root = scene().roots.rbegin(); root != scene().roots.rend(); ++root) {
+            stack.emplace_back(*root, 0);
+        }
+        std::vector<char> visited(scene().nodes.size(), 0);
+        bool spotWarned = false;
+        while (!stack.empty()) {
+            const auto [index, depth] = stack.back();
+            stack.pop_back();
+            if (depth > kSceneMaxDepth || visited[static_cast<size_t>(index)]) {
+                continue;
+            }
+            visited[static_cast<size_t>(index)] = 1;
+            const SceneNode& node = scene().nodes[static_cast<size_t>(index)];
+            Mat4 local = composeTrs(node.translation, node.rotation, node.scale);
+            world[static_cast<size_t>(index)] = depth == 0 ? local : world[static_cast<size_t>(parentOf_[static_cast<size_t>(index)])] * local;
+            const json& source = nodes[static_cast<size_t>(index)];
+            if (lightList != nullptr && source.contains("extensions") && source["extensions"].is_object()) {
+                const auto ext = source["extensions"].find("KHR_lights_punctual");
+                if (ext != source["extensions"].end() && ext->is_object() && ext->contains("light") && scene().fileLights.size() < kSceneMaxFileLights) {
+                    const int64_t lightIndex = integerOf(*ext, "light", -1);
+                    if (lightIndex >= 0 && static_cast<size_t>(lightIndex) < lightList->size() && (*lightList)[static_cast<size_t>(lightIndex)].is_object()) {
+                        const json& l = (*lightList)[static_cast<size_t>(lightIndex)];
+                        const std::string type = l.value("type", std::string());
+                        SceneLight light;
+                        const Mat4& w = world[static_cast<size_t>(index)];
+                        if (type == "directional") {
+                            light.point = false;
+                            light.position = normalize(Vec3{w.m[8], w.m[9], w.m[10]});
+                        } else if (type == "point" || type == "spot") {
+                            if (type == "spot" && !spotWarned) {
+                                warn("a spot light from the file is stored as a point light");
+                                spotWarned = true;
+                            }
+                            light.point = true;
+                            light.position = {w.m[12], w.m[13], w.m[14]};
+                        } else {
+                            warn("a light of type '" + type + "' is skipped");
+                            light.intensity = -1.0f;
+                        }
+                        if (light.intensity >= 0.0f) {
+                            const auto color = l.find("color");
+                            if (color != l.end() && color->is_array() && color->size() == 3) {
+                                for (size_t c = 0; c < 3; ++c) {
+                                    light.color[c] = std::clamp(finiteOr((*color)[c], 1.0f), 0.0f, 1.0f);
+                                }
+                            }
+                            light.intensity = std::clamp(finiteOr(l.value("intensity", json(1.0)), 1.0f), 0.0f, 100000.0f);
+                            scene().fileLights.push_back(std::move(light));
+                        }
+                    }
+                }
+            }
+            if (!cameraList.empty() && source.contains("camera") && scene().fileCameras.size() < kSceneMaxFileCameras) {
+                const int64_t cameraIndex = integerOf(source, "camera", -1);
+                if (cameraIndex >= 0 && static_cast<size_t>(cameraIndex) < cameraList.size() && cameraList[static_cast<size_t>(cameraIndex)].is_object()) {
+                    const json& c = cameraList[static_cast<size_t>(cameraIndex)];
+                    SceneFileCamera camera;
+                    camera.name = c.value("name", std::string());
+                    camera.world = world[static_cast<size_t>(index)];
+                    const std::string type = c.value("type", std::string());
+                    bool valid = false;
+                    if (type == "perspective" && c.contains("perspective") && c["perspective"].is_object()) {
+                        const json& p = c["perspective"];
+                        camera.yfov = finiteOr(p.value("yfov", json(0.8)), 0.8f);
+                        camera.znear = finiteOr(p.value("znear", json(0.1)), 0.1f);
+                        camera.zfar = finiteOr(p.value("zfar", json(1000.0)), 1000.0f);
+                        valid = camera.yfov > 0.0f && camera.yfov < 3.1f && camera.znear > 0.0f;
+                    } else if (type == "orthographic" && c.contains("orthographic") && c["orthographic"].is_object()) {
+                        const json& o = c["orthographic"];
+                        camera.orthographic = true;
+                        camera.xmag = finiteOr(o.value("xmag", json(1.0)), 1.0f);
+                        camera.ymag = finiteOr(o.value("ymag", json(1.0)), 1.0f);
+                        camera.znear = finiteOr(o.value("znear", json(0.1)), 0.1f);
+                        camera.zfar = finiteOr(o.value("zfar", json(100.0)), 100.0f);
+                        valid = camera.znear >= 0.0f && camera.zfar > camera.znear;
+                    }
+                    if (valid) {
+                        scene().fileCameras.push_back(std::move(camera));
+                    } else {
+                        warn("a camera from the file is invalid and was skipped");
+                    }
+                }
+            }
+            for (auto child = node.children.rbegin(); child != node.children.rend(); ++child) {
+                stack.emplace_back(*child, depth + 1);
+            }
+        }
     }
 
     static Quat quatFromMatrix(float r00, float r01, float r02, float r10, float r11, float r12, float r20, float r21, float r22) {
@@ -900,7 +1501,6 @@ private:
             fail("too many nodes");
         }
         std::vector<int> parent(nodes.size(), -1);
-        bool skinWarned = false;
         for (size_t i = 0; i < nodes.size(); ++i) {
             const json& n = nodes[i];
             if (!n.is_object()) {
@@ -921,10 +1521,19 @@ private:
             if (n.contains("mesh")) {
                 const int meshIndex = indexOf(n, "mesh", meshPrimitives_.size(), "mesh");
                 node.meshes = meshPrimitives_[static_cast<size_t>(meshIndex)];
+                node.weights = meshWeights_[static_cast<size_t>(meshIndex)];
             }
-            if (n.contains("skin") && !skinWarned) {
-                warn("skinning is not supported, meshes are drawn in bind pose");
-                skinWarned = true;
+            if (n.contains("weights") && n["weights"].is_array()) {
+                node.weights.clear();
+                for (const json& w : n["weights"]) {
+                    if (node.weights.size() >= limits_.maxMorphTargets) {
+                        break;
+                    }
+                    node.weights.push_back(finiteOr(w, 0.0f));
+                }
+            }
+            if (n.contains("skin")) {
+                node.skin = indexOf(n, "skin", scene().skins.size(), "skin");
             }
             for (const json& child : arrayOf(n, "children")) {
                 if (!child.is_number_integer()) {
@@ -968,6 +1577,7 @@ private:
         if (scene().roots.empty()) {
             fail("the scene has no root nodes");
         }
+        parentOf_ = std::move(parent);
     }
 
     bool readVec(const json& object, const char* key, size_t count, float* out) {
@@ -1017,6 +1627,8 @@ private:
                     animPath = AnimPath::Rotation;
                 } else if (path == "scale") {
                     animPath = AnimPath::Scale;
+                } else if (path == "weights") {
+                    animPath = AnimPath::Weights;
                 } else {
                     warn("animation target '" + path + "' is not supported");
                     continue;
@@ -1033,8 +1645,24 @@ private:
                 const std::string interpolation = sampler.value("interpolation", std::string("LINEAR"));
                 channel.interp = interpolation == "STEP" ? AnimInterp::Step : AnimInterp::Linear;
                 channel.times = readFloats(static_cast<int>(integerOf(sampler, "input", -1)), 1);
-                const int per = animPath == AnimPath::Rotation ? 4 : 3;
-                std::vector<float> values = readFloats(static_cast<int>(integerOf(sampler, "output", -1)), per);
+                if (channel.times.empty()) {
+                    fail("animation without keys");
+                }
+                int per = animPath == AnimPath::Rotation ? 4 : 3;
+                std::vector<float> values;
+                if (animPath == AnimPath::Weights) {
+                    values = readFloats(static_cast<int>(integerOf(sampler, "output", -1)), 1);
+                    const size_t stride = interpolation == "CUBICSPLINE" ? 3 : 1;
+                    if (values.empty() || values.size() % (channel.times.size() * stride) != 0) {
+                        fail("animation output size mismatch");
+                    }
+                    per = static_cast<int>(values.size() / (channel.times.size() * stride));
+                    if (per < 1 || static_cast<size_t>(per) > limits_.maxMorphTargets) {
+                        fail("a weight animation has " + std::to_string(per) + " targets, the limit is " + std::to_string(limits_.maxMorphTargets));
+                    }
+                } else {
+                    values = readFloats(static_cast<int>(integerOf(sampler, "output", -1)), per);
+                }
                 if (interpolation == "CUBICSPLINE") {
                     warn("cubic spline animation is approximated with linear interpolation");
                     if (values.size() != channel.times.size() * 3 * static_cast<size_t>(per)) {
@@ -1072,7 +1700,13 @@ private:
     GltfResult& result_;
     json doc_;
     std::vector<std::vector<uint8_t>> buffers_;
+    std::vector<bool> fallbackBuffers_;
+    std::map<int, std::vector<uint8_t>> decodedViews_;
+    std::vector<int> parentOf_;
+    size_t morphBytes_ = 0;
+    bool skinInfluenceWarned_ = false;
     std::vector<std::vector<int>> meshPrimitives_;
+    std::vector<std::vector<float>> meshWeights_;
     std::map<int, int> imageMap_;
     size_t imageBytes_ = 0;
     size_t vertexTotal_ = 0;

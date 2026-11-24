@@ -65,7 +65,17 @@ void mergeModel(Scene& dst, const Scene& src, int wrapperIndex, int nodeOffset, 
         }
         dst.meshes.push_back(std::move(mesh));
     }
+    const int skinOffset = static_cast<int>(dst.skins.size());
+    for (SceneSkin skin : src.skins) {
+        for (int& joint : skin.joints) {
+            joint += nodeOffset;
+        }
+        dst.skins.push_back(std::move(skin));
+    }
     for (SceneNode node : src.nodes) {
+        if (node.skin >= 0) {
+            node.skin += skinOffset;
+        }
         for (int& child : node.children) {
             child += nodeOffset;
         }
@@ -205,6 +215,10 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
                 result.error = "the scene is too large for its models";
                 return result;
             }
+            if (scene.skins.size() + model->scene.skins.size() > limits.maxSkins) {
+                result.warnings.push_back("model '" + object.model + "' was skipped because the scene would have more than " + std::to_string(limits.maxSkins) + " animated figures");
+                continue;
+            }
             vertices += modelVertices;
             const int nodeOffset = nodeIndex + 1;
             scene.nodes.push_back(std::move(node));
@@ -243,6 +257,11 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
     std::string error;
     if (!validateScene(scene, error)) {
         result.error = error;
+        return result;
+    }
+    const SceneStats stats = sceneStats(scene);
+    if (stats.gpuBytes > limits.maxGpuBytes) {
+        result.error = "the scene needs about " + std::to_string(stats.gpuBytes / (1024 * 1024)) + " MiB of graphics memory, the limit is " + std::to_string(limits.maxGpuBytes / (1024 * 1024)) + " MiB";
         return result;
     }
     result.ok = true;

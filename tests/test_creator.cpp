@@ -7,12 +7,14 @@
 #include "scene3d/scene_doc.hpp"
 #include "scene3d/scene_pack.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -692,7 +694,107 @@ void testScenePack() {
 
 }
 
+DocAssets skinAssets() {
+    DocAssets assets;
+    assets.loadModel = [](const std::string& name, const GltfLimits& limits) -> std::shared_ptr<const GltfResult> {
+        const std::filesystem::path models = std::filesystem::path(NYREXVJ_TEST_DATA) / "models";
+        if (name == "arm.glb") {
+            return std::make_shared<GltfResult>(loadGltfFile(models / "skin_morph.glb", limits));
+        }
+        if (name == "cube.glb") {
+            return std::make_shared<GltfResult>(loadGltfFile(models / "morph_cube.glb", limits));
+        }
+        return nullptr;
+    };
+    assets.loadImage = [](const std::string&, std::string& error) -> std::shared_ptr<const SceneImage> {
+        error = "not here";
+        return nullptr;
+    };
+    return assets;
+}
+
+void testSkinnedModels() {
+    SceneDoc doc = makeDefaultDoc();
+    doc.objects.clear();
+    DocObject arm = makeDefaultObject(PrimitiveKind::Model);
+    arm.model = "arm.glb";
+    arm.position = {0.0f, 0.0f, 0.0f};
+    DocObject second = arm;
+    second.position = {3.0f, 0.0f, 0.0f};
+    second.repeat = {RepeatKind::Line, 3, 1.0f, 2.0f};
+    DocObject cube = makeDefaultObject(PrimitiveKind::Model);
+    cube.model = "cube.glb";
+    doc.objects = {arm, second, cube};
+
+    const GltfResult result = buildSceneFromDoc(doc, skinAssets());
+    CHECK(result.ok);
+    if (!result.ok) {
+        return;
+    }
+    const Scene& scene = result.scene;
+    CHECK(scene.skins.size() == 2);
+    int skinned = 0;
+    int firstSkin = -1;
+    int secondSkin = -1;
+    for (const SceneNode& node : scene.nodes) {
+        if (node.skin >= 0) {
+            ++skinned;
+            (firstSkin < 0 ? firstSkin : secondSkin) = node.skin;
+        }
+    }
+    CHECK(skinned == 2 && firstSkin == 0 && secondSkin == 1);
+    CHECK(scene.skins[1].joints[0] > scene.skins[0].joints[1]);
+    std::string error;
+    CHECK(validateScene(scene, error));
+    CHECK(sceneStats(scene).skins == 2 && sceneStats(scene).morphTargets == 4);
+
+    const SceneEval eval = evaluateSceneFull(scene, scene.animations.empty() ? -1 : 0, 0.0f);
+    int skinnedInstances = 0;
+    std::vector<int> offsets;
+    for (const SceneInstance& instance : eval.instances) {
+        if (instance.skin >= 0) {
+            ++skinnedInstances;
+            offsets.push_back(instance.jointOffset);
+        }
+    }
+    CHECK(skinnedInstances == 4);
+    CHECK(eval.joints.size() == 8);
+    std::sort(offsets.begin(), offsets.end());
+    CHECK(offsets == std::vector<int>({0, 2, 4, 6}));
+    CHECK(eval.weights.size() >= kSceneMaxMorphTargets);
+
+    std::vector<float> xs;
+    for (const SceneInstance& instance : eval.instances) {
+        if (instance.skin >= 0) {
+            const std::vector<Vec3> posed = posedPositions(scene, scene.meshes[static_cast<size_t>(instance.mesh)], eval, instance);
+            xs.push_back(posed[0].x);
+        }
+    }
+    std::sort(xs.begin(), xs.end());
+    CHECK(xs.size() == 4);
+    CHECK(xs[3] - xs[2] > 0.5f && xs[2] - xs[1] > 0.5f && xs[1] - xs[0] > 0.5f);
+
+    GltfLimits oneSkin;
+    oneSkin.maxSkins = 1;
+    const GltfResult limited = buildSceneFromDoc(doc, skinAssets(), oneSkin);
+    CHECK(limited.ok && limited.scene.skins.size() == 1);
+    bool warned = false;
+    for (const std::string& warning : limited.warnings) {
+        warned = warned || warning.find("animated figures") != std::string::npos;
+    }
+    CHECK(warned);
+
+    GltfLimits tinyGpu;
+    tinyGpu.maxGpuBytes = 2000;
+    CHECK(!buildSceneFromDoc(doc, skinAssets(), tinyGpu).ok);
+
+    const std::vector<uint8_t> glb = writeGlb(scene);
+    const GltfResult again = loadGltfMemory(glb.data(), glb.size(), std::filesystem::path());
+    CHECK(again.ok && again.scene.skins.size() == 2);
+}
+
 int main() {
+    testSkinnedModels();
     testContainerRoundTrip();
     testContainerRejections();
     testContainerNames();

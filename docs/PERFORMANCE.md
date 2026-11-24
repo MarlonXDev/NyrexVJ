@@ -187,6 +187,19 @@ No difference outside the spread. Numbers of different sessions on this machine 
 
 Not measured, because it needs hardware that was not available: hardware decoding (decode time, copy back, upload, processor and graphics card load), 4K at 60 frames a second on a real graphics card, the cost next to VRChat and in VR, and the video memory the driver adds. The checklist for a computer with a real graphics card is in [MEDIA.md](MEDIA.md), section Zero copy.
 
+## What is new in 0.32.0: 3D Engine 2.0
+
+[ADR 0025](adr/0025-3d-engine-2.md). Skinning and morph targets are done by the graphics card, so the processor only evaluates the joint matrices of the figures once per frame. Opaque models and the built-in scenes take the same path as before.
+
+- **Old scenes are not slower.** Alternating old and new program, three runs each, `--bench-scene 2:150`, 1920 x 1080, Mesa software renderer: Torus Knot Mesh 142.4 to 149.4 ms per frame (graphics card time) in the old program and 144.3 to 152.1 ms in the new one, Chrome Orbs Mesh 214.2 to 224.1 and 216.9 to 224.4 ms. The differences are inside the spread of the runs. All seven built-in scenes also give the same pixels in both programs (21 pictures compared).
+- **Cost of the new features,** one layer at 1920 x 1080, a tube of 64,000 vertices and 127,488 triangles, `--bench-scene 1:60:"Model: bench_..."`, three runs each (graphics card time per frame, software renderer): plain 164.1 to 169.5 ms, skinned with two joints 174.1 to 175.1 ms (about 5 percent more), eight morph targets 180.2 to 186.1 ms (about 9 percent), skinned and morphed 188.9 to 196.9 ms (about 14 percent), blended 167.7 to 169.4 ms (the same as plain: one extra sorted pass of one mesh). The models are made by `scripts/make_bench_models.py`.
+- **Memory.** Geometry in video memory for that tube: 6.4 MB plain, 7.9 MB skinned (24 bytes per vertex), 18.7 MB with eight morph targets (24 bytes per vertex and target), 20.2 MB with both. The joint texture is 64 KiB for all figures of a frame (1024 joints at most) and is allocated once with the renderer. Morph data lives per mesh, not per layer: layers that play the same model share it.
+- **Limits that protect frame times:** 128 joints per skin, 1024 joints per frame, 32 morph targets per mesh with the eight strongest weights applied per draw, 640 MiB of video memory per scene. 576 figures of a two-joint model draw 512 of them and report the 64 that were skipped.
+- **Program size.** The stripped Linux Release program grew from 8,176,272 to 8,340,120 bytes (+160 KiB, with Meshopt), and a build with `-DNYREXVJ_DRACO=ON` is 8,704,664 bytes.
+- **Not measured:** a real graphics card (the numbers above show how the cost grows, not how fast a card is, since a software renderer is limited by the processor), 4K, several skinned figures at once on a card, anything on Windows or next to VRChat.
+
+Command line: `--scene-selftest FOLDER` draws the test models through the real renderer and checks the pixels (`--bench-out` writes JSON with `frameMs` per model for a 256 x 256 picture including the read back, which is only a smoke test of the speed).
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

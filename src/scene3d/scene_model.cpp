@@ -12,16 +12,20 @@ struct Pose {
     Vec3 translation;
     Quat rotation;
     Vec3 scale{1.0f, 1.0f, 1.0f};
+    std::vector<float> weights;
 };
 
 int valueCount(AnimPath path) {
-    return path == AnimPath::Rotation ? 4 : 3;
+    return path == AnimPath::Rotation ? 4 : (path == AnimPath::Weights ? 0 : 3);
 }
 
 void sampleChannel(const SceneChannel& channel, float time, Pose& pose) {
-    const int count = valueCount(channel.path);
     const size_t keys = channel.times.size();
-    if (keys == 0 || channel.values.size() < keys * static_cast<size_t>(count)) {
+    if (keys == 0) {
+        return;
+    }
+    const int count = channel.path == AnimPath::Weights ? static_cast<int>(channel.values.size() / keys) : valueCount(channel.path);
+    if (count <= 0 || channel.values.size() < keys * static_cast<size_t>(count)) {
         return;
     }
     size_t a = 0;
@@ -43,6 +47,13 @@ void sampleChannel(const SceneChannel& channel, float time, Pose& pose) {
     }
     const float* va = &channel.values[a * static_cast<size_t>(count)];
     const float* vb = &channel.values[b * static_cast<size_t>(count)];
+    if (channel.path == AnimPath::Weights) {
+        pose.weights.resize(static_cast<size_t>(count));
+        for (int i = 0; i < count; ++i) {
+            pose.weights[static_cast<size_t>(i)] = va[i] + (vb[i] - va[i]) * t;
+        }
+        return;
+    }
     if (channel.path == AnimPath::Rotation) {
         pose.rotation = slerp(Quat{va[0], va[1], va[2], va[3]}, Quat{vb[0], vb[1], vb[2], vb[3]}, t);
         return;
@@ -64,7 +75,11 @@ Vec3 axisVector(int axis) {
 struct EvalContext {
     float time = 0.0f;
     SceneAudio audio;
-    std::vector<SceneInstance>* out = nullptr;
+    SceneEval* out = nullptr;
+    const Scene* scene = nullptr;
+    const std::vector<Pose>* poses = nullptr;
+    std::vector<int> parent;
+    std::vector<int> stackCopy;
 };
 
 Mat4 localMatrix(const SceneNode& node, const Pose& pose, const EvalContext& ctx, int copy, float& emissive) {
@@ -112,8 +127,73 @@ Mat4 repeatMatrix(const NodeRepeat& repeat, int copy, int count) {
     return translation({(static_cast<float>(copy) - 0.5f * static_cast<float>(count - 1)) * repeat.spacing, 0.0f, 0.0f});
 }
 
+Mat4 nodeWorld(const EvalContext& ctx, int index) {
+    const Scene& scene = *ctx.scene;
+    int chain[kSceneMaxDepth + 2];
+    int length = 0;
+    for (int n = index; n >= 0 && length < kSceneMaxDepth + 2; n = ctx.parent[static_cast<size_t>(n)]) {
+        chain[length++] = n;
+    }
+    Mat4 world;
+    int copy = 0;
+    for (int i = length - 1; i >= 0; --i) {
+        const int n = chain[i];
+        const SceneNode& node = scene.nodes[static_cast<size_t>(n)];
+        const int copies = node.repeat.kind != RepeatKind::None ? std::clamp(node.repeat.count, 1, kSceneMaxRepeat) : 1;
+        const int c = copies > 1 ? std::max(ctx.stackCopy[static_cast<size_t>(n)], 0) : 0;
+        const int copyIndex = copies > 1 ? c : copy;
+        float emissive = 0.0f;
+        const Mat4 local = localMatrix(node, (*ctx.poses)[static_cast<size_t>(n)], ctx, copyIndex, emissive);
+        world = copies > 1 ? world * repeatMatrix(node.repeat, c, copies) * local : world * local;
+        copy = copyIndex;
+    }
+    return world;
+}
+
+void emitMesh(const Scene& scene, const std::vector<Pose>& poses, int nodeIndex, int mesh, const Mat4& world, float emissive, bool framing, EvalContext& ctx, int& jointBase, int& weightBase) {
+    SceneEval& out = *ctx.out;
+    const SceneNode& node = scene.nodes[static_cast<size_t>(nodeIndex)];
+    SceneInstance instance;
+    instance.mesh = mesh;
+    instance.world = world;
+    instance.emissive = emissive;
+    instance.framing = framing;
+    const SceneMesh& source = scene.meshes[static_cast<size_t>(mesh)];
+    if (node.skin >= 0 && node.skin < static_cast<int>(scene.skins.size()) && source.skinned()) {
+        const SceneSkin& skin = scene.skins[static_cast<size_t>(node.skin)];
+        if (jointBase < 0) {
+            if (out.joints.size() + skin.joints.size() > kSceneMaxJointsPerFrame) {
+                ++out.skippedSkinned;
+                return;
+            }
+            jointBase = static_cast<int>(out.joints.size());
+            for (size_t k = 0; k < skin.joints.size(); ++k) {
+                const int joint = skin.joints[k];
+                const Mat4 bind = k < skin.inverseBind.size() ? skin.inverseBind[k] : Mat4{};
+                out.joints.push_back(joint >= 0 && joint < static_cast<int>(scene.nodes.size()) ? nodeWorld(ctx, joint) * bind : Mat4{});
+            }
+        }
+        instance.skin = node.skin;
+        instance.jointOffset = jointBase;
+        instance.jointCount = static_cast<int>(skin.joints.size());
+        instance.world = Mat4{};
+    }
+    if (source.morphTargetCount() > 0) {
+        if (weightBase < 0) {
+            weightBase = static_cast<int>(out.weights.size());
+            const std::vector<float>& weights = poses[static_cast<size_t>(nodeIndex)].weights;
+            for (size_t t = 0; t < kSceneMaxMorphTargets; ++t) {
+                out.weights.push_back(t < weights.size() ? weights[t] : 0.0f);
+            }
+        }
+        instance.weightOffset = weightBase;
+        instance.weightCount = static_cast<int>(std::min(source.morphTargetCount(), kSceneMaxMorphTargets));
+    }
+    out.instances.push_back(instance);
+}
+
 void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const Mat4& parent, int depth, EvalContext& ctx, int copy, float inheritedEmissive, bool framing) {
-    if (depth > kSceneMaxDepth || index < 0 || index >= static_cast<int>(scene.nodes.size()) || ctx.out->size() >= kSceneMaxInstances) {
+    if (depth > kSceneMaxDepth || index < 0 || index >= static_cast<int>(scene.nodes.size()) || ctx.out->instances.size() >= kSceneMaxInstances) {
         return;
     }
     const SceneNode& node = scene.nodes[static_cast<size_t>(index)];
@@ -125,16 +205,20 @@ void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const M
         float emissive = inheritedEmissive;
         const Mat4 local = localMatrix(node, pose, ctx, copyIndex, emissive);
         const Mat4 world = copies > 1 ? parent * repeatMatrix(node.repeat, c, copies) * local : parent * local;
+        ctx.stackCopy[static_cast<size_t>(index)] = copies > 1 ? c : 0;
+        int jointBase = -1;
+        int weightBase = -1;
         for (const int mesh : node.meshes) {
-            if (ctx.out->size() >= kSceneMaxInstances) {
+            if (ctx.out->instances.size() >= kSceneMaxInstances) {
                 return;
             }
-            ctx.out->push_back({mesh, world, emissive, nodeFraming});
+            emitMesh(scene, poses, index, mesh, world, emissive, nodeFraming, ctx, jointBase, weightBase);
         }
         for (const int child : node.children) {
             walk(scene, poses, child, world, depth + 1, ctx, copyIndex, emissive, nodeFraming);
         }
     }
+    ctx.stackCopy[static_cast<size_t>(index)] = 0;
 }
 
 }
@@ -172,12 +256,13 @@ float sceneDuration(const Scene& scene, int animation) {
     return scene.animations[static_cast<size_t>(animation)].duration;
 }
 
-std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time, const SceneAudio* audio) {
+SceneEval evaluateSceneFull(const Scene& scene, int animation, float time, const SceneAudio* audio) {
     std::vector<Pose> poses(scene.nodes.size());
     for (size_t i = 0; i < scene.nodes.size(); ++i) {
         poses[i].translation = scene.nodes[i].translation;
         poses[i].rotation = scene.nodes[i].rotation;
         poses[i].scale = scene.nodes[i].scale;
+        poses[i].weights = scene.nodes[i].weights;
     }
     if (animation >= 0 && animation < static_cast<int>(scene.animations.size())) {
         const SceneAnimation& clip = scene.animations[static_cast<size_t>(animation)];
@@ -196,17 +281,114 @@ std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, floa
             sampleChannel(channel, local, poses[static_cast<size_t>(channel.node)]);
         }
     }
-    std::vector<SceneInstance> out;
+    SceneEval out;
     EvalContext ctx;
     ctx.time = time;
     if (audio != nullptr) {
         ctx.audio = *audio;
     }
     ctx.out = &out;
+    ctx.scene = &scene;
+    ctx.poses = &poses;
+    ctx.parent.assign(scene.nodes.size(), -1);
+    ctx.stackCopy.assign(scene.nodes.size(), 0);
+    for (size_t n = 0; n < scene.nodes.size(); ++n) {
+        for (const int child : scene.nodes[n].children) {
+            if (child >= 0 && child < static_cast<int>(scene.nodes.size()) && ctx.parent[static_cast<size_t>(child)] < 0) {
+                ctx.parent[static_cast<size_t>(child)] = static_cast<int>(n);
+            }
+        }
+    }
     for (const int root : scene.roots) {
         walk(scene, poses, root, Mat4{}, 0, ctx, 0, 0.0f, true);
     }
     return out;
+}
+
+std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time, const SceneAudio* audio) {
+    return evaluateSceneFull(scene, animation, time, audio).instances;
+}
+
+std::vector<Vec3> posedPositions(const Scene& scene, const SceneMesh& mesh, const SceneEval& eval, const SceneInstance& instance) {
+    (void)scene;
+    std::vector<Vec3> out = mesh.positions;
+    if (instance.weightCount > 0 && !mesh.targets.empty()) {
+        const size_t targets = std::min<size_t>({mesh.targets.size(), static_cast<size_t>(instance.weightCount), kSceneMaxMorphTargets});
+        for (size_t t = 0; t < targets; ++t) {
+            const size_t at = static_cast<size_t>(instance.weightOffset) + t;
+            const float weight = at < eval.weights.size() ? eval.weights[at] : 0.0f;
+            const SceneMorphTarget& target = mesh.targets[t];
+            if (weight == 0.0f || target.positions.size() != out.size()) {
+                continue;
+            }
+            for (size_t i = 0; i < out.size(); ++i) {
+                out[i] = out[i] + target.positions[i] * weight;
+            }
+        }
+    }
+    if (instance.skin >= 0 && instance.jointCount > 0 && mesh.joints.size() == out.size() * 4 && mesh.weights.size() == out.size() * 4) {
+        const std::vector<Vec3> source = out;
+        for (size_t i = 0; i < out.size(); ++i) {
+            Vec3 sum{0.0f, 0.0f, 0.0f};
+            for (size_t k = 0; k < 4; ++k) {
+                const float w = mesh.weights[i * 4 + k];
+                const size_t joint = mesh.joints[i * 4 + k];
+                const size_t at = static_cast<size_t>(instance.jointOffset) + joint;
+                if (w == 0.0f || joint >= static_cast<size_t>(instance.jointCount) || at >= eval.joints.size()) {
+                    continue;
+                }
+                sum = sum + transformPoint(eval.joints[at], source[i]) * w;
+            }
+            out[i] = sum;
+        }
+    }
+    return out;
+}
+
+namespace {
+
+bool needsPose(const SceneInstance& instance) {
+    return instance.skin >= 0 || instance.weightCount > 0;
+}
+
+struct LocalSphere {
+    Vec3 lo;
+    Vec3 hi;
+    Vec3 center;
+    float radius = 0.0f;
+    bool valid = false;
+};
+
+LocalSphere makeLocal(const std::vector<Vec3>& positions, size_t stride) {
+    LocalSphere local;
+    if (positions.empty()) {
+        return local;
+    }
+    constexpr float big = std::numeric_limits<float>::max();
+    Vec3 lo{big, big, big};
+    Vec3 hi{-big, -big, -big};
+    for (size_t i = 0; i < positions.size(); i += stride) {
+        const Vec3& p = positions[i];
+        lo = {std::min(lo.x, p.x), std::min(lo.y, p.y), std::min(lo.z, p.z)};
+        hi = {std::max(hi.x, p.x), std::max(hi.y, p.y), std::max(hi.z, p.z)};
+    }
+    local.lo = lo;
+    local.hi = hi;
+    local.center = (lo + hi) * 0.5f;
+    float farthest = 0.0f;
+    for (size_t i = 0; i < positions.size(); i += stride) {
+        farthest = std::max(farthest, length(positions[i] - local.center));
+    }
+    local.radius = farthest;
+    local.valid = true;
+    return local;
+}
+
+size_t poseStride(size_t count) {
+    constexpr size_t kLimit = 40000;
+    return count > kLimit ? (count + kLimit - 1) / kLimit : 1;
+}
+
 }
 
 SceneBounds sceneBounds(const Scene& scene, int animation, float time) {
@@ -214,13 +396,20 @@ SceneBounds sceneBounds(const Scene& scene, int animation, float time) {
     constexpr float big = std::numeric_limits<float>::max();
     Vec3 lo{big, big, big};
     Vec3 hi{-big, -big, -big};
-    const std::vector<SceneInstance> evaluated = evaluateScene(scene, animation, time);
-    const bool restrictFraming = std::any_of(evaluated.begin(), evaluated.end(), [](const SceneInstance& i) { return i.framing; });
-    for (const SceneInstance& instance : evaluated) {
+    const SceneEval eval = evaluateSceneFull(scene, animation, time);
+    const bool restrictFraming = std::any_of(eval.instances.begin(), eval.instances.end(), [](const SceneInstance& i) { return i.framing; });
+    for (const SceneInstance& instance : eval.instances) {
         if (instance.mesh < 0 || instance.mesh >= static_cast<int>(scene.meshes.size()) || (restrictFraming && !instance.framing)) {
             continue;
         }
-        for (const Vec3& p : scene.meshes[static_cast<size_t>(instance.mesh)].positions) {
+        const SceneMesh& mesh = scene.meshes[static_cast<size_t>(instance.mesh)];
+        std::vector<Vec3> posed;
+        const std::vector<Vec3>* positions = &mesh.positions;
+        if (needsPose(instance)) {
+            posed = posedPositions(scene, mesh, eval, instance);
+            positions = &posed;
+        }
+        for (const Vec3& p : *positions) {
             const Vec3 w = transformPoint(instance.world, p);
             lo = {std::min(lo.x, w.x), std::min(lo.y, w.y), std::min(lo.z, w.z)};
             hi = {std::max(hi.x, w.x), std::max(hi.y, w.y), std::max(hi.z, w.z)};
@@ -236,58 +425,48 @@ SceneBounds sceneBounds(const Scene& scene, int animation, float time) {
 
 SceneSphere sceneSphere(const Scene& scene, int animation, int samples) {
     SceneSphere result;
-    struct LocalSphere {
-        Vec3 lo;
-        Vec3 hi;
-        Vec3 center;
-        float radius = 0.0f;
-        bool valid = false;
-    };
-    std::vector<LocalSphere> locals(scene.meshes.size());
     constexpr float big = std::numeric_limits<float>::max();
+    std::vector<LocalSphere> locals(scene.meshes.size());
     for (size_t i = 0; i < scene.meshes.size(); ++i) {
-        const std::vector<Vec3>& positions = scene.meshes[i].positions;
-        if (positions.empty()) {
-            continue;
-        }
-        Vec3 lo{big, big, big};
-        Vec3 hi{-big, -big, -big};
-        for (const Vec3& p : positions) {
-            lo = {std::min(lo.x, p.x), std::min(lo.y, p.y), std::min(lo.z, p.z)};
-            hi = {std::max(hi.x, p.x), std::max(hi.y, p.y), std::max(hi.z, p.z)};
-        }
-        LocalSphere& local = locals[i];
-        local.lo = lo;
-        local.hi = hi;
-        local.center = (lo + hi) * 0.5f;
-        float farthest = 0.0f;
-        for (const Vec3& p : positions) {
-            farthest = std::max(farthest, length(p - local.center));
-        }
-        local.radius = farthest;
-        local.valid = true;
+        locals[i] = makeLocal(scene.meshes[i].positions, 1);
     }
     const float duration = sceneDuration(scene, animation);
     const int count = std::max(samples, 1);
-    std::vector<std::vector<SceneInstance>> frames;
+    std::vector<SceneEval> frames;
+    std::vector<std::vector<LocalSphere>> posedLocals;
     bool restrictFraming = false;
     for (int s = 0; s < count; ++s) {
-        frames.push_back(evaluateScene(scene, animation, duration * static_cast<float>(s) / static_cast<float>(count)));
-        for (const SceneInstance& instance : frames.back()) {
+        frames.push_back(evaluateSceneFull(scene, animation, duration * static_cast<float>(s) / static_cast<float>(count)));
+        const SceneEval& eval = frames.back();
+        posedLocals.emplace_back(eval.instances.size());
+        for (size_t i = 0; i < eval.instances.size(); ++i) {
+            const SceneInstance& instance = eval.instances[i];
             restrictFraming = restrictFraming || instance.framing;
+            if (needsPose(instance) && instance.mesh >= 0 && instance.mesh < static_cast<int>(scene.meshes.size())) {
+                const SceneMesh& mesh = scene.meshes[static_cast<size_t>(instance.mesh)];
+                posedLocals.back()[i] = makeLocal(posedPositions(scene, mesh, eval, instance), poseStride(mesh.positions.size()));
+            }
         }
     }
+    const auto localOf = [&](size_t frame, size_t index) -> const LocalSphere& {
+        const SceneInstance& instance = frames[frame].instances[index];
+        if (needsPose(instance) && posedLocals[frame][index].valid) {
+            return posedLocals[frame][index];
+        }
+        return locals[static_cast<size_t>(instance.mesh)];
+    };
     const auto usable = [&](const SceneInstance& instance) {
         return instance.mesh >= 0 && instance.mesh < static_cast<int>(locals.size()) && locals[static_cast<size_t>(instance.mesh)].valid && (!restrictFraming || instance.framing);
     };
     Vec3 lo{big, big, big};
     Vec3 hi{-big, -big, -big};
-    for (const std::vector<SceneInstance>& frame : frames) {
-        for (const SceneInstance& instance : frame) {
+    for (size_t f = 0; f < frames.size(); ++f) {
+        for (size_t i = 0; i < frames[f].instances.size(); ++i) {
+            const SceneInstance& instance = frames[f].instances[i];
             if (!usable(instance)) {
                 continue;
             }
-            const LocalSphere& local = locals[static_cast<size_t>(instance.mesh)];
+            const LocalSphere& local = localOf(f, i);
             for (int corner = 0; corner < 8; ++corner) {
                 const Vec3 p{(corner & 1) ? local.hi.x : local.lo.x, (corner & 2) ? local.hi.y : local.lo.y, (corner & 4) ? local.hi.z : local.lo.z};
                 const Vec3 w = transformPoint(instance.world, p);
@@ -302,12 +481,13 @@ SceneSphere sceneSphere(const Scene& scene, int animation, int samples) {
     }
     result.center = (lo + hi) * 0.5f;
     float radius = 0.0f;
-    for (const std::vector<SceneInstance>& frame : frames) {
-        for (const SceneInstance& instance : frame) {
+    for (size_t f = 0; f < frames.size(); ++f) {
+        for (size_t i = 0; i < frames[f].instances.size(); ++i) {
+            const SceneInstance& instance = frames[f].instances[i];
             if (!usable(instance)) {
                 continue;
             }
-            const LocalSphere& local = locals[static_cast<size_t>(instance.mesh)];
+            const LocalSphere& local = localOf(f, i);
             const Vec3 c = transformPoint(instance.world, local.center);
             const Mat4& m = instance.world;
             const float sx = length(Vec3{m.m[0], m.m[1], m.m[2]});
@@ -325,11 +505,28 @@ SceneStats sceneStats(const Scene& scene) {
     stats.meshes = scene.meshes.size();
     stats.nodes = scene.nodes.size();
     stats.images = scene.images.size();
+    stats.skins = scene.skins.size();
+    for (const SceneSkin& skin : scene.skins) {
+        stats.joints += skin.joints.size();
+    }
     for (const SceneMesh& mesh : scene.meshes) {
         stats.vertices += mesh.positions.size();
         stats.triangles += mesh.indices.size() / 3;
         stats.cpuBytes += mesh.positions.size() * sizeof(Vec3) + mesh.normals.size() * sizeof(Vec3) + (mesh.uvs.size() + mesh.colors.size()) * sizeof(float) + mesh.indices.size() * sizeof(uint32_t);
         stats.gpuBytes += mesh.positions.size() * kSceneVertexFloats * sizeof(float) + mesh.indices.size() * sizeof(uint32_t);
+        if (!mesh.joints.empty()) {
+            stats.cpuBytes += mesh.joints.size() * sizeof(uint16_t) + mesh.weights.size() * sizeof(float);
+            stats.gpuBytes += mesh.positions.size() * (4 * sizeof(uint16_t) + 4 * sizeof(float));
+        }
+        stats.morphTargets += mesh.targets.size();
+        for (const SceneMorphTarget& target : mesh.targets) {
+            const size_t bytes = (target.positions.size() + target.normals.size()) * sizeof(Vec3);
+            stats.cpuBytes += bytes;
+            stats.gpuBytes += mesh.positions.size() * 2 * 3 * sizeof(float);
+        }
+    }
+    for (const SceneMaterial& material : scene.materials) {
+        stats.blendMaterials += material.alphaMode == AlphaMode::Blend ? 1 : 0;
     }
     for (const SceneImage& image : scene.images) {
         stats.cpuBytes += image.rgba.size();
@@ -416,6 +613,63 @@ bool validateScene(const Scene& scene, std::string& error) {
             error = label + " references a missing material";
             return false;
         }
+        if (mesh.joints.empty() != mesh.weights.empty() || (!mesh.joints.empty() && (mesh.joints.size() != count * 4 || mesh.weights.size() != count * 4))) {
+            error = label + " has inconsistent skin attributes";
+            return false;
+        }
+        for (const float w : mesh.weights) {
+            if (!std::isfinite(w) || w < 0.0f) {
+                error = label + " has an invalid skin weight";
+                return false;
+            }
+        }
+        if (mesh.targets.size() > kSceneMaxMorphTargets) {
+            error = label + " has too many morph targets";
+            return false;
+        }
+        for (const SceneMorphTarget& target : mesh.targets) {
+            if ((!target.positions.empty() && target.positions.size() != count) || (!target.normals.empty() && target.normals.size() != count)) {
+                error = label + " has an inconsistent morph target";
+                return false;
+            }
+            for (const std::vector<Vec3>* list : {&target.positions, &target.normals}) {
+                for (const Vec3& d : *list) {
+                    if (!std::isfinite(d.x) || !std::isfinite(d.y) || !std::isfinite(d.z)) {
+                        error = label + " has a non-finite morph delta";
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    if (scene.skins.size() > kSceneMaxSkins) {
+        error = "the scene has too many skins";
+        return false;
+    }
+    for (size_t i = 0; i < scene.skins.size(); ++i) {
+        const SceneSkin& skin = scene.skins[i];
+        if (skin.joints.empty() || skin.joints.size() > kSceneMaxBones) {
+            error = "skin " + std::to_string(i) + " has " + std::to_string(skin.joints.size()) + " joints, the limit is " + std::to_string(kSceneMaxBones);
+            return false;
+        }
+        if (skin.inverseBind.size() != skin.joints.size()) {
+            error = "skin " + std::to_string(i) + " has inconsistent inverse bind matrices";
+            return false;
+        }
+        for (const int joint : skin.joints) {
+            if (joint < 0 || joint >= nodeCount) {
+                error = "skin " + std::to_string(i) + " references a missing joint";
+                return false;
+            }
+        }
+        for (const Mat4& m : skin.inverseBind) {
+            for (const float v : m.m) {
+                if (!std::isfinite(v)) {
+                    error = "skin " + std::to_string(i) + " has a non-finite matrix";
+                    return false;
+                }
+            }
+        }
     }
     std::vector<char> seen(scene.nodes.size(), 0);
     std::vector<std::pair<int, int>> stack;
@@ -455,6 +709,32 @@ bool validateScene(const Scene& scene, std::string& error) {
                 return false;
             }
         }
+        if (node.skin >= static_cast<int>(scene.skins.size())) {
+            error = "node " + std::to_string(index) + " references a missing skin";
+            return false;
+        }
+        if (node.skin >= 0) {
+            const size_t joints = scene.skins[static_cast<size_t>(node.skin)].joints.size();
+            for (const int mesh : node.meshes) {
+                const SceneMesh& skinned = scene.meshes[static_cast<size_t>(mesh)];
+                for (const uint16_t joint : skinned.joints) {
+                    if (joint >= joints) {
+                        error = "mesh " + std::to_string(mesh) + " uses a joint outside its skin";
+                        return false;
+                    }
+                }
+            }
+        }
+        if (node.weights.size() > kSceneMaxMorphTargets) {
+            error = "node " + std::to_string(index) + " has too many morph weights";
+            return false;
+        }
+        for (const float w : node.weights) {
+            if (!std::isfinite(w)) {
+                error = "node " + std::to_string(index) + " has a non-finite morph weight";
+                return false;
+            }
+        }
         for (const int child : node.children) {
             if (child < 0 || child >= nodeCount) {
                 error = "node " + std::to_string(index) + " has an invalid child";
@@ -469,8 +749,8 @@ bool validateScene(const Scene& scene, std::string& error) {
                 error = "animation " + std::to_string(i) + " targets a missing node";
                 return false;
             }
-            const size_t per = static_cast<size_t>(valueCount(channel.path));
-            if (channel.times.empty() || channel.values.size() != channel.times.size() * per) {
+            const size_t per = channel.path == AnimPath::Weights ? (channel.times.empty() ? 0 : channel.values.size() / channel.times.size()) : static_cast<size_t>(valueCount(channel.path));
+            if (channel.times.empty() || per == 0 || channel.values.size() != channel.times.size() * per || (channel.path == AnimPath::Weights && per > kSceneMaxMorphTargets)) {
                 error = "animation " + std::to_string(i) + " has inconsistent keys";
                 return false;
             }

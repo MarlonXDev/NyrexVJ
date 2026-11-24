@@ -261,6 +261,50 @@ void testDamagedFiles() {
     fs::remove_all(dir, ec);
 }
 
+void testAdvancedVenue() {
+    const fs::path dir = scratchDirectory("nyrexvj_venue_advanced");
+    const nvj::OutputSet legacy = sampleSet();
+    const std::string legacyText = nvj::venueToJson("Old", legacy).dump();
+    for (const char* key : {"sliceColor", "ndi", "curves", "image"}) {
+        CHECK(legacyText.find(key) == std::string::npos);
+    }
+    nvj::OutputSet reread;
+    std::string name;
+    std::string error;
+    CHECK(nvj::venueFromJson(nlohmann::json::parse(legacyText), name, reread, error) && reread == legacy);
+    CHECK(nvj::venueToJson("Old", reread).dump() == legacyText);
+    for (const nvj::OutputSpec& spec : reread) {
+        CHECK(!spec.ndi && spec.ndiName.empty() && nvj::isDefaultColor(spec.map.sliceColor) && !nvj::maskHasCurves(spec.map.mask) && spec.map.mask.image.empty());
+    }
+
+    nvj::OutputSet rich = legacy;
+    rich[1].ndi = true;
+    rich[1].ndiName = "Left wall NDI";
+    rich[1].map.sliceColor.red = 0.85f;
+    rich[1].map.sliceColor.saturation = 0.9f;
+    nvj::maskSmooth(rich[1].slices[0].map.mask, 1.0f);
+    rich[1].slices[0].map.sliceColor.gamma = 1.2f;
+    rich[2].map.mask.enabled = true;
+    rich[2].map.mask.image = "pillar.png";
+    rich[2].map.mask.feather = 0.02f;
+    CHECK(nvj::saveVenue(dir, "Rich", rich, error));
+    nvj::OutputSet loaded;
+    CHECK(nvj::loadVenue(dir, "Rich", loaded, error) && loaded == rich);
+    CHECK(loaded[1].ndi && loaded[1].ndiName == "Left wall NDI" && nvj::maskHasCurves(loaded[1].slices[0].map.mask));
+    CHECK(loaded[2].map.mask.image == "pillar.png" && loaded[1].map.sliceColor.red == 0.85f);
+
+    const fs::path file = dir / "Hand written.json";
+    writeText(file, R"({"format":"nyrexvj-venue","version":1,"name":"Hand","outputs":[{"enabled":true,"ndi":{"enabled":true,"name":"Hand NDI"},"sliceColor":{"red":0.7},"mask":{"enabled":true,"image":"wall.png"}}]})");
+    nvj::OutputSet hand;
+    CHECK(nvj::loadVenueFile(file, name, hand, error));
+    CHECK(hand[0].ndi && hand[0].ndiName == "Hand NDI" && hand[0].map.sliceColor.red == 0.7f && hand[0].map.mask.image == "wall.png" && hand[0].map.mask.enabled);
+    CHECK(hand[1] == nvj::defaultOutputSpec(1));
+
+    writeText(file, R"({"format":"nyrexvj-venue","version":1,"name":"Bad","outputs":[{"enabled":true,"ndi":[1,2],"sliceColor":7,"mask":{"enabled":true,"image":"..\\..\\x.png","curves":"no"}}]})");
+    CHECK(nvj::loadVenueFile(file, name, hand, error));
+    CHECK(!hand[0].ndi && nvj::isDefaultColor(hand[0].map.sliceColor) && hand[0].map.mask.image.empty() && !hand[0].map.mask.enabled);
+}
+
 }
 
 int main() {
@@ -271,5 +315,6 @@ int main() {
     testUnicodeNames();
     testExportImport();
     testDamagedFiles();
+    testAdvancedVenue();
     return testing::finish();
 }

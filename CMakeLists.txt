@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.29.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.30.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -137,6 +137,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/modulation.cpp
     src/core/output_map.cpp
     src/core/venue_setup.cpp
+    src/core/mask_images.cpp
     src/core/node_graph.cpp
     src/core/node_catalogue.cpp
     src/core/node_compile.cpp

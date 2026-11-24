@@ -33,6 +33,9 @@ public:
     void render(GLuint texture, int width, int height);
     bool capture(int index, GLuint texture, int width, int height, OutputCapture& out);
     size_t gpuBytes() const;
+    size_t budgetBytes() const { return budget_; }
+    void setBudgetBytes(size_t bytes) { budget_ = bytes; }
+    const OutputNdiStatus& ndiStatus(int index) const;
     void setFrameLock(bool on);
     bool frameLock() const { return frameLock_; }
     void setSyncBars(bool on) { syncBars_ = on; }
@@ -50,6 +53,7 @@ private:
 
     std::array<OutputSpec, kMaxOutputs>* specs_ = nullptr;
     std::array<OutputWindow, kMaxOutputs> windows_;
+    size_t budget_ = kOutputGpuBudgetBytes;
     std::array<bool, kMaxOutputs> patterns_{};
     TextureHistory history_;
     SkewTracker skew_;

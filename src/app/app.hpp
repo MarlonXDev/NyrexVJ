@@ -209,6 +209,10 @@ private:
     void drawOutputSlices(OutputSpec& spec);
     void drawSliceMask(OutputMapping& map);
     void drawOutputColor(OutputSpec& spec);
+    void drawSliceColor(OutputMapping& map);
+    void drawOutputNdi(OutputSpec& spec, int index);
+    void drawMaskImage(SliceMask& mask);
+    void drawOutputBudget();
     void drawVenueControls();
     void applyVenue(const std::array<OutputSpec, kMaxOutputs>& set);
     bool importDroppedVenue(const std::string& path);
@@ -311,6 +315,11 @@ private:
     int draggedPoint_ = -1;
     int draggedWarp_ = -1;
     int draggedMask_ = -1;
+    int draggedHandle_ = -1;
+    std::vector<Vec2f> maskStroke_;
+    char maskImagePath_[512] = {};
+    char ndiOutputName_[64] = {};
+    int ndiOutputNameFor_ = -1;
     int selectedSlice_ = 0;
     int canvasMode_ = 0;
     std::vector<std::string> venueList_;

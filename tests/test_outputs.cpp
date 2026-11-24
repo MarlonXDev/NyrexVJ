@@ -1,13 +1,17 @@
 #include "check.hpp"
 
+#include "core/frame_lock.hpp"
+#include "core/mask_images.hpp"
 #include "core/output_map.hpp"
 #include "core/output_map_json.hpp"
 #include "core/settings.hpp"
 
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 
 #define CHECK(expr) testing::check((expr), #expr, __LINE__)
 
@@ -561,6 +565,427 @@ void testSettingsRoundTrip() {
     CHECK(old.outputs[1] == nvj::defaultOutputSpec(1));
 }
 
+std::vector<uint8_t> makeTga(int width, int height, bool alpha, const std::function<void(int, int, uint8_t*)>& pixel) {
+    std::vector<uint8_t> bytes(18, 0);
+    bytes[2] = 2;
+    bytes[12] = static_cast<uint8_t>(width & 0xff);
+    bytes[13] = static_cast<uint8_t>(width >> 8);
+    bytes[14] = static_cast<uint8_t>(height & 0xff);
+    bytes[15] = static_cast<uint8_t>(height >> 8);
+    bytes[16] = alpha ? 32 : 24;
+    bytes[17] = static_cast<uint8_t>(0x20 | (alpha ? 8 : 0));
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            uint8_t rgba[4] = {0, 0, 0, 255};
+            pixel(x, y, rgba);
+            bytes.push_back(rgba[2]);
+            bytes.push_back(rgba[1]);
+            bytes.push_back(rgba[0]);
+            if (alpha) {
+                bytes.push_back(rgba[3]);
+            }
+        }
+    }
+    return bytes;
+}
+
+std::vector<uint8_t> halfWhiteTga() {
+    return makeTga(64, 36, false, [](int x, int, uint8_t* p) { p[0] = p[1] = p[2] = x < 32 ? 255 : 0; });
+}
+
+std::vector<uint8_t> topOpaqueTga() {
+    return makeTga(64, 36, true, [](int, int y, uint8_t* p) {
+        p[0] = p[1] = p[2] = 255;
+        p[3] = y < 18 ? 255 : 0;
+    });
+}
+
+void writeBytes(const std::filesystem::path& file, const std::vector<uint8_t>& bytes) {
+    std::ofstream stream(file, std::ios::binary);
+    stream.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
+void setDataDirectory(const std::filesystem::path& path) {
+#ifdef _WIN32
+    _putenv_s("NYREXVJ_DATA_DIR", path.string().c_str());
+#else
+    setenv("NYREXVJ_DATA_DIR", path.string().c_str(), 1);
+#endif
+}
+
+float polygonArea(const std::vector<nvj::Vec2f>& points) {
+    float sum = 0.0f;
+    for (size_t i = 0; i < points.size(); ++i) {
+        const nvj::Vec2f& a = points[i];
+        const nvj::Vec2f& b = points[(i + 1) % points.size()];
+        sum += a.x * b.y - b.x * a.y;
+    }
+    return std::fabs(sum) * 0.5f;
+}
+
+void testBezierMask() {
+    nvj::SliceMask box = nvj::maskRectangle(0.2f, 0.2f, 0.8f, 0.8f);
+    CHECK(!nvj::maskHasCurves(box));
+    CHECK(nvj::maskOutline(box).size() == 4);
+    CHECK(nvj::maskContains(box, 0.5f, 0.5f) && !nvj::maskContains(box, 0.42f, 0.17f));
+
+    nvj::SliceMask curved = box;
+    nvj::maskSmooth(curved, 1.0f);
+    CHECK(nvj::maskHasCurves(curved) && curved.handles.size() == 4);
+    for (const nvj::MaskHandle& handle : curved.handles) {
+        CHECK(near(handle.in.x, -handle.out.x) && near(handle.in.y, -handle.out.y));
+    }
+    const std::vector<nvj::Vec2f> outline = nvj::maskOutline(curved);
+    CHECK(outline.size() == 4u * static_cast<size_t>(nvj::kBezierSegments));
+    for (const nvj::Vec2f& corner : box.points) {
+        float best = 1.0e9f;
+        for (const nvj::Vec2f& p : outline) {
+            best = std::min(best, std::hypot(p.x - corner.x, p.y - corner.y));
+        }
+        CHECK(best < 1e-4f);
+    }
+    CHECK(nvj::maskContains(curved, 0.42f, 0.17f));
+    CHECK(nvj::maskContains(curved, 0.5f, 0.5f) && !nvj::maskContains(curved, 0.05f, 0.05f));
+    CHECK(polygonArea(outline) > polygonArea(box.points));
+
+    nvj::SliceMask zero = curved;
+    nvj::maskSmooth(zero, 0.0f);
+    CHECK(!nvj::maskHasCurves(zero));
+
+    nvj::SliceMask inserted = curved;
+    const int at = nvj::maskInsertPoint(inserted);
+    CHECK(at >= 0 && inserted.points.size() == 5 && inserted.handles.size() == 5);
+    const float areaBefore = polygonArea(nvj::maskOutline(curved));
+    const float areaAfter = polygonArea(nvj::maskOutline(inserted));
+    CHECK(std::fabs(areaAfter - areaBefore) < areaBefore * 0.01f);
+    for (float probe : {0.3f, 0.5f, 0.7f}) {
+        CHECK(nvj::maskContains(inserted, probe, 0.15f) == nvj::maskContains(curved, probe, 0.15f));
+        CHECK(nvj::maskContains(inserted, probe, 0.5f) && !nvj::maskContains(inserted, probe, 0.02f));
+    }
+    CHECK(nvj::maskRemovePoint(inserted, at));
+    CHECK(inserted.points.size() == 4 && inserted.handles.size() == 4);
+
+    nvj::SliceMask cleared = curved;
+    nvj::maskClearCurves(cleared);
+    CHECK(!nvj::maskHasCurves(cleared) && nvj::maskOutline(cleared).size() == 4);
+
+    nvj::SliceMask triangle;
+    triangle.enabled = true;
+    triangle.points = {{0.2f, 0.2f}, {0.8f, 0.2f}, {0.5f, 0.8f}};
+    nvj::maskSmooth(triangle, 1.0f);
+    CHECK(triangle.handles.size() == 3 && nvj::maskOutline(triangle).size() == 3u * static_cast<size_t>(nvj::kBezierSegments));
+
+    nvj::SliceMask wrong = box;
+    wrong.handles.assign(7, nvj::MaskHandle{{0.1f, 0.0f}, {0.0f, 0.1f}});
+    nvj::normalizeMask(wrong);
+    CHECK(wrong.handles.empty());
+
+    nvj::SliceMask huge = box;
+    huge.handles.assign(4, nvj::MaskHandle{{50.0f, -50.0f}, {9.0f, 9.0f}});
+    nvj::normalizeMask(huge);
+    CHECK(huge.handles.size() == 4 && near(huge.handles[0].in.x, 1.0f) && near(huge.handles[0].in.y, -1.0f) && near(huge.handles[0].out.x, 1.0f));
+
+    const std::vector<uint8_t> image = nvj::buildMaskImage(curved, 256, 144);
+    CHECK(pixel(image, 256, static_cast<int>(0.42f * 256.0f), static_cast<int>(0.17f * 144.0f)) == 255);
+    const std::vector<uint8_t> straight = nvj::buildMaskImage(box, 256, 144);
+    CHECK(pixel(straight, 256, static_cast<int>(0.42f * 256.0f), static_cast<int>(0.17f * 144.0f)) == 0);
+}
+
+void testFreehandStroke() {
+    std::vector<nvj::Vec2f> stroke;
+    for (int i = 0; i <= 600; ++i) {
+        const float a = static_cast<float>(i) / 600.0f * 6.2831853f;
+        const float wobble = 0.003f * std::sin(a * 31.0f);
+        stroke.push_back({0.5f + (0.3f + wobble) * std::cos(a), 0.5f + (0.3f + wobble) * std::sin(a)});
+    }
+    nvj::SliceMask mask;
+    CHECK(nvj::maskFromStroke(mask, stroke));
+    CHECK(mask.enabled && mask.points.size() >= 3 && mask.points.size() <= static_cast<size_t>(nvj::kMaxMaskPoints));
+    CHECK(!nvj::maskHasCurves(mask) && mask.image.empty());
+    const float circle = 3.14159265f * 0.3f * 0.3f;
+    CHECK(std::fabs(polygonArea(mask.points) - circle) < circle * 0.06f);
+    CHECK(nvj::maskContains(mask, 0.5f, 0.5f) && !nvj::maskContains(mask, 0.05f, 0.05f));
+    CHECK(near(mask.points.front().x, mask.points.back().x, 1e-3f) == false || near(mask.points.front().y, mask.points.back().y, 1e-3f) == false);
+
+    const std::vector<nvj::Vec2f> few = nvj::simplifyStroke(stroke, 8);
+    CHECK(few.size() >= 3 && few.size() <= 8);
+
+    std::vector<nvj::Vec2f> line;
+    for (int i = 0; i < 100; ++i) {
+        line.push_back({0.1f + 0.008f * static_cast<float>(i), 0.5f});
+    }
+    nvj::SliceMask flat;
+    CHECK(!nvj::maskFromStroke(flat, line));
+    CHECK(nvj::simplifyStroke(line, nvj::kMaxMaskPoints).size() <= 2);
+
+    nvj::SliceMask tiny;
+    CHECK(!nvj::maskFromStroke(tiny, {{0.5f, 0.5f}, {0.5001f, 0.5001f}}));
+    CHECK(!nvj::maskFromStroke(tiny, {}));
+    CHECK(!tiny.enabled);
+
+    nvj::SliceMask replaced = nvj::maskRectangle(0.1f, 0.1f, 0.9f, 0.9f);
+    nvj::maskSmooth(replaced, 1.0f);
+    replaced.image = "old.png";
+    CHECK(nvj::maskFromStroke(replaced, stroke));
+    CHECK(!nvj::maskHasCurves(replaced) && replaced.image.empty());
+
+    std::vector<nvj::Vec2f> many;
+    for (int i = 0; i < 20000; ++i) {
+        const float a = static_cast<float>(i) / 20000.0f * 6.2831853f;
+        many.push_back({0.5f + 0.35f * std::cos(a) + 0.002f * std::sin(a * 200.0f), 0.5f + 0.35f * std::sin(a)});
+    }
+    const auto begin = std::chrono::steady_clock::now();
+    nvj::SliceMask big;
+    CHECK(nvj::maskFromStroke(big, many) && big.points.size() <= static_cast<size_t>(nvj::kMaxMaskPoints));
+    const double elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
+    CHECK(elapsed < 500.0);
+}
+
+void testMaskBitmap() {
+    nvj::MaskBitmap luma;
+    std::string error;
+    const std::vector<uint8_t> lumaFile = halfWhiteTga();
+    CHECK(nvj::decodeMaskBitmap(lumaFile.data(), lumaFile.size(), luma, error));
+    CHECK(luma.width == nvj::kMaskWidth && luma.height == nvj::kMaskHeight);
+    CHECK(luma.coverage.size() == static_cast<size_t>(nvj::kMaskWidth * nvj::kMaskHeight));
+    CHECK(pixel(luma.coverage, luma.width, 100, 300) == 255 && pixel(luma.coverage, luma.width, 900, 300) == 0);
+    const int middle = pixel(luma.coverage, luma.width, 512, 300);
+    CHECK(middle > 20 && middle < 235);
+
+    nvj::MaskBitmap alpha;
+    const std::vector<uint8_t> alphaFile = topOpaqueTga();
+    CHECK(nvj::decodeMaskBitmap(alphaFile.data(), alphaFile.size(), alpha, error));
+    CHECK(pixel(alpha.coverage, alpha.width, 500, 50) == 255 && pixel(alpha.coverage, alpha.width, 500, 520) == 0);
+
+    nvj::MaskBitmap bad;
+    const std::vector<uint8_t> garbage(200, 0x5a);
+    error.clear();
+    CHECK(!nvj::decodeMaskBitmap(garbage.data(), garbage.size(), bad, error) && !error.empty());
+    error.clear();
+    CHECK(!nvj::decodeMaskBitmap(nullptr, 0, bad, error) && !error.empty());
+    std::vector<uint8_t> truncated(lumaFile.begin(), lumaFile.begin() + 60);
+    error.clear();
+    CHECK(!nvj::decodeMaskBitmap(truncated.data(), truncated.size(), bad, error));
+
+    nvj::SliceMask mask;
+    mask.enabled = true;
+    mask.image = "shape.png";
+    const int w = 128;
+    const int h = 72;
+    CHECK(nvj::maskIsImage(mask) && nvj::maskUsable(mask) && nvj::maskContains(mask, 0.5f, 0.5f));
+    std::vector<uint8_t> hidden = nvj::buildMaskImage(mask, w, h);
+    CHECK(pixel(hidden, w, 10, 10) == 0 && pixel(hidden, w, 100, 50) == 0);
+    mask.invert = true;
+    hidden = nvj::buildMaskImage(mask, w, h);
+    CHECK(pixel(hidden, w, 10, 10) == 0);
+    mask.invert = false;
+
+    std::vector<uint8_t> shown = nvj::buildMaskImage(mask, w, h, &luma);
+    CHECK(pixel(shown, w, 10, 36) == 255 && pixel(shown, w, 118, 36) == 0);
+    mask.invert = true;
+    shown = nvj::buildMaskImage(mask, w, h, &luma);
+    CHECK(pixel(shown, w, 10, 36) == 0 && pixel(shown, w, 118, 36) == 255);
+    mask.invert = false;
+    mask.feather = 0.1f;
+    shown = nvj::buildMaskImage(mask, w, h, &luma);
+    CHECK(pixel(shown, w, 4, 36) > 200 && pixel(shown, w, 124, 36) < 50);
+    const int soft = pixel(shown, w, 64, 36);
+    CHECK(soft > 60 && soft < 200);
+
+    nvj::MaskBitmap broken;
+    broken.width = 10;
+    broken.height = 10;
+    broken.coverage.assign(5, 255);
+    mask.feather = 0.0f;
+    const std::vector<uint8_t> refused = nvj::buildMaskImage(mask, w, h, &broken);
+    CHECK(pixel(refused, w, 10, 36) == 0);
+
+    mask.enabled = false;
+    const std::vector<uint8_t> off = nvj::buildMaskImage(mask, w, h, &luma);
+    CHECK(pixel(off, w, 118, 36) == 255);
+
+    CHECK(nvj::maskImageNameValid("wall.png") && nvj::maskImageNameValid("Pillar 2.JPG") && nvj::maskImageNameValid("a.tga") && nvj::maskImageNameValid("b.bmp") && nvj::maskImageNameValid("c.jpeg"));
+    CHECK(!nvj::maskImageNameValid("") && !nvj::maskImageNameValid("noext") && !nvj::maskImageNameValid("..") && !nvj::maskImageNameValid("a.png.exe"));
+    CHECK(!nvj::maskImageNameValid("../x.png") && !nvj::maskImageNameValid("a/b.png") && !nvj::maskImageNameValid("a\\b.png") && !nvj::maskImageNameValid("c:x.png") && !nvj::maskImageNameValid("x.gif"));
+    CHECK(!nvj::maskImageNameValid(std::string(nvj::kMaxMaskImageNameLength, 'a') + ".png") && !nvj::maskImageNameValid("bad\nname.png"));
+}
+
+void testMaskImageCache() {
+    namespace fs = std::filesystem;
+    const fs::path data = fs::temp_directory_path() / "nyrexvj-mask-cache-test";
+    std::error_code ec;
+    fs::remove_all(data, ec);
+    fs::create_directories(data, ec);
+    setDataDirectory(data);
+    nvj::MaskImages& images = nvj::MaskImages::instance();
+    images.clear();
+    CHECK(images.folder() == data / "masks");
+
+    const fs::path source = data / "source wall.tga";
+    writeBytes(source, halfWhiteTga());
+    std::string name;
+    std::string error;
+    CHECK(images.importFile(source.string(), name, error));
+    CHECK(name == "source wall.tga" && fs::exists(images.folder() / name));
+    std::string again;
+    CHECK(images.importFile(source.string(), again, error) && again == "source wall 2.tga" && fs::exists(images.folder() / again));
+    CHECK(nvj::maskImageNameValid(name) && nvj::maskImageNameValid(again));
+
+    images.clear();
+    CHECK(images.get(name) == nullptr);
+    CHECK(images.waitFor(name, 10000));
+    const std::shared_ptr<const nvj::MaskBitmap> bitmap = images.get(name);
+    CHECK(bitmap != nullptr && bitmap->width == nvj::kMaskWidth && images.error(name).empty() && !images.loading(name));
+    CHECK(bitmap && pixel(bitmap->coverage, bitmap->width, 100, 300) == 255 && pixel(bitmap->coverage, bitmap->width, 900, 300) == 0);
+    CHECK(images.get(name) == bitmap);
+
+    CHECK(images.get("not-there.png") == nullptr);
+    CHECK(!images.waitFor("not-there.png", 10000) && !images.loading("not-there.png"));
+    CHECK(images.get("not-there.png") == nullptr && !images.error("not-there.png").empty());
+    CHECK(images.get("../escape.png") == nullptr);
+
+    writeBytes(images.folder() / "damaged.png", std::vector<uint8_t>(300, 0x11));
+    CHECK(images.get("damaged.png") == nullptr);
+    CHECK(!images.waitFor("damaged.png", 10000) && !images.loading("damaged.png"));
+    CHECK(images.get("damaged.png") == nullptr && !images.error("damaged.png").empty());
+
+    writeBytes(images.folder() / "later.png", halfWhiteTga());
+    images.reload("not-there.png");
+    CHECK(!images.waitFor("not-there.png", 10000) && !images.error("not-there.png").empty());
+
+    const fs::path text = data / "notes.txt";
+    writeBytes(text, std::vector<uint8_t>{'h', 'i'});
+    std::string refused;
+    error.clear();
+    CHECK(!images.importFile(text.string(), refused, error) && refused.empty() && !error.empty());
+    error.clear();
+    CHECK(!images.importFile((data / "missing.png").string(), refused, error) && error == "The file does not exist");
+
+    const fs::path huge = data / "huge.tga";
+    writeBytes(huge, std::vector<uint8_t>(nvj::kMaxMaskFileBytes + 1024u, 0));
+    error.clear();
+    CHECK(!images.importFile(huge.string(), refused, error) && !error.empty());
+
+    images.clear();
+    fs::remove_all(data, ec);
+}
+
+void testBudget() {
+    CHECK(nvj::ndiReadbackBytes(1920, 1080) == 2u * 1920u * 1080u * 4u);
+    CHECK(nvj::ndiReadbackBytes(nvj::kMaxNdiFrameSize, nvj::kMaxNdiFrameSize) == 2u * 4096u * 4096u * 4u);
+    CHECK(nvj::ndiReadbackBytes(nvj::kMaxNdiFrameSize + 1, 100) == 0 && nvj::ndiReadbackBytes(100, nvj::kMaxNdiFrameSize + 1) == 0);
+    CHECK(nvj::ndiReadbackBytes(0, 100) == 0 && nvj::ndiReadbackBytes(100, -4) == 0);
+    CHECK(nvj::defaultNdiName(0) == "NyrexVJ Output 1" && nvj::defaultNdiName(3) == "NyrexVJ Output 4");
+
+    std::array<nvj::OutputSpec, nvj::kMaxOutputs> specs = nvj::defaultOutputs();
+    nvj::OutputBudget base = nvj::estimateOutputBudget(specs, 1920, 1080, 1920, 1080);
+    CHECK(base.meshBytes > 0 && base.maskBytes == 0 && base.delayBytes == 0 && base.ndiBytes == 0);
+    CHECK(base.total() == base.meshBytes);
+
+    specs[0].map.mask = nvj::maskRectangle(0.1f, 0.1f, 0.9f, 0.9f);
+    nvj::OutputBudget hard = nvj::estimateOutputBudget(specs, 1920, 1080, 1920, 1080);
+    CHECK(hard.maskBytes == static_cast<size_t>(nvj::kMaskWidth) * static_cast<size_t>(nvj::kMaskHeight));
+    specs[0].map.mask.feather = 0.05f;
+    nvj::OutputBudget soft = nvj::estimateOutputBudget(specs, 1920, 1080, 1920, 1080);
+    CHECK(soft.maskBytes == static_cast<size_t>(nvj::kMaskWidth / 2) * static_cast<size_t>(nvj::kMaskHeight / 2));
+    specs[0].map.mask.feather = 0.0f;
+    specs[0].map.mask.points.clear();
+    specs[0].map.mask.image = "wall.png";
+    CHECK(nvj::estimateOutputBudget(specs, 1920, 1080, 1920, 1080).maskBytes == hard.maskBytes);
+    specs[0].map.mask = nvj::SliceMask{};
+
+    specs[1].enabled = true;
+    specs[1].ndi = true;
+    specs[1].delayFrames = 3;
+    nvj::OutputBudget second = nvj::estimateOutputBudget(specs, 1920, 1080, 1280, 720);
+    CHECK(second.ndiBytes == nvj::ndiReadbackBytes(1280, 720));
+    CHECK(second.delayBytes == 4u * 1920u * 1080u * 4u);
+    CHECK(second.total() == second.meshBytes + second.maskBytes + second.delayBytes + second.ndiBytes);
+    specs[1].enabled = false;
+    CHECK(nvj::estimateOutputBudget(specs, 1920, 1080, 1280, 720).ndiBytes == 0);
+    CHECK(nvj::estimateOutputBudget(specs, 1920, 1080, 1280, 720).delayBytes == 0);
+    specs[0].ndi = true;
+    CHECK(nvj::estimateOutputBudget(specs, 1920, 1080, 5000, 720).ndiBytes == 0);
+
+    nvj::addSlice(specs[0]);
+    const size_t withSlice = nvj::estimateOutputBudget(specs, 1920, 1080, 1280, 720).meshBytes;
+    specs[0].slices[0].enabled = false;
+    CHECK(nvj::estimateOutputBudget(specs, 1920, 1080, 1280, 720).meshBytes < withSlice);
+
+    std::array<nvj::OutputSpec, nvj::kMaxOutputs> heavy = nvj::defaultOutputs();
+    for (nvj::OutputSpec& spec : heavy) {
+        spec.enabled = true;
+        spec.ndi = true;
+        spec.delayFrames = nvj::kMaxDelayFrames;
+    }
+    CHECK(nvj::estimateOutputBudget(heavy, 3840, 2160, 3840, 2160).total() > nvj::kOutputGpuBudgetBytes);
+    CHECK(nvj::estimateOutputBudget(heavy, 1920, 1080, 1920, 1080).total() < nvj::kOutputGpuBudgetBytes);
+    CHECK(nvj::kOutputGpuBudgetBytes == 384u * 1024u * 1024u);
+}
+
+void testAdvancedJson() {
+    nvj::OutputSpec plain = nvj::defaultOutputSpec(0);
+    plain.color.saturation = 0.8f;
+    plain.map.mask = nvj::maskEllipse(0.5f, 0.5f, 0.4f, 0.4f, 12);
+    plain.map.mask.feather = 0.03f;
+    nvj::addSlice(plain);
+    plain.slices[0].map.mask = nvj::maskRectangle(0.1f, 0.1f, 0.9f, 0.9f);
+    const std::string text = nvj::outputToJson(plain).dump();
+    CHECK(text.find("sliceColor") == std::string::npos && text.find("ndi") == std::string::npos);
+    CHECK(text.find("curves") == std::string::npos && text.find("image") == std::string::npos);
+    nvj::OutputSpec reread = nvj::defaultOutputSpec(0);
+    CHECK(nvj::outputFromJson(nlohmann::json::parse(text), reread) && reread == plain);
+    CHECK(!reread.ndi && reread.ndiName.empty() && nvj::isDefaultColor(reread.map.sliceColor));
+    CHECK(nvj::outputToJson(reread).dump() == text);
+
+    nvj::OutputSpec rich = plain;
+    rich.ndi = true;
+    rich.ndiName = "Left wall";
+    rich.map.sliceColor.red = 0.8f;
+    rich.map.sliceColor.gamma = 1.3f;
+    nvj::maskSmooth(rich.map.mask, 0.8f);
+    rich.slices[0].map.sliceColor.saturation = 0.5f;
+    rich.slices[0].map.mask = nvj::SliceMask{};
+    rich.slices[0].map.mask.enabled = true;
+    rich.slices[0].map.mask.image = "wall mask.png";
+    rich.slices[0].map.mask.feather = 0.02f;
+    const nlohmann::json doc = nvj::outputToJson(rich);
+    nvj::OutputSpec back = nvj::defaultOutputSpec(0);
+    CHECK(nvj::outputFromJson(nlohmann::json::parse(doc.dump()), back));
+    CHECK(back == rich);
+    CHECK(back.ndi && back.ndiName == "Left wall" && back.map.mask.handles.size() == rich.map.mask.points.size());
+    CHECK(back.slices[0].map.mask.image == "wall mask.png" && near(back.map.sliceColor.red, 0.8f));
+    CHECK(nvj::outputToJson(back) == doc);
+
+    nlohmann::json damaged = nvj::outputToJson(nvj::defaultOutputSpec(1));
+    damaged["ndi"] = 5;
+    nvj::OutputSpec target = nvj::defaultOutputSpec(1);
+    target.ndi = true;
+    target.ndiName = "stale";
+    CHECK(nvj::outputFromJson(damaged, target));
+    CHECK(!target.ndi && target.ndiName.empty());
+    damaged["ndi"] = {{"enabled", "yes"}, {"name", 7}};
+    CHECK(nvj::outputFromJson(damaged, target) && !target.ndi && target.ndiName.empty());
+    damaged["ndi"] = {{"enabled", true}, {"name", std::string(300, 'x')}};
+    CHECK(nvj::outputFromJson(damaged, target) && target.ndi && target.ndiName.size() <= 60);
+
+    damaged = nvj::outputToJson(nvj::defaultOutputSpec(1));
+    damaged["mask"] = {{"enabled", true}, {"points", nlohmann::json::array({{0.1, 0.1}, {0.9, 0.1}, {0.5, 0.9}})}, {"image", "../../secret.png"}, {"curves", {1, 2}}};
+    CHECK(nvj::outputFromJson(damaged, target));
+    CHECK(target.map.mask.image.empty() && target.map.mask.handles.empty() && target.map.mask.points.size() == 3 && target.map.mask.enabled);
+    damaged["mask"] = {{"enabled", true}, {"points", nlohmann::json::array({{0.1, 0.1}, {0.9, 0.1}, {0.5, 0.9}})}, {"curves", {{0.1, 0.0, -0.1, 0.0}, "x", {1, 2, 3}}}};
+    CHECK(nvj::outputFromJson(damaged, target) && target.map.mask.handles.size() == 3);
+    CHECK(target.map.mask.handles[1] == nvj::MaskHandle{} && target.map.mask.handles[2] == nvj::MaskHandle{});
+    damaged["mask"] = {{"enabled", true}, {"image", "ok.png"}};
+    CHECK(nvj::outputFromJson(damaged, target) && target.map.mask.enabled && target.map.mask.image == "ok.png");
+    damaged["mask"] = {{"enabled", true}, {"image", 12}};
+    CHECK(nvj::outputFromJson(damaged, target) && !target.map.mask.enabled && target.map.mask.image.empty());
+    damaged["sliceColor"] = {{"red", 99}, {"gamma", "x"}};
+    CHECK(nvj::outputFromJson(damaged, target) && near(target.map.sliceColor.red, 1.5f) && near(target.map.sliceColor.gamma, 1.0f));
+    damaged["sliceColor"] = "broken";
+    CHECK(nvj::outputFromJson(damaged, target) && nvj::isDefaultColor(target.map.sliceColor));
+}
+
 }
 
 int main() {
@@ -581,5 +1006,11 @@ int main() {
     testLargeWarp();
     testJsonSlicesMaskColor();
     testSettingsRoundTrip();
+    testBezierMask();
+    testFreehandStroke();
+    testMaskBitmap();
+    testMaskImageCache();
+    testBudget();
+    testAdvancedJson();
     return testing::finish();
 }

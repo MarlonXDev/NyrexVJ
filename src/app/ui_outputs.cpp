@@ -1,6 +1,8 @@
 #include "app/app.hpp"
 
 #include "app/ui_common.hpp"
+#include "core/mask_images.hpp"
+#include "core/ndi_sender.hpp"
 #include "core/output_map.hpp"
 #include "core/venue_setup.hpp"
 #include "platform/platform.hpp"
@@ -46,6 +48,46 @@ float distanceToSegmentSquared(const Vec2f& p, const Vec2f& a, const Vec2f& b) {
     return ex * ex + ey * ey;
 }
 
+void colorControls(OutputColor& color, const char* id) {
+    ImGui::PushID(id);
+    ImGui::TextUnformatted(tr("Red"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cr", color.red, 0.0f, 1.5f);
+    ImGui::TextUnformatted(tr("Green"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cg", color.green, 0.0f, 1.5f);
+    ImGui::TextUnformatted(tr("Blue"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cb", color.blue, 0.0f, 1.5f);
+    ImGui::TextUnformatted(tr("Saturation"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cs", color.saturation, 0.0f, 2.0f);
+    ImGui::TextUnformatted(tr("Contrast"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##cc", color.contrast, 0.25f, 2.0f);
+    ImGui::TextUnformatted(tr("Gamma"));
+    ImGui::SameLine(110.0f);
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    ui::sliderFloat("##cgm", &color.gamma, 0.4f, 2.5f, "%.2f");
+    ImGui::TextUnformatted(tr("Black lift"));
+    ImGui::SameLine(110.0f);
+    percentSlider("##ck", color.black, 0.0f, 0.3f);
+    ImGui::SetItemTooltip("%s", tr("Raises black to match a projector that cannot show a deep black"));
+    ImGui::PopID();
+    ImGui::BeginDisabled(isDefaultColor(color));
+    if (ImGui::SmallButton(tr("Reset colour"))) {
+        color = OutputColor{};
+    }
+    ImGui::EndDisabled();
+    normalizeColor(color);
+}
+
+std::string megabytes(size_t bytes) {
+    char text[32];
+    std::snprintf(text, sizeof(text), "%.1f MiB", static_cast<double>(bytes) / (1024.0 * 1024.0));
+    return text;
+}
+
 bool sliceActive(const OutputSpec& spec, int index) {
     return index == 0 || spec.slices[static_cast<size_t>(index - 1)].enabled;
 }
@@ -56,7 +98,8 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
     (void)index;
     selectedSlice_ = std::clamp(selectedSlice_, 0, sliceCount(spec) - 1);
     OutputMapping& map = sliceMapping(spec, selectedSlice_);
-    const bool maskMode = canvasMode_ == 1;
+    const bool maskMode = canvasMode_ == 1 && !maskIsImage(map.mask);
+    const bool freehand = canvasMode_ == 2;
     const float width = std::max(160.0f, std::min(ImGui::GetContentRegionAvail().x, 560.0f));
     const ImVec2 size(width, width * 9.0f / 16.0f);
     const ImVec2 origin = ImGui::GetCursorScreenPos();
@@ -93,16 +136,34 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
     }
 
     const SliceMask& shown = map.mask;
-    if (!shown.points.empty()) {
+    if (maskIsImage(shown)) {
+        const MaskImages& images = MaskImages::instance();
+        std::string state = shown.image;
+        if (!images.error(shown.image).empty()) {
+            state += " - " + trMessage(images.error(shown.image));
+        } else if (images.loading(shown.image)) {
+            state += " - " + std::string(tr("loading"));
+        }
+        draw->AddText(ImVec2(origin.x + 6.0f, origin.y + 4.0f), shown.enabled ? IM_COL32(90, 255, 140, 235) : IM_COL32(150, 150, 150, 200), state.c_str());
+    } else if (!shown.points.empty()) {
+        const std::vector<Vec2f> curve = maskOutline(shown);
         std::vector<ImVec2> outline;
-        outline.reserve(shown.points.size());
-        for (const Vec2f& point : shown.points) {
+        outline.reserve(curve.size());
+        for (const Vec2f& point : curve) {
             outline.push_back(screen(point));
         }
-        if (maskUsable(shown)) {
+        if (maskUsable(shown) && outline.size() >= 3) {
             draw->AddConcavePolyFilled(outline.data(), static_cast<int>(outline.size()), shown.invert ? IM_COL32(255, 70, 70, 55) : IM_COL32(70, 255, 120, 45));
         }
         draw->AddPolyline(outline.data(), static_cast<int>(outline.size()), shown.enabled ? IM_COL32(90, 255, 140, 235) : IM_COL32(150, 150, 150, 200), ImDrawFlags_Closed, 1.5f);
+    }
+    if (freehand && maskStroke_.size() >= 2) {
+        std::vector<ImVec2> stroke;
+        stroke.reserve(maskStroke_.size());
+        for (const Vec2f& point : maskStroke_) {
+            stroke.push_back(screen(point));
+        }
+        draw->AddPolyline(stroke.data(), static_cast<int>(stroke.size()), IM_COL32(255, 230, 80, 255), ImDrawFlags_None, 2.0f);
     }
 
     const ImU32 blendColor = IM_COL32(80, 200, 255, 200);
@@ -147,7 +208,9 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
     int hot = -1;
     int hotWarp = -1;
     int hotMask = -1;
+    int hotHandle = -1;
     float best = 14.0f * 14.0f;
+    const bool curved = maskMode && maskHasCurves(map.mask) && map.mask.handles.size() == map.mask.points.size();
     if (maskMode) {
         for (size_t k = 0; k < map.mask.points.size(); ++k) {
             const ImVec2 p = screen(map.mask.points[k]);
@@ -155,9 +218,22 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
             if (d2 < best) {
                 best = d2;
                 hotMask = static_cast<int>(k);
+                hotHandle = -1;
+            }
+            if (curved) {
+                for (int side = 0; side < 2; ++side) {
+                    const Vec2f offset = side == 0 ? map.mask.handles[k].in : map.mask.handles[k].out;
+                    const ImVec2 h = screen({map.mask.points[k].x + offset.x, map.mask.points[k].y + offset.y});
+                    const float hd2 = (h.x - mouse.x) * (h.x - mouse.x) + (h.y - mouse.y) * (h.y - mouse.y);
+                    if (hd2 < best) {
+                        best = hd2;
+                        hotMask = -1;
+                        hotHandle = static_cast<int>(k) * 2 + side;
+                    }
+                }
             }
         }
-    } else {
+    } else if (!freehand) {
         for (int k = 0; k < 4; ++k) {
             const ImVec2 p = screen(map.corners[static_cast<size_t>(k)]);
             const float d2 = (p.x - mouse.x) * (p.x - mouse.x) + (p.y - mouse.y) * (p.y - mouse.y);
@@ -183,15 +259,38 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
         }
     }
 
+    if (freehand) {
+        if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            maskStroke_.clear();
+            maskStroke_.push_back(toCanvas(mouse, origin, size));
+        } else if (!maskStroke_.empty() && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            Vec2f p = toCanvas(mouse, origin, size);
+            p.x = std::clamp(p.x, -0.5f, 1.5f);
+            p.y = std::clamp(p.y, -0.5f, 1.5f);
+            const Vec2f& last = maskStroke_.back();
+            if ((p.x - last.x) * (p.x - last.x) + (p.y - last.y) * (p.y - last.y) > 0.0025f * 0.0025f && maskStroke_.size() < 4096) {
+                maskStroke_.push_back(p);
+            }
+        } else if (!maskStroke_.empty()) {
+            if (maskFromStroke(map.mask, maskStroke_)) {
+                canvasMode_ = 1;
+            }
+            maskStroke_.clear();
+        }
+    } else if (!maskStroke_.empty()) {
+        maskStroke_.clear();
+    }
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         draggedPoint_ = hot;
         draggedWarp_ = hotWarp;
         draggedMask_ = hotMask;
+        draggedHandle_ = hotHandle;
     }
     if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
         draggedPoint_ = -1;
         draggedWarp_ = -1;
         draggedMask_ = -1;
+        draggedHandle_ = -1;
     }
     if (maskMode && hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && hotMask >= 0) {
         maskRemovePoint(map.mask, hotMask);
@@ -215,11 +314,23 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
             }
         }
         points.insert(points.begin() + static_cast<std::ptrdiff_t>(insertAt), p);
+        if (!map.mask.handles.empty()) {
+            map.mask.handles.insert(map.mask.handles.begin() + static_cast<std::ptrdiff_t>(insertAt), MaskHandle{});
+        }
         if (points.size() >= static_cast<size_t>(kMinMaskPoints)) {
             map.mask.enabled = true;
         }
     }
-    if (draggedMask_ >= 0 && draggedMask_ < static_cast<int>(map.mask.points.size())) {
+    if (draggedHandle_ >= 0 && map.mask.handles.size() == map.mask.points.size() && draggedHandle_ / 2 < static_cast<int>(map.mask.points.size())) {
+        const size_t k = static_cast<size_t>(draggedHandle_ / 2);
+        const Vec2f p = toCanvas(mouse, origin, size);
+        const Vec2f offset = {std::clamp(p.x - map.mask.points[k].x, -0.5f, 0.5f), std::clamp(p.y - map.mask.points[k].y, -0.5f, 0.5f)};
+        const bool outHandle = (draggedHandle_ % 2) == 1;
+        (outHandle ? map.mask.handles[k].out : map.mask.handles[k].in) = offset;
+        if (!ImGui::GetIO().KeyAlt) {
+            (outHandle ? map.mask.handles[k].in : map.mask.handles[k].out) = {-offset.x, -offset.y};
+        }
+    } else if (draggedMask_ >= 0 && draggedMask_ < static_cast<int>(map.mask.points.size())) {
         Vec2f p = toCanvas(mouse, origin, size);
         p.x = std::clamp(p.x, -0.5f, 1.5f);
         p.y = std::clamp(p.y, -0.5f, 1.5f);
@@ -246,8 +357,18 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
             const float half = active ? 6.5f : 5.0f;
             draw->AddCircleFilled(p, half, active ? IM_COL32(255, 255, 255, 255) : IM_COL32(90, 255, 140, 255));
             draw->AddCircle(p, half, IM_COL32(0, 0, 0, 255));
+            if (curved) {
+                for (int side = 0; side < 2; ++side) {
+                    const Vec2f offset = side == 0 ? map.mask.handles[k].in : map.mask.handles[k].out;
+                    const ImVec2 h = screen({map.mask.points[k].x + offset.x, map.mask.points[k].y + offset.y});
+                    const bool handleActive = draggedHandle_ == static_cast<int>(k) * 2 + side || (draggedHandle_ < 0 && draggedMask_ < 0 && hotHandle == static_cast<int>(k) * 2 + side && hovered);
+                    draw->AddLine(p, h, IM_COL32(120, 200, 255, 150), 1.0f);
+                    draw->AddRectFilled(ImVec2(h.x - 3.5f, h.y - 3.5f), ImVec2(h.x + 3.5f, h.y + 3.5f), handleActive ? IM_COL32(255, 255, 255, 255) : IM_COL32(120, 200, 255, 255));
+                    draw->AddRect(ImVec2(h.x - 3.5f, h.y - 3.5f), ImVec2(h.x + 3.5f, h.y + 3.5f), IM_COL32(0, 0, 0, 255));
+                }
+            }
         }
-    } else {
+    } else if (!freehand) {
         for (int r = 0; r < rows; ++r) {
             for (int c = 0; c < columns; ++c) {
                 if (isCorner(r, c)) {
@@ -299,6 +420,8 @@ void App::drawOutputSlices(OutputSpec& spec) {
             draggedPoint_ = -1;
             draggedWarp_ = -1;
             draggedMask_ = -1;
+            draggedHandle_ = -1;
+            maskStroke_.clear();
         }
         if (hidden) {
             ImGui::PopStyleVar();
@@ -333,10 +456,56 @@ void App::drawOutputSlices(OutputSpec& spec) {
     }
 }
 
+void App::drawMaskImage(SliceMask& mask) {
+    ImGui::TextUnformatted(tr("Mask from image"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Uses a picture as the mask: bright or opaque parts show the slice, dark or transparent parts hide it. The picture is stretched over the whole output. PNG, JPG, BMP and TGA up to 16 MiB."));
+    ImGui::PopTextWrapPos();
+    MaskImages& images = MaskImages::instance();
+    if (maskIsImage(mask)) {
+        ImGui::TextUnformatted(mask.image.c_str());
+        const std::string failure = images.error(mask.image);
+        if (!failure.empty()) {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "%s", trMessage(failure).c_str());
+        } else if (images.loading(mask.image)) {
+            ImGui::TextDisabled("%s", tr("loading"));
+        } else if (images.get(mask.image)) {
+            ImGui::TextDisabled("%s", tr("Mask image loaded"));
+        }
+        if (ImGui::SmallButton(tr("Reload image"))) {
+            images.reload(mask.image);
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Remove image"))) {
+            mask.image.clear();
+            mask.enabled = mask.points.size() >= static_cast<size_t>(kMinMaskPoints) && mask.enabled;
+        }
+    }
+    ImGui::SetNextItemWidth(-90.0f);
+    ImGui::InputTextWithHint("##maskImagePath", tr("Image file path"), maskImagePath_, sizeof(maskImagePath_));
+    ImGui::SetItemTooltip("%s", tr("Full path of a picture on this computer. It is copied into the mask folder of NyrexVJ, so the original can be moved afterwards."));
+    ImGui::SameLine();
+    ImGui::BeginDisabled(maskImagePath_[0] == '\0');
+    if (ImGui::Button(tr("Use image"))) {
+        std::string name;
+        std::string error;
+        if (images.importFile(maskImagePath_, name, error)) {
+            mask.image = name;
+            mask.enabled = true;
+            maskImagePath_[0] = '\0';
+            canvasMode_ = 1;
+            toast(std::string(tr("Mask image imported: ")) + name);
+        } else {
+            toast(trMessage(error));
+        }
+    }
+    ImGui::EndDisabled();
+}
+
 void App::drawSliceMask(OutputMapping& map) {
     ImGui::SeparatorText(tr("Mask"));
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextDisabled("%s", tr("Cuts the slice to a shape, for example around a screen or a pillar. Choose Mask above the canvas, then drag the green points, double-click to add a point and right-click a point to remove it."));
+    ImGui::TextDisabled("%s", tr("Cuts the slice to a shape, for example around a screen or a pillar. Choose Mask above the canvas, then drag the green points, double-click to add a point and right-click a point to remove it. Choose Freehand to draw the shape with the mouse."));
     ImGui::PopTextWrapPos();
     SliceMask& mask = map.mask;
     const auto preset = [&](const SliceMask& shape) {
@@ -350,7 +519,7 @@ void App::drawSliceMask(OutputMapping& map) {
     };
     bool enabled = mask.enabled;
     if (ImGui::Checkbox(tr("Use mask"), &enabled)) {
-        if (enabled && mask.points.size() < static_cast<size_t>(kMinMaskPoints)) {
+        if (enabled && !maskIsImage(mask) && mask.points.size() < static_cast<size_t>(kMinMaskPoints)) {
             preset(maskRectangle(0.1f, 0.1f, 0.9f, 0.9f));
         }
         mask.enabled = enabled;
@@ -369,7 +538,13 @@ void App::drawSliceMask(OutputMapping& map) {
         preset(maskEllipse(0.5f, 0.5f, 0.45f, 0.45f, 32));
     }
     ImGui::SameLine();
-    ImGui::BeginDisabled(mask.points.size() >= static_cast<size_t>(kMaxMaskPoints));
+    if (ImGui::SmallButton(tr("Freehand"))) {
+        mask.image.clear();
+        canvasMode_ = 2;
+    }
+    ImGui::SetItemTooltip("%s", tr("Draw the shape with the mouse on the canvas. It is simplified to at most 32 points that you can edit afterwards."));
+    ImGui::SameLine();
+    ImGui::BeginDisabled(maskIsImage(mask) || mask.points.size() >= static_cast<size_t>(kMaxMaskPoints));
     if (ImGui::SmallButton(tr("Add point"))) {
         maskInsertPoint(mask);
         canvasMode_ = 1;
@@ -378,54 +553,101 @@ void App::drawSliceMask(OutputMapping& map) {
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Clear"))) {
         mask.points.clear();
+        mask.handles.clear();
+        mask.image.clear();
         mask.enabled = false;
     }
-    ImGui::SameLine();
-    ImGui::TextDisabled("%d / %d", static_cast<int>(mask.points.size()), kMaxMaskPoints);
+    if (!maskIsImage(mask)) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("%d / %d", static_cast<int>(mask.points.size()), kMaxMaskPoints);
+        ImGui::BeginDisabled(mask.points.size() < static_cast<size_t>(kMinMaskPoints));
+        if (ImGui::SmallButton(tr("Smooth edges"))) {
+            maskSmooth(mask, 1.0f);
+            canvasMode_ = 1;
+        }
+        ImGui::SetItemTooltip("%s", tr("Turns the corners into curves. Drag the blue squares to bend each edge. Hold Alt to move one handle on its own."));
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!maskHasCurves(mask));
+        if (ImGui::SmallButton(tr("Straight edges"))) {
+            maskClearCurves(mask);
+        }
+        ImGui::EndDisabled();
+    }
     ImGui::TextUnformatted(tr("Soft edge"));
     ImGui::SameLine(90.0f);
     percentSlider("##maskFeather", mask.feather, 0.0f, kMaxMaskFeather);
     ImGui::SetItemTooltip("%s", tr("Softens the edge of the mask, in percent of the picture height"));
+    drawMaskImage(mask);
     normalizeMask(mask);
 }
 
 void App::drawOutputColor(OutputSpec& spec) {
-    OutputColor& color = spec.color;
     ImGui::SeparatorText(tr("Colour of this output"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Matches the colour of this projector to its neighbours. It applies to all slices of this output but not to the test pattern."));
     ImGui::PopTextWrapPos();
-    ImGui::PushID("outputColor");
-    ImGui::TextUnformatted(tr("Red"));
-    ImGui::SameLine(110.0f);
-    percentSlider("##cr", color.red, 0.0f, 1.5f);
-    ImGui::TextUnformatted(tr("Green"));
-    ImGui::SameLine(110.0f);
-    percentSlider("##cg", color.green, 0.0f, 1.5f);
-    ImGui::TextUnformatted(tr("Blue"));
-    ImGui::SameLine(110.0f);
-    percentSlider("##cb", color.blue, 0.0f, 1.5f);
-    ImGui::TextUnformatted(tr("Saturation"));
-    ImGui::SameLine(110.0f);
-    percentSlider("##cs", color.saturation, 0.0f, 2.0f);
-    ImGui::TextUnformatted(tr("Contrast"));
-    ImGui::SameLine(110.0f);
-    percentSlider("##cc", color.contrast, 0.25f, 2.0f);
-    ImGui::TextUnformatted(tr("Gamma"));
-    ImGui::SameLine(110.0f);
-    ImGui::SetNextItemWidth(-FLT_MIN);
-    ui::sliderFloat("##cgm", &color.gamma, 0.4f, 2.5f, "%.2f");
-    ImGui::TextUnformatted(tr("Black lift"));
-    ImGui::SameLine(110.0f);
-    percentSlider("##ck", color.black, 0.0f, 0.3f);
-    ImGui::SetItemTooltip("%s", tr("Raises black to match a projector that cannot show a deep black"));
-    ImGui::PopID();
-    ImGui::BeginDisabled(isDefaultColor(color));
-    if (ImGui::SmallButton(tr("Reset colour"))) {
-        color = OutputColor{};
+    colorControls(spec.color, "outputColor");
+}
+
+void App::drawSliceColor(OutputMapping& map) {
+    ImGui::SeparatorText(tr("Colour of this slice"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Corrects the colour of this slice only, for example when two surfaces on one output look different. It is applied first, then the colour of the output. The test pattern is not changed."));
+    ImGui::PopTextWrapPos();
+    colorControls(map.sliceColor, "sliceColor");
+}
+
+void App::drawOutputBudget() {
+    const std::array<OutputSpec, kMaxOutputs>& specs = outputs_.specs();
+    const OutputBudget planned = estimateOutputBudget(specs, engine_.width(), engine_.height(), 1920, 1080);
+    const size_t used = outputs_.gpuBytes();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Output memory"));
+    ImGui::SameLine();
+    const std::string line = megabytes(used) + " / " + megabytes(outputs_.budgetBytes());
+    ImGui::TextUnformatted(line.c_str());
+    ImGui::SetItemTooltip("%s", tr("Graphics memory used by the output windows, masks, delay and NDI readback. NDI readback is not started when it would go over the limit."));
+    if (planned.total() > outputs_.budgetBytes()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s %s", tr("The current setup needs about"), megabytes(planned.total()).c_str());
     }
+}
+
+void App::drawOutputNdi(OutputSpec& spec, int index) {
+    ImGui::SeparatorText(tr("NDI output"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Sends this output exactly as the window shows it, with slices, warp, masks, blending and colour, as its own NDI source. It only reads the picture back while a receiver is connected."));
+    ImGui::PopTextWrapPos();
+    ImGui::Checkbox(tr("Send this output as NDI"), &spec.ndi);
+    if (ndiOutputNameFor_ != index) {
+        std::snprintf(ndiOutputName_, sizeof(ndiOutputName_), "%s", spec.ndiName.c_str());
+        ndiOutputNameFor_ = index;
+    }
+    ImGui::BeginDisabled(!spec.ndi);
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::InputTextWithHint("##ndiOutputName", defaultNdiName(index).c_str(), ndiOutputName_, sizeof(ndiOutputName_))) {
+        spec.ndiName = ndiOutputName_;
+    }
+    ImGui::SetItemTooltip("%s", tr("Name of the NDI source. Empty uses the default name. A changed name restarts the sender."));
     ImGui::EndDisabled();
-    normalizeColor(color);
+    if (spec.ndi) {
+        const OutputNdiStatus& status = outputs_.ndiStatus(index);
+        if (!outputs_.isOpen(index)) {
+            ImGui::TextDisabled("%s", tr("Open this output to start sending."));
+        } else if (!status.error.empty()) {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "%s", trMessage(status.error).c_str());
+        } else if (status.tooLarge) {
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", tr("The window is larger than 4096 pixels, so no NDI picture is sent."));
+        } else if (status.overBudget) {
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", tr("Not enough graphics memory budget for the NDI readback."));
+        } else if (status.active && status.connections > 0) {
+            ImGui::TextDisabled("%s: %d", tr("Receivers connected"), status.connections);
+        } else if (status.active) {
+            ImGui::TextDisabled("%s", tr("Waiting for a receiver."));
+        } else {
+            ImGui::TextDisabled("%s", tr("Starting NDI..."));
+        }
+    }
 }
 
 void App::drawOutputMapping(int index) {
@@ -498,6 +720,8 @@ void App::drawOutputMapping(int index) {
     ImGui::RadioButton(tr("Corners and warp"), &canvasMode_, 0);
     ImGui::SameLine();
     ImGui::RadioButton(tr("Mask"), &canvasMode_, 1);
+    ImGui::SameLine();
+    ImGui::RadioButton(tr("Freehand"), &canvasMode_, 2);
     drawMappingCanvas(spec, index);
     ImGui::SetNextItemWidth(120.0f);
     if (ImGui::BeginCombo(tr("Warp points"), (std::to_string(map.warpColumns) + " x " + std::to_string(map.warpRows)).c_str())) {
@@ -519,6 +743,7 @@ void App::drawOutputMapping(int index) {
     }
 
     drawSliceMask(map);
+    drawSliceColor(map);
 
     ImGui::SeparatorText(tr("Edge blending"));
     ImGui::PushTextWrapPos(0.0f);
@@ -566,6 +791,8 @@ void App::drawOutputMapping(int index) {
         draggedPoint_ = -1;
         draggedWarp_ = -1;
         draggedMask_ = -1;
+        draggedHandle_ = -1;
+        maskStroke_.clear();
     }
 }
 
@@ -589,6 +816,9 @@ void App::applyVenue(const std::array<OutputSpec, kMaxOutputs>& set) {
     draggedPoint_ = -1;
     draggedWarp_ = -1;
     draggedMask_ = -1;
+    draggedHandle_ = -1;
+    maskStroke_.clear();
+    ndiOutputNameFor_ = -1;
 }
 
 bool App::importDroppedVenue(const std::string& path) {
@@ -843,6 +1073,9 @@ void App::drawOutputControls() {
         ImGui::TextDisabled("%s: %s", tr("Delay memory"), memory);
     }
 
+    drawOutputNdi(spec, index);
+    drawOutputBudget();
+
     drawOutputMapping(index);
     ImGui::EndDisabled();
 
@@ -906,6 +1139,7 @@ void App::drawOutputControls() {
             maps[i].warpRows = keep.warpRows;
             maps[i].warp = keep.warp;
             maps[i].brightness = keep.brightness;
+            maps[i].sliceColor = keep.sliceColor;
             specs[i].map = maps[i];
             specs[i].enabled = true;
         }

@@ -8,12 +8,14 @@
 namespace nvj {
 
 constexpr unsigned kPluginApiMajor = 1;
-constexpr unsigned kPluginApiMinor = 0;
+constexpr unsigned kPluginApiMinor = 1;
 constexpr size_t kMaxPluginFolders = 16;
 constexpr size_t kMaxManifestBytes = 16 * 1024;
 constexpr size_t kMaxPluginIdLength = 32;
 constexpr size_t kMaxPluginNameLength = 40;
 constexpr size_t kMaxPluginVersionLength = 24;
+constexpr size_t kMaxPluginRequires = 16;
+constexpr size_t kMaxCapabilityLength = 48;
 constexpr int kPluginModulationSlots = 8;
 constexpr int kPluginFrameSlots = 4;
 constexpr int kPluginParameters = 4;
@@ -33,7 +35,9 @@ enum class PluginProblem {
     NoLibrary,
     BadLibraryName,
     MissingLibrary,
-    DuplicateId
+    DuplicateId,
+    BadRequires,
+    MissingCapability
 };
 
 const char* pluginProblemName(PluginProblem problem);
@@ -45,6 +49,7 @@ struct PluginManifest {
     unsigned apiMajor = 0;
     unsigned apiMinor = 0;
     std::string library;
+    std::vector<std::string> requiredCapabilities;
 };
 
 struct PluginEntry {
@@ -58,6 +63,9 @@ struct PluginEntry {
 };
 
 bool validPluginId(const std::string& id);
+bool validCapabilityName(const std::string& name);
+const std::vector<std::string>& pluginHostCapabilities();
+bool pluginHostHasCapability(const std::string& name);
 const char* pluginPlatformKey();
 std::filesystem::path pluginsFolder(const std::filesystem::path& dataDir);
 

@@ -5,7 +5,7 @@
 
 namespace nvj {
 
-constexpr int kCrashMarkerSlots = 32;
+constexpr int kCrashMarkerSlots = 64;
 constexpr int kCrashMarkerIdLength = 48;
 
 void installCrashHandler(const std::string& reportPath, const std::string& version);

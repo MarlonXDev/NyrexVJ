@@ -15,7 +15,9 @@
 #include <cstring>
 #include <map>
 #include <mutex>
+#include <set>
 #include <thread>
+#include <vector>
 
 namespace nvj {
 
@@ -91,10 +93,52 @@ struct ParamBlock {
 
 struct HostContext {
     std::string pluginId;
+    int maxInstances = kPluginMaxInstancesPerPlugin;
     std::shared_ptr<SnapshotBox> snapshot;
     std::shared_ptr<ParamBlock> params;
     std::atomic<int> logBudget{kPluginLogsPerSecond};
+    std::mutex errorMutex;
+    std::string pluginError;
+
+    void storeError(const std::string& text) {
+        std::lock_guard<std::mutex> lock(errorMutex);
+        pluginError = text;
+    }
+
+    std::string takeError() {
+        std::lock_guard<std::mutex> lock(errorMutex);
+        std::string text;
+        text.swap(pluginError);
+        return text;
+    }
 };
+
+template <typename T>
+struct Guarded {
+    T value{};
+    uint8_t guard[kGuardBytes];
+
+    Guarded() { std::memset(guard, kGuardByte, sizeof(guard)); }
+
+    bool intact() const {
+        for (size_t i = 0; i < kGuardBytes; ++i) {
+            if (guard[i] != kGuardByte) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+std::string cleanText(const std::string& text) {
+    std::string out = text;
+    for (char& c : out) {
+        if (static_cast<unsigned char>(c) < 0x20 || static_cast<unsigned char>(c) == 0x7f) {
+            c = ' ';
+        }
+    }
+    return out;
+}
 
 void hostLog(void* context, int32_t level, const char* message) {
     HostContext* host = static_cast<HostContext*>(context);
@@ -168,6 +212,47 @@ float hostParameter(void* context, uint32_t index) {
     return host->params->values[index].load();
 }
 
+int32_t hostHasCapability(void* context, const char* name) {
+    if (context == nullptr || name == nullptr) {
+        return 0;
+    }
+    return pluginHostHasCapability(boundedString(name, kMaxCapabilityLength + 1)) ? 1 : 0;
+}
+
+int32_t hostLimits(void* context, NvjLimits* out) {
+    HostContext* host = static_cast<HostContext*>(context);
+    if (host == nullptr || out == nullptr || out->size < sizeof(uint32_t)) {
+        return NVJ_FAILED;
+    }
+    NvjLimits full{};
+    full.size = sizeof(NvjLimits);
+    full.max_sources = NYREXVJ_PLUGIN_MAX_SOURCES;
+    full.max_parameters = NYREXVJ_PLUGIN_MAX_PARAMETERS;
+    full.frame_width = static_cast<uint32_t>(kPluginFrameWidth);
+    full.frame_height = static_cast<uint32_t>(kPluginFrameHeight);
+    full.frame_rate = static_cast<uint32_t>(kPluginFrameFps);
+    full.modulation_rate = static_cast<uint32_t>(kModulationRate);
+    full.modulation_budget_ms = static_cast<uint32_t>(kPluginModulationBudget * 1000.0);
+    full.frame_budget_ms = static_cast<uint32_t>(kPluginFrameBudget * 1000.0);
+    full.create_budget_ms = static_cast<uint32_t>(kPluginCreateBudget * 1000.0);
+    full.load_budget_ms = static_cast<uint32_t>(kPluginLoadBudget * 1000.0);
+    full.max_instances = static_cast<uint32_t>(std::max(0, host->maxInstances));
+    full.log_lines_per_second = static_cast<uint32_t>(kPluginLogsPerSecond);
+    full.log_line_length = static_cast<uint32_t>(kMaxLogLength);
+    const uint32_t given = out->size;
+    std::memcpy(out, &full, std::min<size_t>(given, sizeof(full)));
+    out->size = given;
+    return NVJ_OK;
+}
+
+void hostSetError(void* context, const char* message) {
+    HostContext* host = static_cast<HostContext*>(context);
+    if (host == nullptr || message == nullptr) {
+        return;
+    }
+    host->storeError(cleanText(boundedString(message, kPluginMaxErrorText)));
+}
+
 NvjHost makeHostTable(HostContext* context) {
     NvjHost table{};
     table.size = sizeof(NvjHost);
@@ -178,6 +263,9 @@ NvjHost makeHostTable(HostContext* context) {
     table.get_audio = hostAudio;
     table.get_beat = hostBeat;
     table.get_parameter = hostParameter;
+    table.has_capability = hostHasCapability;
+    table.get_limits = hostLimits;
+    table.set_error = hostSetError;
     return table;
 }
 
@@ -209,6 +297,11 @@ struct Runner {
     std::atomic<double> lastCallMs{0.0};
     std::atomic<double> maxCallMs{0.0};
     std::atomic<double> fps{0.0};
+    double maxDuty = kPluginMaxDuty;
+    std::atomic<double> duty{0.0};
+    std::atomic<double> throttledAt{0.0};
+    std::atomic<bool> throttleLogged{false};
+    std::atomic<int> errorKind{static_cast<int>(PluginErrorKind::None)};
     std::string error;
     LiveFrameBox box;
 
@@ -224,19 +317,25 @@ struct Runner {
     }
 };
 
-void failRunner(Runner& runner, const std::string& reason) {
+void failRunner(Runner& runner, PluginErrorKind kind, const std::string& reason) {
     bool first = false;
+    std::string text = reason;
     {
         std::lock_guard<std::mutex> lock(runner.mutex);
         if (!runner.failed.load()) {
-            runner.error = reason;
+            const std::string said = runner.context.takeError();
+            if (!said.empty()) {
+                text += " (the plugin says: " + said + ")";
+            }
+            runner.error = text;
+            runner.errorKind.store(static_cast<int>(kind));
             runner.failed.store(true);
             first = true;
         }
         runner.wake.notify_all();
     }
     if (first) {
-        logLine("plugin " + runner.pluginId + " disabled for this session: " + reason);
+        logLine("plugin " + runner.pluginId + " disabled for this session [" + pluginErrorKindName(kind) + "]: " + text);
     }
 }
 
@@ -263,22 +362,21 @@ bool guardedCall(Runner& runner, double budget, const char* what, Fn&& fn) {
     }
     ++runner.calls;
     if (threw) {
-        failRunner(runner, std::string(what) + " threw an exception");
+        failRunner(runner, PluginErrorKind::Exception, std::string(what) + " threw an exception");
         return false;
     }
     if (!ok) {
-        failRunner(runner, std::string(what) + " returned an error");
+        failRunner(runner, PluginErrorKind::CallFailed, std::string(what) + " returned an error");
         return false;
     }
     if (ms > budget * 1000.0) {
-        failRunner(runner, std::string(what) + " took " + std::to_string(static_cast<int>(ms)) + " ms, over the time budget of " + std::to_string(static_cast<int>(budget * 1000.0)) + " ms");
+        failRunner(runner, PluginErrorKind::Timeout, std::string(what) + " took " + std::to_string(static_cast<int>(ms)) + " ms, over the time budget of " + std::to_string(static_cast<int>(budget * 1000.0)) + " ms");
         return false;
     }
     return !runner.failed.load();
 }
 
 void runnerMain(std::shared_ptr<Runner> runner) {
-    threadStarted();
     Runner& r = *runner;
     void* instance = nullptr;
     const bool created = guardedCall(r, kPluginCreateBudget, "create", [&]() {
@@ -298,6 +396,20 @@ void runnerMain(std::shared_ptr<Runner> runner) {
         unsigned long long frameId = 0;
         double fpsAverage = 0.0;
         double lastFrameAt = 0.0;
+        double lastCallBegin = 0.0;
+        double dutyAverage = 0.0;
+        const auto settleCycle = [&]() {
+            const double end = steadySeconds();
+            const double busy = r.lastCallMs.load() / 1000.0;
+            const double gap = busy * (1.0 / r.maxDuty - 1.0);
+            if (next < end + gap) {
+                next = end + gap;
+                r.throttledAt.store(end);
+                if (!r.throttleLogged.exchange(true)) {
+                    logLine("plugin " + r.pluginId + " is slowed down: its calls use more than " + std::to_string(static_cast<int>(r.maxDuty * 100.0)) + " percent of the time of one thread");
+                }
+            }
+        };
         while (true) {
             {
                 std::unique_lock<std::mutex> lock(r.mutex);
@@ -315,11 +427,18 @@ void runnerMain(std::shared_ptr<Runner> runner) {
                 next = now + period;
             }
             const double time = now - startTime;
+            if (lastCallBegin > 0.0 && now > lastCallBegin) {
+                const double busyBefore = r.lastCallMs.load() / 1000.0;
+                dutyAverage = dutyAverage * 0.8 + std::min(1.0, busyBefore / (now - lastCallBegin)) * 0.2;
+                r.duty.store(dutyAverage);
+            }
+            lastCallBegin = now;
             if (!frameKind) {
                 float output = 0.0f;
                 if (!guardedCall(r, kPluginModulationBudget, "modulation", [&]() { return r.api.modulation(instance, time, delta, &output) == NVJ_OK; })) {
                     break;
                 }
+                settleCycle();
                 if (!std::isfinite(output)) {
                     output = 0.0f;
                 }
@@ -337,9 +456,10 @@ void runnerMain(std::shared_ptr<Runner> runner) {
             if (!guardedCall(r, kPluginFrameBudget, "frame", [&]() { return r.api.frame(instance, time, delta, &image) == NVJ_OK; })) {
                 break;
             }
+            settleCycle();
             bool intact = image.width == static_cast<uint32_t>(r.width) && image.height == static_cast<uint32_t>(r.height) && image.stride == static_cast<uint32_t>(r.width) * 4u && image.data == work.data();
             if (!intact) {
-                failRunner(r, "frame changed the image description");
+                failRunner(r, PluginErrorKind::BadOutput, "frame changed the image description");
                 break;
             }
             for (size_t i = 0; i < kGuardBytes; ++i) {
@@ -349,7 +469,7 @@ void runnerMain(std::shared_ptr<Runner> runner) {
                 }
             }
             if (!intact) {
-                failRunner(r, "frame wrote outside of the image");
+                failRunner(r, PluginErrorKind::Guard, "frame wrote outside of the image");
                 break;
             }
             LiveFrame frame;
@@ -427,29 +547,35 @@ struct LoadJob {
     HostContext context;
     NvjHost table{};
     DynamicLibrary library;
+    Guarded<NvjPlugin> raw;
     NvjPlugin api{};
     std::vector<PluginSourceDesc> sources;
     std::string error;
+    PluginErrorKind kind = PluginErrorKind::None;
     std::atomic<bool> done{false};
     bool ok = false;
 };
 
-bool describeSources(LoadJob& job, std::string& error) {
+bool describeSources(LoadJob& job, std::string& error, PluginErrorKind& kind) {
     const NvjPlugin& api = job.api;
+    kind = PluginErrorKind::Load;
     if (api.size < offsetof(NvjPlugin, source_count) + sizeof(uint32_t)) {
         error = "the plugin table is too small";
         return false;
     }
     if (api.api_major != NYREXVJ_PLUGIN_API_MAJOR || api.api_minor > NYREXVJ_PLUGIN_API_MINOR) {
         error = "the library reports API " + std::to_string(api.api_major) + "." + std::to_string(api.api_minor);
+        kind = PluginErrorKind::Incompatible;
         return false;
     }
     if (api.api_major != job.manifest.apiMajor || api.api_minor != job.manifest.apiMinor) {
         error = "the library reports API " + std::to_string(api.api_major) + "." + std::to_string(api.api_minor) + " but plugin.json says " + std::to_string(job.manifest.apiMajor) + "." + std::to_string(job.manifest.apiMinor);
+        kind = PluginErrorKind::Incompatible;
         return false;
     }
     if (boundedString(api.id, kMaxPluginIdLength + 1) != job.manifest.id) {
         error = "the library id differs from plugin.json";
+        kind = PluginErrorKind::Incompatible;
         return false;
     }
     if (!NYREXVJ_HAS_FIELD(&api, NvjPlugin, get_source) || !NYREXVJ_HAS_FIELD(&api, NvjPlugin, create) || !NYREXVJ_HAS_FIELD(&api, NvjPlugin, destroy) || api.get_source == nullptr || api.create == nullptr || api.destroy == nullptr) {
@@ -461,10 +587,16 @@ bool describeSources(LoadJob& job, std::string& error) {
         return false;
     }
     for (uint32_t i = 0; i < api.source_count; ++i) {
-        NvjSourceInfo info{};
+        Guarded<NvjSourceInfo> infoBox;
+        NvjSourceInfo& info = infoBox.value;
         info.size = sizeof(NvjSourceInfo);
         if (api.get_source(i, &info) != NVJ_OK) {
             error = "get_source failed for source " + std::to_string(i);
+            return false;
+        }
+        if (!infoBox.intact()) {
+            error = "get_source wrote behind the source description of source " + std::to_string(i);
+            kind = PluginErrorKind::Guard;
             return false;
         }
         PluginSourceDesc desc;
@@ -514,10 +646,10 @@ bool describeSources(LoadJob& job, std::string& error) {
 }
 
 void loadMain(std::shared_ptr<LoadJob> job) {
-    threadStarted();
     const int slot = crashMarkerAcquire(job->id);
     crashMarkerEnter(slot);
     std::string error;
+    PluginErrorKind kind = PluginErrorKind::Load;
     bool ok = false;
     try {
         if (!job->library.open(job->path, error)) {
@@ -528,24 +660,51 @@ void loadMain(std::shared_ptr<LoadJob> job) {
                 error = std::string("the library has no ") + NYREXVJ_PLUGIN_ENTRY_NAME + " function";
             } else {
                 NvjEntryFn entry = reinterpret_cast<NvjEntryFn>(symbol);
-                job->api.size = sizeof(NvjPlugin);
-                if (entry(&job->table, &job->api) != NVJ_OK) {
+                job->raw.value.size = sizeof(NvjPlugin);
+                if (entry(&job->table, &job->raw.value) != NVJ_OK) {
                     error = "the entry function returned an error";
+                } else if (!job->raw.intact()) {
+                    error = "the entry function wrote behind the plugin table";
+                    kind = PluginErrorKind::Guard;
+                } else if (job->raw.value.size > sizeof(NvjPlugin)) {
+                    error = "the plugin reports a table of " + std::to_string(job->raw.value.size) + " bytes but the host offered " + std::to_string(sizeof(NvjPlugin));
+                    kind = PluginErrorKind::Guard;
                 } else {
-                    ok = describeSources(*job, error);
+                    job->api = job->raw.value;
+                    ok = describeSources(*job, error, kind);
                 }
             }
         }
     } catch (...) {
         ok = false;
         error = "the plugin threw an exception while loading";
+        kind = PluginErrorKind::Exception;
     }
     crashMarkerLeave(slot);
     crashMarkerRelease(slot);
+    if (!ok) {
+        const std::string said = job->context.takeError();
+        if (!said.empty()) {
+            error += " (the plugin says: " + said + ")";
+        }
+    }
     job->ok = ok;
     job->error = error;
+    job->kind = ok ? PluginErrorKind::None : kind;
     job->done.store(true);
     threadFinished();
+}
+
+template <typename T>
+bool launchThread(void (*entry)(std::shared_ptr<T>), const std::shared_ptr<T>& argument) {
+    threadStarted();
+    try {
+        std::thread(entry, argument).detach();
+        return true;
+    } catch (...) {
+        threadFinished();
+        return false;
+    }
 }
 
 struct Tracked {
@@ -559,14 +718,20 @@ struct PluginHost::Impl {
     struct ModSlot {
         std::string key;
         std::shared_ptr<Runner> runner;
+        std::string refused;
     };
 
     fs::path dataDir;
     bool allowLoading = true;
+    PluginLimits limits;
     PluginConfig config;
     std::vector<PluginSafeEntry> safeList;
     std::vector<PluginInfo> plugins;
     std::map<std::string, NvjPlugin> apis;
+    std::map<std::string, fs::path> apiPaths;
+    std::map<std::string, std::vector<PluginSourceDesc>> sourceCache;
+    std::set<std::string> pending;
+    std::set<std::string> refusalLogged;
     std::map<std::string, std::shared_ptr<LoadJob>> jobs;
     std::map<std::string, double> jobStart;
     std::shared_ptr<SnapshotBox> snapshot = std::make_shared<SnapshotBox>();
@@ -603,13 +768,88 @@ struct PluginHost::Impl {
         job->path = info.entry.libraryPath;
         job->manifest = info.entry.manifest;
         job->context.pluginId = job->id;
+        job->context.maxInstances = limits.instancesPerPlugin;
         job->context.snapshot = snapshot;
         job->table = makeHostTable(&job->context);
         jobs[job->id] = job;
         jobStart[job->id] = steadySeconds();
         info.state = PluginState::Loading;
         info.message.clear();
-        std::thread(loadMain, job).detach();
+        if (!launchThread(loadMain, job)) {
+            jobs.erase(job->id);
+            jobStart.erase(job->id);
+            refuse(info, PluginErrorKind::Limit, "could not start a thread for loading");
+        }
+    }
+
+    int liveRunnersOf(const std::string& id) const {
+        int count = 0;
+        for (const Tracked& tracked : runners) {
+            if (tracked.runner->pluginId == id && !tracked.runner->finished.load()) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    int liveRunnersTotal() const {
+        int count = 0;
+        for (const Tracked& tracked : runners) {
+            if (!tracked.runner->finished.load()) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    void refuse(PluginInfo& info, PluginErrorKind kind, const std::string& reason) {
+        info.state = PluginState::Failed;
+        info.errorKind = kind;
+        info.message = reason;
+        logLine("plugin " + info.entry.manifest.id + " " + reason);
+    }
+
+    void activate(PluginInfo& info) {
+        const std::string id = info.entry.manifest.id;
+        info.message.clear();
+        info.errorKind = PluginErrorKind::None;
+        if (jobs.count(id) != 0) {
+            info.state = PluginState::Loading;
+            return;
+        }
+        if (abandoned >= limits.abandoned) {
+            refuse(info, PluginErrorKind::Limit, "was not loaded: " + std::to_string(abandoned) + " plugin calls are stuck in this session (the limit is " + std::to_string(limits.abandoned) + "). Restart NyrexVJ.");
+            return;
+        }
+        const auto api = apis.find(id);
+        const auto path = apiPaths.find(id);
+        if (api != apis.end() && path != apiPaths.end() && path->second == info.entry.libraryPath) {
+            info.sources = sourceCache[id];
+            if (liveRunnersOf(id) > 0) {
+                info.state = PluginState::Loading;
+                pending.insert(id);
+            } else {
+                info.state = PluginState::Loaded;
+            }
+            return;
+        }
+        startLoad(info);
+    }
+
+    void settlePending() {
+        const std::vector<std::string> ids(pending.begin(), pending.end());
+        for (const std::string& id : ids) {
+            PluginInfo* info = record(id);
+            if (info == nullptr || info->state != PluginState::Loading || !config.isEnabled(id)) {
+                if (info != nullptr && info->state == PluginState::Loading) {
+                    info->state = PluginState::NotEnabled;
+                }
+                pending.erase(id);
+            } else if (liveRunnersOf(id) == 0) {
+                info->state = PluginState::Loaded;
+                pending.erase(id);
+            }
+        }
     }
 
     static void dropSlot(ModSlot& slot) {
@@ -632,12 +872,14 @@ struct PluginHost::Impl {
         }
     }
 
-    void failPlugin(const std::string& id, const std::string& reason) {
+    void failPlugin(const std::string& id, PluginErrorKind kind, const std::string& reason) {
         PluginInfo* info = record(id);
         if (info != nullptr && info->state != PluginState::Failed) {
             info->state = PluginState::Failed;
+            info->errorKind = kind;
             info->message = reason;
         }
+        pending.erase(id);
         stopRunnersOf(id);
     }
 
@@ -654,18 +896,27 @@ struct PluginHost::Impl {
             if (job.done.load()) {
                 if (job.ok) {
                     apis[id] = job.api;
-                    info->sources = job.sources;
-                    info->state = PluginState::Loaded;
-                    info->message.clear();
-                    logLine("plugin " + id + " loaded with " + std::to_string(job.sources.size()) + " sources");
+                    apiPaths[id] = job.path;
+                    sourceCache[id] = job.sources;
+                    if (info->state == PluginState::Loading) {
+                        info->sources = job.sources;
+                        info->state = PluginState::Loaded;
+                        info->message.clear();
+                        info->errorKind = PluginErrorKind::None;
+                        logLine("plugin " + id + " loaded with " + std::to_string(job.sources.size()) + " sources");
+                    } else {
+                        logLine("plugin " + id + " finished loading after it was switched off, it stays off");
+                    }
                 } else {
                     info->state = PluginState::Failed;
                     info->message = job.error;
-                    logLine("plugin " + id + " could not be loaded: " + job.error);
+                    info->errorKind = job.kind;
+                    logLine("plugin " + id + " could not be loaded [" + pluginErrorKindName(job.kind) + "]: " + job.error);
                 }
                 finished.push_back(id);
             } else if (now - jobStart[id] > kPluginLoadBudget) {
                 info->state = PluginState::Failed;
+                info->errorKind = PluginErrorKind::Timeout;
                 info->message = "loading did not finish within " + std::to_string(static_cast<int>(kPluginLoadBudget * 1000.0)) + " ms";
                 logLine("plugin " + id + " " + info->message);
                 ++abandoned;
@@ -675,6 +926,13 @@ struct PluginHost::Impl {
         for (const std::string& id : finished) {
             jobs.erase(id);
             jobStart.erase(id);
+            pending.erase(id);
+        }
+    }
+
+    void noteRefusal(const std::string& pluginId, const std::string& text) {
+        if (refusalLogged.insert(pluginId + text).second) {
+            logLine("plugin " + pluginId + " " + text);
         }
     }
 
@@ -703,6 +961,21 @@ struct PluginHost::Impl {
             error = "the source does not exist or has another kind";
             return nullptr;
         }
+        if (abandoned >= limits.abandoned) {
+            error = "limit: " + std::to_string(abandoned) + " plugin calls are stuck, no new instance is started";
+            noteRefusal(pluginId, error);
+            return nullptr;
+        }
+        if (liveRunnersOf(pluginId) >= limits.instancesPerPlugin) {
+            error = "limit: this plugin already has " + std::to_string(limits.instancesPerPlugin) + " running instances";
+            noteRefusal(pluginId, error);
+            return nullptr;
+        }
+        if (liveRunnersTotal() >= limits.instancesTotal) {
+            error = "limit: " + std::to_string(limits.instancesTotal) + " plugin instances are running in total";
+            noteRefusal(pluginId, error);
+            return nullptr;
+        }
         std::shared_ptr<Runner> runner = std::make_shared<Runner>();
         runner->api = apis[pluginId];
         runner->pluginId = pluginId;
@@ -714,6 +987,8 @@ struct PluginHost::Impl {
         runner->context.snapshot = snapshot;
         runner->context.params = paramBlock(key);
         runner->table = makeHostTable(&runner->context);
+        runner->maxDuty = std::clamp(limits.maxDuty, 0.05, 1.0);
+        runner->context.maxInstances = limits.instancesPerPlugin;
         runner->lastUse.store(steadySeconds());
         runner->markerSlot = crashMarkerAcquire(pluginId);
         if (runner->markerSlot < 0) {
@@ -723,7 +998,13 @@ struct PluginHost::Impl {
         Tracked tracked;
         tracked.runner = runner;
         runners.push_back(tracked);
-        std::thread(runnerMain, runner).detach();
+        if (!launchThread(runnerMain, runner)) {
+            runners.pop_back();
+            crashMarkerRelease(runner->markerSlot);
+            error = "limit: the system could not start another thread";
+            noteRefusal(pluginId, error);
+            return nullptr;
+        }
         return runner;
     }
 
@@ -737,7 +1018,7 @@ struct PluginHost::Impl {
                 const double elapsed = now - r.callStart.load();
                 const double budget = r.budget.load();
                 if (elapsed > budget) {
-                    failRunner(r, "a call took longer than the time budget of " + std::to_string(static_cast<int>(budget * 1000.0)) + " ms");
+                    failRunner(r, PluginErrorKind::Timeout, "a call took longer than the time budget of " + std::to_string(static_cast<int>(budget * 1000.0)) + " ms");
                 }
             }
             if (r.failed.load() && !tracked.handled) {
@@ -745,7 +1026,7 @@ struct PluginHost::Impl {
                 if (r.inCall.load()) {
                     ++abandoned;
                 }
-                failPlugin(r.pluginId, r.errorText());
+                failPlugin(r.pluginId, static_cast<PluginErrorKind>(r.errorKind.load()), r.errorText());
             }
             if (r.kind == kPluginSourceKindModulation && !r.stop.load() && now - r.lastUse.load() > kPluginIdleSeconds) {
                 r.requestStop();
@@ -755,7 +1036,7 @@ struct PluginHost::Impl {
         for (Tracked& tracked : runners) {
             if (tracked.runner->finished.load() && !tracked.handled && tracked.runner->failed.load()) {
                 tracked.handled = true;
-                failPlugin(tracked.runner->pluginId, tracked.runner->errorText());
+                failPlugin(tracked.runner->pluginId, static_cast<PluginErrorKind>(tracked.runner->errorKind.load()), tracked.runner->errorText());
             }
         }
         if (now - logRefresh >= 1.0) {
@@ -772,9 +1053,10 @@ struct PluginHost::Impl {
     }
 };
 
-PluginHost::PluginHost(fs::path dataDir, bool allowLoading) : impl_(std::make_unique<Impl>()) {
+PluginHost::PluginHost(fs::path dataDir, bool allowLoading, PluginLimits limits) : impl_(std::make_unique<Impl>()) {
     impl_->dataDir = std::move(dataDir);
     impl_->allowLoading = allowLoading;
+    impl_->limits = limits;
     impl_->config = readPluginConfig(impl_->dataDir);
     rescan();
 }
@@ -794,6 +1076,7 @@ void PluginHost::rescan() {
         info.entry = entry;
         if (!entry.usable()) {
             info.state = PluginState::Incompatible;
+            info.errorKind = PluginErrorKind::Incompatible;
             info.message = pluginProblemName(entry.problem);
             if (!entry.detail.empty()) {
                 info.message += " (" + entry.detail + ")";
@@ -805,6 +1088,7 @@ void PluginHost::rescan() {
         const auto before = std::find_if(previous.begin(), previous.end(), [&](const PluginInfo& other) { return other.entry.manifest.id == id; });
         if (before != previous.end() && (before->state == PluginState::Loaded || before->state == PluginState::Failed || before->state == PluginState::Loading)) {
             info.state = before->state;
+            info.errorKind = before->errorKind;
             info.message = before->message;
             info.sources = before->sources;
             s.plugins.push_back(std::move(info));
@@ -819,7 +1103,7 @@ void PluginHost::rescan() {
         }
         s.plugins.push_back(std::move(info));
         if (s.allowLoading && s.config.isEnabled(id)) {
-            s.startLoad(s.plugins.back());
+            s.activate(s.plugins.back());
         }
     }
 }
@@ -849,10 +1133,12 @@ void PluginHost::setEnabled(const std::string& id, bool on) {
     s.config.setEnabled(id, on);
     saveConfig();
     if (!on) {
+        s.pending.erase(id);
         s.stopRunnersOf(id);
         if (info->state == PluginState::Loaded || info->state == PluginState::Loading) {
             info->state = PluginState::NotEnabled;
             info->message.clear();
+            info->errorKind = PluginErrorKind::None;
         }
         return;
     }
@@ -860,7 +1146,7 @@ void PluginHost::setEnabled(const std::string& id, bool on) {
         return;
     }
     if (info->state == PluginState::NotEnabled) {
-        s.startLoad(*info);
+        s.activate(*info);
     }
 }
 
@@ -910,6 +1196,10 @@ const PluginSourceDesc* PluginHost::findSource(const std::string& key) const {
 
 bool PluginHost::allowLoading() const {
     return impl_->allowLoading;
+}
+
+const PluginLimits& PluginHost::limits() const {
+    return impl_->limits;
 }
 
 bool PluginHost::loading() const {
@@ -966,6 +1256,7 @@ void PluginHost::update() {
     const double now = steadySeconds();
     impl_->harvestLoads(now);
     impl_->watchdog(now);
+    impl_->settlePending();
 }
 
 float PluginHost::modulation(int slot) {
@@ -992,6 +1283,7 @@ float PluginHost::modulation(int slot) {
         }
         std::string error;
         entry.runner = s.startRunner(key, kPluginSourceKindModulation, error);
+        entry.refused = entry.runner ? std::string() : error;
         if (!entry.runner) {
             return 0.0f;
         }
@@ -1003,23 +1295,56 @@ float PluginHost::modulation(int slot) {
     return entry.runner->value.load();
 }
 
+namespace {
+
+PluginRunStats statsOf(const Runner& runner, Runner& mutableRunner) {
+    PluginRunStats stats;
+    stats.running = !runner.stop.load() && !runner.finished.load() && !runner.failed.load();
+    stats.failed = runner.failed.load();
+    stats.errorKind = static_cast<PluginErrorKind>(runner.errorKind.load());
+    stats.error = mutableRunner.errorText();
+    stats.calls = runner.calls.load();
+    stats.frames = runner.frames.load();
+    stats.lastCallMs = runner.lastCallMs.load();
+    stats.maxCallMs = runner.maxCallMs.load();
+    stats.fps = runner.fps.load();
+    stats.value = runner.value.load();
+    stats.duty = runner.duty.load();
+    const double slowedAt = runner.throttledAt.load();
+    stats.throttled = slowedAt > 0.0 && steadySeconds() - slowedAt < 2.0;
+    return stats;
+}
+
+}
+
 PluginRunStats PluginHost::modulationStats(int slot) const {
     PluginRunStats stats;
     if (slot < 0 || slot >= kPluginModulationSlots) {
         return stats;
     }
-    const std::shared_ptr<Runner>& runner = impl_->modSlots[static_cast<size_t>(slot)].runner;
-    if (!runner) {
+    const Impl::ModSlot& entry = impl_->modSlots[static_cast<size_t>(slot)];
+    if (!entry.runner) {
+        if (!entry.refused.empty()) {
+            stats.error = entry.refused;
+            stats.errorKind = PluginErrorKind::Limit;
+        }
         return stats;
     }
-    stats.running = !runner->stop.load() && !runner->finished.load() && !runner->failed.load();
-    stats.failed = runner->failed.load();
-    stats.error = runner->errorText();
-    stats.calls = runner->calls.load();
-    stats.lastCallMs = runner->lastCallMs.load();
-    stats.maxCallMs = runner->maxCallMs.load();
-    stats.value = runner->value.load();
+    return statsOf(*entry.runner, *entry.runner);
+}
+
+PluginRunStats PluginHost::runnerStats(const std::string& key) const {
+    PluginRunStats stats;
+    for (auto it = impl_->runners.rbegin(); it != impl_->runners.rend(); ++it) {
+        if (it->runner->key == key) {
+            return statsOf(*it->runner, *it->runner);
+        }
+    }
     return stats;
+}
+
+int PluginHost::liveInstancesOf(const std::string& id) const {
+    return impl_->liveRunnersOf(id);
 }
 
 std::unique_ptr<LiveSource> PluginHost::openFrameSource(const std::string& key, std::string& error) {
@@ -1058,6 +1383,30 @@ void PluginHost::stopAll() {
     for (Impl::ModSlot& slot : s.modSlots) {
         slot.runner.reset();
     }
+}
+
+const char* pluginErrorKindName(PluginErrorKind kind) {
+    switch (kind) {
+    case PluginErrorKind::None:
+        return "none";
+    case PluginErrorKind::Load:
+        return "load error";
+    case PluginErrorKind::Incompatible:
+        return "not compatible";
+    case PluginErrorKind::CallFailed:
+        return "call failed";
+    case PluginErrorKind::Exception:
+        return "exception";
+    case PluginErrorKind::Timeout:
+        return "time budget";
+    case PluginErrorKind::BadOutput:
+        return "invalid result";
+    case PluginErrorKind::Guard:
+        return "memory guard";
+    case PluginErrorKind::Limit:
+        return "limit";
+    }
+    return "none";
 }
 
 int pluginThreadsAlive() {

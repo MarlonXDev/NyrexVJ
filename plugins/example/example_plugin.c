@@ -26,6 +26,13 @@ static float parameter(const ExampleInstance* self, uint32_t index)
     return self->host->get_parameter(self->host->context, index);
 }
 
+static void report(const ExampleInstance* self, const char* text)
+{
+    if (NYREXVJ_HAS_FIELD(self->host, NvjHost, set_error) && self->host->set_error != NULL) {
+        self->host->set_error(self->host->context, text);
+    }
+}
+
 static float kick(const ExampleInstance* self)
 {
     NvjAudio audio;
@@ -154,9 +161,11 @@ static int32_t frame(void* instance, double time, double delta, NvjImage* image)
         return NVJ_FAILED;
     }
     if (image->width == 0 || image->height == 0 || image->width > NYREXVJ_PLUGIN_MAX_WIDTH || image->height > NYREXVJ_PLUGIN_MAX_HEIGHT || image->stride < image->width * 4u) {
+        report(self, "the image size is not supported");
         return NVJ_FAILED;
     }
     if (!prepare(self, image->width, image->height)) {
+        report(self, "not enough memory for the lookup tables");
         return NVJ_FAILED;
     }
     speed = 0.2 + 2.0 * (double)parameter(self, 0);
@@ -200,9 +209,10 @@ static int32_t frame(void* instance, double time, double delta, NvjImage* image)
 
 NYREXVJ_PLUGIN_EXPORT int32_t nyrexvj_plugin_entry(const NvjHost* host, NvjPlugin* plugin)
 {
-    if (host == NULL || plugin == NULL || host->api_major != NYREXVJ_PLUGIN_API_MAJOR) {
+    if (host == NULL || plugin == NULL || host->api_major != NYREXVJ_PLUGIN_API_MAJOR || plugin->size < sizeof(NvjPlugin)) {
         return NVJ_FAILED;
     }
+    plugin->size = sizeof(NvjPlugin);
     plugin->api_major = NYREXVJ_PLUGIN_API_MAJOR;
     plugin->api_minor = NYREXVJ_PLUGIN_API_MINOR;
     plugin->id = "nyrexvj-example";

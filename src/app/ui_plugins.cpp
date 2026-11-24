@@ -98,6 +98,29 @@ void drawParameters(PluginHost& host, const std::string& key) {
     ImGui::PopID();
 }
 
+const char* errorKindLabel(PluginErrorKind kind) {
+    switch (kind) {
+    case PluginErrorKind::Load:
+        return tr("Load error");
+    case PluginErrorKind::Incompatible:
+        return tr("Not compatible");
+    case PluginErrorKind::CallFailed:
+        return tr("Call failed");
+    case PluginErrorKind::Exception:
+        return tr("Exception");
+    case PluginErrorKind::Timeout:
+        return tr("Time budget exceeded");
+    case PluginErrorKind::BadOutput:
+        return tr("Invalid result");
+    case PluginErrorKind::Guard:
+        return tr("Memory guard");
+    case PluginErrorKind::Limit:
+        return tr("Limit reached");
+    default:
+        return tr("Failed");
+    }
+}
+
 const char* stateLabel(PluginState state) {
     switch (state) {
     case PluginState::Loading:
@@ -135,7 +158,7 @@ void drawPluginEntry(PluginHost& host, const PluginInfo& info) {
     ImGui::TextUnformatted(info.entry.manifest.name.empty() ? folder.c_str() : info.entry.manifest.name.c_str());
     ImGui::SameLine();
     ImGui::TextDisabled("%s", info.entry.manifest.version.c_str());
-    ImGui::SetItemTooltip("%s", info.entry.directory.string().c_str());
+    ImGui::SetItemTooltip("%s\nAPI %u.%u", info.entry.directory.string().c_str(), info.entry.manifest.apiMajor, info.entry.manifest.apiMinor);
     const bool blocked = info.state == PluginState::SafeMode || info.state == PluginState::Incompatible;
     ImGui::BeginDisabled(blocked);
     bool on = host.config().isEnabled(id) && !blocked;
@@ -153,7 +176,7 @@ void drawPluginEntry(PluginHost& host, const PluginInfo& info) {
     }
     if (!info.message.empty() && (info.state == PluginState::Failed || info.state == PluginState::Incompatible)) {
         ImGui::PushStyleColor(ImGuiCol_Text, kPluginWarn);
-        ImGui::TextWrapped("%s", info.message.c_str());
+        ImGui::TextWrapped("[%s] %s", errorKindLabel(info.errorKind), info.message.c_str());
         ImGui::PopStyleColor();
     }
     if (info.state == PluginState::Failed) {
@@ -244,12 +267,16 @@ void App::drawPluginsPage() {
                 ImGui::TextColored(kPluginBad, "%s", tr("Failed"));
             } else if (stats.running) {
                 ImGui::TextDisabled("%s %.2f ms", tr("slowest call"), stats.maxCallMs);
+                if (stats.throttled) {
+                    ImGui::SameLine();
+                    ImGui::TextColored(kPluginWarn, "%s", tr("Slowed down"));
+                }
             } else {
                 ImGui::TextDisabled("%s", tr("Idle"));
             }
-            if (stats.failed && !stats.error.empty()) {
+            if (!stats.error.empty() && (stats.failed || stats.errorKind == PluginErrorKind::Limit)) {
                 ImGui::PushStyleColor(ImGuiCol_Text, kPluginWarn);
-                ImGui::TextWrapped("%s", stats.error.c_str());
+                ImGui::TextWrapped("[%s] %s", errorKindLabel(stats.errorKind), stats.error.c_str());
                 ImGui::PopStyleColor();
             }
             drawParameters(host, current);
@@ -272,6 +299,16 @@ void App::drawPluginsPage() {
             host.assignFrame(slot, chosen);
         }
         if (!current.empty()) {
+            const PluginRunStats stats = host.runnerStats(current);
+            if (stats.throttled && !stats.failed) {
+                ImGui::SameLine();
+                ImGui::TextColored(kPluginWarn, "%s", tr("Slowed down"));
+            }
+            if (stats.failed && !stats.error.empty()) {
+                ImGui::PushStyleColor(ImGuiCol_Text, kPluginWarn);
+                ImGui::TextWrapped("[%s] %s", errorKindLabel(stats.errorKind), stats.error.c_str());
+                ImGui::PopStyleColor();
+            }
             drawParameters(host, current);
         }
         ImGui::PopID();

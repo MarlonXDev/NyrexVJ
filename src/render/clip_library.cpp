@@ -281,6 +281,7 @@ void fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
     def.body.clear();
     def.error.clear();
     def.shadertoy = false;
+    def.plan.reset();
     if (def.bytes > kMaxShaderFileBytes) {
         def.error = "The shader file is larger than 256 KiB";
         return;
@@ -299,6 +300,7 @@ void fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
     }
     def.body = prepared.body;
     def.shadertoy = prepared.shadertoy;
+    def.plan = prepared.plan;
 }
 
 int appendShaderClips(std::vector<ClipDef>& clips) {
@@ -462,7 +464,7 @@ vec2 centered() {
 }
 )glsl";
 
-const char* kShadertoyHeader = R"glsl(#version 330 core
+const char* kShadertoyUniforms = R"glsl(#version 330 core
 in vec2 vUv;
 out vec4 fragColor;
 uniform float uTime;
@@ -476,7 +478,9 @@ uniform float uScale;
 uniform vec4 uAudio;
 uniform float uKick;
 uniform sampler2D uAudioTex;
-#define iResolution vec3(uRes, 1.0)
+)glsl";
+
+const char* kShadertoyLegacyDefines = R"glsl(#define iResolution vec3(uRes, 1.0)
 #define iTime uTime
 #define iTimeDelta 0.016667
 #define iFrame int(uTime * 60.0)
@@ -484,6 +488,31 @@ uniform sampler2D uAudioTex;
 #define iDate vec4(2026.0, 1.0, 1.0, 0.0)
 #define iSampleRate 44100.0
 #define iChannel0 uAudioTex
+)glsl";
+
+const char* kShadertoyAdvancedDefines = R"glsl(#define iResolution vec3(uRes, 1.0)
+#define iTime uTime
+#define iTimeDelta uDelta
+#define iFrame uFrame
+#define iMouse vec4(0.0)
+#define iDate vec4(2026.0, 1.0, 1.0, 0.0)
+#define iSampleRate 44100.0
+#define iChannel0 uChannel0
+#define iChannel1 uChannel1
+#define iChannel2 uChannel2
+#define iChannel3 uChannel3
+#define iChannelResolution uChannelRes
+#define iChannelTime uChannelTime
+)glsl";
+
+const char* kChannelUniforms = R"glsl(uniform sampler2D uChannel0;
+uniform sampler2D uChannel1;
+uniform sampler2D uChannel2;
+uniform sampler2D uChannel3;
+uniform vec3 uChannelRes[4];
+uniform float uChannelTime[4];
+uniform int uFrame;
+uniform float uDelta;
 )glsl";
 
 const char* kShadertoyMain = R"glsl(
@@ -494,6 +523,40 @@ void main() {
     fragColor = vec4(shaderColor.rgb, 1.0);
 }
 )glsl";
+
+const char* kShadertoyPassMainHead = R"glsl(
+void main() {
+    vec4 shaderColor = vec4(0.0, 0.0, 0.0, 1.0);
+    vec2 shaderCoord = ((vUv - 0.5) / max(uScale, 0.05) + 0.5) * uRes;
+    mainImage(shaderColor, shaderCoord);
+)glsl";
+
+std::string shadertoyHeader() {
+    return std::string(kShadertoyUniforms) + kShadertoyLegacyDefines;
+}
+
+std::string advancedHeader(bool shadertoy) {
+    if (shadertoy) {
+        return std::string(kShadertoyUniforms) + kChannelUniforms + kShadertoyAdvancedDefines;
+    }
+    return std::string(kHeader) + kChannelUniforms;
+}
+
+std::string passTail(const ShaderPlan& plan, bool imagePass, bool shadertoy) {
+    if (!imagePass) {
+        return shadertoy ? "    fragColor = shaderColor;\n}\n" : std::string();
+    }
+    if (shadertoy) {
+        if (!plan.alpha) {
+            return "    fragColor = vec4(shaderColor.rgb, 1.0);\n}\n";
+        }
+        return std::string("    float alphaValue = clamp(shaderColor.a, 0.0, 1.0);\n    fragColor = ") + (plan.premultiplied ? "vec4(shaderColor.rgb, alphaValue);" : "vec4(shaderColor.rgb * alphaValue, alphaValue);") + "\n}\n";
+    }
+    if (!plan.alpha) {
+        return std::string();
+    }
+    return std::string("\n#undef main\nvoid main() {\n    nyrexUserMain();\n    float alphaValue = clamp(fragColor.a, 0.0, 1.0);\n    fragColor = ") + (plan.premultiplied ? "vec4(fragColor.rgb, alphaValue);" : "vec4(fragColor.rgb * alphaValue, alphaValue);") + "\n}\n";
+}
 
 std::vector<ClipDef> buildLibrary() {
     std::vector<ClipDef> clips;
@@ -1018,9 +1081,34 @@ const std::string& clipVertexSource() {
     return source;
 }
 
-std::string clipFragmentSource(const ClipDef& clip) {
+std::string clipPassFragmentSource(const ClipDef& clip, int pass) {
+    if (!clip.plan || clip.plan->passes.empty()) {
+        return clipFragmentSource(clip);
+    }
+    const ShaderPlan& plan = *clip.plan;
+    const ShaderPassSource& source = plan.passes[static_cast<size_t>(std::clamp(pass, 0, static_cast<int>(plan.passes.size()) - 1))];
+    std::string text = advancedHeader(clip.shadertoy);
+    if (!plan.common.empty()) {
+        text += "#line " + std::to_string(plan.commonLine) + "\n" + plan.common + "\n";
+    }
+    const bool alphaMain = source.image && plan.alpha && !clip.shadertoy;
+    if (alphaMain) {
+        text += "#define main nyrexUserMain\n";
+    }
+    text += "#line " + std::to_string(source.firstLine) + "\n" + source.code + "\n";
     if (clip.shadertoy) {
-        return std::string(kShadertoyHeader) + "#line 1\n" + clip.body + "\n" + kShadertoyMain;
+        text += kShadertoyPassMainHead;
+    }
+    text += passTail(plan, source.image, clip.shadertoy);
+    return text;
+}
+
+std::string clipFragmentSource(const ClipDef& clip) {
+    if (clip.plan && !clip.plan->passes.empty()) {
+        return clipPassFragmentSource(clip, static_cast<int>(clip.plan->passes.size()) - 1);
+    }
+    if (clip.shadertoy) {
+        return shadertoyHeader() + "#line 1\n" + clip.body + "\n" + kShadertoyMain;
     }
     if (clip.isShaderFile()) {
         return std::string(kHeader) + "#line 1\n" + clip.body;

@@ -176,7 +176,7 @@ int runSceneBenchmark(Engine& engine, const std::string& spec, const std::string
         report["scene"] = {{"vertices", stats.vertices}, {"triangles", stats.triangles}, {"meshes", stats.meshes}, {"nodes", stats.nodes}, {"images", stats.images}, {"geometryGpuBytes", stats.gpuBytes}, {"loadMs", player->loadMilliseconds()}, {"uploadMs", player->uploadMilliseconds()}};
     }
     const GpuMemory memory = engine.gpuMemory();
-    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"renderTargetBytes", memory.targets}, {"thumbnailBytes", memory.thumbnails}, {"sceneDepthBytes", memory.sceneDepth}, {"sceneGeometryBytes", memory.sceneGeometry}, {"mediaBytes", memory.media}, {"processResidentBytes", platform::processMemoryBytes()}};
+    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"renderTargetBytes", memory.targets}, {"thumbnailBytes", memory.thumbnails}, {"sceneDepthBytes", memory.sceneDepth}, {"sceneGeometryBytes", memory.sceneGeometry}, {"mediaBytes", memory.media}, {"shaderBufferBytes", memory.shaderBuffers}, {"processResidentBytes", platform::processMemoryBytes()}};
 
     const std::string text = report.dump(2);
     logLine("Benchmark result:\n" + text);
@@ -354,7 +354,7 @@ int runVideoBenchmark(Engine& engine, const std::string& spec, const std::string
     }
     report["videos"] = std::move(videos);
     const GpuMemory memory = engine.gpuMemory();
-    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"mediaBytes", memory.media}, {"processResidentBytes", platform::processMemoryBytes()}};
+    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"mediaBytes", memory.media}, {"shaderBufferBytes", memory.shaderBuffers}, {"processResidentBytes", platform::processMemoryBytes()}};
     report["videoSettings"] = {{"decoder", videoDecodeModeName(engine.videoDecodeMode())}, {"hapDirect", engine.hapDirect()}, {"gpuConversion", engine.gpuConversion()}, {"compressedTextures", engine.videoCaps().compressedTextures}, {"pixelBuffers", engine.videoCaps().pixelBuffers}};
 
     const std::string text = report.dump(2);
@@ -530,7 +530,7 @@ int runSwitchBenchmark(Engine& engine, const std::string& spec, const std::strin
     report["switchesWithBlankFrames"] = static_cast<int>(std::count_if(blankFrames.begin(), blankFrames.end(), [](double value) { return value > 0.0; }));
     report["loadedClips"] = engine.loadedMediaCount();
     const GpuMemory memory = engine.gpuMemory();
-    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"mediaBytes", memory.media}, {"processResidentBytes", platform::processMemoryBytes()}};
+    report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"mediaBytes", memory.media}, {"shaderBufferBytes", memory.shaderBuffers}, {"processResidentBytes", platform::processMemoryBytes()}};
     const std::string text = report.dump(2);
     logLine("Benchmark result:\n" + text);
     if (!outputPath.empty()) {

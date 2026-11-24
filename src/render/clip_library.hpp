@@ -1,6 +1,9 @@
 #pragma once
 
+#include "render/shader_source.hpp"
+
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -28,11 +31,14 @@ struct ClipDef {
     int sceneIndex = -1;
     std::string path = {};
     bool shadertoy = false;
+    std::shared_ptr<const ShaderPlan> plan = {};
     std::string error = {};
     long long stamp = 0;
     unsigned long long bytes = 0;
 
     bool isShaderFile() const { return kind == ClipKind::ShaderFile; }
+    bool isAdvancedShader() const { return plan != nullptr; }
+    int passCount() const { return plan ? static_cast<int>(plan->passes.size()) : 1; }
     bool isScene() const { return kind == ClipKind::BuiltinScene || kind == ClipKind::ModelFile || kind == ClipKind::ScenePack; }
     bool isMedia() const { return kind == ClipKind::ImageFile || kind == ClipKind::VideoFile; }
     bool isLive() const { return kind == ClipKind::NdiSource || kind == ClipKind::CameraSource || kind == ClipKind::PluginSource; }
@@ -74,5 +80,6 @@ std::string createExampleShader();
 int clipIndexByName(const std::string& name);
 const std::string& clipVertexSource();
 std::string clipFragmentSource(const ClipDef& clip);
+std::string clipPassFragmentSource(const ClipDef& clip, int pass);
 
 }

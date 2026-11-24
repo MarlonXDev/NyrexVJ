@@ -360,7 +360,14 @@ void App::drawClipPanel() {
     } else if (def.kind == ClipKind::ImageFile) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Image file"));
     } else if (def.isShaderFile()) {
-        ImGui::TextColored(ui::kAccent, "%s", def.shadertoy ? tr("Shader file (Shadertoy style)") : tr("Shader file"));
+        const bool multipass = def.isAdvancedShader() && def.plan->bufferCount() > 0;
+        ImGui::TextColored(ui::kAccent, "%s", multipass ? tr("Shader file (multipass)") : (def.shadertoy ? tr("Shader file (Shadertoy style)") : tr("Shader file")));
+        if (multipass) {
+            ImGui::TextDisabled("%s: %d", tr("Buffers"), def.plan->bufferCount());
+        }
+        if (def.isAdvancedShader() && def.plan->alpha) {
+            ImGui::TextDisabled("%s", tr("Alpha output"));
+        }
     } else if (def.is3d) {
         ImGui::TextColored(ui::kAccent, "3D");
     }
@@ -388,7 +395,23 @@ void App::drawClipPanel() {
             ImGui::PopTextWrapPos();
             ImGui::EndChild();
         } else {
-            ImGui::TextDisabled("%s", tr("Saving the file reloads the shader."));
+            const std::string runtimeError = engine_.shaderRuntimeError(clip);
+            if (!runtimeError.empty()) {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.35f, 1.0f));
+                ImGui::TextWrapped("%s", tr("This shader cannot run right now."));
+                ImGui::PopStyleColor();
+                ImGui::PushTextWrapPos(0.0f);
+                ImGui::TextUnformatted(trMessage(runtimeError).c_str());
+                ImGui::PopTextWrapPos();
+            } else {
+                ImGui::TextDisabled("%s", tr("Saving the file reloads the shader."));
+                const std::string note = engine_.shaderNote(clip);
+                if (!note.empty()) {
+                    ImGui::PushTextWrapPos(0.0f);
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "%s", trMessage(note).c_str());
+                    ImGui::PopTextWrapPos();
+                }
+            }
         }
         ImGui::TextDisabled("%s", def.path.c_str());
         if (ImGui::SmallButton(tr("Open shaders folder"))) {

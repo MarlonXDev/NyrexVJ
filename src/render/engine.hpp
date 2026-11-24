@@ -11,11 +11,13 @@
 #include "render/live_input.hpp"
 #include "render/media_player.hpp"
 #include "render/scene_player.hpp"
+#include "render/shader_passes.hpp"
 #include "render/spout_input.hpp"
 
 #include <array>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -29,9 +31,10 @@ struct GpuMemory {
     size_t sceneGeometry = 0;
     size_t media = 0;
     size_t live = 0;
+    size_t shaderBuffers = 0;
     VideoMemory video;
 
-    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live; }
+    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers; }
 };
 
 class Engine {
@@ -95,6 +98,10 @@ public:
     MediaPlayer* mediaPlayer(int clip);
     int loadedMediaCount() const;
     GpuMemory gpuMemory() const;
+    std::string shaderNote(int clip) const;
+    std::string shaderRuntimeError(int clip) const;
+    size_t shaderBufferBytes() const;
+    void setShaderBufferBudget(unsigned long long bytes);
     void setVideoSettings(VideoDecodeMode mode, bool hapDirect, bool gpuConversion = true);
     VideoDecodeMode videoDecodeMode() const { return videoMode_; }
     bool hapDirect() const { return hapDirect_; }
@@ -133,10 +140,34 @@ public:
     bool prewarmNext = true;
 
 private:
+    struct PassProgram {
+        GLuint id = 0;
+        GLint time = -1;
+        GLint beat = -1;
+        GLint bpm = -1;
+        GLint res = -1;
+        GLint colorA = -1;
+        GLint colorB = -1;
+        GLint rainbow = -1;
+        GLint scale = -1;
+        GLint audio = -1;
+        GLint kick = -1;
+        GLint audioTex = -1;
+        GLint frame = -1;
+        GLint delta = -1;
+        std::array<GLint, kShaderChannels> channel{};
+        std::array<GLint, kShaderChannels> channelRes{};
+        std::array<GLint, kShaderChannels> channelTime{};
+    };
+
     struct ClipProgram {
         GLuint id = 0;
         bool tried = false;
         std::string error;
+        std::string runtimeError;
+        std::string note;
+        std::vector<PassProgram> passes;
+        bool ready() const { return id != 0 || !passes.empty(); }
         GLint time = -1;
         GLint beat = -1;
         GLint bpm = -1;
@@ -276,7 +307,18 @@ private:
     RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner);
     RenderTarget* chainFeedback(int chain) { return &feedback_[static_cast<size_t>(chain * kEffectSlots)]; }
     bool* chainUsed(int chain) { return &feedbackUsed_[static_cast<size_t>(chain * kEffectSlots)]; }
-    void drawLayerSource(int clipIndex, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target);
+    void drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target);
+    void releaseClipProgram(ClipProgram& clip);
+    bool buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& clip);
+    bool allocateShaderState(ShaderPassState& state, size_t clipIndex, const ShaderPlan& plan, int width, int height, std::string& error, std::string& note);
+    void drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target);
+    void runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail);
+    void renderShaderThumbnail(size_t clipIndex, const RenderTarget& target);
+    void releaseIdleShaderStates();
+    void restartShaders(bool carryOver);
+    void restartShaderLayer(int layer);
+    void clearShaderStates(int clipIndex);
+    int resolveMediaClip(const std::string& name) const;
     void renderPreview();
     void pollGpuQueries();
     void downsample(const RenderTarget& source, const RenderTarget& target);
@@ -291,6 +333,10 @@ private:
     void blit(const RenderTarget& source, const RenderTarget& target);
 
     std::vector<ClipProgram> clips_;
+    std::map<int, ShaderPassState> shaderStates_;
+    std::array<GLuint, 4> channelSamplers_{};
+    GLuint blackTexture_ = 0;
+    unsigned long long shaderBudget_ = kShaderBufferBudgetBytes;
     std::vector<EffectProgram> effects_;
     CompositeProgram composite_;
     BlendProgram blend_;

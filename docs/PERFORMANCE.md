@@ -127,6 +127,18 @@ Not measured: a plugin that does real work, plugin sources next to VRChat, timin
 
 Command line: `--plugin-selftest FOLDER` loads a plugin through the real engine and checks both source kinds (`--bench-out` writes JSON); `--no-plugins` switches plugins off for a run.
 
+## What is new in 0.29.0: Shader 2.0
+
+Shader clips with a `#pragma nyrexvj` line can write alpha and use Buffer A to D ([SHADERS.md](SHADERS.md), [ADR 0022](adr/0022-glsl-shader-2.md)). A shader file without such a line is compiled exactly as before and costs nothing extra.
+
+- **A buffer is one more full-screen pass and 16 bytes per pixel.** Each buffer is a pair of 16 bit floating point pictures (current and previous). At 1920 x 1080 that is about 33 MB for one buffer and 133 MB for four, for every layer that shows such a shader. All shader buffers together stay inside 512 MiB; a buffer that does not fit runs at a smaller scale (down to a quarter) before it is refused.
+- **Buffers exist only while they are used.** They are freed after 240 frames without drawing (about four seconds at 60 fps), on a reload and when the picture size changes, so a deck that is not shown does not keep video memory. The old deck keeps its buffers while a transition fades it out.
+- **Alpha costs nothing measurable.** The same single pass shader took 12.3 ms per frame without and 11.8 ms with `alpha` (software renderer, 1280 x 720, 60 frames, so the difference is noise).
+- **Measured** with `NyrexVJ --shader-selftest 60` on the Mesa software renderer (llvmpipe) at 1280 x 720, 60 frames each: a plain shader 12.3 ms (worst 13.3), an alpha shader 11.8 ms (14.1), two buffers 27.3 ms (37.1) with 29.5 MB of buffers, four buffers 49.3 ms (79.4) with 59.0 MB. These numbers show how the cost grows with every pass, they do not say how fast a real graphics card is. The test shaders are simple, a real feedback shader with more maths per pass costs more.
+- **Not measured:** a real graphics card, 1920 x 1080 or 4K, a video as an input, and four layers with buffers at once.
+
+Command line: `--shader-selftest [FRAMES]` runs the checks and the timing (`--bench-out` writes JSON).
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

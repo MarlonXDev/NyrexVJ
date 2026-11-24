@@ -59,29 +59,42 @@ GLuint buildProgram(const std::string& vertexSource, const std::string& fragment
     return program;
 }
 
-bool RenderTarget::create(int w, int h) {
-    destroy();
-    width = w;
-    height = h;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+namespace {
+
+bool createTarget(RenderTarget& target, int w, int h, GLenum internalFormat, GLenum type, int bytesPerPixel) {
+    target.destroy();
+    target.width = w;
+    target.height = h;
+    target.bytesPerPixel = bytesPerPixel;
+    glGenTextures(1, &target.texture);
+    glBindTexture(GL_TEXTURE_2D, target.texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(internalFormat), w, h, 0, GL_RGBA, type, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+    glGenFramebuffers(1, &target.fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, target.fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.texture, 0);
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
         logLine("Framebuffer incomplete, status " + std::to_string(status));
-        destroy();
+        target.destroy();
         return false;
     }
     return true;
+}
+
+}
+
+bool RenderTarget::create(int w, int h) {
+    return createTarget(*this, w, h, GL_RGBA8, GL_UNSIGNED_BYTE, 4);
+}
+
+bool RenderTarget::createFloat(int w, int h) {
+    return createTarget(*this, w, h, GL_RGBA16F, GL_HALF_FLOAT, 8);
 }
 
 void RenderTarget::destroy() {
@@ -95,6 +108,7 @@ void RenderTarget::destroy() {
     }
     width = 0;
     height = 0;
+    bytesPerPixel = 4;
 }
 
 void RenderTarget::bind() const {

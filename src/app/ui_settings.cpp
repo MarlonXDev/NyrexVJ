@@ -718,6 +718,7 @@ void App::drawPerformancePage() {
         ImGui::Text("%s: %.1f MB", tr("3D depth buffers"), megabytes(memory.sceneDepth));
         ImGui::Text("%s: %.1f MB", tr("3D geometry and textures"), megabytes(memory.sceneGeometry));
         ImGui::Text("%s: %.1f MB", tr("Images and videos"), megabytes(memory.media));
+        ImGui::Text("%s: %.1f MB", tr("Shader buffers"), megabytes(memory.shaderBuffers));
         ImGui::EndTooltip();
     }
     ImGui::Text("%s: %.1f MB", tr("Video memory"), megabytes(memory.video.total()));

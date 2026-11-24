@@ -168,6 +168,8 @@ void OutputManager::render(GLuint texture, int width, int height) {
             continue;
         }
         OutputSpec& spec = (*specs_)[static_cast<size_t>(i)];
+        const size_t others = gpuBytes() - window.ndiBytes();
+        window.setNdiBudget(others >= budget_ ? 0 : budget_ - others);
         const bool ok = window.draw(sourceFor(i, texture), width, height, spec, patterns_[static_cast<size_t>(i)], syncValueFor(i));
         if (window.isOpen()) {
             spec.fullscreen = window.isFullscreen();
@@ -201,10 +203,17 @@ bool OutputManager::capture(int index, GLuint texture, int width, int height, Ou
         return false;
     }
     OutputWindow& window = windows_[static_cast<size_t>(index)];
+    const size_t others = gpuBytes() - window.ndiBytes();
+    window.setNdiBudget(others >= budget_ ? 0 : budget_ - others);
     if (window.draw(sourceFor(index, texture), width, height, (*specs_)[static_cast<size_t>(index)], patterns_[static_cast<size_t>(index)], syncValueFor(index), &out)) {
         window.swap(true);
     }
     return out.width > 0 && out.height > 0;
+}
+
+const OutputNdiStatus& OutputManager::ndiStatus(int index) const {
+    static const OutputNdiStatus none;
+    return valid(index) ? windows_[static_cast<size_t>(index)].ndiStatus() : none;
 }
 
 size_t OutputManager::gpuBytes() const {

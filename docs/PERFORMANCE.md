@@ -79,6 +79,16 @@ Measured with `--output-selftest` (software OpenGL, llvmpipe, 1280 x 720 window,
 
 Command line: `--output-selftest` runs the check and prints the numbers above.
 
+## What is new in 0.30.0: advanced output 2.0
+
+Everything new costs nothing while it is not used ([ADR 0023](adr/0023-advanced-output-2.md), [OUTPUTS.md](OUTPUTS.md)). Measured with `--output-selftest` on the same software renderer (llvmpipe, 1280 x 720 window, three runs in a row, spread up to 25 percent):
+
+- **Colour per slice** is a second pass of the same few operations in the shader when it is not at its default: slice and output colour together 10.3 to 12.0 ms per frame, against 7.5 to 9.2 ms with the output colour alone. At default it costs one uniform check.
+- **Curved masks** cost the same per frame as polygon masks (7.3 to 8.6 ms against 7.4 to 8.3), because the texture is built once when the mask changes. Building a 32 point curved mask takes 7.0 to 7.2 ms at 1024 x 576 (a polygon of 4 points 2.2 to 2.9 ms, the work grows with the number of edges crossing each row).
+- **Picture masks** are decoded on a thread of their own. Turning a 1024 x 576 picture into a mask texture takes 2.2 to 3.1 ms hard and 3.0 to 3.6 ms soft at 512 x 288; the decoder reduces any picture to 1024 x 576 once and keeps that copy (590 KB of normal memory per picture, in addition to the texture).
+- **NDI of an output** reads the back buffer into two pixel buffers only while a receiver is connected: 7.3 to 9.6 ms per frame with one receiver (including the flip and the copy into the sender) against 4.5 to 6.0 ms without NDI, and no measurable cost with NDI on and no receiver. The readback needs `2 x width x height x 4` bytes of video memory (7.4 MB at 1280 x 720, 66 MB at 3840 x 2160) and counts against the budget.
+- **Output budget.** All of it, meshes, masks, delay ring and NDI readback, is estimated by `estimateOutputBudget` and measured by `OutputManager::gpuBytes`; the self test checks that both give the same number (2,506,880 B for eight soft masked 17 x 17 slices, 42,000 B for one plain slice). The limit is 384 MiB and only the NDI readback is refused when it does not fit; four 4K outputs with NDI and a delay of 8 frames would need about 540 MiB (a delay ring of 285 MiB and 253 MiB of readback buffers), one 1080p output with NDI and a delay of 2 needs 23.7 MiB for the delay ring and 15.8 MiB for the readback.
+
 ## What is new in 0.24.0: show sync
 
 The sync system ([SYNC.md](SYNC.md), [ADR 0016](adr/0016-show-sync.md)) is built so that a show that uses none of it pays almost nothing, and one that uses it pays in small steps:

@@ -1,12 +1,16 @@
 #pragma once
 
+#include "core/mask_images.hpp"
+#include "core/ndi_sender.hpp"
 #include "core/output_map.hpp"
 
 #include <glad/gl.h>
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -18,6 +22,15 @@ struct OutputCapture {
     std::vector<uint8_t> rgb;
     int width = 0;
     int height = 0;
+};
+
+struct OutputNdiStatus {
+    bool wanted = false;
+    bool active = false;
+    bool tooLarge = false;
+    bool overBudget = false;
+    int connections = 0;
+    std::string error;
 };
 
 class OutputWindow {
@@ -37,6 +50,9 @@ public:
     bool draw(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, int syncValue, OutputCapture* capture = nullptr);
     void swap(bool restoreContext);
     size_t gpuBytes() const;
+    size_t ndiBytes() const;
+    void setNdiBudget(size_t bytes) { ndiBudget_ = bytes; }
+    const OutputNdiStatus& ndiStatus() const { return ndiStatus_; }
 
     static std::vector<std::string> monitorNames();
     static int monitorCount();
@@ -56,6 +72,7 @@ private:
         int maskWidth = 0;
         int maskHeight = 0;
         SliceMask mask;
+        std::shared_ptr<const MaskBitmap> maskBitmap;
         bool maskValid = false;
     };
 
@@ -67,6 +84,8 @@ private:
     void releaseMask(SliceGpu& slice);
     void uploadMesh(SliceGpu& slice, const OutputMapping& map);
     void uploadMask(SliceGpu& slice, const SliceMask& mask);
+    void updateNdi(const OutputSpec& spec, int width, int height);
+    void releaseNdiBuffers();
 
     GLFWwindow* window_ = nullptr;
     GLuint program_ = 0;
@@ -83,6 +102,19 @@ private:
     GLint brightnessLocation_ = -1;
     GLint patternLocation_ = -1;
     GLint syncLocation_ = -1;
+    GLint sliceGainLocation_ = -1;
+    GLint sliceToneLocation_ = -1;
+    int index_ = 0;
+    NdiSender ndi_;
+    std::string ndiName_;
+    GLuint ndiBuffers_[2] = {0, 0};
+    int ndiWidth_ = 0;
+    int ndiHeight_ = 0;
+    int ndiIndex_ = 0;
+    bool ndiPrimed_ = false;
+    size_t ndiBudget_ = kOutputGpuBudgetBytes;
+    OutputNdiStatus ndiStatus_;
+    std::chrono::steady_clock::time_point ndiRetryAt_{};
     bool pendingSwap_ = false;
     bool fullscreen_ = false;
     int monitorIndex_ = 0;

@@ -2,6 +2,7 @@
 
 #include "render/gl_util.hpp"
 #include "core/log.hpp"
+#include "core/mask_images.hpp"
 
 #include <GLFW/glfw3.h>
 
@@ -39,6 +40,8 @@ uniform int uPattern;
 uniform int uSync;
 uniform vec4 uGain;
 uniform vec4 uTone;
+uniform vec4 uSliceGain;
+uniform vec4 uSliceTone;
 uniform vec2 uBlack;
 
 float ramp(float t) {
@@ -86,13 +89,13 @@ vec3 syncBars(vec2 uv) {
     return c;
 }
 
-vec3 correct(vec3 c) {
-    c *= uGain.rgb;
+vec3 correct(vec3 c, vec4 gain, vec4 tone) {
+    c *= gain.rgb;
     float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    c = vec3(l) + (c - vec3(l)) * uGain.a;
-    c = clamp((c - 0.5) * uTone.x + 0.5, 0.0, 1.0);
-    c = pow(c, vec3(uTone.y));
-    return vec3(uTone.z) + (1.0 - uTone.z) * c;
+    c = vec3(l) + (c - vec3(l)) * gain.a;
+    c = clamp((c - 0.5) * tone.x + 0.5, 0.0, 1.0);
+    c = pow(c, vec3(tone.y));
+    return vec3(tone.z) + (1.0 - tone.z) * c;
 }
 
 float zoneEdge(float distanceToEdge, float size, float pixel) {
@@ -112,7 +115,8 @@ float blendZone(vec2 p) {
 
 void main() {
     vec3 c = uPattern == 2 ? syncBars(vUv) : (uPattern == 1 ? pattern(vUv) : texture(uTex, vUv).rgb);
-    if (uPattern == 0 && uTone.w > 0.5) c = correct(c);
+    if (uPattern == 0 && uSliceTone.w > 0.5) c = correct(c, uSliceGain, uSliceTone);
+    if (uPattern == 0 && uTone.w > 0.5) c = correct(c, uGain, uTone);
     float f = 1.0;
     if (uBlend.x > 0.0) f *= ramp(vOut.x / uBlend.x);
     if (uBlend.y > 0.0) f *= ramp((1.0 - vOut.x) / uBlend.y);
@@ -169,6 +173,7 @@ bool OutputWindow::open(GLFWwindow* share, int index, int monitorIndex, bool ful
     if (window_) {
         return true;
     }
+    index_ = index;
     const std::string title = "NyrexVJ Output " + std::to_string(index + 1);
     window_ = glfwCreateWindow(windowedWidth_, windowedHeight_, title.c_str(), nullptr, share);
     if (!window_) {
@@ -234,6 +239,8 @@ bool OutputWindow::createResources() {
     gainLocation_ = glGetUniformLocation(program_, "uGain");
     toneLocation_ = glGetUniformLocation(program_, "uTone");
     blackLocation_ = glGetUniformLocation(program_, "uBlack");
+    sliceGainLocation_ = glGetUniformLocation(program_, "uSliceGain");
+    sliceToneLocation_ = glGetUniformLocation(program_, "uSliceTone");
     return true;
 }
 
@@ -289,6 +296,12 @@ void OutputWindow::releaseSlice(SliceGpu& slice) {
 }
 
 void OutputWindow::destroyResources() {
+    if (ndi_.active()) {
+        ndi_.stop();
+    }
+    releaseNdiBuffers();
+    ndiStatus_ = OutputNdiStatus{};
+    ndiRetryAt_ = {};
     for (SliceGpu& slice : slices_) {
         releaseSlice(slice);
     }
@@ -328,13 +341,17 @@ void OutputWindow::uploadMask(SliceGpu& slice, const SliceMask& mask) {
         releaseMask(slice);
         return;
     }
-    if (slice.maskTexture && slice.maskValid && slice.mask == mask) {
+    std::shared_ptr<const MaskBitmap> bitmap;
+    if (maskIsImage(mask)) {
+        bitmap = MaskImages::instance().get(mask.image);
+    }
+    if (slice.maskTexture && slice.maskValid && slice.mask == mask && slice.maskBitmap == bitmap) {
         return;
     }
     const bool soft = mask.feather > 0.0f;
     const int width = soft ? kMaskWidth / 2 : kMaskWidth;
     const int height = soft ? kMaskHeight / 2 : kMaskHeight;
-    const std::vector<uint8_t> image = buildMaskImage(mask, width, height);
+    const std::vector<uint8_t> image = buildMaskImage(mask, width, height, bitmap.get());
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     if (!slice.maskTexture || slice.maskWidth != width || slice.maskHeight != height) {
         if (!slice.maskTexture) {
@@ -354,11 +371,16 @@ void OutputWindow::uploadMask(SliceGpu& slice, const SliceMask& mask) {
     }
     glBindTexture(GL_TEXTURE_2D, 0);
     slice.mask = mask;
+    slice.maskBitmap = bitmap;
     slice.maskValid = true;
 }
 
+size_t OutputWindow::ndiBytes() const {
+    return ndiBuffers_[0] != 0 ? 2u * static_cast<size_t>(ndiWidth_) * static_cast<size_t>(ndiHeight_) * 4u : 0u;
+}
+
 size_t OutputWindow::gpuBytes() const {
-    size_t total = 0;
+    size_t total = ndiBytes();
     for (const SliceGpu& slice : slices_) {
         total += slice.vboBytes + slice.eboBytes;
         if (slice.maskTexture) {
@@ -366,6 +388,110 @@ size_t OutputWindow::gpuBytes() const {
         }
     }
     return total;
+}
+
+void OutputWindow::releaseNdiBuffers() {
+    if (ndiBuffers_[0] != 0) {
+        glDeleteBuffers(2, ndiBuffers_);
+        ndiBuffers_[0] = 0;
+        ndiBuffers_[1] = 0;
+    }
+    ndiWidth_ = 0;
+    ndiHeight_ = 0;
+    ndiIndex_ = 0;
+    ndiPrimed_ = false;
+}
+
+void OutputWindow::updateNdi(const OutputSpec& spec, int width, int height) {
+    ndiStatus_.wanted = spec.ndi;
+    if (!spec.ndi) {
+        if (ndi_.active()) {
+            ndi_.stop();
+        }
+        releaseNdiBuffers();
+        ndiStatus_ = OutputNdiStatus{};
+        ndiRetryAt_ = {};
+        return;
+    }
+    const std::string name = spec.ndiName.empty() ? defaultNdiName(index_) : spec.ndiName;
+    if (ndi_.active() && ndiName_ != name) {
+        ndi_.stop();
+        releaseNdiBuffers();
+    }
+    if (!ndi_.active()) {
+        ndiStatus_.active = false;
+        ndiStatus_.connections = 0;
+        const auto now = std::chrono::steady_clock::now();
+        if (now < ndiRetryAt_) {
+            return;
+        }
+        if (!NdiSender::available()) {
+            ndiStatus_.error = "The NDI runtime is not installed";
+            ndiRetryAt_ = now + std::chrono::seconds(3);
+            return;
+        }
+        if (!ndi_.start(name)) {
+            ndiStatus_.error = ndi_.error();
+            ndiRetryAt_ = now + std::chrono::seconds(3);
+            return;
+        }
+        ndiName_ = name;
+        logLine("NDI output " + std::to_string(index_ + 1) + " started as " + name);
+    }
+    ndiStatus_.active = true;
+    ndiStatus_.error.clear();
+    ndiStatus_.connections = ndi_.connections();
+    ndiStatus_.tooLarge = false;
+    ndiStatus_.overBudget = false;
+    if (ndiStatus_.connections <= 0) {
+        releaseNdiBuffers();
+        return;
+    }
+    const size_t needed = ndiReadbackBytes(width, height);
+    if (needed == 0) {
+        ndiStatus_.tooLarge = true;
+        releaseNdiBuffers();
+        return;
+    }
+    const bool allocated = ndiBuffers_[0] != 0 && ndiWidth_ == width && ndiHeight_ == height;
+    if (needed > ndiBudget_) {
+        ndiStatus_.overBudget = true;
+        releaseNdiBuffers();
+        return;
+    }
+    GLint previousPack = 0;
+    GLint previousAlignment = 4;
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previousPack);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &previousAlignment);
+    const size_t bytes = needed / 2u;
+    if (!allocated) {
+        releaseNdiBuffers();
+        glGenBuffers(2, ndiBuffers_);
+        for (GLuint buffer : ndiBuffers_) {
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
+            glBufferData(GL_PIXEL_PACK_BUFFER, static_cast<GLsizeiptr>(bytes), nullptr, GL_STREAM_READ);
+        }
+        ndiWidth_ = width;
+        ndiHeight_ = height;
+        ndiIndex_ = 0;
+        ndiPrimed_ = false;
+    }
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadBuffer(GL_BACK);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, ndiBuffers_[ndiIndex_]);
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if (ndiPrimed_) {
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, ndiBuffers_[1 - ndiIndex_]);
+        const void* mapped = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(bytes), GL_MAP_READ_BIT);
+        if (mapped) {
+            ndi_.sendRgbaBottomUp(static_cast<const uint8_t*>(mapped), width, height);
+            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+        }
+    }
+    ndiIndex_ = 1 - ndiIndex_;
+    ndiPrimed_ = true;
+    glPixelStorei(GL_PACK_ALIGNMENT, previousAlignment);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(previousPack));
 }
 
 void OutputWindow::setFullscreen(bool fullscreen, int monitorIndex) {
@@ -526,6 +652,11 @@ bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, con
             glUniform4f(blendLocation_, map.blend.left, map.blend.right, map.blend.top, map.blend.bottom);
             glUniform2f(shapeLocation_, map.blend.power, map.blend.gamma);
             glUniform1f(brightnessLocation_, map.brightness);
+            OutputColor sliceColor = map.sliceColor;
+            normalizeColor(sliceColor);
+            const bool sliceColorOn = !isDefaultColor(sliceColor);
+            glUniform4f(sliceGainLocation_, sliceColor.red, sliceColor.green, sliceColor.blue, sliceColor.saturation);
+            glUniform4f(sliceToneLocation_, sliceColor.contrast, 1.0f / sliceColor.gamma, sliceColor.black, sliceColorOn ? 1.0f : 0.0f);
             const bool lift = map.blend.blackLevel > 0.0f && hasEdgeBlend(map.blend);
             glUniform2f(blackLocation_, map.blend.blackLevel, lift ? 1.0f : 0.0f);
             glBindVertexArray(gpu.vao);
@@ -538,6 +669,8 @@ bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, con
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
+
+        updateNdi(spec, frameWidth, frameHeight);
 
         if (capture) {
             capture->width = frameWidth;

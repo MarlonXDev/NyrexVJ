@@ -1,7 +1,9 @@
 #include "app/output_selftest.hpp"
 
+#include "core/dynlib.hpp"
 #include "core/frame_lock.hpp"
 #include "core/log.hpp"
+#include "core/mask_images.hpp"
 #include "core/output_map.hpp"
 #include "render/output_manager.hpp"
 #include "render/texture_history.hpp"
@@ -16,6 +18,10 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -190,6 +196,8 @@ public:
         return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / frames;
     }
 
+    int frameWidth() const { return frame_.width; }
+    int frameHeight() const { return frame_.height; }
     size_t gpuBytes() const { return manager_.gpuBytes(); }
     int checks() const { return checks_; }
     int failures() const { return failures_; }
@@ -483,6 +491,463 @@ void caseFrameLock(Runner& run) {
     run.condition("no skew with one output", run.manager().skew().count() == 0);
 }
 
+Rgb sourceAt(float fx, float fy) {
+    if (fy < 0.5f) {
+        return fx < 0.5f ? kRed : kGreen;
+    }
+    return fx < 0.5f ? kBlue : kYellow;
+}
+
+float outlineDistance(const std::vector<Vec2f>& outline, float x, float y) {
+    float best = 1.0e9f;
+    for (size_t i = 0; i < outline.size(); ++i) {
+        const Vec2f& a = outline[i];
+        const Vec2f& b = outline[(i + 1) % outline.size()];
+        const float dx = b.x - a.x;
+        const float dy = b.y - a.y;
+        const float lengthSquared = dx * dx + dy * dy;
+        float t = lengthSquared > 1.0e-12f ? ((x - a.x) * dx + (y - a.y) * dy) / lengthSquared : 0.0f;
+        t = std::clamp(t, 0.0f, 1.0f);
+        const float ex = a.x + t * dx - x;
+        const float ey = a.y + t * dy - y;
+        best = std::min(best, std::sqrt(ex * ex + ey * ey));
+    }
+    return best;
+}
+
+void sweepMask(Runner& run, const std::string& label, const SliceMask& mask) {
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.map.mask = mask;
+    run.draw(spec);
+    const std::vector<Vec2f> outline = maskOutline(mask);
+    int inside = 0;
+    int outside = 0;
+    for (int j = 0; j < 9; ++j) {
+        for (int i = 0; i < 15; ++i) {
+            const float fx = (static_cast<float>(i) + 0.5f) / 15.0f;
+            const float fy = (static_cast<float>(j) + 0.5f) / 9.0f;
+            if (std::fabs(fx - 0.5f) < 0.03f || std::fabs(fy - 0.5f) < 0.03f || outlineDistance(outline, fx, fy) < 0.035f) {
+                continue;
+            }
+            const bool in = maskContains(mask, fx, fy);
+            (in ? inside : outside) += 1;
+            const std::string name = label + " probe " + std::to_string(i) + "," + std::to_string(j);
+            run.expect(name.c_str(), fx, fy, in ? sourceAt(fx, fy) : kBlack);
+        }
+    }
+    run.condition((label + " has probes inside and outside").c_str(), inside >= 6 && outside >= 6);
+}
+
+void caseSliceColor(Runner& run) {
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.map.sliceColor.red = 0.5f;
+    run.draw(spec);
+    run.expect("slice gain on yellow", 0.75f, 0.75f, Rgb{128, 255, 0});
+    run.expect("slice gain keeps blue", 0.25f, 0.75f, kBlue);
+    run.expect("slice gain keeps green", 0.75f, 0.25f, kGreen);
+
+    spec = defaultOutputSpec(0);
+    spec.map = region(0.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 1.0f);
+    addSlice(spec);
+    spec.slices[0].map = region(0.5f, 0.0f, 0.5f, 1.0f, 0.5f, 0.0f, 0.5f, 1.0f);
+    spec.slices[0].map.sliceColor.saturation = 0.0f;
+    run.draw(spec);
+    run.expect("first slice keeps its colour", 0.25f, 0.25f, kRed);
+    run.expect("first slice keeps its colour below", 0.25f, 0.75f, kBlue);
+    const Rgb grey = corrected(spec.slices[0].map.sliceColor, kGreen);
+    run.expect("second slice is desaturated", 0.75f, 0.25f, grey);
+    run.expect("second slice has equal channels", 0.75f, 0.25f, Rgb{grey.r, grey.r, grey.r});
+    run.expect("second slice below is desaturated", 0.75f, 0.75f, corrected(spec.slices[0].map.sliceColor, kYellow));
+
+    spec = defaultOutputSpec(0);
+    spec.map.sliceColor.gamma = 1.6f;
+    spec.map.sliceColor.red = 0.9f;
+    spec.color.contrast = 1.4f;
+    spec.color.saturation = 0.7f;
+    spec.color.black = 0.05f;
+    run.draw(spec);
+    const Rgb sliceFirst = corrected(spec.color, corrected(spec.map.sliceColor, kYellow));
+    const Rgb outputFirst = corrected(spec.map.sliceColor, corrected(spec.color, kYellow));
+    run.condition("the two orders give different colours", std::abs(sliceFirst.g - outputFirst.g) > 6 || std::abs(sliceFirst.r - outputFirst.r) > 6);
+    run.expect("slice colour is applied before the output colour", 0.75f, 0.75f, sliceFirst, 6);
+    run.expect("slice and output colour on red", 0.25f, 0.25f, corrected(spec.color, corrected(spec.map.sliceColor, kRed)), 6);
+
+    spec = defaultOutputSpec(0);
+    spec.map.sliceColor.black = 0.2f;
+    spec.map.mask = maskRectangle(0.1f, 0.1f, 0.9f, 0.9f);
+    run.draw(spec);
+    run.expect("slice colour does not leak outside the mask", 0.05f, 0.05f, kBlack);
+    run.expect("slice black lift on the image", 0.25f, 0.25f, Rgb{255, 51, 51});
+
+    spec = defaultOutputSpec(0);
+    spec.map.sliceColor = OutputColor{};
+    run.draw(spec);
+    quadrants(run, "default slice colour changes nothing", kRed, kGreen, kBlue, kYellow);
+}
+
+void caseCurves(Runner& run) {
+    SliceMask straight = maskRectangle(0.2f, 0.2f, 0.8f, 0.8f);
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.map.mask = straight;
+    run.draw(spec);
+    run.expect("straight mask cuts the bulge area", 0.42f, 0.17f, kBlack);
+
+    SliceMask curved = straight;
+    maskSmooth(curved, 1.0f);
+    run.condition("smoothing creates handles", maskHasCurves(curved) && curved.handles.size() == curved.points.size());
+    spec.map.mask = curved;
+    run.draw(spec);
+    run.expect("curved mask bulges over the straight edge", 0.42f, 0.17f, sourceAt(0.42f, 0.17f));
+    run.expect("curved mask keeps the centre", 0.45f, 0.45f, kRed);
+    run.expect("curved mask stays closed far outside", 0.05f, 0.05f, kBlack);
+    sweepMask(run, "smoothed square", curved);
+
+    SliceMask handmade = maskRectangle(0.25f, 0.25f, 0.75f, 0.75f);
+    handmade.handles.assign(4, MaskHandle{});
+    handmade.handles[0].out = {0.2f, -0.15f};
+    handmade.handles[1].in = {-0.2f, -0.15f};
+    handmade.handles[2].out = {-0.1f, 0.2f};
+    handmade.handles[3].in = {0.1f, 0.2f};
+    sweepMask(run, "hand placed handles", handmade);
+
+    SliceMask feathered = curved;
+    feathered.feather = 0.05f;
+    spec.map.mask = feathered;
+    run.draw(spec);
+    run.expect("feathered curve keeps the centre", 0.45f, 0.45f, kRed);
+    run.expect("feathered curve cuts far outside", 0.05f, 0.05f, kBlack);
+
+    SliceMask inverted = curved;
+    inverted.invert = true;
+    spec.map.mask = inverted;
+    run.draw(spec);
+    run.expect("inverted curve hides the inside", 0.45f, 0.45f, kBlack);
+    run.expect("inverted curve shows the outside", 0.05f, 0.05f, kRed);
+    run.expect("inverted curve hides the bulge", 0.42f, 0.17f, kBlack);
+
+    maskClearCurves(curved);
+    spec.map.mask = curved;
+    run.draw(spec);
+    run.expect("clearing the curves goes back to straight edges", 0.42f, 0.17f, kBlack);
+}
+
+void caseFreehand(Runner& run) {
+    std::vector<Vec2f> stroke;
+    for (int i = 0; i <= 240; ++i) {
+        const float a = static_cast<float>(i) / 240.0f * 6.2831853f;
+        const float wobble = 0.004f * std::sin(a * 23.0f);
+        stroke.push_back({0.5f + (0.32f + wobble) * std::cos(a) * 0.5625f, 0.5f + (0.32f + wobble) * std::sin(a)});
+    }
+    SliceMask mask;
+    run.condition("a freehand stroke becomes a mask", maskFromStroke(mask, stroke));
+    run.condition("the stroke is reduced to at most 32 points", mask.points.size() >= 3 && mask.points.size() <= static_cast<size_t>(kMaxMaskPoints));
+    run.condition("a freehand mask is enabled and has no curves", mask.enabled && !maskHasCurves(mask));
+    sweepMask(run, "freehand circle", mask);
+
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.map.mask = mask;
+    run.draw(spec);
+    run.expect("freehand mask shows the inside", 0.4f, 0.4f, kRed);
+    run.expect("freehand mask hides the corner", 0.03f, 0.03f, kBlack);
+
+    SliceMask tooShort;
+    run.condition("a tiny stroke is refused", !maskFromStroke(tooShort, {{0.5f, 0.5f}, {0.5001f, 0.5001f}}));
+}
+
+std::vector<uint8_t> makeTga(int width, int height, bool alpha, const std::function<void(int, int, uint8_t*)>& pixel) {
+    std::vector<uint8_t> bytes(18, 0);
+    bytes[2] = 2;
+    bytes[12] = static_cast<uint8_t>(width & 0xff);
+    bytes[13] = static_cast<uint8_t>(width >> 8);
+    bytes[14] = static_cast<uint8_t>(height & 0xff);
+    bytes[15] = static_cast<uint8_t>(height >> 8);
+    bytes[16] = alpha ? 32 : 24;
+    bytes[17] = static_cast<uint8_t>(0x20 | (alpha ? 8 : 0));
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            uint8_t rgba[4] = {0, 0, 0, 255};
+            pixel(x, y, rgba);
+            bytes.push_back(rgba[2]);
+            bytes.push_back(rgba[1]);
+            bytes.push_back(rgba[0]);
+            if (alpha) {
+                bytes.push_back(rgba[3]);
+            }
+        }
+    }
+    return bytes;
+}
+
+bool writeTemp(const std::filesystem::path& path, const std::vector<uint8_t>& bytes) {
+    std::ofstream stream(path, std::ios::binary);
+    if (!stream) {
+        return false;
+    }
+    stream.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    return static_cast<bool>(stream);
+}
+
+void caseImageMask(Runner& run) {
+    namespace fs = std::filesystem;
+    MaskImages& images = MaskImages::instance();
+    const fs::path temp = fs::temp_directory_path();
+    const fs::path lumaFile = temp / "nyrexvj-selftest-mask-luma.tga";
+    const fs::path alphaFile = temp / "nyrexvj-selftest-mask-alpha.tga";
+    const bool wrote = writeTemp(lumaFile, makeTga(64, 36, false, [](int x, int, uint8_t* p) { p[0] = p[1] = p[2] = x < 32 ? 255 : 0; })) &&
+                       writeTemp(alphaFile, makeTga(64, 36, true, [](int, int y, uint8_t* p) { p[0] = p[1] = p[2] = 255; p[3] = y < 18 ? 255 : 0; }));
+    run.condition("test mask pictures were written", wrote);
+    if (!wrote) {
+        return;
+    }
+    std::string lumaName;
+    std::string alphaName;
+    std::string error;
+    run.condition("a mask picture can be imported", images.importFile(lumaFile.string(), lumaName, error) && images.importFile(alphaFile.string(), alphaName, error));
+    if (lumaName.empty() || alphaName.empty()) {
+        logLine("Output self test: import error: " + error);
+        return;
+    }
+    images.clear();
+
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.map.mask.enabled = true;
+    spec.map.mask.image = lumaName;
+    run.draw(spec);
+    run.expect("an image mask stays hidden until it is loaded", 0.25f, 0.25f, kBlack);
+    run.expect("an unloaded image mask hides the rest too", 0.75f, 0.75f, kBlack);
+    run.condition("the picture loads in the background", images.waitFor(lumaName, 10000));
+    run.draw(spec);
+    run.expect("bright side of the image shows the slice", 0.25f, 0.25f, kRed);
+    run.expect("bright side below", 0.25f, 0.75f, kBlue);
+    run.expect("dark side of the image hides the slice", 0.75f, 0.25f, kBlack);
+    run.expect("dark side below", 0.75f, 0.75f, kBlack);
+
+    spec.map.mask.invert = true;
+    run.draw(spec);
+    run.expect("inverted image mask hides the bright side", 0.25f, 0.25f, kBlack);
+    run.expect("inverted image mask shows the dark side", 0.75f, 0.25f, kGreen);
+
+    spec.map.mask.invert = false;
+    spec.map.mask.feather = 0.05f;
+    run.draw(spec);
+    run.expect("softened image mask keeps the bright side", 0.2f, 0.25f, kRed);
+    run.expect("softened image mask keeps the dark side hidden", 0.8f, 0.25f, kBlack);
+
+    spec.map.mask.feather = 0.0f;
+    spec.map.mask.image = alphaName;
+    run.draw(spec);
+    run.condition("the transparent picture loads", images.waitFor(alphaName, 10000));
+    run.draw(spec);
+    run.expect("opaque top half shows the slice", 0.25f, 0.25f, kRed);
+    run.expect("opaque top half shows the slice right", 0.75f, 0.25f, kGreen);
+    run.expect("transparent bottom half hides the slice", 0.25f, 0.75f, kBlack);
+    run.expect("transparent bottom half hides the slice right", 0.75f, 0.75f, kBlack);
+
+    spec.map.mask.image = "selftest-missing-mask.png";
+    run.draw(spec);
+    images.waitFor(spec.map.mask.image, 10000);
+    run.draw(spec);
+    run.expect("a missing mask picture hides the slice", 0.25f, 0.25f, kBlack);
+    run.condition("a missing mask picture reports an error", !images.error(spec.map.mask.image).empty());
+
+    spec.map.mask.image.clear();
+    spec.map.mask.points = {{0.1f, 0.1f}, {0.9f, 0.1f}, {0.9f, 0.9f}, {0.1f, 0.9f}};
+    run.draw(spec);
+    run.expect("without the picture the polygon is used again", 0.25f, 0.25f, kRed);
+    run.expect("without the picture the polygon cuts", 0.03f, 0.03f, kBlack);
+
+    std::error_code ec;
+    fs::remove(images.folder() / lumaName, ec);
+    fs::remove(images.folder() / alphaName, ec);
+    fs::remove(lumaFile, ec);
+    fs::remove(alphaFile, ec);
+    images.clear();
+}
+
+void setEnvironment(const char* name, const std::string& value, bool present) {
+#ifdef _WIN32
+    _putenv_s(name, present ? value.c_str() : "");
+#else
+    if (present) {
+        setenv(name, value.c_str(), 1);
+    } else {
+        unsetenv(name);
+    }
+#endif
+}
+
+struct FakeNdi {
+    DynamicLibrary library;
+    int (*frames)() = nullptr;
+    int (*created)() = nullptr;
+    int (*destroyed)() = nullptr;
+    int (*width)() = nullptr;
+    int (*height)() = nullptr;
+    int (*stride)() = nullptr;
+    const char* (*name)() = nullptr;
+    const uint8_t* (*last)() = nullptr;
+    int (*lastSize)() = nullptr;
+    void (*setConnections)(int) = nullptr;
+
+    template <typename Fn>
+    bool bind(Fn& target, const char* symbolName) {
+        target = reinterpret_cast<Fn>(library.symbol(symbolName));
+        return target != nullptr;
+    }
+
+    bool open(const std::string& path) {
+        std::string error;
+        if (!library.open(path, error)) {
+            return false;
+        }
+        return bind(frames, "fake_ndi_frames") && bind(created, "fake_ndi_created") && bind(destroyed, "fake_ndi_destroyed") && bind(width, "fake_ndi_width") && bind(height, "fake_ndi_height") && bind(stride, "fake_ndi_stride") && bind(name, "fake_ndi_name") && bind(last, "fake_ndi_last") && bind(lastSize, "fake_ndi_last_size") && bind(setConnections, "fake_ndi_set_connections");
+    }
+
+    Rgb at(float fx, float fy) const {
+        const int w = width();
+        const int h = height();
+        const int x = std::clamp(static_cast<int>(fx * static_cast<float>(w)), 0, w - 1);
+        const int y = std::clamp(static_cast<int>(fy * static_cast<float>(h)), 0, h - 1);
+        const uint8_t* p = last() + (static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)) * 4u;
+        return {p[0], p[1], p[2]};
+    }
+};
+
+void caseNdiFallback(Runner& run) {
+    const char* original = std::getenv("NYREXVJ_NDI_LIB");
+    const bool had = original != nullptr;
+    const std::string saved = had ? original : "";
+    setEnvironment("NYREXVJ_NDI_LIB", "/nonexistent/nyrexvj-no-ndi-runtime", true);
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.ndi = true;
+    run.draw(spec);
+    run.draw(spec);
+    const OutputNdiStatus& status = run.manager().ndiStatus(0);
+    run.condition("NDI without a runtime says so", status.wanted && status.error == "The NDI runtime is not installed");
+    run.condition("NDI without a runtime is not active", !status.active && status.connections == 0);
+    quadrants(run, "the picture still renders without the NDI runtime", kRed, kGreen, kBlue, kYellow);
+    const size_t withoutNdi = run.gpuBytes();
+    spec.ndi = false;
+    run.draw(spec);
+    run.condition("turning NDI off clears the message", !run.manager().ndiStatus(0).wanted && run.manager().ndiStatus(0).error.empty());
+    run.condition("a failed NDI start uses no extra memory", run.gpuBytes() == withoutNdi);
+    setEnvironment("NYREXVJ_NDI_LIB", saved, had);
+}
+
+void caseNdiOutput(Runner& run) {
+    const char* path = std::getenv("NYREXVJ_NDI_LIB");
+    FakeNdi fake;
+    if (!path || !*path || !fake.open(path)) {
+        logLine("Output self test: mapped NDI cases skipped (set NYREXVJ_NDI_LIB to the fake NDI library)");
+        return;
+    }
+    OutputSpec spec = defaultOutputSpec(0);
+    run.draw(spec);
+    const size_t baseline = run.gpuBytes();
+
+    spec.ndi = true;
+    spec.ndiName = "Selftest A";
+    fake.setConnections(0);
+    for (int i = 0; i < 4; ++i) {
+        run.draw(spec);
+    }
+    const OutputNdiStatus& status = run.manager().ndiStatus(0);
+    run.condition("NDI output starts a sender", status.active && fake.created() == 1);
+    run.condition("NDI output uses the chosen name", std::string(fake.name()) == "Selftest A");
+    run.condition("nothing is read back without a receiver", fake.frames() == 0 && status.connections == 0);
+    run.condition("no readback memory without a receiver", run.gpuBytes() == baseline);
+
+    fake.setConnections(2);
+    for (int i = 0; i < 5; ++i) {
+        run.draw(spec);
+    }
+    run.condition("frames are sent once a receiver connects", fake.frames() >= 3);
+    run.condition("receivers are counted", run.manager().ndiStatus(0).connections == 2);
+    const int width = run.frameWidth();
+    const int height = run.frameHeight();
+    run.condition("NDI frame has the window size", fake.width() == width && fake.height() == height && fake.stride() == width * 4);
+    run.condition("NDI frame has all its bytes", fake.lastSize() == width * height * 4);
+    run.condition("readback memory matches the estimate", run.gpuBytes() - baseline == ndiReadbackBytes(width, height));
+    const auto sameAsWindow = [&](const char* label) {
+        for (int j = 0; j < 5; ++j) {
+            for (int i = 0; i < 9; ++i) {
+                const float fx = (static_cast<float>(i) + 0.5f) / 9.0f;
+                const float fy = (static_cast<float>(j) + 0.5f) / 5.0f;
+                const Rgb window = run.at(fx, fy);
+                const Rgb sent = fake.at(fx, fy);
+                const bool equal = std::abs(window.r - sent.r) <= 4 && std::abs(window.g - sent.g) <= 4 && std::abs(window.b - sent.b) <= 4;
+                if (!equal) {
+                    run.condition((std::string(label) + " at " + std::to_string(i) + "," + std::to_string(j)).c_str(), false);
+                    return;
+                }
+            }
+        }
+        run.condition(label, true);
+    };
+    sameAsWindow("NDI frame equals the window picture");
+    run.condition("NDI frame is upright", fake.at(0.25f, 0.25f).r > 200 && fake.at(0.25f, 0.25f).g < 60 && fake.at(0.25f, 0.75f).b > 200);
+
+    spec.map.mask = maskRectangle(0.1f, 0.1f, 0.9f, 0.9f);
+    spec.map.sliceColor.red = 0.5f;
+    spec.color.blue = 0.5f;
+    for (int i = 0; i < 5; ++i) {
+        run.draw(spec);
+    }
+    sameAsWindow("NDI frame follows mask and colour");
+    const Rgb masked = fake.at(0.05f, 0.05f);
+    run.condition("NDI frame carries the mask", masked.r < 8 && masked.g < 8 && masked.b < 8);
+    const Rgb tinted = fake.at(0.75f, 0.75f);
+    const Rgb wantTint = corrected(spec.color, corrected(spec.map.sliceColor, kYellow));
+    run.condition("NDI frame carries both colour corrections", std::abs(tinted.r - wantTint.r) <= 6 && std::abs(tinted.g - wantTint.g) <= 6 && std::abs(tinted.b - wantTint.b) <= 6);
+
+    spec.ndiName = "Selftest B";
+    for (int i = 0; i < 4; ++i) {
+        run.draw(spec);
+    }
+    run.condition("a new name restarts the sender", fake.created() == 2 && fake.destroyed() == 1 && std::string(fake.name()) == "Selftest B");
+
+    const int sentBefore = fake.frames();
+    const size_t withReadback = run.gpuBytes();
+    run.manager().setBudgetBytes(1024u * 1024u);
+    for (int i = 0; i < 4; ++i) {
+        run.draw(spec);
+    }
+    run.condition("NDI readback is refused over the budget", run.manager().ndiStatus(0).overBudget);
+    run.condition("no frames are sent over the budget", fake.frames() == sentBefore);
+    run.condition("the readback memory is released over the budget", withReadback - run.gpuBytes() == ndiReadbackBytes(width, height));
+    run.expect("the window still renders over the NDI budget", 0.25f, 0.25f, corrected(spec.color, corrected(spec.map.sliceColor, kRed)), 6);
+    run.expect("the window still masks over the NDI budget", 0.05f, 0.05f, kBlack);
+    run.manager().setBudgetBytes(kOutputGpuBudgetBytes);
+    for (int i = 0; i < 5; ++i) {
+        run.draw(spec);
+    }
+    run.condition("NDI readback resumes within the budget", !run.manager().ndiStatus(0).overBudget && fake.frames() > sentBefore);
+
+    const size_t beforeOff = run.gpuBytes();
+    spec.ndi = false;
+    run.draw(spec);
+    run.draw(spec);
+    run.condition("turning NDI off stops the sender", fake.destroyed() == 2 && !run.manager().ndiStatus(0).wanted);
+    run.condition("turning NDI off frees the readback memory", beforeOff - run.gpuBytes() == ndiReadbackBytes(width, height));
+    const int sentAfter = fake.frames();
+    run.draw(spec);
+    run.draw(spec);
+    run.condition("no frames are sent after turning NDI off", fake.frames() == sentAfter);
+
+    spec.map = OutputMapping{};
+    spec.color = OutputColor{};
+    spec.ndi = false;
+    const double without = run.frameMilliseconds(spec, 60);
+    spec.ndi = true;
+    fake.setConnections(1);
+    const double withReceiver = run.frameMilliseconds(spec, 60);
+    fake.setConnections(0);
+    const double withoutReceiver = run.frameMilliseconds(spec, 60);
+    char text[300];
+    std::snprintf(text, sizeof(text), "Output self test numbers: frame (1280x720 window, software OpenGL) without NDI %.2f ms, NDI on without receiver %.2f ms, NDI on with one receiver %.2f ms (readback and send)", without, withoutReceiver, withReceiver);
+    logLine(text);
+}
+
 void measureHistory() {
     const int width = 1920;
     const int height = 1080;
@@ -558,10 +1023,38 @@ void measure(Runner& run) {
     spec.map.mask = soft;
     run.draw(spec);
     const size_t heavy = run.gpuBytes();
+    std::array<OutputSpec, kMaxOutputs> planned = defaultOutputs();
+    planned[0] = spec;
+    const OutputBudget heavyEstimate = estimateOutputBudget(planned, 64, 36, 1280, 720);
 
     spec = defaultOutputSpec(0);
     run.draw(spec);
     const size_t after = run.gpuBytes();
+    planned[0] = spec;
+    const OutputBudget plainEstimate = estimateOutputBudget(planned, 64, 36, 1280, 720);
+
+    SliceMask curve = maskEllipse(0.5f, 0.5f, 0.4f, 0.4f, 32);
+    maskSmooth(curve, 1.0f);
+    MaskBitmap bitmap;
+    bitmap.width = kMaskWidth;
+    bitmap.height = kMaskHeight;
+    bitmap.coverage.assign(static_cast<size_t>(kMaskWidth) * static_cast<size_t>(kMaskHeight), 200);
+    SliceMask imageMask;
+    imageMask.enabled = true;
+    imageMask.image = "bench.png";
+    auto timeImage = [&](const SliceMask& mask, int width, int height) {
+        const auto begin = std::chrono::steady_clock::now();
+        const int runs = 5;
+        for (int i = 0; i < runs; ++i) {
+            buildMaskImage(mask, width, height, &bitmap);
+        }
+        return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / runs;
+    };
+    const double curveMs = timeBuild(curve);
+    const double imageMs = timeImage(imageMask, kMaskWidth, kMaskHeight);
+    SliceMask softImage = imageMask;
+    softImage.feather = 0.1f;
+    const double softImageMs = timeImage(softImage, kMaskWidth / 2, kMaskHeight / 2);
 
     constexpr int kFrames = 60;
     OutputSpec plainSpec = defaultOutputSpec(0);
@@ -586,21 +1079,36 @@ void measure(Runner& run) {
         resizeWarp(slice.map, 17, 17);
         slice.map.mask = soft;
     }
+    OutputSpec sliceColourSpec = defaultOutputSpec(0);
+    sliceColourSpec.map.sliceColor.saturation = 0.8f;
+    sliceColourSpec.map.sliceColor.gamma = 1.2f;
+    sliceColourSpec.color = colourSpec.color;
+    OutputSpec curveSpec = defaultOutputSpec(0);
+    curveSpec.map.mask = curve;
     const double plainFrame = run.frameMilliseconds(plainSpec, kFrames);
     const double maskedFrame = run.frameMilliseconds(maskedSpec, kFrames);
     const double softFrame = run.frameMilliseconds(softSpec, kFrames);
     const double colourFrame = run.frameMilliseconds(colourSpec, kFrames);
     const double fourFrame = run.frameMilliseconds(fourSpec, kFrames);
     const double eightFrame = run.frameMilliseconds(eightSpec, kFrames);
+    const double sliceColourFrame = run.frameMilliseconds(sliceColourSpec, kFrames);
+    const double curveFrame = run.frameMilliseconds(curveSpec, kFrames);
     run.condition("gpu memory returns to the baseline", after == baseline);
     run.condition("a hard mask costs one 1024x576 byte texture", withHardMask == baseline + static_cast<size_t>(kMaskWidth) * static_cast<size_t>(kMaskHeight));
     run.condition("a soft mask costs one 512x288 byte texture", withSoftMask == baseline + static_cast<size_t>(kMaskWidth / 2) * static_cast<size_t>(kMaskHeight / 2));
+    run.condition("the budget estimate matches the measured memory of eight slices", heavyEstimate.meshBytes + heavyEstimate.maskBytes == heavy);
+    run.condition("the budget estimate matches the measured memory of one plain slice", plainEstimate.total() == baseline);
     logLine("Output self test numbers: default " + std::to_string(baseline) + " B, one hard mask " + std::to_string(withHardMask) + " B, one soft mask " + std::to_string(withSoftMask) + " B, eight masked 17x17 slices " + std::to_string(heavy) + " B");
     char text[400];
     std::snprintf(text, sizeof(text), "Output self test numbers: mask build %.2f ms hard (1024x576), %.2f ms feathered at 1024x576, %.2f ms feathered at 512x288 (used)", plainMs, softMs, halfMs);
     logLine(text);
     std::snprintf(text, sizeof(text), "Output self test numbers: frame (1280x720 window, software OpenGL) default %.2f ms, hard mask %.2f, soft mask %.2f, colour %.2f, 4 masked slices %.2f, 8 soft masked 17x17 slices %.2f", plainFrame, maskedFrame, softFrame, colourFrame, fourFrame, eightFrame);
     logLine(text);
+    std::snprintf(text, sizeof(text), "Output self test numbers: curved 32 point mask build %.2f ms hard (1024x576), image mask build %.2f ms hard (1024x576) and %.2f ms feathered at 512x288", curveMs, imageMs, softImageMs);
+    logLine(text);
+    std::snprintf(text, sizeof(text), "Output self test numbers: frame (1280x720 window, software OpenGL) slice and output colour %.2f ms, curved mask %.2f ms", sliceColourFrame, curveFrame);
+    logLine(text);
+    logLine("Output self test numbers: budget estimate for eight masked 17x17 slices " + std::to_string(heavyEstimate.meshBytes + heavyEstimate.maskBytes) + " B against " + std::to_string(heavy) + " B measured");
 }
 
 }
@@ -615,6 +1123,12 @@ int runOutputSelfTest(GLFWwindow* share) {
     caseMask(run);
     caseColor(run);
     caseBlackLevel(run);
+    caseSliceColor(run);
+    caseCurves(run);
+    caseFreehand(run);
+    caseImageMask(run);
+    caseNdiFallback(run);
+    caseNdiOutput(run);
     caseWarp(run);
     caseSyncBars(run);
     caseDelay(run);

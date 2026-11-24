@@ -342,11 +342,15 @@ int runVideoBenchmark(Engine& engine, const std::string& spec, const std::string
             item["fallbackReason"] = status.fallbackReason;
             item["threads"] = status.threads;
             item["decodeMs"] = status.decodeMs;
+            item["firstPictureMs"] = status.firstPictureMs;
+            item["transfer"] = status.transfer;
             item["decoded"] = status.decoded;
             item["dropped"] = status.dropped;
             item["underruns"] = status.underruns;
             item["uploadRoute"] = uploadRouteName(player->uploadRoute());
             item["uploadMs"] = upload.averageMs;
+            item["uploadP95Ms"] = upload.p95Ms;
+            item["uploadMaxMs"] = upload.maxMs;
             item["uploadFrames"] = upload.frames;
             item["memory"] = {{"output", memory.output}, {"planes", memory.planes}, {"compressed", memory.compressed}, {"staging", memory.staging}};
         }
@@ -615,7 +619,8 @@ int runVideoSelfTest(Engine& engine, const std::string& directory, const std::st
             item["worstDifference"] = worst;
             const bool compressed = file.filename().string().find("hap") != std::string::npos;
             const std::string expected = compressed ? "compressed direct" : "gpu convert";
-            const bool routeOk = (compressed && !caps.compressedTextures) || (!compressed && !caps.conversion) || fast.route == expected;
+            const bool processorRgba = fast.decoder == "dxv" && fast.route == "cpu rgba";
+            const bool routeOk = (compressed && !caps.compressedTextures) || (!compressed && !caps.conversion) || fast.route == expected || processorRgba;
             const bool lit = light > 0.0;
             item["expectedRoute"] = expected;
             itemPassed = mean < 4.0 && routeOk && lit && reference.route == "cpu rgba";

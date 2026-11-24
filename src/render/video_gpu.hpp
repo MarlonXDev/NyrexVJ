@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/frame_stats.hpp"
 #include "media/video_types.hpp"
 #include "render/gl_util.hpp"
 
@@ -34,6 +35,8 @@ const char* uploadRouteName(UploadRoute route);
 struct UploadStats {
     double lastMs = 0.0;
     double averageMs = 0.0;
+    double p95Ms = 0.0;
+    double maxMs = 0.0;
     unsigned long long lastBytes = 0;
     unsigned long long frames = 0;
 };
@@ -140,6 +143,7 @@ private:
     float scaleY_ = 1.0f;
     bool ycocg_ = false;
     UploadStats stats_;
+    FrameStats samples_{120};
     UploadRoute route_ = UploadRoute::None;
     std::vector<unsigned char> scratch_;
 };

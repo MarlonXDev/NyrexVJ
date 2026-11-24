@@ -428,6 +428,10 @@ bool VideoUploader::present(const VideoFrame& frame) {
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
         stats_.lastMs = ms;
         stats_.averageMs = stats_.frames == 0 ? ms : stats_.averageMs * 0.9 + ms * 0.1;
+        samples_.add(ms);
+        const FrameSummary spread = samples_.summary();
+        stats_.p95Ms = spread.p95;
+        stats_.maxMs = spread.max;
         stats_.lastBytes = bytes;
         ++stats_.frames;
     }

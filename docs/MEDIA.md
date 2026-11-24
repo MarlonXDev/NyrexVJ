@@ -44,6 +44,21 @@ NyrexVJ picks the cheapest route that works and falls back by itself, so a video
 
 HAP needs a graphics card with S3TC (DXT) textures. NyrexVJ checks this at start with a real test upload. Without it, or when a HAP file uses something unusual, FFmpeg's own HAP decoder takes over on the processor and the monitor says so.
 
+### Colour spaces, bit depth and HDR
+
+The shader that converts the colour planes on the graphics card reads the matrix and the range from the stream and handles these cases:
+
+| Property | Handled | How |
+| --- | --- | --- |
+| Matrix | BT.601 (SMPTE 170M, BT.470 BG), BT.709, BT.2020 (non constant and constant luminance, both as non constant), YCoCg | From the colour space tag. Without a tag a picture of 720 lines or more is 709 and a smaller one 601. SMPTE 240M has no matrix of its own and uses that height rule. |
+| Range | Limited (16 to 235) and full | From the range tag of the stream. |
+| Bit depth | 8 to 16 bit, also most significant bit aligned samples (P010) | Planes of 8 or 16 bit are uploaded as they are and scaled in the shader. |
+| Chroma | 4:2:0, 4:2:2, 4:4:4, packed UYVY | The sampler interpolates the chroma planes bilinearly. Chroma siting (left, centre, top left) is not read. |
+| Alpha | A fourth plane (for example ProRes 4444, yuva420p) and HAP Alpha | Kept and composited with premultiplied alpha like every layer, see Transparency. |
+| HDR (PQ, HLG) | **Detected, not converted** | The picture is shown with the matrix and range of the file as an ordinary picture, without tone mapping, so it looks flat. The monitor, the Clip window and the Library tooltip say `HDR video (PQ)` or `HDR video (HLG)` with that note. Tone mapping belongs to colour management, which is a request of its own. |
+
+How well this matches FFmpeg's own conversion was measured with test clips made for each case (mean difference per colour channel of 255 over the picture, one run of `nvj_media_tests` with software OpenGL): BT.601 limited 0.75 to 0.77, BT.709 full 0.60, 4:2:2 10 bit 1.0 to 1.07, and 3.2 to 3.6 for the BT.2020 10 bit clips in 4:2:0 (the PQ and HLG test clips are BT.2020 10 bit and give the same numbers). The 4:4:4 clips (8 bit BT.709 and 10 bit BT.2020) differ by 0.002, so matrix and range are exact; the 3 of 255 for 10 bit 4:2:0 is the chroma filter (bilinear on the graphics card against FFmpeg's), not the matrix. Every test also requires that the wrong matrix gives a difference at least 1.5 times larger, so a clip that cannot tell the matrices apart fails instead of passing.
+
 ### Hardware decoding
 
 The program asks FFmpeg for the graphics card's decoder and tests every interface once with a tiny built-in clip for H.264, HEVC and AV1. The order is Windows: Direct3D 11 (D3D11VA), DXVA2, NVIDIA CUDA, Intel QSV. Linux: NVIDIA CUDA (NVDEC), VA-API, Intel QSV, VDPAU. Settings, Performance, Video playback shows the result as a table (H.264, HEVC and AV1 per interface: works, not supported or failed, with the reason as a tooltip; VP9 has no test clip and is only tried when a VP9 video plays) and a Test hardware decoding button.
@@ -75,13 +90,36 @@ DXV is decoded on the processor. HAP is not: its compressed blocks go to the gra
 
 The decoded picture is copied back to normal memory and uploaded again. A direct hand-over of the decoded picture to OpenGL (zero copy) is not implemented, see [ADR 0010](adr/0010-video-decode-pipeline.md) for why.
 
+### Zero copy: what was checked and what stays open
+
+[ADR 0024](adr/0024-video-pipeline-audit-and-measurement.md) examined the three possible ways to hand a decoded picture to OpenGL without the copy through normal memory. None was built, because none can be tried without the matching hardware, and a path written blind for a graphics driver can crash a live show. What runs today is the cheapest path that does not need such a hand-over: with a hardware decoder one copy of the NV12 or P010 picture (about 3 MB for 1080p, 12 MB for 4K at 8 bit) and one upload through an orphaned pixel buffer, a conversion on the graphics card and nothing read back from it; HAP goes to the graphics card compressed; without a hardware decoder the processor decodes and the graphics card converts.
+
+| Route | Needs | Status |
+| --- | --- | --- |
+| Direct3D 11 (D3D11VA) into OpenGL | `WGL_NV_DX_interop2`, an OpenGL context on the same adapter, texture array slices of the decoder | Not implemented, not tested |
+| NVDEC through CUDA into OpenGL | A CUDA context shared with OpenGL, `cudaGraphicsGLRegisterImage` | Not implemented, not tested |
+| VA-API through DMA-BUF into OpenGL | EGL (GLFW gives a GLX or WGL context here), `EGL_EXT_image_dma_buf_import`, tiling modifiers | Not implemented, not tested |
+| Hardware decode, copy to memory, upload, convert on the graphics card | FFmpeg with a hardware interface | Implemented, probed with a built-in clip, **not run on a real card** |
+| Processor decode, upload planes, convert on the graphics card | Nothing | Implemented, tested with software OpenGL |
+| HAP, HAP Alpha, HAP Q | `S3TC` textures | Implemented, tested with software OpenGL |
+
+What a person with a real graphics card should run and send back (nothing here was measured without one):
+
+1. Settings, Performance, Video playback, Test hardware decoding. The table is the real compatibility matrix of that computer; send a screenshot with the card and driver version.
+2. `NyrexVJ --bench-video 20:h264_1080,h264_4k,hevc_1080,av1_1080,hap_1080 --video-mode hardware --bench-out hw.json` and the same with `--video-mode software` (clips in the media folder). The JSON has the decoder, the route, `firstPictureMs`, `decodeMs`, `uploadMs`, `uploadP95Ms` and `uploadMaxMs` per video, and the processor and memory figures. Check that the hardware run says `hardware` as the decoder, that dropped and late pictures stay at zero, and that the upload p95 is small against the frame time.
+3. The same next to VRChat in VR with the frame rate limit at 60, looking at the VRChat frame time with and without the video playing.
+4. One HDR file and one 10 bit file from the real source of the videos, to see whether the HDR note appears and whether the colours are what the file should have.
+
+
+
 ### Monitoring
 
 Settings, Performance, Videos lists every playing video with:
 
 - the codec, size and picture format, the decoder in use (processor or the hardware interface) and the number of decoder threads,
 - the route to the graphics card (compressed HAP upload, colour planes converted on the graphics card, or plain RGBA) and, when a faster route was not possible, the reason, for example "no hardware decoder worked on this computer" or "this graphics card cannot take compressed textures",
-- the decode time per picture, the upload time per picture, dropped pictures (skipped to keep up) and late pictures (not ready in time),
+- the decode time per picture, the upload time per picture (hover for the 95th percentile and the largest of the last 120), the time from opening the video to its first picture, dropped pictures (skipped to keep up) and late pictures (not ready in time),
+- a note `HDR video (PQ)` or `HDR video (HLG)` when the file is HDR (it is shown without tone mapping),
 - the video memory, split into pictures, colour planes, compressed HAP textures and upload buffers.
 
 The Clip window of a video and the tooltip of its Library entry show the same decoder and route for that clip. Settings, Performance, Memory explains each memory number.
@@ -198,12 +236,15 @@ Whoever distributes NyrexVJ together with the FFmpeg libraries has to follow the
 - Playback control: `src/core/playhead.{hpp,cpp}` (pure play head, no FFmpeg or OpenGL), `src/media/playback_driver.{hpp,cpp}` (clock to decoder), the range, direction and exact seek parts of `src/media/video_decoder.cpp`, `src/render/media_player.cpp` (forwarding, scrub, step), `Engine::prewarmMedia` (next clip) and `drawPlaybackControls` in `src/app/ui_browser.cpp`.
 - Conversion: `src/media/hap_convert.cpp` (the converter), `src/media/convert_cache.cpp` (the cache), `src/media/convert_manager.cpp` (queue, worker thread, modes), `src/media/video_redirect.cpp` (hooks that let `MediaPlayer` ask for a copy without knowing the manager), `src/media/ffmpeg_setup.cpp` (capability check, package choice, download, verification, install), `src/core/archive.cpp` (zip and tar.xz reader with limits), the download functions in `src/platform/` and `src/app/ui_convert.cpp` (settings page and notice cards). `NyrexVJ --bench-convert RUNS:file1,file2` (with `--convert-format auto|hap|hap_alpha|hap_q` and `--convert-keep DIR`, no window) measures the conversion; `tests/test_convert.cpp` (`nvj_convert_tests`) covers the archive reader, the package choice, the checksum list, the licence decision, the install, the cache, the redirect hooks and the manager.
 - Command line for tests and measurements: `--bench-switch SECONDS:clip1,clip2,...` (at least two clips, counts empty frames and the time to the first picture over repeated switches in real time, `--bench-out` writes JSON), `--no-prewarm`, `--bench-video SECONDS:clip1,clip2` measures the processor cost of videos in real time, `--video-selftest DIR` uploads every clip of a folder through the graphics card path and compares it with the processor path (exit code 1 on a difference), `--video-mode auto|hardware|software`, `--no-hap-direct`, `--no-gpu-convert` and `--frame-report SECONDS` (frame time and sleep time statistics with the limiter).
+- Colour space test clips in `tests/data` (`test_cs_601_limited`, `test_cs_709_full`, `test_cs_2020_limited10`, `test_cs_2020_full10`, `test_cs_2020_444_10`, `test_hdr_pq`, `test_hdr_hlg`, `test_h264_422_10`, `test_h264_444`, each 10 to 13 kB, made with FFmpeg's encoder with the colour tags set) are compared with FFmpeg's own conversion in `nvj_media_tests` (`testGpuLayouts`) and on a real OpenGL context in `--video-selftest`. The `--bench-video` JSON also has `firstPictureMs`, `transfer`, `uploadP95Ms` and `uploadMaxMs` per video.
 - `tests/test_playhead.cpp` (target `nvj_playhead_tests`) tests the play head alone: every loop mode in both directions, ranges, speed, beat sync and invalid values. `tests/test_media.cpp` also uses two index videos (`tests/data/test_index_h264.mp4` and `tests/data/test_index_mjpeg.avi`, every picture carries its number in its brightness) to check exactly which picture is shown after forward play, reverse play, exact seeks, ranges, ping-pong, once and hold, once and stop and a prepared clip.
 - `tests/test_media.cpp` covers the file name rules, premultiplication, image loading with alpha, errors, the library scan, the import of dropped files and, when the libraries are present, H.264 and HAP decoding, seeking, looping without lost frames, alpha, opening and closing many decoders, the HAP parser (Snappy, chunks, uncompressed, HAP Q, damaged files), the choice of decoder and the fallback reasons, the codecs that skip the graphics card and the YCoCg conversion (a small test video tagged YCoCg, on the processor path, in the reference conversion and in the real OpenGL shader).
 
 ## What was and was not tested
 
 The conversion of DXV videos to HAP and the FFmpeg setup (v0.28.0): see [ADR 0021](adr/0021-dxv-hap-conversion-and-ffmpeg-setup.md) and [FFMPEG.md](FFMPEG.md) for the full list. In short, tested on Linux: the converter on the one real DXV file (Normal Quality) and on stand-in files for High Quality and alpha (the YCoCg path, alpha kept with ProRes), the cache, the manager with its modes, queue, cancel and eviction (`nvj_convert_tests`, also under ThreadSanitizer without a warning), the archive reader, the install with real archives and a real download, and playback of an original and its copy in the benchmark. Not tested: real DXV High Quality or alpha files, DXV files of 1080p or 4K (so no processor figure for them), the switch from original to copy in the interactive program by hand, the notice cards and the settings page in use, a real graphics card, and everything that runs only on Windows (the download with WinHTTP, loading the installed DLLs).
+
+The GPU video pipeline audit (v0.31.0): see [ADR 0024](adr/0024-video-pipeline-audit-and-measurement.md). Tested on Linux with software OpenGL: nine colour space test clips (601, 709, 2020, limited, full, 8 and 10 bit, 4:2:2, 4:4:4, PQ and HLG) against FFmpeg's conversion, the HDR detection, the first picture time and the upload percentiles, and `--video-selftest tests/data` (now also in the CI). Not tested: hardware decoding, zero copy, HDR files from real sources, chroma siting, anything on a real graphics card, on Windows at run time or next to VRChat.
 
 Tested on Linux with FFmpeg 6.1 and software OpenGL (llvmpipe): everything above except hardware decoding, including the thumbnails, the transparency over other layers, the real OpenGL upload of every test clip (HAP, HAP Alpha, HAP Q, chunked and uncompressed HAP, 8 bit and 10 bit H.264 and HEVC, ProRes with alpha) compared with the processor path (`NyrexVJ --video-selftest tests/data`), looping and seeking, and several videos at once in 1080p and 4K. On Windows (MSVC, the build workflow) with the FFmpeg 8.1 headers and DLLs: the build and the decode tests. The Windows-only code was also compiled with MinGW as a check.
 

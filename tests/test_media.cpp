@@ -725,12 +725,24 @@ void testGpuLayouts() {
         int depth;
         bool alpha;
         double tolerance;
+        const char* transfer = "";
+        int matrix = -1;
+        bool fullRange = false;
     };
     const Case cases[] = {
         {"test_h264.mp4", nvj::VideoLayout::Planar, 3, 8, false, 6.0},
-        {"test_hevc10.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0},
+        {"test_hevc10.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0, "", 0, false},
         {"test_prores_alpha.mov", nvj::VideoLayout::Planar, 4, 12, true, 6.0},
         {"test_ycocg.mkv", nvj::VideoLayout::Planar, 3, 8, false, 2.0},
+        {"test_cs_601_limited.mp4", nvj::VideoLayout::Planar, 3, 8, false, 6.0, "", 0, false},
+        {"test_cs_709_full.mp4", nvj::VideoLayout::Planar, 3, 8, false, 6.0, "", 1, true},
+        {"test_cs_2020_limited10.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0, "", 2, false},
+        {"test_cs_2020_full10.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0, "", 2, true},
+        {"test_hdr_pq.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0, "PQ", 2, false},
+        {"test_hdr_hlg.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0, "HLG", 2, false},
+        {"test_h264_422_10.mp4", nvj::VideoLayout::Planar, 3, 10, false, 6.0, "", 1, false},
+        {"test_h264_444.mp4", nvj::VideoLayout::Planar, 3, 8, false, 6.0, "", 1, false},
+        {"test_cs_2020_444_10.mp4", nvj::VideoLayout::Planar, 3, 10, false, 1.0, "", 2, false},
     };
     for (const Case& test : cases) {
         std::string error;
@@ -750,12 +762,23 @@ void testGpuLayouts() {
                 continue;
             }
             CHECK(a->layout == test.layout && a->planeCount == test.planes && a->bitDepth == test.depth);
+            if (test.matrix >= 0) {
+                CHECK(a->matrix == test.matrix);
+                CHECK(a->fullRange == test.fullRange);
+            }
             CHECK(a->outWidth > 0 && a->outHeight > 0 && a->planes[0].width == a->width && a->planes[0].height == a->height);
             CHECK(b->layout == nvj::VideoLayout::Rgba);
             const Difference diff = compare(pictureOf(*a), pictureOf(*b));
             CHECK(diff.sameSize);
             CHECK(diff.mean < test.tolerance);
             CHECK(diff.alphaMean < 2.0);
+            if (test.matrix >= 0) {
+                nvj::VideoFrame wrong = *a;
+                wrong.matrix = (a->matrix + 1) % 3;
+                const Difference other = compare(pictureOf(wrong), pictureOf(*b));
+                std::printf("%s: matrix %d mean %.3f, other matrix %.3f\n", test.file, a->matrix, diff.mean, other.mean);
+                CHECK(other.mean > diff.mean * 1.5);
+            }
             if (test.alpha) {
                 const Picture picture = pictureOf(*a);
                 const size_t row = static_cast<size_t>(picture.height / 2) * static_cast<size_t>(picture.width) * 4u;
@@ -769,6 +792,16 @@ void testGpuLayouts() {
         CHECK(status.threads >= 1 && status.decoded > 0);
         CHECK(status.decodeMs >= 0.0);
         CHECK(status.fallbackReason.empty());
+        CHECK(status.transfer == test.transfer);
+        CHECK(status.firstPictureMs > 0.0 && status.firstPictureMs < 5000.0);
+    }
+}
+
+void testTransferNames() {
+    CHECK(std::string(nvj::videoTransferName(16)) == "PQ");
+    CHECK(std::string(nvj::videoTransferName(18)) == "HLG");
+    for (const int code : {0, 1, 2, 5, 6, 8, 13, 17, 15, 19, 99, -1}) {
+        CHECK(std::string(nvj::videoTransferName(code)).empty());
     }
 }
 
@@ -1602,6 +1635,7 @@ int main() {
     testVideo();
     testHapParser();
     testModeNames();
+    testTransferNames();
     testHardwareLibraryGuard();
     if (videoAvailable()) {
         testHapDirect();

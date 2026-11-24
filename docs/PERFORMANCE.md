@@ -149,6 +149,44 @@ Shader clips with a `#pragma nyrexvj` line can write alpha and use Buffer A to D
 
 Command line: `--shader-selftest [FRAMES]` runs the checks and the timing (`--bench-out` writes JSON).
 
+## What is new in 0.31.0: video pipeline audit
+
+[ADR 0024](adr/0024-video-pipeline-audit-and-measurement.md). The routes of the video pipeline were not changed, so no video got cheaper or more expensive; what is new is what can be seen and how it was checked.
+
+- **First picture.** The time from opening a decoder to its first picture (opening the file, finding the first key frame, decoding it) is shown in the video tooltips and written as `firstPictureMs` by `--bench-video`.
+- **Upload spread.** The upload time has a 95th percentile and a largest value over the last 120 uploads (tooltip and `uploadP95Ms`, `uploadMaxMs` in the JSON), because a mean of 3 ms can hide one upload of 30 ms.
+- **HDR.** PQ and HLG files are marked in the monitor and tooltips. They are not converted.
+
+Measured with `scripts/bench_video.py --seconds 6` (Linux, 2 cores, FFmpeg 6.1, Mesa llvmpipe, 1920 x 1080 output, one run per scenario, **software renderer only, no hardware decoder**):
+
+| Scenario | Decoder | First picture | Upload mean | Upload p95 | Upload max |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1x H.264 1080p | h264 (processor) | 35.9 ms | 3.2 ms | 8.9 ms | 32.8 ms |
+| 4x H.264 1080p | h264 (processor) | 105.7 ms | 8.4 ms | 39.3 ms | 58.6 ms |
+| 1x H.264 4K | h264 (processor) | 94.4 ms | 72.3 ms | 156.6 ms | 167.7 ms |
+| 1x HEVC 1080p (10 bit) | hevc (processor) | 65.6 ms | 4.8 ms | 8.1 ms | 32.0 ms |
+| 1x AV1 1080p | libdav1d (processor) | 12.5 ms | 4.1 ms | 7.1 ms | 29.5 ms |
+| 1x HAP 1080p | HAP direct upload | 1.7 ms | 1.1 ms | 1.4 ms | 1.9 ms |
+| 1x HAP Alpha 1080p | HAP direct upload | 2.4 ms | 1.4 ms | 2.6 ms | 4.3 ms |
+| 1x HAP Q 1080p | HAP direct upload | 12.8 ms | 1.5 ms | 2.5 ms | 2.9 ms |
+| 1x HAP 4K | HAP direct upload | 6.1 ms | 2.9 ms | 4.4 ms | 5.3 ms |
+| 4x HAP 1080p | HAP direct upload | 6.8 ms | 1.1 ms | 2.4 ms | 8.9 ms |
+| 2x H.264 1080p + 1x H.264 4K | h264 (processor) | 61.4 ms | 11.5 ms | 49.1 ms | 150.1 ms |
+
+The upload times of the decoded video are the time a software rasteriser needs to take the planes, so they say how the figures behave, not what a graphics card does: they grow with the picture size and with the number of videos, the HAP uploads are an order of magnitude smaller than the plane uploads, and the largest value of the plane uploads is several times the mean. Several videos open at the same time slow each other down on two cores, which is why the first picture of the four H.264 videos is later than that of one.
+
+Does the new measuring cost anything? The old build (without these changes) and the new one were measured alternately, three runs each, the processor time of NyrexVJ without the software rasteriser in percent of one core:
+
+| Scenario | Before | After |
+| --- | --- | --- |
+| 1x HAP 1080p | 4.0 to 4.2 | 4.1 to 4.4 |
+| 1x H.264 1080p | 15.5 to 16.5 | 15.9 to 16.8 |
+| 1x HEVC 1080p | 30.3 to 30.9 | 30.4 to 31.0 |
+
+No difference outside the spread. Numbers of different sessions on this machine can not be compared: a first set of the same scenarios on the old build gave 2.7, 13.8 and 37.2, the figures of 0.18.0 in [MEDIA.md](MEDIA.md) 5.7, 16.3 and 24.9, and a single run of the full set of scenarios showed 27.7 MB of video memory for HAP 4K once (7.9 MB alone, three times), probably a thumbnail that was being decoded at that moment. Only alternating runs of two builds are a comparison.
+
+Not measured, because it needs hardware that was not available: hardware decoding (decode time, copy back, upload, processor and graphics card load), 4K at 60 frames a second on a real graphics card, the cost next to VRChat and in VR, and the video memory the driver adds. The checklist for a computer with a real graphics card is in [MEDIA.md](MEDIA.md), section Zero copy.
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

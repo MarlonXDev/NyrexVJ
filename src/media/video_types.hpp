@@ -62,6 +62,7 @@ struct VideoStatus {
     std::string backend;
     std::string pixelFormat;
     std::string variant;
+    std::string transfer;
     std::string fallbackReason;
     std::string fallbackDetail;
     bool hardwareWanted = false;
@@ -69,6 +70,7 @@ struct VideoStatus {
     bool convertedCopy = false;
     int threads = 1;
     double decodeMs = 0.0;
+    double firstPictureMs = 0.0;
     unsigned long long decoded = 0;
     unsigned long long dropped = 0;
     unsigned long long underruns = 0;
@@ -80,6 +82,7 @@ struct VideoStatus {
 };
 
 const char* decodePathName(DecodePath path);
+const char* videoTransferName(int code);
 const char* videoDecodeModeName(VideoDecodeMode mode);
 VideoDecodeMode videoDecodeModeFromName(const std::string& name);
 

@@ -27,6 +27,16 @@ const char* decodePathName(DecodePath path) {
     }
 }
 
+const char* videoTransferName(int code) {
+    if (code == 16) {
+        return "PQ";
+    }
+    if (code == 18) {
+        return "HLG";
+    }
+    return "";
+}
+
 const char* videoDecodeModeName(VideoDecodeMode mode) {
     switch (mode) {
     case VideoDecodeMode::PreferHardware:
@@ -244,6 +254,9 @@ struct VideoDecoder::Impl {
     std::atomic<bool> stop{false};
     std::atomic<bool> broken{false};
     std::atomic<double> decodeMs{0.0};
+    std::atomic<double> firstPictureMs{0.0};
+    std::atomic<int> transferCode{2};
+    std::chrono::steady_clock::time_point openedAt = std::chrono::steady_clock::now();
     std::atomic<unsigned long long> decoded{0};
     std::atomic<unsigned long long> dropped{0};
     std::atomic<unsigned long long> underruns{0};
@@ -422,7 +435,9 @@ struct VideoDecoder::Impl {
         if (epoch.load() != stepEpoch) {
             return;
         }
-        decoded.fetch_add(1);
+        if (decoded.fetch_add(1) == 0 && firstPictureMs.load() <= 0.0) {
+            firstPictureMs.store(std::max(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - openedAt).count(), 0.001));
+        }
         out->id = nextId++;
         queue.push_back(std::move(out));
         decodedUntil = absolute;
@@ -505,6 +520,7 @@ struct VideoDecoder::Impl {
             download->height = frame->height;
             source = download;
         }
+        transferCode.store(static_cast<int>(source->color_trc));
         VideoFrame description;
         bool handled = false;
         if (options.gpuConversion && describeFrame(*api, *source, description)) {
@@ -1199,6 +1215,8 @@ VideoStatus VideoDecoder::status() const {
         result.pixelFormat = d.pixelFormat;
     }
     result.decodeMs = d.decodeMs.load();
+    result.firstPictureMs = d.firstPictureMs.load();
+    result.transfer = videoTransferName(d.transferCode.load());
     result.decoded = d.decoded.load();
     result.dropped = d.dropped.load();
     result.underruns = d.underruns.load();

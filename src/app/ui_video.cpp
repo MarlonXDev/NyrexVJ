@@ -212,6 +212,9 @@ void App::drawVideoMonitor() {
                 }
                 ImGui::Text("%s: %d", tr("Decoder threads"), status.threads);
                 ImGui::Text("%s: %llu", tr("Seeks"), status.seeks);
+                if (status.firstPictureMs > 0.0) {
+                    ImGui::Text("%s: %.0f ms", tr("First picture after opening"), status.firstPictureMs);
+                }
                 if (status.reverse) {
                     ImGui::Text(tr("Playing backwards, buffer of %d pictures"), status.reverseFrames);
                 }
@@ -236,6 +239,12 @@ void App::drawVideoMonitor() {
             if (status.convertedCopy) {
                 ImGui::TextColored(kGood, "%s", tr("Converted HAP copy of the original video"));
             }
+            if (!status.transfer.empty()) {
+                ImGui::TextColored(kWarn, "%s (%s)", tr("HDR video"), status.transfer.c_str());
+                ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetFontSize() * 22.0f);
+                ImGui::TextDisabled("%s", tr("Shown without tone mapping, so colours look flat."));
+                ImGui::PopTextWrapPos();
+            }
             if (explained) {
                 ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + ImGui::GetFontSize() * 22.0f);
                 ImGui::TextDisabled("%s: %s", tr("Why"), trMessage(status.fallbackReason).c_str());
@@ -250,6 +259,12 @@ void App::drawVideoMonitor() {
             ImGui::Text("%.2f ms", status.decodeMs);
             ImGui::TableSetColumnIndex(3);
             ImGui::Text("%.2f ms", upload.averageMs);
+            if (ImGui::IsItemHovered() && upload.frames > 0) {
+                ImGui::BeginTooltip();
+                ImGui::Text("%s: %.2f ms", tr("Upload, 95th percentile"), upload.p95Ms);
+                ImGui::Text("%s: %.2f ms", tr("Upload, worst of the last 120"), upload.maxMs);
+                ImGui::EndTooltip();
+            }
             ImGui::TableSetColumnIndex(4);
             ImGui::Text("%llu", status.dropped);
             ImGui::TableSetColumnIndex(5);

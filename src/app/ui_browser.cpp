@@ -250,6 +250,11 @@ void App::drawMediaDetails(const MediaPlayer& player, bool tooltip) {
                     path = tr("HAP, processor fallback");
                 }
                 ImGui::Text("%s: %s", tr("Decoding"), path);
+                if (!status.transfer.empty()) {
+                    ImGui::PushTextWrapPos(tooltip ? ImGui::GetFontSize() * 26.0f : 0.0f);
+                    ImGui::TextDisabled("%s (%s): %s", tr("HDR video"), status.transfer.c_str(), tr("Shown without tone mapping, so colours look flat."));
+                    ImGui::PopTextWrapPos();
+                }
                 if (!status.fallbackReason.empty()) {
                     ImGui::PushTextWrapPos(tooltip ? ImGui::GetFontSize() * 26.0f : 0.0f);
                     ImGui::TextDisabled("%s: %s", tr("Why"), trMessage(status.fallbackReason).c_str());

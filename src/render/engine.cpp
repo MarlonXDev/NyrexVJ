@@ -504,10 +504,9 @@ void Engine::reloadShaderClips(const std::vector<size_t>& indices) {
         if (index >= clips_.size()) {
             continue;
         }
-        if (clips_[index].id) {
-            glDeleteProgram(clips_[index].id);
-        }
+        releaseClipProgram(clips_[index]);
         clips_[index] = ClipProgram{};
+        clearShaderStates(static_cast<int>(index));
         if (std::find(reloadThumbs_.begin(), reloadThumbs_.end(), index) == reloadThumbs_.end()) {
             reloadThumbs_.push_back(index);
         }
@@ -587,6 +586,36 @@ std::string Engine::clipError(int clip) const {
         return def.error;
     }
     return clips_[static_cast<size_t>(clip)].error;
+}
+
+std::string Engine::shaderRuntimeError(int clip) const {
+    if (clip < 0 || static_cast<size_t>(clip) >= clips_.size()) {
+        return std::string();
+    }
+    return clips_[static_cast<size_t>(clip)].runtimeError;
+}
+
+std::string Engine::shaderNote(int clip) const {
+    if (clip < 0 || static_cast<size_t>(clip) >= clips_.size()) {
+        return std::string();
+    }
+    return clips_[static_cast<size_t>(clip)].note;
+}
+
+void Engine::setShaderBufferBudget(unsigned long long bytes) {
+    shaderBudget_ = bytes;
+    for (auto& entry : shaderStates_) {
+        entry.second.destroy();
+    }
+    shaderStates_.clear();
+}
+
+size_t Engine::shaderBufferBytes() const {
+    size_t total = 0;
+    for (const auto& entry : shaderStates_) {
+        total += entry.second.bytes();
+    }
+    return total;
 }
 
 void Engine::syncLibrary() {
@@ -790,6 +819,23 @@ bool Engine::init() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glGenSamplers(static_cast<GLsizei>(channelSamplers_.size()), channelSamplers_.data());
+    for (size_t k = 0; k < channelSamplers_.size(); ++k) {
+        const bool nearest = (k & 1u) != 0;
+        const bool repeat = (k & 2u) != 0;
+        glSamplerParameteri(channelSamplers_[k], GL_TEXTURE_MIN_FILTER, nearest ? GL_NEAREST : GL_LINEAR);
+        glSamplerParameteri(channelSamplers_[k], GL_TEXTURE_MAG_FILTER, nearest ? GL_NEAREST : GL_LINEAR);
+        glSamplerParameteri(channelSamplers_[k], GL_TEXTURE_WRAP_S, repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+        glSamplerParameteri(channelSamplers_[k], GL_TEXTURE_WRAP_T, repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+    }
+    glGenTextures(1, &blackTexture_);
+    glBindTexture(GL_TEXTURE_2D, blackTexture_);
+    const unsigned char black[4] = {0, 0, 0, 0};
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, black);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
     audio_ = virtualAudio(0.0, 0.0);
     if (!buildPrograms()) {
         return false;
@@ -898,6 +944,7 @@ GpuMemory Engine::gpuMemory() const {
         memory.thumbnails += bytes(target);
     }
     memory.sceneDepth = sceneRenderer_.depthBytes();
+    memory.shaderBuffers = shaderBufferBytes();
     for (const std::unique_ptr<LiveInput>& input : liveInputs_) {
         if (input) {
             memory.live += static_cast<size_t>(input->info().memory.total());
@@ -943,7 +990,7 @@ bool Engine::ensureClip(size_t index) {
     }
     ClipProgram& clip = clips_[index];
     if (clip.tried) {
-        return clip.id != 0;
+        return clip.ready();
     }
     clip.tried = true;
     clip.error.clear();
@@ -951,6 +998,9 @@ bool Engine::ensureClip(size_t index) {
     if (!def.error.empty()) {
         clip.error = def.error;
         return false;
+    }
+    if (def.isAdvancedShader()) {
+        return buildAdvancedClip(index, def, clip);
     }
     std::string error;
     GLuint program = buildProgram(clipVertexSource(), clipFragmentSource(def), &error);
@@ -971,6 +1021,65 @@ bool Engine::ensureClip(size_t index) {
     clip.audio = glGetUniformLocation(program, "uAudio");
     clip.kick = glGetUniformLocation(program, "uKick");
     clip.audioTex = glGetUniformLocation(program, "uAudioTex");
+    return true;
+}
+
+void Engine::releaseClipProgram(ClipProgram& clip) {
+    if (clip.id) {
+        glDeleteProgram(clip.id);
+        clip.id = 0;
+    }
+    for (PassProgram& pass : clip.passes) {
+        if (pass.id) {
+            glDeleteProgram(pass.id);
+        }
+    }
+    clip.passes.clear();
+}
+
+bool Engine::buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& clip) {
+    (void)index;
+    std::string errors;
+    std::vector<PassProgram> passes;
+    for (int p = 0; p < def.passCount(); ++p) {
+        std::string error;
+        const GLuint program = buildProgram(clipVertexSource(), clipPassFragmentSource(def, p), &error);
+        if (!program) {
+            errors += def.plan->passes[static_cast<size_t>(p)].label() + ":\n" + error + "\n";
+            continue;
+        }
+        PassProgram pass;
+        pass.id = program;
+        pass.time = glGetUniformLocation(program, "uTime");
+        pass.beat = glGetUniformLocation(program, "uBeat");
+        pass.bpm = glGetUniformLocation(program, "uBpm");
+        pass.res = glGetUniformLocation(program, "uRes");
+        pass.colorA = glGetUniformLocation(program, "uColorA");
+        pass.colorB = glGetUniformLocation(program, "uColorB");
+        pass.rainbow = glGetUniformLocation(program, "uRainbow");
+        pass.scale = glGetUniformLocation(program, "uScale");
+        pass.audio = glGetUniformLocation(program, "uAudio");
+        pass.kick = glGetUniformLocation(program, "uKick");
+        pass.audioTex = glGetUniformLocation(program, "uAudioTex");
+        pass.frame = glGetUniformLocation(program, "uFrame");
+        pass.delta = glGetUniformLocation(program, "uDelta");
+        for (int c = 0; c < kShaderChannels; ++c) {
+            const std::string index = std::to_string(c);
+            pass.channel[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannel" + index).c_str());
+            pass.channelRes[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannelRes[" + index + "]").c_str());
+            pass.channelTime[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannelTime[" + index + "]").c_str());
+        }
+        passes.push_back(pass);
+    }
+    if (!errors.empty()) {
+        for (const PassProgram& pass : passes) {
+            glDeleteProgram(pass.id);
+        }
+        logLine("Clip shader '" + def.name + "' failed: " + errors);
+        clip.error = errors.size() > 4000 ? errors.substr(0, 4000) : errors;
+        return false;
+    }
+    clip.passes = std::move(passes);
     return true;
 }
 
@@ -1065,11 +1174,21 @@ void Engine::shutdown() {
         mediaProgram_ = MediaProgram{};
     }
     for (ClipProgram& clip : clips_) {
-        if (clip.id) {
-            glDeleteProgram(clip.id);
-        }
+        releaseClipProgram(clip);
     }
     clips_.clear();
+    for (auto& entry : shaderStates_) {
+        entry.second.destroy();
+    }
+    shaderStates_.clear();
+    if (blackTexture_) {
+        glDeleteTextures(1, &blackTexture_);
+        blackTexture_ = 0;
+    }
+    if (channelSamplers_[0]) {
+        glDeleteSamplers(static_cast<GLsizei>(channelSamplers_.size()), channelSamplers_.data());
+        channelSamplers_.fill(0);
+    }
     deferredThumbs_.clear();
     scenes_.clear();
     media_.clear();
@@ -1249,6 +1368,7 @@ void Engine::applyComposition(const Composition& source) {
         }
         layerClock_[static_cast<size_t>(l)] = 0.0;
     }
+    restartShaders(false);
 }
 
 void Engine::setAudio(const AudioFeatures& features) {
@@ -1607,6 +1727,7 @@ bool Engine::switchDeck(int index) {
     const float duration = transitionSeconds(comp.deckSettings, comp.bpm);
     const int previousDeck = comp.activeDeck;
     const bool smooth = duration >= 0.05f && out_.fbo && ensureTransitionTargets();
+    const bool carryShaders = smooth && !transition_.active;
     if (smooth) {
         if (transition_.active) {
             blit(out_, deckTex_[0]);
@@ -1624,6 +1745,7 @@ bool Engine::switchDeck(int index) {
     }
     selectDeck(comp, index);
     layerClock_.fill(0.0);
+    restartShaders(carryShaders);
     if (smooth) {
         transition_.active = true;
         transition_.elapsed = 0.0f;
@@ -1660,6 +1782,7 @@ void Engine::clearDeck(int index) {
     if (index == comp.activeDeck) {
         restoreDeck(comp, emptyDeck());
         layerClock_.fill(0.0);
+        restartShaders(false);
         transition_ = Transition{};
         for (int c = 0; c < kChainsPerSet * kEffectSlots; ++c) {
             feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)].destroy();
@@ -1697,6 +1820,7 @@ void Engine::loadLook(const Composition& look) {
         }
     }
     layerClock_.fill(0.0);
+    restartShaders(false);
     for (int c = 0; c < kChainsPerSet * kEffectSlots; ++c) {
         feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)].destroy();
     }
@@ -1742,6 +1866,7 @@ void Engine::trigger(int layer, int column) {
     }
     l.activeColumn = column;
     layerClock_[static_cast<size_t>(layer)] = 0.0;
+    restartShaderLayer(layer);
 }
 
 void Engine::triggerColumn(int column) {
@@ -1832,6 +1957,276 @@ void Engine::drawClip(const ClipProgram& clip, float time, float beat, float bpm
     triangle_.draw();
 }
 
+int Engine::resolveMediaClip(const std::string& name) const {
+    const int direct = clipIndexByName(name);
+    const int candidates[3] = {direct, clipIndexByName(imageClipName(name)), clipIndexByName(videoClipName(name))};
+    for (const int index : candidates) {
+        if (index >= 0 && isMediaClip(index)) {
+            return index;
+        }
+    }
+    return -1;
+}
+
+void Engine::clearShaderStates(int clipIndex) {
+    for (auto it = shaderStates_.begin(); it != shaderStates_.end();) {
+        if (it->second.clipIndex == clipIndex) {
+            it->second.destroy();
+            it = shaderStates_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void Engine::restartShaderLayer(int layer) {
+    const auto it = shaderStates_.find(layer);
+    if (it != shaderStates_.end()) {
+        it->second.restart = true;
+    }
+}
+
+void Engine::restartShaders(bool carryOver) {
+    for (int l = 0; l < kLayerCount; ++l) {
+        auto current = shaderStates_.extract(l);
+        auto previous = shaderStates_.extract(kLayerCount + l);
+        if (previous) {
+            previous.mapped().destroy();
+        }
+        if (current) {
+            if (carryOver) {
+                current.key() = kLayerCount + l;
+                shaderStates_.insert(std::move(current));
+            } else {
+                current.mapped().restart = true;
+                shaderStates_.insert(std::move(current));
+            }
+        }
+    }
+}
+
+void Engine::releaseIdleShaderStates() {
+    for (auto it = shaderStates_.begin(); it != shaderStates_.end();) {
+        if (frameId_ > it->second.lastDrawn && frameId_ - it->second.lastDrawn > kShaderIdleReleaseFrames) {
+            it->second.destroy();
+            it = shaderStates_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+bool Engine::allocateShaderState(ShaderPassState& state, size_t clipIndex, const ShaderPlan& plan, int width, int height, std::string& error, std::string& note) {
+    state.destroy();
+    note.clear();
+    const unsigned long long used = shaderBufferBytes();
+    unsigned long long remaining = used < shaderBudget_ ? shaderBudget_ - used : 0;
+    state.clipIndex = static_cast<int>(clipIndex);
+    state.width = width;
+    state.height = height;
+    while (glGetError() != GL_NO_ERROR) {
+    }
+    const auto scaled = [](int size, float factor) { return std::max(1, static_cast<int>(std::lround(static_cast<float>(size) * factor))); };
+    for (const ShaderPassSource& pass : plan.passes) {
+        if (pass.image) {
+            continue;
+        }
+        const size_t b = static_cast<size_t>(pass.buffer);
+        const float fit = fitShaderScale(pass.scale, width, height, 8, 2, remaining);
+        if (fit <= 0.0f) {
+            error = "There is not enough video memory budget for the shader buffers";
+            state.destroy();
+            return false;
+        }
+        const int w = scaled(width, fit);
+        const int h = scaled(height, fit);
+        if (!state.buffers[b][0].createFloat(w, h) || !state.buffers[b][1].createFloat(w, h)) {
+            error = "The graphics card could not create the shader buffers";
+            state.destroy();
+            return false;
+        }
+        remaining -= std::min<unsigned long long>(remaining, static_cast<unsigned long long>(state.buffers[b][0].bytes() + state.buffers[b][1].bytes()));
+        state.scale[b] = fit;
+        state.used[b] = true;
+        if (fit + 0.001f < pass.scale) {
+            note = "A shader buffer runs at a lower resolution because of the video memory budget";
+        }
+    }
+    const std::vector<std::string> names = plan.mediaNames();
+    for (size_t m = 0; m < names.size() && m < state.media.size(); ++m) {
+        const float fit = fitShaderScale(1.0f, width, height, 4, 1, remaining);
+        if (fit <= 0.0f) {
+            error = "There is not enough video memory budget for the shader buffers";
+            state.destroy();
+            return false;
+        }
+        if (!state.media[m].create(scaled(width, fit), scaled(height, fit))) {
+            error = "The graphics card could not create the shader buffers";
+            state.destroy();
+            return false;
+        }
+        remaining -= std::min<unsigned long long>(remaining, static_cast<unsigned long long>(state.media[m].bytes()));
+    }
+    if (glGetError() == GL_OUT_OF_MEMORY) {
+        error = "The graphics card ran out of video memory for the shader buffers";
+        state.destroy();
+        return false;
+    }
+    state.allocated = true;
+    state.clear();
+    return true;
+}
+
+void Engine::drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target) {
+    ClipProgram& clip = clips_[clipIndex];
+    const ClipDef& def = clipLibrary()[clipIndex];
+    ShaderPassState& state = shaderStates_[instance];
+    if (!state.matches(clipIndex, target.width, target.height)) {
+        std::string error;
+        std::string note;
+        if (!allocateShaderState(state, clipIndex, *def.plan, target.width, target.height, error, note)) {
+            if (clip.runtimeError != error) {
+                logLine("Shader '" + def.name + "': " + error);
+            }
+            clip.runtimeError = error;
+            state.destroy();
+            target.bind();
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            return;
+        }
+        clip.note = note;
+        if (!note.empty()) {
+            logLine("Shader '" + def.name + "': " + note);
+        }
+        state.lastDrawn = frameId_;
+        state.lastClock = clock;
+    } else if (state.restart || frameId_ - state.lastDrawn > kShaderRestartGapFrames || clock < state.lastClock - kShaderRestartBackSeconds) {
+        state.clear();
+    }
+    clip.runtimeError.clear();
+    runShaderPasses(clip, def, state, colorA, colorB, rainbow, scale, clock, static_cast<float>(beat_), comp.bpm, target, false);
+    state.lastDrawn = frameId_;
+    state.lastClock = clock;
+}
+
+void Engine::renderShaderThumbnail(size_t clipIndex, const RenderTarget& target) {
+    const ClipDef& def = clipLibrary()[clipIndex];
+    ClipProgram& clip = clips_[clipIndex];
+    ShaderPassState state;
+    std::string error;
+    std::string note;
+    if (!allocateShaderState(state, clipIndex, *def.plan, target.width, target.height, error, note)) {
+        return;
+    }
+    const Layer defaults;
+    constexpr int kWarmFrames = 8;
+    for (int k = 0; k < kWarmFrames; ++k) {
+        const double clock = 2.6 - static_cast<double>(kWarmFrames - 1 - k) / 30.0;
+        runShaderPasses(clip, def, state, defaults.colorA, defaults.colorB, false, 1.0f, clock, 2.3f, 128.0f, target, true);
+    }
+    state.destroy();
+}
+
+void Engine::runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail) {
+    const ShaderPlan& plan = *def.plan;
+    const std::vector<std::string> mediaNames = plan.mediaNames();
+    glDisable(GL_BLEND);
+    for (size_t m = 0; m < mediaNames.size() && m < state.media.size(); ++m) {
+        if (!state.media[m].fbo) {
+            continue;
+        }
+        if (!thumbnail && (state.mediaClip[m] < 0 || !isMediaClip(state.mediaClip[m])) && (state.frame % 60 == 0)) {
+            state.mediaClip[m] = resolveMediaClip(mediaNames[m]);
+        }
+        state.media[m].bind();
+        bool drawn = false;
+        if (!thumbnail && state.mediaClip[m] >= 0 && isMediaClip(state.mediaClip[m])) {
+            const size_t mediaIndex = static_cast<size_t>(state.mediaClip[m]);
+            if (ensureMedia(mediaIndex)) {
+                media_[mediaIndex]->touch();
+                drawn = drawMedia(*media_[mediaIndex], 1.0f, false, clock, nullptr);
+            }
+        }
+        if (!drawn) {
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+    }
+
+    const float delta = state.frame == 0 ? 0.0f : static_cast<float>(std::clamp(std::abs(clock - state.lastClock), 0.0, 0.25));
+    for (size_t p = 0; p < plan.passes.size() && p < clip.passes.size(); ++p) {
+        const ShaderPassSource& source = plan.passes[p];
+        const PassProgram& program = clip.passes[p];
+        const RenderTarget* destination = &target;
+        if (!source.image) {
+            const size_t b = static_cast<size_t>(source.buffer);
+            destination = &state.buffers[b][static_cast<size_t>(1 - state.latest[b])];
+        }
+        destination->bind();
+        glUseProgram(program.id);
+        glUniform1f(program.time, static_cast<float>(clock));
+        glUniform1f(program.beat, beat);
+        glUniform1f(program.bpm, bpm);
+        glUniform2f(program.res, static_cast<float>(destination->width), static_cast<float>(destination->height));
+        glUniform3f(program.colorA, colorA[0], colorA[1], colorA[2]);
+        glUniform3f(program.colorB, colorB[0], colorB[1], colorB[2]);
+        glUniform1f(program.rainbow, rainbow ? 1.0f : 0.0f);
+        glUniform1f(program.scale, source.image ? scale : 1.0f);
+        glUniform1i(program.frame, static_cast<GLint>(std::min<unsigned long long>(state.frame, 2147483647ull)));
+        glUniform1f(program.delta, delta);
+        setAudioUniforms(program.audio, program.kick, program.audioTex);
+        for (int c = 0; c < kShaderChannels; ++c) {
+            const ShaderInput& input = source.inputs[static_cast<size_t>(c)];
+            GLuint texture = blackTexture_;
+            float width = 1.0f;
+            float height = 1.0f;
+            if (input.kind == ShaderInputKind::Audio) {
+                texture = audioTexture_;
+                width = static_cast<float>(kSpectrumBins);
+                height = 2.0f;
+            } else if (input.kind == ShaderInputKind::Buffer) {
+                const size_t b = static_cast<size_t>(input.buffer);
+                const RenderTarget& buffer = state.buffers[b][static_cast<size_t>(state.latest[b])];
+                if (buffer.texture) {
+                    texture = buffer.texture;
+                    width = static_cast<float>(buffer.width);
+                    height = static_cast<float>(buffer.height);
+                }
+            } else if (input.kind == ShaderInputKind::Media) {
+                for (size_t m = 0; m < mediaNames.size() && m < state.media.size(); ++m) {
+                    if (mediaNames[m] == input.media && state.media[m].texture) {
+                        texture = state.media[m].texture;
+                        width = static_cast<float>(state.media[m].width);
+                        height = static_cast<float>(state.media[m].height);
+                    }
+                }
+            }
+            const GLuint unit = static_cast<GLuint>(3 + c);
+            glActiveTexture(GL_TEXTURE0 + unit);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glBindSampler(unit, channelSamplers_[(input.nearest ? 1u : 0u) + (input.repeat ? 2u : 0u)]);
+            glUniform1i(program.channel[static_cast<size_t>(c)], static_cast<GLint>(unit));
+            glUniform3f(program.channelRes[static_cast<size_t>(c)], width, height, 1.0f);
+            glUniform1f(program.channelTime[static_cast<size_t>(c)], static_cast<float>(clock));
+        }
+        glActiveTexture(GL_TEXTURE0);
+        triangle_.draw();
+        if (!source.image) {
+            const size_t b = static_cast<size_t>(source.buffer);
+            state.latest[b] = 1 - state.latest[b];
+        }
+    }
+    for (int c = 0; c < kShaderChannels; ++c) {
+        const GLuint unit = static_cast<GLuint>(3 + c);
+        glActiveTexture(GL_TEXTURE0 + unit);
+        glBindSampler(unit, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    glActiveTexture(GL_TEXTURE0);
+    ++state.frame;
+}
+
 void Engine::renderClipThumbnails(int maxCount) {
     if ((nextThumb_ >= clips_.size() && reloadThumbs_.empty()) || maxCount <= 0) {
         return;
@@ -1851,7 +2246,11 @@ void Engine::renderClipThumbnails(int maxCount) {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
             if (ensureClip(i)) {
-                drawClip(clips_[i], 2.6f, 2.3f, 128.0f, static_cast<float>(kThumbWidth), static_cast<float>(kThumbHeight), defaults.colorA, defaults.colorB, false, 1.0f);
+                if (clipLibrary()[i].isAdvancedShader()) {
+                    renderShaderThumbnail(i, clipThumbs_[i]);
+                } else {
+                    drawClip(clips_[i], 2.6f, 2.3f, 128.0f, static_cast<float>(kThumbWidth), static_cast<float>(kThumbHeight), defaults.colorA, defaults.colorB, false, 1.0f);
+                }
             }
         }
     }
@@ -1872,7 +2271,11 @@ void Engine::renderClipThumbnails(int maxCount) {
             continue;
         }
         clipThumbs_[i].bind();
-        drawClip(clips_[i], 2.6f, 2.3f, 128.0f, static_cast<float>(kThumbWidth), static_cast<float>(kThumbHeight), defaults.colorA, defaults.colorB, false, 1.0f);
+        if (clipLibrary()[i].isAdvancedShader()) {
+            renderShaderThumbnail(i, clipThumbs_[i]);
+        } else {
+            drawClip(clips_[i], 2.6f, 2.3f, 128.0f, static_cast<float>(kThumbWidth), static_cast<float>(kThumbHeight), defaults.colorA, defaults.colorB, false, 1.0f);
+        }
     }
     glUseProgram(0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1898,7 +2301,7 @@ void Engine::blit(const RenderTarget& source, const RenderTarget& target) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Engine::drawLayerSource(int clipIndex, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target) {
+void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target) {
     const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
     const bool spoutClip = clipDef.kind == ClipKind::SpoutSource;
     const bool liveClip = clipDef.isLive();
@@ -1926,6 +2329,8 @@ void Engine::drawLayerSource(int clipIndex, const Layer& layer, const ClipPlayba
     } else if (media_[static_cast<size_t>(clipIndex)]) {
         drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock, &playback);
     } else if (liveClip && drawLive(clipDef, scale)) {
+    } else if (clipDef.isAdvancedShader()) {
+        drawShaderInstance(static_cast<size_t>(clipIndex), instance, layer.colorA, layer.colorB, layer.rainbow, scale, clock, target);
     } else if (liveClip || !spoutClip || !drawSpout(clipDef.sceneIndex, scale)) {
         drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clock), static_cast<float>(beat_), comp.bpm, static_cast<float>(target.width), static_cast<float>(target.height), layer.colorA, layer.colorB, layer.rainbow, scale);
     }
@@ -1978,7 +2383,7 @@ void Engine::renderPreview() {
     if (profiler_.enabled()) {
         profiler_.mark(PassKind::Preview, 0, -1, 0, clipLibrary()[static_cast<size_t>(clipIndex)].name);
     }
-    drawLayerSource(clipIndex, layer, layer.playback[static_cast<size_t>(previewColumn_)], effective_[layerIndex].scale, previewClock_, previewA_);
+    drawLayerSource(clipIndex, kLayerCount * 2, layer, layer.playback[static_cast<size_t>(previewColumn_)], effective_[layerIndex].scale, previewClock_, previewA_);
     previewResult_ = runChain(layer.fx, previewFeedback_.data(), previewFeedbackUsed_.data(), &previewA_, &previewB_, 0, -1);
     for (size_t k = 0; k < previewFeedback_.size(); ++k) {
         if (previewFeedback_[k].fbo && !previewFeedbackUsed_[k]) {
@@ -2118,7 +2523,7 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         if (profiler_.enabled()) {
             profiler_.mark(PassKind::Source, deck, l + 1, 0, clipLibrary()[static_cast<size_t>(clipIndex)].name);
         }
-        drawLayerSource(clipIndex, layer, layer.playback[static_cast<size_t>(layer.activeColumn)], effective[li].scale, clocks[li], *chainSource);
+        drawLayerSource(clipIndex, deck * kLayerCount + l, layer, layer.playback[static_cast<size_t>(layer.activeColumn)], effective[li].scale, clocks[li], *chainSource);
 
         RenderTarget* result = runChain(layer.fx, chainFeedback(chainBase + l), chainUsed(chainBase + l), chainSource, chainScratch, deck, l + 1);
         if (updatePreviews) {
@@ -2226,6 +2631,7 @@ void Engine::render() {
     prewarmMedia();
     serviceSpout();
     serviceLive();
+    releaseIdleShaderStates();
 
     feedbackUsed_.fill(false);
     uploadAudio();

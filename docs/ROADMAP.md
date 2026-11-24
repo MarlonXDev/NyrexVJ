@@ -60,7 +60,7 @@ Seven milestones, one issue and one pull request each, in this order. Status is 
 - Video clips via FFmpeg (H.264/HAP): landed in v0.13.0, see [MEDIA.md](MEDIA.md).
 - DXV videos converted to HAP in the background and the FFmpeg setup by button: landed in v0.28.0, see [MEDIA.md](MEDIA.md), [FFMPEG.md](FFMPEG.md) and [ADR 0021](adr/0021-dxv-hap-conversion-and-ffmpeg-setup.md).
 - DMX strip output for VRSL: landed in v0.15.0, see [DMX.md](DMX.md).
-- Custom shader clips loaded from files: landed in v0.16.0, see [SHADERS.md](SHADERS.md).
+- Custom shader clips loaded from files: landed in v0.16.0, see [SHADERS.md](SHADERS.md). Alpha output, Buffer A to D and several image and video inputs (Shader 2.0): landed in v0.29.0, see [ADR 0022](adr/0022-glsl-shader-2.md).
 - More languages: Spanish and French plus your own language files landed in v0.16.0, Italian, Portuguese, Dutch and Japanese in v0.27.0, see [LANGUAGES.md](LANGUAGES.md). All of them except German are machine assisted and not reviewed by native speakers. Japanese uses a system font that is merged in at run time; your own language files are still limited to Latin-1.
 
 These existing commitments/ideas should be reconciled with the proposed milestones by maintainers, not silently replaced.

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.28.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.29.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -254,6 +254,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/bench.cpp
     src/app/bench_convert.cpp
     src/app/output_selftest.cpp
+    src/app/shader_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
     src/app/ui_deck.cpp
@@ -272,6 +273,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/engine.cpp
     src/render/gpu_profiler.cpp
     src/render/gl_util.cpp
+    src/render/shader_passes.cpp
     src/render/output_window.cpp
     src/render/texture_history.cpp
     src/render/output_manager.cpp

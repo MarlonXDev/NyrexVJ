@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 #define NYREXVJ_PLUGIN_API_MAJOR 1u
-#define NYREXVJ_PLUGIN_API_MINOR 0u
+#define NYREXVJ_PLUGIN_API_MINOR 1u
 
 #define NYREXVJ_PLUGIN_ENTRY_NAME "nyrexvj_plugin_entry"
 
@@ -17,6 +17,16 @@ extern "C" {
 #define NYREXVJ_PLUGIN_MAX_PARAMETERS 4u
 #define NYREXVJ_PLUGIN_MAX_WIDTH 1920u
 #define NYREXVJ_PLUGIN_MAX_HEIGHT 1080u
+
+#define NYREXVJ_CAP_SOURCE_MODULATION "source.modulation"
+#define NYREXVJ_CAP_SOURCE_FRAME "source.frame"
+#define NYREXVJ_CAP_FRAME_RGBA8 "frame.rgba8"
+#define NYREXVJ_CAP_HOST_LOG "host.log"
+#define NYREXVJ_CAP_HOST_AUDIO "host.audio"
+#define NYREXVJ_CAP_HOST_BEAT "host.beat"
+#define NYREXVJ_CAP_HOST_PARAMETERS "host.parameters"
+#define NYREXVJ_CAP_HOST_LIMITS "host.limits"
+#define NYREXVJ_CAP_HOST_SET_ERROR "host.set_error"
 
 #if defined(_WIN32)
 #define NYREXVJ_PLUGIN_EXPORT __declspec(dllexport)
@@ -59,6 +69,23 @@ typedef struct NvjBeat {
     uint32_t beats_per_bar;
 } NvjBeat;
 
+typedef struct NvjLimits {
+    uint32_t size;
+    uint32_t max_sources;
+    uint32_t max_parameters;
+    uint32_t frame_width;
+    uint32_t frame_height;
+    uint32_t frame_rate;
+    uint32_t modulation_rate;
+    uint32_t modulation_budget_ms;
+    uint32_t frame_budget_ms;
+    uint32_t create_budget_ms;
+    uint32_t load_budget_ms;
+    uint32_t max_instances;
+    uint32_t log_lines_per_second;
+    uint32_t log_line_length;
+} NvjLimits;
+
 typedef struct NvjHost {
     uint32_t size;
     uint32_t api_major;
@@ -68,6 +95,9 @@ typedef struct NvjHost {
     int32_t (*get_audio)(void* context, NvjAudio* out);
     int32_t (*get_beat)(void* context, NvjBeat* out);
     float (*get_parameter)(void* context, uint32_t index);
+    int32_t (*has_capability)(void* context, const char* name);
+    int32_t (*get_limits)(void* context, NvjLimits* out);
+    void (*set_error)(void* context, const char* message);
 } NvjHost;
 
 typedef struct NvjSourceInfo {

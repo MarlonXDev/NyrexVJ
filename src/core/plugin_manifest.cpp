@@ -2,6 +2,8 @@
 
 #include "core/recovery.hpp"
 
+#include "nyrexvj_plugin.h"
+
 #include <algorithm>
 #include <cctype>
 #include <system_error>
@@ -105,6 +107,10 @@ const char* pluginProblemName(PluginProblem problem) {
         return "the library file is missing";
     case PluginProblem::DuplicateId:
         return "another plugin already uses this id";
+    case PluginProblem::BadRequires:
+        return "the list of required capabilities is not valid";
+    case PluginProblem::MissingCapability:
+        return "the plugin needs a capability that this NyrexVJ does not have";
     }
     return "unknown";
 }
@@ -122,6 +128,40 @@ bool validPluginId(const std::string& id) {
         }
     }
     return true;
+}
+
+bool validCapabilityName(const std::string& name) {
+    if (name.empty() || name.size() > kMaxCapabilityLength) {
+        return false;
+    }
+    for (size_t i = 0; i < name.size(); ++i) {
+        const char c = name[i];
+        const bool alnum = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+        const bool joiner = c == '-' || c == '_' || c == '.';
+        if (!alnum && !(joiner && i > 0 && i + 1 < name.size())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+const std::vector<std::string>& pluginHostCapabilities() {
+    static const std::vector<std::string> list = {
+        NYREXVJ_CAP_SOURCE_MODULATION,
+        NYREXVJ_CAP_SOURCE_FRAME,
+        NYREXVJ_CAP_FRAME_RGBA8,
+        NYREXVJ_CAP_HOST_LOG,
+        NYREXVJ_CAP_HOST_AUDIO,
+        NYREXVJ_CAP_HOST_BEAT,
+        NYREXVJ_CAP_HOST_PARAMETERS,
+        NYREXVJ_CAP_HOST_LIMITS,
+        NYREXVJ_CAP_HOST_SET_ERROR};
+    return list;
+}
+
+bool pluginHostHasCapability(const std::string& name) {
+    const std::vector<std::string>& list = pluginHostCapabilities();
+    return std::find(list.begin(), list.end(), name) != list.end();
 }
 
 const char* pluginPlatformKey() {
@@ -184,12 +224,43 @@ PluginEntry parseManifest(const std::string& text, const fs::path& directory, un
     }
     entry.manifest.apiMajor = manifest.apiMajor;
     entry.manifest.apiMinor = manifest.apiMinor;
+    if (doc.contains("requires")) {
+        const nlohmann::json& list = doc["requires"];
+        if (!list.is_array() || list.size() > kMaxPluginRequires) {
+            return fail(entry, PluginProblem::BadRequires, "");
+        }
+        for (const nlohmann::json& item : list) {
+            if (!item.is_string() || !validCapabilityName(item.get<std::string>())) {
+                return fail(entry, PluginProblem::BadRequires, "");
+            }
+            const std::string name = item.get<std::string>();
+            if (std::find(entry.manifest.requiredCapabilities.begin(), entry.manifest.requiredCapabilities.end(), name) == entry.manifest.requiredCapabilities.end()) {
+                entry.manifest.requiredCapabilities.push_back(name);
+            }
+        }
+    }
     const std::string apiText = std::to_string(manifest.apiMajor) + "." + std::to_string(manifest.apiMinor);
     if (manifest.apiMajor != hostMajor) {
         return fail(entry, PluginProblem::WrongMajor, "plugin " + apiText + ", NyrexVJ " + std::to_string(hostMajor) + "." + std::to_string(hostMinor));
     }
     if (manifest.apiMinor > hostMinor) {
         return fail(entry, PluginProblem::NewerMinor, "plugin " + apiText + ", NyrexVJ " + std::to_string(hostMajor) + "." + std::to_string(hostMinor));
+    }
+
+    std::string missing;
+    for (const std::string& name : entry.manifest.requiredCapabilities) {
+        if (!pluginHostHasCapability(name)) {
+            if (!missing.empty()) {
+                missing += ", ";
+            }
+            missing += name;
+            if (missing.size() > 120) {
+                break;
+            }
+        }
+    }
+    if (!missing.empty()) {
+        return fail(entry, PluginProblem::MissingCapability, missing);
     }
 
     if (!doc.contains("library") || !doc["library"].is_object() || !doc["library"].contains(platformKey) || !doc["library"][platformKey].is_string()) {

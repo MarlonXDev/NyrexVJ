@@ -34,6 +34,13 @@
 #define MODE_CRASH_CREATE 18
 #define MODE_CRASH_LOAD 19
 #define MODE_LOG_SPAM 20
+#define MODE_TABLE_OVERFLOW 21
+#define MODE_TABLE_SIZE 22
+#define MODE_SOURCE_OVERFLOW 23
+#define MODE_BUSY_FRAME 24
+#define MODE_ERROR_TEXT 25
+#define MODE_ENTRY_TEXT 26
+#define MODE_FINE 99
 
 #ifndef NVJ_BROKEN_MODE
 #error NVJ_BROKEN_MODE must be defined
@@ -68,6 +75,9 @@ static int32_t get_source(uint32_t index, NvjSourceInfo* out)
     if (out == NULL) {
         return NVJ_FAILED;
     }
+#if NVJ_BROKEN_MODE == MODE_SOURCE_OVERFLOW
+    memset((char*)out + sizeof(NvjSourceInfo), 0x11, 8);
+#endif
     if (index == 0) {
         out->id = "mod";
         out->name = "Broken modulation";
@@ -167,6 +177,12 @@ static int32_t modulation(void* instance, double time, double delta, float* valu
         *value = 0.25f;
     }
     return NVJ_OK;
+#elif NVJ_BROKEN_MODE == MODE_ERROR_TEXT
+    if (self->host != NULL && NYREXVJ_HAS_FIELD(self->host, NvjHost, set_error) && self->host->set_error != NULL) {
+        self->host->set_error(self->host->context, "the device was unplugged");
+    }
+    *value = 0.5f;
+    return NVJ_FAILED;
 #elif NVJ_BROKEN_MODE == MODE_LOG_SPAM
     if (self->host != NULL && self->host->log != NULL) {
         int i;
@@ -202,6 +218,10 @@ static int32_t frame(void* instance, double time, double delta, NvjImage* image)
     pause_ms(250u);
     memset(image->data, 0x40, (size_t)image->stride * image->height);
     return NVJ_OK;
+#elif NVJ_BROKEN_MODE == MODE_BUSY_FRAME
+    pause_ms(60u);
+    memset(image->data, 0x40, (size_t)image->stride * image->height);
+    return NVJ_OK;
 #else
     memset(image->data, 0x40, (size_t)image->stride * image->height);
     return NVJ_OK;
@@ -220,6 +240,12 @@ NYREXVJ_PLUGIN_EXPORT int32_t ENTRY_NAME(const NvjHost* host, NvjPlugin* plugin)
         return NVJ_FAILED;
     }
 #if NVJ_BROKEN_MODE == MODE_ENTRY_FAIL
+    return NVJ_FAILED;
+#endif
+#if NVJ_BROKEN_MODE == MODE_ENTRY_TEXT
+    if (NYREXVJ_HAS_FIELD(host, NvjHost, set_error) && host->set_error != NULL) {
+        host->set_error(host->context, "no license file found");
+    }
     return NVJ_FAILED;
 #endif
 #if NVJ_BROKEN_MODE == MODE_CRASH_LOAD
@@ -256,5 +282,11 @@ NYREXVJ_PLUGIN_EXPORT int32_t ENTRY_NAME(const NvjHost* host, NvjPlugin* plugin)
     plugin->modulation = modulation;
 #endif
     plugin->frame = frame;
+#if NVJ_BROKEN_MODE == MODE_TABLE_OVERFLOW
+    memset((char*)plugin + sizeof(NvjPlugin), 0x22, 8);
+#endif
+#if NVJ_BROKEN_MODE == MODE_TABLE_SIZE
+    plugin->size = (uint32_t)sizeof(NvjPlugin) + 64u;
+#endif
     return NVJ_OK;
 }

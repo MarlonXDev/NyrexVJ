@@ -22,10 +22,26 @@ constexpr int kPluginFrameFps = 30;
 constexpr int kPluginFrameWidth = 1280;
 constexpr int kPluginFrameHeight = 720;
 constexpr int kPluginLogsPerSecond = 20;
+constexpr int kPluginMaxInstancesPerPlugin = 12;
+constexpr int kPluginMaxInstancesTotal = 24;
+constexpr int kPluginMaxAbandoned = 16;
+constexpr double kPluginMaxDuty = 0.8;
+constexpr size_t kPluginMaxErrorText = 200;
 constexpr int kPluginSourceKindModulation = 1;
 constexpr int kPluginSourceKindFrame = 2;
 
 enum class PluginState { NotEnabled, SafeMode, Incompatible, Loading, Loaded, Failed };
+
+enum class PluginErrorKind { None, Load, Incompatible, CallFailed, Exception, Timeout, BadOutput, Guard, Limit };
+
+const char* pluginErrorKindName(PluginErrorKind kind);
+
+struct PluginLimits {
+    int instancesPerPlugin = kPluginMaxInstancesPerPlugin;
+    int instancesTotal = kPluginMaxInstancesTotal;
+    int abandoned = kPluginMaxAbandoned;
+    double maxDuty = kPluginMaxDuty;
+};
 
 struct PluginSourceDesc {
     std::string id;
@@ -39,6 +55,7 @@ struct PluginSourceDesc {
 struct PluginInfo {
     PluginEntry entry;
     PluginState state = PluginState::NotEnabled;
+    PluginErrorKind errorKind = PluginErrorKind::None;
     std::string message;
     std::string safeReason;
     std::vector<PluginSourceDesc> sources;
@@ -47,7 +64,10 @@ struct PluginInfo {
 struct PluginRunStats {
     bool running = false;
     bool failed = false;
+    bool throttled = false;
+    PluginErrorKind errorKind = PluginErrorKind::None;
     std::string error;
+    double duty = 0.0;
     unsigned long long calls = 0;
     unsigned long long frames = 0;
     double lastCallMs = 0.0;
@@ -69,7 +89,7 @@ struct PluginHostSnapshot {
 
 class PluginHost {
 public:
-    PluginHost(std::filesystem::path dataDir, bool allowLoading = true);
+    PluginHost(std::filesystem::path dataDir, bool allowLoading = true, PluginLimits limits = PluginLimits());
     ~PluginHost();
     PluginHost(const PluginHost&) = delete;
     PluginHost& operator=(const PluginHost&) = delete;
@@ -83,6 +103,7 @@ public:
     const PluginInfo* find(const std::string& id) const;
     const PluginSourceDesc* findSource(const std::string& key) const;
     bool allowLoading() const;
+    const PluginLimits& limits() const;
     bool loading() const;
 
     PluginConfig& config();
@@ -96,6 +117,8 @@ public:
     void update();
     float modulation(int slot);
     PluginRunStats modulationStats(int slot) const;
+    PluginRunStats runnerStats(const std::string& key) const;
+    int liveInstancesOf(const std::string& id) const;
     std::unique_ptr<LiveSource> openFrameSource(const std::string& key, std::string& error);
 
     int runningInstances() const;

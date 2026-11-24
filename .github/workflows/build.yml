@@ -180,6 +180,7 @@ jobs:
           build/NyrexVJ --check-shaders
           build/NyrexVJ --live-selftest
           build/NyrexVJ --plugin-selftest build/plugins/nyrexvj-example
+          build/NyrexVJ --plugin-selftest build/plugins/nyrexvj-legacy
           NYREXVJ_NDI_LIB="$PWD/build/fake_ndi.so" build/NyrexVJ --output-selftest
           build/NyrexVJ --shader-selftest
           build/NyrexVJ --scene-selftest tests/data/models

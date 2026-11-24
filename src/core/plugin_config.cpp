@@ -23,6 +23,17 @@ float clampUnit(double value) {
     return static_cast<float>(std::clamp(value, 0.0, 1.0));
 }
 
+std::string textField(const nlohmann::json& object, const char* key) {
+    if (!object.is_object()) {
+        return std::string();
+    }
+    const auto found = object.find(key);
+    if (found == object.end() || !found->is_string()) {
+        return std::string();
+    }
+    return found->get<std::string>();
+}
+
 bool validSourceKey(const std::string& key) {
     std::string plugin;
     std::string source;
@@ -99,7 +110,7 @@ PluginConfig pluginConfigFromJson(const std::string& text) {
         return config;
     }
     const nlohmann::json doc = nlohmann::json::parse(text, nullptr, false);
-    if (doc.is_discarded() || !doc.is_object() || doc.value("format", std::string()) != "nyrexvj-plugin-settings") {
+    if (doc.is_discarded() || !doc.is_object() || textField(doc, "format") != "nyrexvj-plugin-settings") {
         return config;
     }
     if (!doc.contains("version") || !doc["version"].is_number_integer() || doc["version"].get<long long>() != 1) {
@@ -171,7 +182,11 @@ PluginConfig readPluginConfig(const fs::path& dataDir) {
     if (!readLimited(pluginConfigPath(dataDir), text)) {
         return PluginConfig();
     }
-    return pluginConfigFromJson(text);
+    try {
+        return pluginConfigFromJson(text);
+    } catch (...) {
+        return PluginConfig();
+    }
 }
 
 bool writePluginConfig(const fs::path& dataDir, const PluginConfig& config) {
@@ -186,7 +201,7 @@ std::vector<PluginSafeEntry> pluginSafeListFromJson(const std::string& text) {
         return entries;
     }
     const nlohmann::json doc = nlohmann::json::parse(text, nullptr, false);
-    if (doc.is_discarded() || !doc.is_object() || doc.value("format", std::string()) != "nyrexvj-plugin-safe-list") {
+    if (doc.is_discarded() || !doc.is_object() || textField(doc, "format") != "nyrexvj-plugin-safe-list") {
         return entries;
     }
     if (!doc.contains("disabled") || !doc["disabled"].is_array()) {
@@ -197,8 +212,8 @@ std::vector<PluginSafeEntry> pluginSafeListFromJson(const std::string& text) {
             continue;
         }
         PluginSafeEntry entry;
-        entry.id = item.value("id", std::string());
-        entry.reason = item.value("reason", std::string());
+        entry.id = textField(item, "id");
+        entry.reason = textField(item, "reason");
         entry.time = item.contains("time") && item["time"].is_number_integer() ? item["time"].get<long long>() : 0;
         if (!validPluginId(entry.id) || inPluginSafeList(entries, entry.id)) {
             continue;
@@ -231,7 +246,11 @@ std::vector<PluginSafeEntry> readPluginSafeList(const fs::path& dataDir) {
     if (!readLimited(pluginSafeListPath(dataDir), text)) {
         return {};
     }
-    return pluginSafeListFromJson(text);
+    try {
+        return pluginSafeListFromJson(text);
+    } catch (...) {
+        return {};
+    }
 }
 
 bool inPluginSafeList(const std::vector<PluginSafeEntry>& entries, const std::string& id) {

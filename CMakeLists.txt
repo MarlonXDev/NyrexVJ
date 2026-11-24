@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.33.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.34.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -202,6 +202,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/frame_lock.cpp
     src/core/render_policy.cpp
     src/core/frame_stats.cpp
+    src/core/growth_check.cpp
+    src/core/soak_plan.cpp
     src/media/ffmpeg_dyn.cpp
     src/media/ffmpeg_setup.cpp
     src/media/frame_convert.cpp
@@ -306,6 +308,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/app.cpp
     src/app/fonts.cpp
     src/app/bench.cpp
+    src/app/soak.cpp
     src/app/bench_convert.cpp
     src/app/output_selftest.cpp
     src/app/shader_selftest.cpp
@@ -441,6 +444,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_frame_lock_tests PRIVATE nvj_core)
     target_include_directories(nvj_frame_lock_tests PRIVATE tests)
     add_test(NAME nvj_frame_lock_tests COMMAND nvj_frame_lock_tests)
+    add_executable(nvj_soak_tests tests/test_soak.cpp)
+    target_link_libraries(nvj_soak_tests PRIVATE nvj_core)
+    target_include_directories(nvj_soak_tests PRIVATE tests)
+    add_test(NAME nvj_soak_tests COMMAND nvj_soak_tests)
     add_executable(nvj_djlink_tests tests/test_djlink.cpp)
     target_link_libraries(nvj_djlink_tests PRIVATE nvj_core)
     target_include_directories(nvj_djlink_tests PRIVATE tests)

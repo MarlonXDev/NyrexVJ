@@ -59,6 +59,7 @@ struct Options {
     bool benchAll = false;
     bool profile = false;
     bool benchMemory = false;
+    std::string soak;
     int benchShaders = 0;
     int benchNodes = 0;
     std::string benchOut;
@@ -138,6 +139,8 @@ Options parseOptions(int argc, char** argv) {
             options.benchShaders = std::atoi(argv[++i]);
         } else if (arg == "--bench-memory") {
             options.benchMemory = true;
+        } else if (arg == "--soak" && hasValue) {
+            options.soak = argv[++i];
         } else if (arg == "--quality" && hasValue) {
             options.start.quality = std::atoi(argv[++i]);
         } else if (arg == "--profile") {
@@ -349,7 +352,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.shaderSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.shaderSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -370,6 +373,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runVideoSelfTest(app.engine(), options.videoSelfTest, options.benchOut);
         } else if (!options.sceneSelfTest.empty()) {
             benchExit = nvj::runSceneSelfTest(app.engine(), options.sceneSelfTest, options.benchOut);
+        } else if (!options.soak.empty()) {
+            benchExit = nvj::runSoakTest(app.engine(), options.soak, options.benchOut);
         } else if (options.benchMemory) {
             benchExit = nvj::runMemoryBenchmark(app.engine(), options.benchOut);
         } else if (options.benchShaders > 0) {

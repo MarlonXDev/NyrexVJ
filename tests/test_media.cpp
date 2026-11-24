@@ -1369,6 +1369,135 @@ void testPrerollReady() {
     }
 }
 
+int framesDuring(nvj::VideoDecoder& decoder, double seconds, double videoSpan) {
+    int received = 0;
+    unsigned long long lastId = 0;
+    const auto begin = std::chrono::steady_clock::now();
+    for (;;) {
+        const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count();
+        if (elapsed >= seconds) {
+            return received;
+        }
+        const std::shared_ptr<const nvj::VideoFrame> frame = decoder.frameAt(std::fmod(elapsed, videoSpan));
+        if (frame && frame->id != lastId) {
+            lastId = frame->id;
+            ++received;
+        }
+        if (decoder.failed()) {
+            return received;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(8));
+    }
+}
+
+bool damageFile(const fs::path& path, std::uintmax_t from, unsigned char value) {
+    std::error_code ec;
+    const std::uintmax_t size = fs::file_size(path, ec);
+    if (ec || from >= size) {
+        return false;
+    }
+    std::fstream file(path, std::ios::in | std::ios::out | std::ios::binary);
+    if (!file) {
+        return false;
+    }
+    file.seekp(static_cast<std::streamoff>(from));
+    const std::vector<char> block(4096, static_cast<char>(value));
+    std::uintmax_t left = size - from;
+    while (left > 0 && file) {
+        const std::uintmax_t part = std::min<std::uintmax_t>(left, block.size());
+        file.write(block.data(), static_cast<std::streamsize>(part));
+        left -= part;
+    }
+    file.flush();
+    return static_cast<bool>(file);
+}
+
+void testMediaOutage(const fs::path& scratch) {
+    std::error_code ec;
+    const fs::path folder = scratch / "outage";
+    fs::create_directories(folder, ec);
+    const fs::path original = kData / "test_h264.mp4";
+    const std::uintmax_t size = fs::file_size(original, ec);
+    CHECK(!ec && size > 4096);
+    std::string error;
+
+    for (const double keep : {0.5, 0.1, 0.0}) {
+        const fs::path cut = folder / "cut_at_open.mp4";
+        fs::copy_file(original, cut, fs::copy_options::overwrite_existing, ec);
+        fs::resize_file(cut, static_cast<std::uintmax_t>(static_cast<double>(size) * keep), ec);
+        CHECK(!ec);
+        nvj::VideoDecoder decoder;
+        const bool opened = decoder.open(cut.string(), error, legacyOptions());
+        CHECK(opened || !error.empty());
+        if (opened) {
+            framesDuring(decoder, 1.0, 2.0);
+        }
+        decoder.close();
+        CHECK(!decoder.isOpen());
+        CHECK(decoder.frameAt(0.0) == nullptr);
+    }
+
+    const fs::path live = folder / "live.mp4";
+    fs::copy_file(original, live, fs::copy_options::overwrite_existing, ec);
+    {
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open(live.string(), error, legacyOptions()));
+        CHECK(waitForFrame(decoder, 0.0, 0.0, 0.1) != nullptr);
+        const int before = framesDuring(decoder, 0.5, 2.0);
+        CHECK(before > 3);
+        fs::resize_file(live, size / 3, ec);
+        if (!ec) {
+            framesDuring(decoder, 2.0, 2.0);
+            CHECK(decoder.isOpen() || decoder.failed());
+            CHECK(!decoder.failed() || !decoder.failure().empty());
+        }
+        decoder.close();
+        CHECK(!decoder.isOpen());
+    }
+
+    fs::copy_file(original, live, fs::copy_options::overwrite_existing, ec);
+    {
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open(live.string(), error, legacyOptions()));
+        CHECK(waitForFrame(decoder, 0.0, 0.0, 0.1) != nullptr);
+        if (damageFile(live, size / 2, 0xFF)) {
+            framesDuring(decoder, 2.0, 2.0);
+            CHECK(!decoder.failed() || !decoder.failure().empty());
+        }
+        decoder.close();
+        CHECK(!decoder.isOpen());
+    }
+
+    fs::copy_file(original, live, fs::copy_options::overwrite_existing, ec);
+    {
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open(live.string(), error, legacyOptions()));
+        CHECK(waitForFrame(decoder, 0.0, 0.0, 0.1) != nullptr);
+        fs::remove(live, ec);
+        if (!ec) {
+            CHECK(framesDuring(decoder, 1.5, 2.0) > 3);
+            CHECK(!decoder.failed());
+        }
+        decoder.close();
+        CHECK(!decoder.isOpen());
+    }
+
+    fs::copy_file(original, live, fs::copy_options::overwrite_existing, ec);
+    {
+        nvj::VideoDecoder decoder;
+        CHECK(decoder.open(live.string(), error, legacyOptions()));
+        decoder.close();
+        fs::remove(live, ec);
+        CHECK(!decoder.open(live.string(), error, legacyOptions()) && !error.empty());
+        CHECK(!decoder.isOpen());
+        fs::copy_file(original, live, fs::copy_options::overwrite_existing, ec);
+        CHECK(decoder.open(live.string(), error, legacyOptions()));
+        CHECK(waitForFrame(decoder, 0.5, 0.4, 0.6) != nullptr);
+        CHECK(!decoder.failed());
+        decoder.close();
+    }
+}
+
 void testManyDecoders() {
     constexpr int kCount = 6;
     std::vector<std::unique_ptr<nvj::VideoDecoder>> decoders;
@@ -1652,6 +1781,7 @@ int main() {
         testTransportModes();
         testPrerollReady();
         testManyDecoders();
+        testMediaOutage(scratch);
     }
     testTargetChoice();
     if (videoAvailable() && converterAvailable()) {

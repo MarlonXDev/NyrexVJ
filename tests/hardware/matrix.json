@@ -1,0 +1,757 @@
+{
+  "schema": 1,
+  "note": "Pass criteria marked 'Proposed' are suggestions for the maintainer to confirm. A result counts as hardware only when it was run on real hardware and says so (see docs/TESTING.md).",
+  "platforms": [
+    "windows",
+    "linux"
+  ],
+  "gpus": [
+    "nvidia",
+    "amd",
+    "intel",
+    "software"
+  ],
+  "areas": [
+    {
+      "id": "render-gpu",
+      "title": "Rendering, shaders and 3D scenes on graphics card vendors",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SHADERS.md",
+        "docs/PERFORMANCE.md",
+        "docs/SCENE3D.md"
+      ],
+      "sources": [
+        "src/render/engine.cpp",
+        "src/app/bench.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-RENDER-1",
+          "kind": "ctest",
+          "name": "nvj_shader_tests"
+        },
+        {
+          "id": "A-RENDER-2",
+          "kind": "cli",
+          "command": "NyrexVJ --check-shaders",
+          "note": "compiles every shader on the driver in use"
+        },
+        {
+          "id": "A-RENDER-3",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest",
+          "note": "renders every effect and checks the picture"
+        },
+        {
+          "id": "A-RENDER-4",
+          "kind": "cli",
+          "command": "NyrexVJ --scene-selftest tests/data/models",
+          "note": "loads and draws the 3D test models"
+        },
+        {
+          "id": "A-RENDER-5",
+          "kind": "cli",
+          "command": "NyrexVJ --bench-comp 300 --bench-all --bench-out OUT.json",
+          "note": "frame times of all factory looks; on software OpenGL these numbers say nothing about a real card"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-RENDER-1",
+          "title": "Shader compile, selftests and look benchmark on one graphics card",
+          "needs": "A Windows or Linux PC with one NVIDIA, AMD or Intel graphics card and its current vendor driver",
+          "steps": [
+            "Start a command line in the folder of NyrexVJ.",
+            "Run the three selftests (A-RENDER-2 to A-RENDER-4) and note every line that says FAILED.",
+            "Run A-RENDER-5 with --bench-budget 16.7 and keep OUT.json.",
+            "Write the GL_RENDERER string from OUT.json and the driver version into the result."
+          ],
+          "measure": "Shader failures, selftest exit codes, avg/p95/p99/max work time per look from OUT.json",
+          "criteria": "Proposed: no shader failure, all three selftests exit 0, every factory look passes the 16.7 ms budget at 1080p. The maintainer sets the real thresholds."
+        }
+      ]
+    },
+    {
+      "id": "spout-out",
+      "title": "Spout output to OBS, Unreal or VRChat capture (Windows)",
+      "platforms": {
+        "windows": true,
+        "linux": false
+      },
+      "docs": [
+        "docs/OUTPUTS.md",
+        "docs/UNREAL.md"
+      ],
+      "sources": [
+        "src/render/spout_output_win.cpp",
+        "src/render/spout_output.hpp"
+      ],
+      "automated": [
+        {
+          "id": "A-SPOUT-1",
+          "kind": "ctest",
+          "name": "nvj_output_tests"
+        },
+        {
+          "id": "A-SPOUT-2",
+          "kind": "cli",
+          "command": "NyrexVJ --output-selftest",
+          "note": "output chain with a fake NDI library; Spout itself only compiles on Windows"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-SPOUT-1",
+          "title": "Spout sender seen by a real receiver",
+          "needs": "Windows PC with a graphics card and OBS (Spout plugin) or another Spout receiver",
+          "steps": [
+            "Start NyrexVJ with a visible look and turn Spout output on.",
+            "Open the receiver and select the NyrexVJ sender.",
+            "Run scripts/measure_live.py for 10 minutes while the look plays.",
+            "Stop and start NyrexVJ twice and check that the receiver finds the sender again."
+          ],
+          "measure": "Picture correct (orientation, colours), receiver frame rate, CPU and GPU of NyrexVJ and of the receiver",
+          "criteria": "Proposed: picture upright and correct, receiver rate equals the output rate, sender reappears after a restart without restarting the receiver."
+        }
+      ]
+    },
+    {
+      "id": "spout-in",
+      "title": "Spout input from Unreal or Unity (Windows)",
+      "platforms": {
+        "windows": true,
+        "linux": false
+      },
+      "docs": [
+        "docs/UNREAL.md"
+      ],
+      "sources": [
+        "src/render/spout_input_win.cpp",
+        "src/render/spout_input.hpp"
+      ],
+      "automated": [
+        {
+          "id": "A-SPOUTIN-1",
+          "kind": "cli",
+          "command": "NyrexVJ --spout-test-pattern",
+          "note": "feeds a generated pattern through the input path without Spout"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-SPOUTIN-1",
+          "title": "Spout input from a real sender",
+          "needs": "Windows PC with a Spout sender (Unreal with a Spout plugin, Unity or a test sender)",
+          "steps": [
+            "Start the sender, then NyrexVJ.",
+            "Add the Spout source as a clip and play it.",
+            "Close the sender while playing, then start it again.",
+            "Run scripts/measure_live.py for 10 minutes."
+          ],
+          "measure": "Picture, behaviour when the sender disappears and returns, CPU, GPU, VRAM",
+          "criteria": "Proposed: picture correct, the clip falls back to its placeholder when the sender closes and recovers without restarting NyrexVJ."
+        }
+      ]
+    },
+    {
+      "id": "ndi-out",
+      "title": "NDI output",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/OUTPUTS.md",
+        "docs/LIVE.md"
+      ],
+      "sources": [
+        "src/core/ndi_sender.cpp",
+        "src/render/ndi_output.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-NDIOUT-1",
+          "kind": "ctest",
+          "name": "nvj_ndi_tests"
+        },
+        {
+          "id": "A-NDIOUT-2",
+          "kind": "cli",
+          "command": "NYREXVJ_NDI_LIB=build/fake_ndi.so NyrexVJ --output-selftest",
+          "note": "sends through the fake NDI library"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-NDIOUT-1",
+          "title": "NDI output seen by a real NDI receiver",
+          "needs": "Two computers (or one with NDI Studio Monitor) on one network with the NDI runtime installed",
+          "steps": [
+            "Turn NDI output on in NyrexVJ and select it in NDI Studio Monitor or OBS.",
+            "Play a look for 10 minutes while scripts/measure_live.py runs.",
+            "Unplug the network cable for 10 seconds and plug it in again."
+          ],
+          "measure": "Receiver frame rate, dropped frames at the receiver, CPU and GPU of NyrexVJ",
+          "criteria": "Proposed: receiver shows the picture, rate matches, the stream returns after the cable is plugged in."
+        }
+      ]
+    },
+    {
+      "id": "ndi-in",
+      "title": "NDI input",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/LIVE.md"
+      ],
+      "sources": [
+        "src/core/ndi_receiver.cpp",
+        "src/core/ndi_runtime.cpp",
+        "src/render/live_input.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-NDIIN-1",
+          "kind": "ctest",
+          "name": "nvj_ndi_receive_tests"
+        },
+        {
+          "id": "A-NDIIN-2",
+          "kind": "ctest",
+          "name": "nvj_live_tests"
+        },
+        {
+          "id": "A-NDIIN-3",
+          "kind": "cli",
+          "command": "NyrexVJ --live-selftest",
+          "note": "plays a test source through the whole live path"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-NDIIN-1",
+          "title": "NDI input from a real sender, with the sender lost and found again",
+          "needs": "A real NDI sender (OBS NDI plugin, a camera with NDI, another NyrexVJ) and the NDI runtime",
+          "steps": [
+            "Add the NDI source as a clip and play it.",
+            "Run NyrexVJ --bench-live 300:ndi:NAME and keep the JSON.",
+            "Stop the sender for 30 seconds and start it again."
+          ],
+          "measure": "Latency and dropped-picture numbers from --bench-live, state shown in the Clip window",
+          "criteria": "Proposed: state goes to reconnecting and back to live without restarting NyrexVJ."
+        }
+      ]
+    },
+    {
+      "id": "camera",
+      "title": "Cameras and capture cards",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/LIVE.md"
+      ],
+      "sources": [
+        "src/media/camera_capture.cpp",
+        "src/core/live_source.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-CAM-1",
+          "kind": "ctest",
+          "name": "nvj_camera_tests"
+        },
+        {
+          "id": "A-CAM-2",
+          "kind": "ctest",
+          "name": "nvj_live_tests"
+        },
+        {
+          "id": "A-CAM-3",
+          "kind": "cli",
+          "command": "NyrexVJ --bench-live 5:camera:lavfi:testsrc2=size=1280x720:rate=30",
+          "note": "plays an FFmpeg test source as a camera"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-CAM-1",
+          "title": "A real camera or capture card, unplugged and plugged in while playing",
+          "needs": "A USB camera or a capture card and a cable",
+          "steps": [
+            "Pick the device in the Clip window and play it.",
+            "Run NyrexVJ --bench-live 300:camera:NAME.",
+            "Unplug the device for 10 seconds while it plays, then plug it in again."
+          ],
+          "measure": "Format chosen by the driver, latency and dropped pictures from --bench-live, state after unplugging",
+          "criteria": "Proposed: picture shows, state goes to reconnecting and back to live, no crash."
+        }
+      ]
+    },
+    {
+      "id": "displays",
+      "title": "Several displays and projectors, hot plugging",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/OUTPUTS.md"
+      ],
+      "sources": [
+        "src/render/output_window.cpp",
+        "src/render/output_manager.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-DISP-1",
+          "kind": "ctest",
+          "name": "nvj_output_tests"
+        },
+        {
+          "id": "A-DISP-2",
+          "kind": "ctest",
+          "name": "nvj_frame_lock_tests"
+        },
+        {
+          "id": "A-DISP-3",
+          "kind": "cli",
+          "command": "NyrexVJ --output-selftest",
+          "note": "output windows, mapping and edge blending on the virtual display"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-DISP-1",
+          "title": "Fullscreen on a second display or a projector",
+          "needs": "A second display or a projector",
+          "steps": [
+            "Add an output window in the Outputs panel, assign it to the second display and go fullscreen.",
+            "Run scripts/measure_live.py for 10 minutes.",
+            "Unplug the display cable for 10 seconds while the output runs, plug it back in and check the window."
+          ],
+          "measure": "Picture on the display, resolution and position, CPU and GPU, what happens to the window when the display disappears",
+          "criteria": "Proposed: picture correct at the display's native resolution, NyrexVJ keeps running while the display is missing."
+        }
+      ]
+    },
+    {
+      "id": "midi",
+      "title": "MIDI controllers and MIDI clock",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SYNC.md",
+        "docs/INTERFACES.md"
+      ],
+      "sources": [
+        "src/control/midi_input_win.cpp",
+        "src/control/midi_input_linux.cpp",
+        "src/core/midi_clock.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-MIDI-1",
+          "kind": "ctest",
+          "name": "nvj_midi_clock_tests"
+        },
+        {
+          "id": "A-MIDI-2",
+          "kind": "ctest",
+          "name": "nvj_control_tests"
+        },
+        {
+          "id": "A-MIDI-3",
+          "kind": "cli",
+          "command": "NyrexVJ --midi-inject 144,60,127",
+          "note": "feeds one message through the real control path"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-MIDI-1",
+          "title": "A real MIDI controller, unplugged and plugged in while running",
+          "needs": "A USB MIDI controller (pads or knobs) and, for the clock, a device that sends MIDI clock",
+          "steps": [
+            "Map two controls in the MIDI panel.",
+            "Move them for one minute and check the response.",
+            "Unplug the controller, plug it in again and move the controls."
+          ],
+          "measure": "Response to controls, response after the device returns, clock tempo against the sender",
+          "criteria": "Proposed: mapped controls respond, the device is found again without restarting NyrexVJ."
+        }
+      ]
+    },
+    {
+      "id": "artnet",
+      "title": "Art-Net / DMX output",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/DMX.md"
+      ],
+      "sources": [
+        "src/render/dmx_strip.cpp",
+        "src/control/udp_socket_posix.cpp",
+        "src/control/udp_socket_win.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-ART-1",
+          "kind": "ctest",
+          "name": "nvj_venue_tests"
+        },
+        {
+          "id": "A-ART-2",
+          "kind": "ctest",
+          "name": "nvj_control_tests"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-ART-1",
+          "title": "Art-Net to a real node or software receiver",
+          "needs": "An Art-Net node, HNode or QLC+ on the same network",
+          "steps": [
+            "Set the same universe in NyrexVJ and the receiver.",
+            "Move a DMX channel in NyrexVJ and watch the receiver.",
+            "Run for 10 minutes and note whether the receiver stays in sync."
+          ],
+          "measure": "Channel values at the receiver, packet loss seen by the receiver",
+          "criteria": "Proposed: values at the receiver follow NyrexVJ without gaps."
+        }
+      ]
+    },
+    {
+      "id": "dj-sync",
+      "title": "DJ sync: Pro DJ Link, MIDI clock, timecode",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SYNC.md"
+      ],
+      "sources": [
+        "src/core/djlink.cpp",
+        "src/core/beat_clock.cpp",
+        "src/core/midi_clock.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-SYNC-1",
+          "kind": "ctest",
+          "name": "nvj_djlink_tests"
+        },
+        {
+          "id": "A-SYNC-2",
+          "kind": "ctest",
+          "name": "nvj_beat_clock_tests"
+        },
+        {
+          "id": "A-SYNC-3",
+          "kind": "ctest",
+          "name": "nvj_timecode_tests"
+        },
+        {
+          "id": "A-SYNC-4",
+          "kind": "ctest",
+          "name": "nvj_sync_system_tests"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-SYNC-1",
+          "title": "Beat sync with a real player or mixer",
+          "needs": "A Pioneer player or mixer with Pro DJ Link (or a MIDI clock source) on the network",
+          "steps": [
+            "Select the sync source in NyrexVJ and play a track.",
+            "Watch the beat indicator against the beat for 5 minutes.",
+            "Change the tempo on the player and stop the track."
+          ],
+          "measure": "Beat offset (by eye or with a recorded video), tempo shown in NyrexVJ against the player",
+          "criteria": "Proposed: beat indicator stays on the beat, tempo follows within one bar of a change."
+        }
+      ]
+    },
+    {
+      "id": "ffmpeg-decode",
+      "title": "FFmpeg, hardware decoders and the fallback to the processor",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/MEDIA.md",
+        "docs/FFMPEG.md"
+      ],
+      "sources": [
+        "src/media/video_decoder.cpp",
+        "src/media/ffmpeg_setup.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-FF-1",
+          "kind": "ctest",
+          "name": "nvj_media_tests"
+        },
+        {
+          "id": "A-FF-2",
+          "kind": "ctest",
+          "name": "nvj_convert_tests"
+        },
+        {
+          "id": "A-FF-3",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data",
+          "note": "decodes the test clips with and without graphics card conversion"
+        },
+        {
+          "id": "A-FF-4",
+          "kind": "cli",
+          "command": "NyrexVJ --bench-video SECONDS:CLIP",
+          "note": "decode and upload times of one clip"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-FF-1",
+          "title": "Hardware decoding on a real graphics card and the fallback",
+          "needs": "A graphics card with a hardware decoder (D3D11VA, DXVA2, NVDEC, VA-API or QSV) and an H.264/H.265 test clip",
+          "steps": [
+            "Play the clip with --video-mode auto and note decoder and route in the Clip window.",
+            "Repeat with --video-mode software.",
+            "Play a clip with a profile the card does not support and check that the processor takes over."
+          ],
+          "measure": "Decoder name, decode time, CPU and GPU use for both modes",
+          "criteria": "Proposed: automatic mode uses the hardware decoder where available, the fallback shows its reason and playback continues."
+        }
+      ]
+    },
+    {
+      "id": "plugins",
+      "title": "Plugin errors, limits and recovery",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/PLUGINS.md"
+      ],
+      "sources": [
+        "src/core/plugin_host.cpp",
+        "plugins/include/nyrexvj_plugin.h"
+      ],
+      "automated": [
+        {
+          "id": "A-PLUG-1",
+          "kind": "ctest",
+          "name": "nvj_plugin_tests"
+        },
+        {
+          "id": "A-PLUG-2",
+          "kind": "cli",
+          "command": "NyrexVJ --plugin-selftest build/plugins/nyrexvj-example",
+          "note": "loads and runs the example plugin"
+        },
+        {
+          "id": "A-PLUG-3",
+          "kind": "cli",
+          "command": "NyrexVJ --plugin-selftest build/plugins/nyrexvj-legacy",
+          "note": "loads a plugin of the old interface version"
+        }
+      ],
+      "manual": []
+    },
+    {
+      "id": "soak",
+      "title": "Long shows: frame times, memory growth, threads and handles over time",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/TESTING.md",
+        "docs/PERFORMANCE.md"
+      ],
+      "sources": [
+        "src/app/soak.cpp",
+        "src/core/growth_check.cpp",
+        "src/core/soak_plan.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-SOAK-1",
+          "kind": "ctest",
+          "name": "nvj_soak_tests"
+        },
+        {
+          "id": "A-SOAK-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --soak 6 --bench-out OUT.json",
+          "note": "short smoke run: events, samples and report; too short to judge growth"
+        },
+        {
+          "id": "A-SOAK-3",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --soak 300 --bench-out OUT.json",
+          "note": "five minute run with the growth verdict; on software OpenGL only"
+        },
+        {
+          "id": "A-SOAK-4",
+          "kind": "script",
+          "command": "python3 scripts/test_measure_live.py",
+          "note": "parsers for nvidia-smi, Windows counters, PowerShell and amdgpu files with sample texts, plus a live check against the own process on Linux"
+        },
+        {
+          "id": "A-SOAK-5",
+          "kind": "script",
+          "command": "python3 scripts/check_test_matrix.py",
+          "note": "checks this matrix, the results file and the table in docs/TESTING.md"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-SOAK-1",
+          "title": "Three hour soak on a real graphics card",
+          "needs": "A PC with a real graphics card, the output resolution of the show and an idle desktop",
+          "steps": [
+            "Run NyrexVJ --fresh --no-update-check --no-welcome --soak 10800 --bench-out soak.json.",
+            "In a second window run scripts/measure_live.py --seconds 10800 --out device.json.",
+            "Do not touch the PC while it runs."
+          ],
+          "measure": "growth block of soak.json (RSS, GPU estimate, threads, handles), over-budget frames, device.json VRAM curve",
+          "criteria": "Proposed: no leak verdict, VRAM of the whole card stays flat after the first 25 percent. The soak estimate counts only allocations the program makes itself; device.json is the check against drivers."
+        }
+      ]
+    },
+    {
+      "id": "restart-recovery",
+      "title": "Restart and recovery after a crash",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/TESTING.md",
+        "docs/INTERFACES.md"
+      ],
+      "sources": [
+        "src/core/recovery.cpp",
+        "src/core/crash_handler.hpp"
+      ],
+      "automated": [
+        {
+          "id": "A-REC-1",
+          "kind": "ctest",
+          "name": "nvj_tests"
+        },
+        {
+          "id": "A-REC-2",
+          "kind": "cli",
+          "command": "NyrexVJ --crash-test",
+          "note": "forces a crash and checks the recovery data"
+        },
+        {
+          "id": "A-REC-3",
+          "kind": "script",
+          "command": "bash scripts/test_restart.sh build/NyrexVJ",
+          "note": "starts the program, ends it with kill -9, starts it again and checks that the second run works and ends its session cleanly"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-REC-1",
+          "title": "End the program with the task manager during a show",
+          "needs": "Any PC",
+          "steps": [
+            "Start NyrexVJ with a saved show, trigger a few clips.",
+            "End the process with the task manager (Windows) or kill -9 (Linux).",
+            "Start NyrexVJ again."
+          ],
+          "measure": "Time from start to the first picture, what is offered for recovery, state of the last saved show",
+          "criteria": "Proposed: the program starts, offers the recovery, and the saved show is intact."
+        }
+      ]
+    },
+    {
+      "id": "vrchat-parallel",
+      "title": "Running next to VRChat (CPU, GPU and VRAM shared)",
+      "platforms": {
+        "windows": true,
+        "linux": false
+      },
+      "docs": [
+        "docs/TESTING.md",
+        "docs/PERFORMANCE.md"
+      ],
+      "sources": [
+        "scripts/measure_live.py"
+      ],
+      "automated": [],
+      "manual": [
+        {
+          "id": "M-VRC-1",
+          "title": "NyrexVJ and VRChat on the same PC with the show's setup",
+          "needs": "Windows PC with VRChat, a world with a Spout or NDI capture of NyrexVJ and a real graphics card",
+          "steps": [
+            "Start VRChat in the world and NyrexVJ with the output going to the world.",
+            "Run scripts/measure_live.py --seconds 1800 --process NyrexVJ --process VRChat --out parallel.json.",
+            "Repeat with NyrexVJ closed to get the VRChat baseline."
+          ],
+          "measure": "CPU, GPU and VRAM of both programs and of the whole card, VRChat frame rate with and without NyrexVJ",
+          "criteria": "Proposed: the VRChat frame rate drops by less than the maintainer allows; the numbers go into the result either way."
+        }
+      ]
+    },
+    {
+      "id": "media-outage",
+      "title": "Media outages: file removed or truncated while it plays",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/MEDIA.md",
+        "docs/TESTING.md"
+      ],
+      "sources": [
+        "src/media/video_decoder.cpp",
+        "src/render/media_player.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-OUT-1",
+          "kind": "ctest",
+          "name": "nvj_media_tests",
+          "note": "includes a video cut at open, cut while playing, overwritten while playing, deleted while playing and opened again after it came back"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-OUT-1",
+          "title": "Network share or external drive disappears during playback",
+          "needs": "A video on a network share or a USB drive",
+          "steps": [
+            "Play the video from the share or drive.",
+            "Disconnect the share or drive for 10 seconds, then connect it again.",
+            "Trigger the clip again."
+          ],
+          "measure": "Picture while the media is gone, state shown, whether the clip plays again",
+          "criteria": "Proposed: no crash, no frozen program, the clip reports the problem and plays again after reconnecting."
+        }
+      ]
+    }
+  ]
+}

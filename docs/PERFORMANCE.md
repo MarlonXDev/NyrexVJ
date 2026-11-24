@@ -46,6 +46,7 @@ Command line:
 - `--profile` with `--bench-comp FRAMES`: adds the per-pass table (`passes`) to the JSON result.
 - `--bench-shaders FRAMES`: measures every clip (alone on one layer) and every effect (alone on the cheapest clip, default parameters) and prints the most expensive ten of each, with `--bench-out FILE.json` the complete lists.
 - `--bench-memory`: reports the size of the render targets while idle, during and after a deck transition and for each render quality.
+- `--soak SECONDS[,FPS]`: a real-time run that changes looks, decks and quality on a timer and samples frame time, CPU, memory, graphics estimate, threads and handles; it reports growth over the run. See [TESTING.md](TESTING.md). The outside view (other processes, the graphics card) is `scripts/measure_live.py`.
 - `--quality N`: 0 Full, 1 Balanced, 2 Performance, 3 Automatic for this run.
 - `--bench-switch SECONDS:clip1,clip2,...`: switches between video clips and counts empty frames and the time to the first picture (see [MEDIA.md](MEDIA.md)); `--no-prewarm` turns the background preparation of the next clip off for the run.
 - `scripts/make_bench_presets.py DIR`: writes the five scenario presets used below (`Bench Four Visible`, `Bench Three Hidden`, `Bench Hidden Feedback`, `Bench Heavy Chain`, `Bench Fade Mix`) into a presets folder, so the same files can be run with any version through `--preset`.
@@ -199,6 +200,14 @@ Not measured, because it needs hardware that was not available: hardware decodin
 - **Not measured:** a real graphics card (the numbers above show how the cost grows, not how fast a card is, since a software renderer is limited by the processor), 4K, several skinned figures at once on a card, anything on Windows or next to VRChat.
 
 Command line: `--scene-selftest FOLDER` draws the test models through the real renderer and checks the pixels (`--bench-out` writes JSON with `frameMs` per model for a 256 x 256 picture including the read back, which is only a smoke test of the speed).
+
+## What is new in 0.34.0: long run tests
+
+[ADR 0027](adr/0027-live-stability-and-hardware-test-matrix.md), [TESTING.md](TESTING.md). `--soak SECONDS[,FPS]` runs the program like a show for a given time and samples it; `scripts/measure_live.py` samples it from outside, together with other processes and the graphics card. The program itself got nothing new at run time: the option exists only when it is given, and nothing is sent anywhere.
+
+- **Run:** `--soak 300` on the build server (Linux, 2 processor cores, Mesa llvmpipe, 1920 x 1080), 300.5 seconds, 940 frames, 14 look changes, 42 deck switches and 27 quality changes, no OpenGL error. Between the first and the last third of the run after the first quarter: memory of the process 302.2 to 321.6 MiB (+19.5, limit 64), the program's graphics estimate 54.7 to 53.0 MiB (-1.7, limit 16), threads 7 to 7, handles 9 to 9. No growth above the limits was found. `measure_live.py` ran next to it and saw 299 to 322 MiB (+22.7) and 196 percent of one core on average (two cores, the software renderer's threads included).
+- **What this does not show.** A software renderer needs about 320 ms for a frame at 1920 x 1080 here (95th percentile 696 ms), so every one of the 940 frames was over the 16.7 ms budget and the frame time numbers say nothing about a real graphics card. The memory rose by about 20 MiB in five minutes: that is within what caches filling look like, and five minutes cannot tell it from a slow leak. A three hour run on real hardware is the open manual test `M-SOAK-1`.
+- **Not measured:** a real graphics card, the memory of the graphics driver (the soak run reports the program's own estimate), latency, VRChat running next to the program, and everything on Windows.
 
 ## Measured
 

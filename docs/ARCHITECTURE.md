@@ -53,6 +53,7 @@ The diagram is a target abstraction, not a description of existing code.
 - Never block the render loop on video decoding, file I/O, or network operations.
 - Specify GPU/CPU memory budgets and test under multi-layer load.
 - Handle lost Spout senders, missing media, GPU resource failures, and app restart gracefully.
+- What is tested automatically, what needs real hardware, the long run test (`--soak`) and the measuring script are in [TESTING.md](TESTING.md) and [ADR 0027](adr/0027-live-stability-and-hardware-test-matrix.md).
 - Preserve preset/session compatibility when evolving clip types and parameters.
 - Validate third-party licenses and binary distribution constraints before adding dependencies.
 

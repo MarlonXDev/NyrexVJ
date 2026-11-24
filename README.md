@@ -361,6 +361,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--profile` | With `--bench-comp`, time every render pass on its own and add the table to the JSON result |
 | `--bench-shaders FRAMES` | Measure the GPU time of every clip alone and of every effect alone over FRAMES frames and print the most expensive ones (`--bench-out` writes JSON), then exit |
 | `--bench-memory` | Report the size of the render targets while idle, during and after a deck transition and for each render quality, then exit |
+| `--soak SECONDS[,FPS]` | Run a long show test in real time (looks, deck switches and quality changes on a timer), sample frame time, CPU, memory, graphics estimate, threads and handles, report growth, then exit; see [docs/TESTING.md](docs/TESTING.md) |
 | `--quality 0\|1\|2\|3` | Layer resolution for this run: 0 Full, 1 Balanced, 2 Performance, 3 Automatic |
 | `--bench-video SECONDS:CLIP1,CLIP2` | Measure the processor time, decode time, upload time and video memory of the listed video clips playing for SECONDS, then exit (`--bench-out` writes JSON) |
 | `--bench-convert RUNS:FILE1,FILE2` | Convert the listed DXV videos to HAP RUNS times without a window and print the time, decode and encode time, frames per second and size (`--convert-format auto\|hap\|hap_alpha\|hap_q` picks the format, `--convert-keep DIR` keeps the last copy, `--bench-out` writes JSON), then exit |

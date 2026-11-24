@@ -6,6 +6,7 @@
 #endif
 #include <windows.h>
 #include <psapi.h>
+#include <tlhelp32.h>
 #include <shellapi.h>
 #include <winhttp.h>
 
@@ -614,6 +615,34 @@ size_t processMemoryBytes() {
         return 0;
     }
     return static_cast<size_t>(counters.WorkingSetSize);
+}
+
+int processThreadCount() {
+    const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (snapshot == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+    THREADENTRY32 entry{};
+    entry.dwSize = sizeof(entry);
+    const DWORD self = GetCurrentProcessId();
+    int count = 0;
+    if (Thread32First(snapshot, &entry)) {
+        do {
+            if (entry.th32OwnerProcessID == self) {
+                ++count;
+            }
+        } while (Thread32Next(snapshot, &entry));
+    }
+    CloseHandle(snapshot);
+    return count;
+}
+
+int processHandleCount() {
+    DWORD count = 0;
+    if (!GetProcessHandleCount(GetCurrentProcess(), &count)) {
+        return 0;
+    }
+    return static_cast<int>(count);
 }
 
 double processCpuSeconds() {

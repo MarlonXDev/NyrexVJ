@@ -173,7 +173,7 @@ int runSceneBenchmark(Engine& engine, const std::string& spec, const std::string
     report["gpuMs"] = summarize(gpu);
     if (player != nullptr) {
         const SceneStats& stats = player->stats();
-        report["scene"] = {{"vertices", stats.vertices}, {"triangles", stats.triangles}, {"meshes", stats.meshes}, {"nodes", stats.nodes}, {"images", stats.images}, {"geometryGpuBytes", stats.gpuBytes}, {"loadMs", player->loadMilliseconds()}, {"uploadMs", player->uploadMilliseconds()}};
+        report["scene"] = {{"vertices", stats.vertices}, {"triangles", stats.triangles}, {"meshes", stats.meshes}, {"nodes", stats.nodes}, {"images", stats.images}, {"skins", stats.skins}, {"joints", stats.joints}, {"morphTargets", stats.morphTargets}, {"blendMaterials", stats.blendMaterials}, {"geometryGpuBytes", stats.gpuBytes}, {"loadMs", player->loadMilliseconds()}, {"uploadMs", player->uploadMilliseconds()}};
     }
     const GpuMemory memory = engine.gpuMemory();
     report["memory"] = {{"estimatedGpuBytes", memory.total()}, {"renderTargetBytes", memory.targets}, {"thumbnailBytes", memory.thumbnails}, {"sceneDepthBytes", memory.sceneDepth}, {"sceneGeometryBytes", memory.sceneGeometry}, {"mediaBytes", memory.media}, {"shaderBufferBytes", memory.shaderBuffers}, {"processResidentBytes", platform::processMemoryBytes()}};

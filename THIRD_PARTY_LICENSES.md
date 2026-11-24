@@ -10,6 +10,8 @@ NyrexVJ itself is MIT licensed (see [LICENSE](LICENSE)). The components below ar
 | [stb_image, stb_image_write](https://github.com/nothings/stb) | bundled copy | MIT or public domain | Compiled into the program |
 | [glad](https://github.com/Dav1dde/glad) | generated loader | (WTFPL or CC0-1.0) and Apache-2.0 | Compiled into the program |
 | [Spout2](https://github.com/leadedge/Spout2) | 2.007.017 | BSD 2-Clause | Compiled into the Windows program only |
+| [meshoptimizer](https://github.com/zeux/meshoptimizer) | 1.3 | MIT | Decoder sources compiled into the program (CMake option `NYREXVJ_MESHOPT`, on by default) |
+| [Draco](https://github.com/google/draco) | 1.5.7 | Apache-2.0 | Decoder compiled into the program only when built with `NYREXVJ_DRACO=ON` (off by default, not in the release files) |
 | [FFmpeg](https://ffmpeg.org/) | 8.x | LGPL 2.1 or later (use the LGPL build) | Headers are used to build the program. The libraries are not included and not linked, they are loaded at run time from files you provide |
 | NDI runtime (Vizrt) | any | Proprietary | Not included. Loaded at run time from the runtime you install |
 | PulseAudio client library | any | LGPL 2.1 or later | Linux only, not included, loaded at run time |
@@ -146,3 +148,33 @@ The OpenGL loader in `third_party/glad` was generated with glad 2. Its source he
 ## Spout2
 
 Spout2 by Lynn Jarvis and contributors is used in the Windows program only. License: BSD 2-Clause. The full text is in the Spout2 repository: https://github.com/leadedge/Spout2/blob/master/LICENSE
+
+## meshoptimizer
+
+```text
+MIT License
+
+Copyright (c) 2016-2026 Arseny Kapoulkine
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## Draco
+
+Draco is licensed under the Apache License, Version 2.0 (<https://www.apache.org/licenses/LICENSE-2.0>), Copyright The Draco Authors. It is only part of builds made with `-DNYREXVJ_DRACO=ON`; the full license text is in the source of Draco (`LICENSE`).

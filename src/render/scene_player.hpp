@@ -70,11 +70,18 @@ private:
         GLuint vao = 0;
         GLuint vbo = 0;
         GLuint ebo = 0;
+        GLuint skinVbo = 0;
+        GLuint morphTex = 0;
         GLsizei indexCount = 0;
+        GLsizei vertexCount = 0;
         int material = -1;
+        int morphTargets = 0;
+        bool skinned = false;
+        Vec3 centre;
     };
 
     bool upload();
+    void uploadMorph(const SceneMesh& mesh, GpuMesh& gpu);
     void freeGpu();
 
     std::string label_;
@@ -104,6 +111,8 @@ public:
     bool pbrReady() const { return pbr_.id != 0; }
     size_t depthBytes() const;
     void draw(const ScenePlayer& player, const SceneFrame& frame, const RenderTarget& target);
+    size_t skippedSkinned() const { return skippedSkinned_; }
+    size_t blendedDraws() const { return blendedDraws_; }
 
 private:
     struct Surface {
@@ -150,6 +159,15 @@ private:
         GLint sunDir = -1;
         GLint sunColor = -1;
         GLint exposure = -1;
+        GLint blend = -1;
+        GLint skinned = -1;
+        GLint jointTex = -1;
+        GLint jointBase = -1;
+        GLint morphCount = -1;
+        GLint morphVerts = -1;
+        GLint morphTex = -1;
+        GLint morphIndex = -1;
+        GLint morphWeight = -1;
     };
 
     bool prepare(Surface& surface, const RenderTarget& target);
@@ -158,6 +176,10 @@ private:
 
     Program classic_;
     Program pbr_;
+    GLuint jointTexture_ = 0;
+    size_t skippedSkinned_ = 0;
+    size_t blendedDraws_ = 0;
+    bool skipLogged_ = false;
     Surface main_;
     Surface thumb_;
     Surface editor_;

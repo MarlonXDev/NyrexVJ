@@ -198,6 +198,21 @@ void App::drawSceneDetails(const ScenePlayer& player) {
     case SceneState::Ready:
         ImGui::Text("%s: %zu", tr("Vertices"), player.stats().vertices);
         ImGui::Text("%s: %zu", tr("Triangles"), player.stats().triangles);
+        if (player.stats().skins > 0) {
+            ImGui::Text("%s: %zu (%zu %s)", tr("Skins"), player.stats().skins, player.stats().joints, tr("Joints"));
+        }
+        if (player.stats().morphTargets > 0) {
+            ImGui::Text("%s: %zu", tr("Morph targets"), player.stats().morphTargets);
+        }
+        if (player.stats().blendMaterials > 0) {
+            ImGui::Text("%s: %zu", tr("Blended materials"), player.stats().blendMaterials);
+        }
+        if (!player.scene().fileLights.empty()) {
+            ImGui::TextDisabled("%s: %zu", tr("Lights in the file (not used)"), player.scene().fileLights.size());
+        }
+        if (!player.scene().fileCameras.empty()) {
+            ImGui::TextDisabled("%s: %zu", tr("Cameras in the file (not used)"), player.scene().fileCameras.size());
+        }
         ImGui::Text("%s: %.2f MB", tr("GPU memory"), static_cast<double>(player.stats().gpuBytes) / (1024.0 * 1024.0));
         ImGui::Text("%s: %.0f ms", tr("Load time"), player.loadMilliseconds());
         break;

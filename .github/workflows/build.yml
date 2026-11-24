@@ -182,6 +182,7 @@ jobs:
           build/NyrexVJ --plugin-selftest build/plugins/nyrexvj-example
           NYREXVJ_NDI_LIB="$PWD/build/fake_ndi.so" build/NyrexVJ --output-selftest
           build/NyrexVJ --shader-selftest
+          build/NyrexVJ --scene-selftest tests/data/models
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data
           fi
@@ -220,6 +221,48 @@ jobs:
           name: linux-test-log
           path: build/Testing/Temporary/LastTest.log
           if-no-files-found: ignore
+
+  linux-scene-variants:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: with Draco
+            flags: -DNYREXVJ_DRACO=ON
+          - name: without Meshopt and Draco
+            flags: -DNYREXVJ_MESHOPT=OFF -DNYREXVJ_DRACO=OFF
+    name: linux scene variant (${{ matrix.name }})
+    env:
+      DISPLAY: ":99"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build and test packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DNYREXVJ_VIDEO=OFF -DGLFW_BUILD_WAYLAND=OFF ${{ matrix.flags }}
+
+      - name: Build the scene tests and the program
+        run: cmake --build build --parallel --target nvj_scene3d_tests nvj_creator_tests NyrexVJ
+
+      - name: Start the virtual display
+        run: |
+          Xvfb :99 -screen 0 1280x720x24 &
+          sleep 2
+
+      - name: Test the 3D scene loader and render the test models
+        run: |
+          build/nvj_scene3d_tests
+          build/nvj_creator_tests
+          export NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-data"
+          build/NyrexVJ --scene-selftest tests/data/models
 
   publish:
     needs: [windows, linux]

@@ -15,17 +15,50 @@ layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aUv;
 layout(location = 3) in vec4 aColor;
+layout(location = 4) in uvec4 aJoints;
+layout(location = 5) in vec4 aWeights;
 uniform mat4 uViewProj;
 uniform mat4 uModel;
 uniform mat3 uNormalMat;
+uniform int uSkinned;
+uniform sampler2D uJointTex;
+uniform int uJointBase;
+uniform int uMorphCount;
+uniform int uMorphVerts;
+uniform sampler2D uMorphTex;
+uniform int uMorphIndex[8];
+uniform float uMorphWeight[8];
 out vec3 vNormal;
 out vec3 vWorld;
 out vec2 vUv;
 out vec4 vColor;
+mat4 jointMatrix(uint joint) {
+    int row = uJointBase + int(joint);
+    return mat4(texelFetch(uJointTex, ivec2(0, row), 0), texelFetch(uJointTex, ivec2(1, row), 0), texelFetch(uJointTex, ivec2(2, row), 0), texelFetch(uJointTex, ivec2(3, row), 0));
+}
+vec3 morphFetch(int texel) {
+    return texelFetch(uMorphTex, ivec2(texel % 2048, texel / 2048), 0).rgb;
+}
 void main() {
-    vec4 world = uModel * vec4(aPos, 1.0);
+    vec3 position = aPos;
+    vec3 normal = aNormal;
+    for (int i = 0; i < 8; ++i) {
+        if (i >= uMorphCount) {
+            break;
+        }
+        int base = (uMorphIndex[i] * uMorphVerts + gl_VertexID) * 2;
+        position += uMorphWeight[i] * morphFetch(base);
+        normal += uMorphWeight[i] * morphFetch(base + 1);
+    }
+    vec4 local = vec4(position, 1.0);
+    if (uSkinned != 0) {
+        mat4 skin = aWeights.x * jointMatrix(aJoints.x) + aWeights.y * jointMatrix(aJoints.y) + aWeights.z * jointMatrix(aJoints.z) + aWeights.w * jointMatrix(aJoints.w);
+        local = skin * local;
+        normal = mat3(skin) * normal;
+    }
+    vec4 world = uModel * local;
     vWorld = world.xyz;
-    vNormal = uNormalMat * aNormal;
+    vNormal = uNormalMat * normal;
     vUv = aUv;
     vColor = aColor;
     gl_Position = uViewProj * world;
@@ -48,6 +81,7 @@ uniform vec3 uColorB;
 uniform float uRainbow;
 uniform float uTime;
 uniform float uKick;
+uniform int uBlend;
 void main() {
     vec3 n = normalize(vNormal);
     if (!gl_FrontFacing) {
@@ -73,7 +107,7 @@ void main() {
     float rim = pow(1.0 - max(dot(n, view), 0.0), 3.0);
     vec3 rimColor = uPalette > 0.5 ? mix(uColorA, uColorB, 0.5) : vec3(0.6);
     vec3 col = base * diffuse + rimColor * rim * (0.3 + uKick * 0.6);
-    fragColor = vec4(col, 1.0);
+    fragColor = vec4(col, uBlend != 0 ? albedo.a : 1.0);
 }
 )glsl";
 
@@ -246,7 +280,7 @@ void main() {
     color *= uExposure * (1.0 + 0.12 * uKick);
     color = aces(color);
     color = pow(color, vec3(1.0 / 2.2));
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(color, (uFlags & 32) != 0 ? albedo.a : 1.0);
 }
 )glsl";
 
@@ -380,6 +414,12 @@ void ScenePlayer::freeGpu() {
         if (mesh.ebo) {
             glDeleteBuffers(1, &mesh.ebo);
         }
+        if (mesh.skinVbo) {
+            glDeleteBuffers(1, &mesh.skinVbo);
+        }
+        if (mesh.morphTex) {
+            glDeleteTextures(1, &mesh.morphTex);
+        }
     }
     meshes_.clear();
     if (!textures_.empty()) {
@@ -388,8 +428,63 @@ void ScenePlayer::freeGpu() {
     }
 }
 
+void ScenePlayer::uploadMorph(const SceneMesh& mesh, GpuMesh& gpu) {
+    constexpr int kWidth = 2048;
+    GLint maxSize = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
+    const size_t vertices = mesh.positions.size();
+    const size_t targets = std::min(mesh.targets.size(), kSceneMaxMorphTargets);
+    const size_t texels = vertices * targets * 2;
+    const size_t rows = (texels + kWidth - 1) / kWidth;
+    if (rows > static_cast<size_t>(maxSize)) {
+        warnings_.push_back("the morph targets of a mesh are too large for this graphics card and are ignored");
+        return;
+    }
+    glGenTextures(1, &gpu.morphTex);
+    glBindTexture(GL_TEXTURE_2D, gpu.morphTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, kWidth, static_cast<GLsizei>(rows), 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    constexpr size_t kChunkRows = 128;
+    std::vector<float> chunk(static_cast<size_t>(kWidth) * kChunkRows * 3);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    for (size_t row = 0; row < rows; row += kChunkRows) {
+        const size_t count = std::min(kChunkRows, rows - row);
+        std::fill(chunk.begin(), chunk.end(), 0.0f);
+        for (size_t r = 0; r < count; ++r) {
+            for (size_t x = 0; x < static_cast<size_t>(kWidth); ++x) {
+                const size_t texel = (row + r) * kWidth + x;
+                if (texel >= texels) {
+                    break;
+                }
+                const size_t pair = texel / 2;
+                const size_t target = pair / vertices;
+                const size_t vertex = pair % vertices;
+                const SceneMorphTarget& source = mesh.targets[target];
+                const std::vector<Vec3>& list = texel % 2 == 0 ? source.positions : source.normals;
+                if (list.empty()) {
+                    continue;
+                }
+                float* out = &chunk[(r * kWidth + x) * 3];
+                out[0] = list[vertex].x;
+                out[1] = list[vertex].y;
+                out[2] = list[vertex].z;
+            }
+        }
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, static_cast<GLint>(row), kWidth, static_cast<GLsizei>(count), GL_RGB, GL_FLOAT, chunk.data());
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    gpu.morphTargets = static_cast<int>(targets);
+}
+
 bool ScenePlayer::upload() {
     stats_ = sceneStats(scene_);
+    if (stats_.gpuBytes > kSceneMaxGpuBytes) {
+        error_ = "the scene needs about " + std::to_string(stats_.gpuBytes / (1024 * 1024)) + " MiB of graphics memory, the limit is " + std::to_string(kSceneMaxGpuBytes / (1024 * 1024)) + " MiB";
+        return false;
+    }
     animation_ = scene_.animations.empty() ? -1 : 0;
     const SceneSphere sphere = sceneSphere(scene_, animation_, animation_ >= 0 ? 12 : 1);
     if (!sphere.valid) {
@@ -435,7 +530,15 @@ bool ScenePlayer::upload() {
         }
         GpuMesh gpu;
         gpu.indexCount = static_cast<GLsizei>(mesh.indices.size());
+        gpu.vertexCount = static_cast<GLsizei>(mesh.positions.size());
         gpu.material = mesh.material;
+        Vec3 low = mesh.positions[0];
+        Vec3 high = mesh.positions[0];
+        for (const Vec3& point : mesh.positions) {
+            low = {std::min(low.x, point.x), std::min(low.y, point.y), std::min(low.z, point.z)};
+            high = {std::max(high.x, point.x), std::max(high.y, point.y), std::max(high.z, point.z)};
+        }
+        gpu.centre = (low + high) * 0.5f;
         glGenVertexArrays(1, &gpu.vao);
         glGenBuffers(1, &gpu.vbo);
         glGenBuffers(1, &gpu.ebo);
@@ -451,8 +554,28 @@ bool ScenePlayer::upload() {
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ebo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(uint32_t)), mesh.indices.data(), GL_STATIC_DRAW);
+        if (!mesh.joints.empty()) {
+            std::vector<uint16_t> skinData(mesh.positions.size() * 8);
+            for (size_t i = 0; i < mesh.positions.size(); ++i) {
+                for (size_t k = 0; k < 4; ++k) {
+                    skinData[i * 8 + k] = mesh.joints[i * 4 + k];
+                    skinData[i * 8 + 4 + k] = static_cast<uint16_t>(std::lround(std::clamp(mesh.weights[i * 4 + k], 0.0f, 1.0f) * 65535.0f));
+                }
+            }
+            glGenBuffers(1, &gpu.skinVbo);
+            glBindBuffer(GL_ARRAY_BUFFER, gpu.skinVbo);
+            glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(skinData.size() * sizeof(uint16_t)), skinData.data(), GL_STATIC_DRAW);
+            glEnableVertexAttribArray(4);
+            glVertexAttribIPointer(4, 4, GL_UNSIGNED_SHORT, 16, nullptr);
+            glEnableVertexAttribArray(5);
+            glVertexAttribPointer(5, 4, GL_UNSIGNED_SHORT, GL_TRUE, 16, reinterpret_cast<const void*>(8));
+            gpu.skinned = true;
+        }
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (!mesh.targets.empty()) {
+            uploadMorph(mesh, gpu);
+        }
         meshes_.push_back(gpu);
     }
     if (glGetError() == GL_OUT_OF_MEMORY) {
@@ -461,11 +584,15 @@ bool ScenePlayer::upload() {
         return false;
     }
     for (SceneMesh& mesh : scene_.meshes) {
+        mesh.rememberAnimationData();
         std::vector<Vec3>().swap(mesh.positions);
         std::vector<Vec3>().swap(mesh.normals);
         std::vector<float>().swap(mesh.uvs);
         std::vector<float>().swap(mesh.colors);
         std::vector<uint32_t>().swap(mesh.indices);
+        std::vector<uint16_t>().swap(mesh.joints);
+        std::vector<float>().swap(mesh.weights);
+        std::vector<SceneMorphTarget>().swap(mesh.targets);
     }
     std::vector<SceneImage>().swap(scene_.images);
     return true;
@@ -507,6 +634,15 @@ void SceneRenderer::locate(Program& p) {
     p.sunDir = at("uSunDir");
     p.sunColor = at("uSunColor");
     p.exposure = at("uExposure");
+    p.blend = at("uBlend");
+    p.skinned = at("uSkinned");
+    p.jointTex = at("uJointTex");
+    p.jointBase = at("uJointBase");
+    p.morphCount = at("uMorphCount");
+    p.morphVerts = at("uMorphVerts");
+    p.morphTex = at("uMorphTex");
+    p.morphIndex = at("uMorphIndex");
+    p.morphWeight = at("uMorphWeight");
 }
 
 bool SceneRenderer::init() {
@@ -523,6 +659,14 @@ bool SceneRenderer::init() {
     } else {
         locate(pbr_);
     }
+    glGenTextures(1, &jointTexture_);
+    glBindTexture(GL_TEXTURE_2D, jointTexture_);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 4, static_cast<GLsizei>(kSceneMaxJointsPerFrame), 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
     return true;
 }
 
@@ -537,6 +681,10 @@ void SceneRenderer::destroy(Surface& surface) {
 }
 
 void SceneRenderer::shutdown() {
+    if (jointTexture_) {
+        glDeleteTextures(1, &jointTexture_);
+        jointTexture_ = 0;
+    }
     destroy(main_);
     destroy(thumb_);
     destroy(editor_);
@@ -702,25 +850,54 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
         glUniform1i(p.texEmissive, 3);
     }
 
+    glUniform1i(p.jointTex, 4);
+    glUniform1i(p.morphTex, 5);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    bool culling = true;
+    int cullMode = 1;
+    const auto setCull = [&](int mode) {
+        if (mode == cullMode) {
+            return;
+        }
+        if (mode == 0) {
+            glDisable(GL_CULL_FACE);
+        } else {
+            glEnable(GL_CULL_FACE);
+            glCullFace(mode == 1 ? GL_BACK : GL_FRONT);
+        }
+        cullMode = mode;
+    };
     const auto textureOf = [&](int index) -> GLuint {
         return index >= 0 && index < static_cast<int>(player.textures_.size()) ? player.textures_[static_cast<size_t>(index)] : 0;
     };
-    for (const SceneInstance& instance : evaluateScene(scene, player.animation_, frame.time, &audio)) {
-        if (instance.mesh < 0 || instance.mesh >= static_cast<int>(player.meshes_.size())) {
-            continue;
+    const SceneEval eval = evaluateSceneFull(scene, player.animation_, frame.time, &audio);
+    if (!eval.joints.empty()) {
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, jointTexture_);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 4, static_cast<GLsizei>(eval.joints.size()), GL_RGBA, GL_FLOAT, eval.joints.data());
+        glActiveTexture(GL_TEXTURE0);
+    }
+    skippedSkinned_ = eval.skippedSkinned;
+    if (eval.skippedSkinned > 0 && !skipLogged_) {
+        skipLogged_ = true;
+        logLine("3D scene '" + player.label() + "': " + std::to_string(eval.skippedSkinned) + " animated figures were skipped because the limit of " + std::to_string(kSceneMaxJointsPerFrame) + " joints per frame was reached");
+    }
+    const auto materialOf = [&](const ScenePlayer::GpuMesh& mesh) {
+        SceneMaterial material;
+        if (mesh.material >= 0 && mesh.material < static_cast<int>(scene.materials.size())) {
+            material = scene.materials[static_cast<size_t>(mesh.material)];
         }
+        return material;
+    };
+    const auto drawInstance = [&](const SceneInstance& instance, int pass) {
         const ScenePlayer::GpuMesh& mesh = player.meshes_[static_cast<size_t>(instance.mesh)];
         const Mat4 model = pivot * instance.world;
         const std::array<float, 9> normal = normalMatrix(model);
         glUniformMatrix4fv(p.model, 1, GL_FALSE, model.m.data());
         glUniformMatrix3fv(p.normalMat, 1, GL_FALSE, normal.data());
-        SceneMaterial material;
-        if (mesh.material >= 0 && mesh.material < static_cast<int>(scene.materials.size())) {
-            material = scene.materials[static_cast<size_t>(mesh.material)];
-        }
+        const SceneMaterial material = materialOf(mesh);
+        const bool blended = material.alphaMode == AlphaMode::Blend;
         glUniform4f(p.base, material.baseColor[0], material.baseColor[1], material.baseColor[2], material.baseColor[3]);
         const GLuint baseTexture = textureOf(material.baseTexture);
         if (usePbr) {
@@ -733,6 +910,7 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
             flags |= normalTexture ? 4 : 0;
             flags |= emissiveTexture ? 8 : 0;
             flags |= material.alphaMode == AlphaMode::Mask ? 16 : 0;
+            flags |= blended ? 32 : 0;
             glUniform1i(p.flags, flags);
             glUniform1f(p.metal, material.metallic);
             glUniform1f(p.rough, material.roughness);
@@ -750,22 +928,110 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
             glActiveTexture(GL_TEXTURE0);
         } else {
             glUniform1i(p.hasTex, baseTexture ? 1 : 0);
+            glUniform1i(p.blend, blended ? 1 : 0);
         }
         glBindTexture(GL_TEXTURE_2D, baseTexture);
-        const bool wantCulling = !material.doubleSided;
-        if (wantCulling != culling) {
-            if (wantCulling) {
-                glEnable(GL_CULL_FACE);
-            } else {
-                glDisable(GL_CULL_FACE);
+        const bool skinned = instance.skin >= 0 && mesh.skinned;
+        glUniform1i(p.skinned, skinned ? 1 : 0);
+        if (skinned) {
+            glUniform1i(p.jointBase, instance.jointOffset);
+        }
+        int active = 0;
+        int morphIndex[kSceneMaxActiveMorphs] = {};
+        float morphWeight[kSceneMaxActiveMorphs] = {};
+        if (mesh.morphTex && instance.weightCount > 0) {
+            const size_t count = std::min(static_cast<size_t>(instance.weightCount), static_cast<size_t>(mesh.morphTargets));
+            for (size_t t = 0; t < count; ++t) {
+                const float w = eval.weights[static_cast<size_t>(instance.weightOffset) + t];
+                if (std::fabs(w) < 1e-4f) {
+                    continue;
+                }
+                size_t slot = static_cast<size_t>(active);
+                if (active < static_cast<int>(kSceneMaxActiveMorphs)) {
+                    ++active;
+                } else {
+                    slot = 0;
+                    for (size_t k = 1; k < kSceneMaxActiveMorphs; ++k) {
+                        if (std::fabs(morphWeight[k]) < std::fabs(morphWeight[slot])) {
+                            slot = k;
+                        }
+                    }
+                    if (std::fabs(morphWeight[slot]) >= std::fabs(w)) {
+                        continue;
+                    }
+                }
+                morphIndex[slot] = static_cast<int>(t);
+                morphWeight[slot] = w;
             }
-            culling = wantCulling;
+        }
+        glUniform1i(p.morphCount, active);
+        if (active > 0) {
+            glUniform1i(p.morphVerts, mesh.vertexCount);
+            glUniform1iv(p.morphIndex, static_cast<GLsizei>(kSceneMaxActiveMorphs), morphIndex);
+            glUniform1fv(p.morphWeight, static_cast<GLsizei>(kSceneMaxActiveMorphs), morphWeight);
+            glActiveTexture(GL_TEXTURE5);
+            glBindTexture(GL_TEXTURE_2D, mesh.morphTex);
+            glActiveTexture(GL_TEXTURE0);
         }
         glBindVertexArray(mesh.vao);
-        glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        if (pass == 0) {
+            setCull(material.doubleSided ? 0 : 1);
+            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        } else if (material.doubleSided) {
+            setCull(2);
+            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+            setCull(1);
+            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        } else {
+            setCull(1);
+            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        }
+    };
+
+    struct Pending {
+        size_t index;
+        float depth;
+    };
+    std::vector<Pending> blendList;
+    const Vec3 forward = normalize(player.center_ - eye);
+    for (size_t i = 0; i < eval.instances.size(); ++i) {
+        const SceneInstance& instance = eval.instances[i];
+        if (instance.mesh < 0 || instance.mesh >= static_cast<int>(player.meshes_.size())) {
+            continue;
+        }
+        const ScenePlayer::GpuMesh& mesh = player.meshes_[static_cast<size_t>(instance.mesh)];
+        if (materialOf(mesh).alphaMode == AlphaMode::Blend) {
+            Vec3 centre = transformPoint(pivot * instance.world, mesh.centre);
+            if (instance.skin >= 0 && instance.jointCount > 0) {
+                Vec3 sum{0.0f, 0.0f, 0.0f};
+                for (int k = 0; k < instance.jointCount; ++k) {
+                    sum = sum + transformPoint(pivot * eval.joints[static_cast<size_t>(instance.jointOffset + k)], mesh.centre);
+                }
+                centre = sum * (1.0f / static_cast<float>(instance.jointCount));
+            }
+            blendList.push_back({i, dot(centre - eye, forward)});
+            continue;
+        }
+        drawInstance(instance, 0);
+    }
+    blendedDraws_ = blendList.size();
+    if (!blendList.empty()) {
+        std::stable_sort(blendList.begin(), blendList.end(), [](const Pending& a, const Pending& b) { return a.depth > b.depth; });
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+        glDepthMask(GL_FALSE);
+        for (const Pending& entry : blendList) {
+            drawInstance(eval.instances[entry.index], 1);
+        }
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
     }
 
     glBindVertexArray(0);
+    for (const GLenum unit : {GL_TEXTURE5, GL_TEXTURE4}) {
+        glActiveTexture(unit);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
     if (usePbr) {
         for (const GLenum unit : {GL_TEXTURE3, GL_TEXTURE2, GL_TEXTURE1}) {
             glActiveTexture(unit);

@@ -2,6 +2,7 @@
 
 #include "scene3d/scene_math.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +18,7 @@ struct SceneImage {
 };
 
 enum class Shading { Classic, Pbr };
-enum class AlphaMode { Opaque, Mask };
+enum class AlphaMode { Opaque, Mask, Blend };
 enum class MotionKind { Spin, Bob, Orbit, Pulse, Sway };
 enum class BindSource { Bass, Mid, High, Level, Kick };
 enum class BindTarget { Scale, Emissive, Twist, Lift, Light, Zoom };
@@ -69,6 +70,11 @@ struct SceneAudio {
     float kick = 0.0f;
 };
 
+struct SceneMorphTarget {
+    std::vector<Vec3> positions;
+    std::vector<Vec3> normals;
+};
+
 struct SceneMesh {
     std::vector<Vec3> positions;
     std::vector<Vec3> normals;
@@ -76,6 +82,24 @@ struct SceneMesh {
     std::vector<float> colors;
     std::vector<uint32_t> indices;
     int material = -1;
+    std::vector<uint16_t> joints;
+    std::vector<float> weights;
+    std::vector<SceneMorphTarget> targets;
+    bool keptSkin = false;
+    size_t keptTargets = 0;
+
+    bool skinned() const { return keptSkin || !joints.empty(); }
+    size_t morphTargetCount() const { return std::max(keptTargets, targets.size()); }
+    void rememberAnimationData() {
+        keptSkin = skinned();
+        keptTargets = morphTargetCount();
+    }
+};
+
+struct SceneSkin {
+    std::string name;
+    std::vector<int> joints;
+    std::vector<Mat4> inverseBind;
 };
 
 struct SceneNode {
@@ -89,9 +113,11 @@ struct SceneNode {
     std::vector<NodeBinding> bindings;
     NodeRepeat repeat;
     bool framing = true;
+    int skin = -1;
+    std::vector<float> weights;
 };
 
-enum class AnimPath { Translation, Rotation, Scale };
+enum class AnimPath { Translation, Rotation, Scale, Weights };
 enum class AnimInterp { Linear, Step };
 
 struct SceneChannel {
@@ -126,6 +152,18 @@ struct SceneInstance {
     Mat4 world;
     float emissive = 0.0f;
     bool framing = true;
+    int skin = -1;
+    int jointOffset = 0;
+    int jointCount = 0;
+    int weightOffset = 0;
+    int weightCount = 0;
+};
+
+struct SceneEval {
+    std::vector<SceneInstance> instances;
+    std::vector<Mat4> joints;
+    std::vector<float> weights;
+    size_t skippedSkinned = 0;
 };
 
 struct SceneStats {
@@ -136,6 +174,10 @@ struct SceneStats {
     size_t images = 0;
     size_t cpuBytes = 0;
     size_t gpuBytes = 0;
+    size_t skins = 0;
+    size_t joints = 0;
+    size_t morphTargets = 0;
+    size_t blendMaterials = 0;
 };
 
 struct SceneLight {
@@ -164,6 +206,17 @@ struct SceneCamera {
     std::vector<NodeBinding> bindings;
 };
 
+struct SceneFileCamera {
+    std::string name;
+    bool orthographic = false;
+    float yfov = 0.8f;
+    float xmag = 1.0f;
+    float ymag = 1.0f;
+    float znear = 0.1f;
+    float zfar = 100.0f;
+    Mat4 world;
+};
+
 struct Scene {
     std::string name;
     bool paletteTint = false;
@@ -180,6 +233,9 @@ struct Scene {
     std::vector<SceneNode> nodes;
     std::vector<int> roots;
     std::vector<SceneAnimation> animations;
+    std::vector<SceneSkin> skins;
+    std::vector<SceneLight> fileLights;
+    std::vector<SceneFileCamera> fileCameras;
 };
 
 constexpr int kSceneMaxDepth = 64;
@@ -187,10 +243,20 @@ constexpr int kSceneVertexFloats = 12;
 constexpr int kSceneMaxRepeat = 64;
 constexpr size_t kSceneMaxInstances = 8192;
 constexpr size_t kSceneMaxLights = 4;
+constexpr size_t kSceneMaxSkins = 64;
+constexpr size_t kSceneMaxBones = 128;
+constexpr size_t kSceneMaxMorphTargets = 32;
+constexpr size_t kSceneMaxActiveMorphs = 8;
+constexpr size_t kSceneMaxJointsPerFrame = 1024;
+constexpr size_t kSceneMaxFileLights = 16;
+constexpr size_t kSceneMaxFileCameras = 16;
 
 float audioValue(const SceneAudio& audio, BindSource source);
 float bindingSum(const std::vector<NodeBinding>& bindings, BindTarget target, const SceneAudio& audio);
 std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time, const SceneAudio* audio = nullptr);
+SceneEval evaluateSceneFull(const Scene& scene, int animation, float time, const SceneAudio* audio = nullptr);
+std::vector<Vec3> posedPositions(const Scene& scene, const SceneMesh& mesh, const SceneEval& eval, const SceneInstance& instance);
+constexpr size_t kSceneMaxGpuBytes = 640u * 1024u * 1024u;
 SceneBounds sceneBounds(const Scene& scene, int animation, float time);
 SceneSphere sceneSphere(const Scene& scene, int animation, int samples);
 SceneStats sceneStats(const Scene& scene);

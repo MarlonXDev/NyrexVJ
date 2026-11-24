@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.31.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.32.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -49,6 +49,45 @@ FetchContent_Declare(
     GIT_TAG v1.93.0-docking
     GIT_SHALLOW TRUE
 )
+
+option(NYREXVJ_MESHOPT "Read glTF files compressed with EXT_meshopt_compression (decoder of meshoptimizer, MIT license)" ON)
+option(NYREXVJ_DRACO "Read glTF files compressed with KHR_draco_mesh_compression (Draco, Apache 2.0 license; large, off by default)" OFF)
+
+if(NYREXVJ_MESHOPT)
+    FetchContent_Declare(
+        meshoptimizer
+        GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
+        GIT_TAG v1.3
+        GIT_SHALLOW TRUE
+        SOURCE_SUBDIR nyrexvj_skip_upstream_cmake
+    )
+    FetchContent_MakeAvailable(meshoptimizer)
+    add_library(meshopt_decoder STATIC
+        ${meshoptimizer_SOURCE_DIR}/src/vertexcodec.cpp
+        ${meshoptimizer_SOURCE_DIR}/src/indexcodec.cpp
+        ${meshoptimizer_SOURCE_DIR}/src/vertexfilter.cpp
+        ${meshoptimizer_SOURCE_DIR}/src/allocator.cpp
+    )
+    target_include_directories(meshopt_decoder PUBLIC ${meshoptimizer_SOURCE_DIR}/src)
+    if(MSVC)
+        target_compile_options(meshopt_decoder PRIVATE /w)
+    endif()
+endif()
+
+if(NYREXVJ_DRACO)
+    set(DRACO_TESTS OFF CACHE BOOL "" FORCE)
+    set(DRACO_JS_GLUE OFF CACHE BOOL "" FORCE)
+    set(DRACO_GLTF_BITSTREAM ON CACHE BOOL "" FORCE)
+    set(DRACO_INSTALL OFF CACHE BOOL "" FORCE)
+    set(DRACO_BACKWARDS_COMPATIBILITY OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+        draco
+        GIT_REPOSITORY https://github.com/google/draco.git
+        GIT_TAG 1.5.7
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(draco)
+endif()
 
 if(WIN32)
     FetchContent_Declare(
@@ -127,6 +166,7 @@ set(NYREXVJ_CORE_SOURCES
     src/scene3d/doc_build.cpp
     src/scene3d/glb_writer.cpp
     src/scene3d/gltf.cpp
+    src/scene3d/gltf_compression.cpp
     src/scene3d/image_decode.cpp
     src/scene3d/primitives.cpp
     src/scene3d/procedural.cpp
@@ -213,6 +253,19 @@ add_library(nvj_core STATIC ${NYREXVJ_CORE_SOURCES})
 if(NOT WIN32)
     target_link_libraries(nvj_core PUBLIC ${CMAKE_DL_LIBS})
 endif()
+if(NYREXVJ_MESHOPT)
+    target_compile_definitions(nvj_core PUBLIC NYREXVJ_MESHOPT=1)
+    target_link_libraries(nvj_core PUBLIC meshopt_decoder)
+else()
+    target_compile_definitions(nvj_core PUBLIC NYREXVJ_MESHOPT=0)
+endif()
+if(NYREXVJ_DRACO)
+    target_compile_definitions(nvj_core PUBLIC NYREXVJ_DRACO=1)
+    target_include_directories(nvj_core SYSTEM PUBLIC ${draco_SOURCE_DIR}/src ${CMAKE_BINARY_DIR})
+    target_link_libraries(nvj_core PUBLIC draco_static)
+else()
+    target_compile_definitions(nvj_core PUBLIC NYREXVJ_DRACO=0)
+endif()
 
 option(NYREXVJ_VIDEO "Build video clip support (needs the FFmpeg headers; the FFmpeg libraries are loaded at run time)" ON)
 set(NYREXVJ_FFMPEG_ROOT "" CACHE PATH "Folder with the FFmpeg include directory (headers only are needed)")
@@ -256,6 +309,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/bench_convert.cpp
     src/app/output_selftest.cpp
     src/app/shader_selftest.cpp
+    src/app/scene_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
     src/app/ui_deck.cpp
@@ -342,10 +396,12 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_scene3d_tests PRIVATE nvj_core)
     target_include_directories(nvj_scene3d_tests PRIVATE tests)
     target_include_directories(nvj_scene3d_tests SYSTEM PRIVATE third_party/stb)
+    target_compile_definitions(nvj_scene3d_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
     add_test(NAME nvj_scene3d_tests COMMAND nvj_scene3d_tests)
     add_executable(nvj_creator_tests tests/test_creator.cpp)
     target_link_libraries(nvj_creator_tests PRIVATE nvj_core)
     target_include_directories(nvj_creator_tests PRIVATE tests)
+    target_compile_definitions(nvj_creator_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
     add_test(NAME nvj_creator_tests COMMAND nvj_creator_tests)
     add_executable(nvj_i18n_tests tests/test_i18n.cpp)
     target_link_libraries(nvj_i18n_tests PRIVATE nvj_core)

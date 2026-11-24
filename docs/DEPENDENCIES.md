@@ -56,6 +56,15 @@ The Linux release is built with Wayland support switched off (`-DGLFW_BUILD_WAYL
 
 Bundled in the repository: glad (OpenGL loader), stb_image, stb_image_write and nlohmann/json.
 
+Fetched by CMake for 3D model compression (v0.32.0), both compiled into the program and not loaded at run time:
+
+| Library | Option | Default | Size of the program | Used for |
+| --- | --- | --- | --- | --- |
+| meshoptimizer 1.3 (decoder sources only, MIT) | `NYREXVJ_MESHOPT` | on | about +160 KiB (the same change also adds skinning and morph targets) | glTF files with `EXT_meshopt_compression` |
+| Draco 1.5.7 (decoder, Apache 2.0) | `NYREXVJ_DRACO` | **off** | about +356 KiB more and a long compile | glTF files with `KHR_draco_mesh_compression` |
+
+Without the options a file that needs the missing decoder is refused with a message that names the option, other files are not affected, and no download happens for a library that is switched off. Neither library adds a shared library to the program, `scripts/check_linux_deps.sh` is unchanged. The sizes are for a stripped Linux Release build.
+
 The node effect editor (v0.25.0) adds no dependency: the editor is drawn with the Dear ImGui draw list, the document uses the bundled nlohmann/json, and the graph is compiled to GLSL by the program itself. Node effect files are data and need no library to read.
 
 The plugin system (v0.26.0) adds no dependency either: a plugin library is opened with the system's own `LoadLibrary` or `dlopen`, the interface is a C header in the repository (`plugins/include/nyrexvj_plugin.h`, MIT like the rest) and the example plugin needs only a C compiler and the math library. NyrexVJ ships no plugin and no plugin is loaded unless the person enables it; a plugin brings its own licence, see [PLUGINS.md](PLUGINS.md).

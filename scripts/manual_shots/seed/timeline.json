@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "loop": {
+    "enabled": false,
+    "start": 0.0,
+    "end": 0.0
+  },
+  "lanes": [
+    {
+      "target": "master/level",
+      "muted": false,
+      "keys": [
+        {
+          "seconds": 0.0,
+          "value": 0.0,
+          "shape": "linear"
+        },
+        {
+          "seconds": 3.0,
+          "value": 1.0,
+          "shape": "smooth"
+        },
+        {
+          "seconds": 12.0,
+          "value": 1.0,
+          "shape": "hold"
+        },
+        {
+          "seconds": 16.0,
+          "value": 0.35,
+          "shape": "linear"
+        }
+      ]
+    },
+    {
+      "target": "layer/1/opacity",
+      "muted": false,
+      "keys": [
+        {
+          "seconds": 0.0,
+          "value": 1.0,
+          "shape": "smooth"
+        },
+        {
+          "seconds": 6.0,
+          "value": 0.25,
+          "shape": "smooth"
+        },
+        {
+          "seconds": 10.0,
+          "value": 0.9,
+          "shape": "linear"
+        },
+        {
+          "seconds": 18.0,
+          "value": 0.0,
+          "shape": "linear"
+        }
+      ]
+    },
+    {
+      "target": "macro/1",
+      "muted": false,
+      "keys": [
+        {
+          "seconds": 2.0,
+          "value": 0.2,
+          "shape": "hold"
+        },
+        {
+          "seconds": 8.0,
+          "value": 0.8,
+          "shape": "hold"
+        },
+        {
+          "seconds": 14.0,
+          "value": 0.4,
+          "shape": "hold"
+        }
+      ]
+    }
+  ]
+}

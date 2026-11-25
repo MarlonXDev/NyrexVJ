@@ -1754,6 +1754,19 @@ const Translation kJapanese[] = {
     {"Writes", "書き込み"},
     {"You moved these controls by hand, so the timeline lets go of them. Release hands them back.", "これらのコントロールを手動で動かしたため、タイムラインは制御を手放しています。「解放」で制御を戻します。"},
     {"Zooms so that all keyframes and cues are visible.", "すべてのキーフレームとキューが見えるようにズームします。"},
+    {"Back", "戻る"},
+    {"Contents", "目次"},
+    {"F1  open or close the manual", "F1  マニュアルを開く／閉じる"},
+    {"Next chapter", "次の章"},
+    {"No chapter matches your search.", "検索に一致する章はありません。"},
+    {"Note", "メモ"},
+    {"Press F1 any time to open the manual.", "F1 キーでいつでもマニュアルを開けます。"},
+    {"Previous chapter", "前の章"},
+    {"Search the manual", "マニュアルを検索"},
+    {"The manual is written in English and German. You see the English version.", "マニュアルは英語とドイツ語で書かれています。英語版が表示されています。"},
+    {"Tip", "ヒント"},
+    {"User manual", "ユーザーマニュアル"},
+    {"Warning", "警告"},
 };
 
 }

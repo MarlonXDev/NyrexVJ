@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aufnahme - NyrexVJ-Handbuch</title>
+<meta name="description" content="NyrexVJ kann das fertige Bild der Show in eine Videodatei aufnehmen, während es läuft. Nutze das Menü Ausgabe, Aufnahme starten, oder Strg+Umschalt+R, und dieselben...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/recording.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/recording.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html" aria-current="page">Aufnahme</a>
+<ul><li><a href="#record-start">Starten und beenden</a></li><li><a href="#record-what">Was aufgenommen wird</a></li><li><a href="#record-formats">Formate</a></li><li><a href="#record-size">Größe, Bildrate und Qualität</a></li><li><a href="#record-safe">Die Show geht vor</a></li></ul>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="alle.html">Das ganze Handbuch auf einer Seite lesen</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html" aria-current="page">Aufnahme</a>
+<ul><li><a href="#record-start">Starten und beenden</a></li><li><a href="#record-what">Was aufgenommen wird</a></li><li><a href="#record-formats">Formate</a></li><li><a href="#record-size">Größe, Bildrate und Qualität</a></li><li><a href="#record-safe">Die Show geht vor</a></li></ul>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Handbuch</a> / Ausgabe und Aufnahme</p>
+<h1>Aufnahme</h1>
+<p class="meta">Kapitel 22 von 35 &middot; 2 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#record-start">Starten und beenden</a><a href="#record-what">Was aufgenommen wird</a><a href="#record-formats">Formate</a><a href="#record-size">Größe, Bildrate und Qualität</a><a href="#record-safe">Die Show geht vor</a></nav>
+<h2 id="record-start"><a class="anchor" href="#record-start" aria-label="Link">#</a>Starten und beenden</h2>
+<p>NyrexVJ kann das fertige Bild der Show in eine Videodatei aufnehmen, während es läuft. Nutze das Menü Ausgabe, Aufnahme starten, oder <code>Strg+Umschalt+R</code>, und dieselben Tasten beenden sie wieder. Einstellungen, Aufnahme hat alle Optionen und Live-Zahlen. Die Statusleiste zeigt REC, die aufgenommene Zeit und in Orange die verworfenen Bilder.</p>
+<p>Beenden speichert die Datei. Schließt du das Programm während der Aufnahme, speichert es die Datei zuerst. Abbrechen und löschen hält sofort an und löscht die Datei. Dateien tragen Datum und Uhrzeit des Starts im Namen und liegen im Ordner Recordings des Datenordners, außer du wählst einen anderen Ordner.</p>
+<h2 id="record-what"><a class="anchor" href="#record-what" aria-label="Link">#</a>Was aufgenommen wird</h2>
+<p>Das Bild, das die Engine für die Komposition rendert, dasselbe Bild, das an die Vorschau, an Spout und an NDI geht. Es hat die Auflösung der Komposition und wird auf die Größe skaliert, die du für die Datei wählst. Was ein einzelnes Ausgabefenster nach dem Mapping zeigt, wird nicht aufgenommen, nutze dafür NDI pro Ausgang oder eine Aufnahme des Fensters. Die Aufnahme hat keine Transparenz und keinen Ton aus Videos. Der Ton kommt aus der Audioquelle unter Einstellungen, Audio, wenn Ton aufnehmen angehakt ist.</p>
+<h2 id="record-formats"><a class="anchor" href="#record-formats" aria-label="Link">#</a>Formate</h2>
+<p>NyrexVJ probiert jedes Format mit einem kleinen Testbild aus und listet nur die, die auf deinem Computer funktionieren. FFmpeg übernimmt das Kodieren.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Format</th><th scope="col">Datei</th><th scope="col">Gut für</th></tr></thead><tbody><tr><td>H.264</td><td>MP4</td><td>Weitergeben und kleine Dateien, der Prozessor arbeitet</td></tr><tr><td>H.264 auf der Grafikkarte</td><td>MP4</td><td>Dasselbe, die Grafikkarte arbeitet</td></tr><tr><td>HEVC auf der Grafikkarte</td><td>MP4</td><td>Kleinere Dateien als H.264</td></tr><tr><td>ProRes 422 HQ und 4444</td><td>MOV</td><td>Videoschnittprogramme</td></tr><tr><td>HAP, HAP Alpha und HAP Q</td><td>MOV</td><td>VJ-Programme, sehr leicht abzuspielen</td></tr><tr><td>Motion JPEG</td><td>MOV</td><td>Einfach und robust</td></tr><tr><td>FFV1</td><td>MKV</td><td>Verlustfreie Archive</td></tr><tr><td>VP9</td><td>MKV</td><td>Das Web, langsam zu kodieren</td></tr></tbody></table></div>
+<h2 id="record-size"><a class="anchor" href="#record-size" aria-label="Link">#</a>Größe, Bildrate und Qualität</h2>
+<p>Die Größe ist wie die Ausgabe, 1280 x 720, 1920 x 1080, 2560 x 1440, 3840 x 2160 oder eine benutzerdefinierte Größe, mit insgesamt bis zu 3840 x 2160 Pixeln. Die Bildrate ist 24, 25, 30, 48, 50, 60, 90 oder 120. Qualität legt die Bitrate von H.264, HEVC und VP9 fest und den Quantisierer von Motion JPEG, die anderen Formate haben eine feste Qualität. Einstellungen, Aufnahme zeigt den Speicher, den die Aufnahme braucht.</p>
+<h2 id="record-safe"><a class="anchor" href="#record-safe" aria-label="Link">#</a>Die Show geht vor</h2>
+<p>Die Aufnahme lässt die Show nie warten. Im Render-Thread wird nur eine Kopie des Bildes gemacht, und alles Langsame läuft in einem anderen Thread. Ist der Encoder langsamer als die Show, werden Bilder verworfen und gezählt, statt das Bild anzuhalten. Die Datei hält Echtzeit, Video und Ton bleiben also im Takt, auch wenn die Show stockt. Mit der Option Datei nach einem Absturz lesbar halten übersteht die Datei einen Absturz, und eine volle Festplatte beendet die Aufnahme sauber.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Nimm eine lange Show mit H.264 oder einem Hardware-Format in mäßiger Qualität auf. ProRes und FFV1 füllen eine Platte schnell.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="outputs.html"><small>Zurück</small><span>Ausgänge, Mapping und OBS</span></a><a class="next" href="control.html"><small>Weiter</small><span>Steuerung: MIDI, OSC und die Webseite</span></a></nav>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

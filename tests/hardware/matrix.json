@@ -1121,6 +1121,103 @@
           "criteria": "Proposed: no measurable cost beyond the spread of the baseline, no memory growth beyond the growth check of the soak test, and every loop wrap counted."
         }
       ]
+    },
+    {
+      "id": "user-manual",
+      "title": "User manual and website: the manual window, the generated website, the pictures, English and German text",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/MANUAL.md",
+        "docs/WEBSITE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0032-user-manual.md"
+      ],
+      "sources": [
+        "docs/manual/manual.en.md",
+        "docs/manual/manual.de.md",
+        "src/core/manual.cpp",
+        "src/app/ui_manual.cpp",
+        "src/app/manual_view.hpp",
+        "tests/test_manual.cpp",
+        "scripts/build_manual_site.py",
+        "scripts/make_manual_shots.py"
+      ],
+      "automated": [
+        {
+          "id": "A-MN-1",
+          "kind": "ctest",
+          "name": "nvj_manual_tests"
+        },
+        {
+          "id": "A-MN-2",
+          "kind": "script",
+          "command": "python3 scripts/build_manual_site.py --check",
+          "note": "the generated website pages are current, the Python and the C++ parser give the same outline for the fixture, English and German have the same structure, and every link, anchor and picture exists; no script, no foreign host, no picture without alt, width and height"
+        },
+        {
+          "id": "A-MN-3",
+          "kind": "cli",
+          "command": "NyrexVJ --manual --frames 60",
+          "note": "opens the manual window at the first chapter and runs 60 frames through a real OpenGL context; a smoke test of the window, not a test of its use"
+        },
+        {
+          "id": "A-MN-4",
+          "kind": "cli",
+          "command": "NyrexVJ --manual outputs --lang de --frames 60",
+          "note": "opens the German manual at a chapter by its id and runs 60 frames; checks that a chapter id of --manual is found"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-MN-1",
+          "title": "The German manual read by a native speaker next to the program",
+          "needs": "A native German speaker who has used NyrexVJ, the German interface, and the manual in the window and on the website",
+          "steps": [
+            "Read every chapter in the manual window with the interface set to German, and open each place the text names (a menu, a window, a setting) to see that the name and the described behaviour are right.",
+            "Mark every sentence that sounds like a translation, every wrong or missing interface name, and every claim about the program that is not true."
+          ],
+          "measure": "Number of wrong interface names, wrong statements and unnatural sentences per chapter",
+          "criteria": "Proposed: no wrong interface name and no wrong statement remains; unnatural sentences are fixed by the reader or listed in the issue."
+        },
+        {
+          "id": "M-MN-2",
+          "title": "The manual window on Windows with a real graphics card",
+          "needs": "A Windows 10 or 11 PC with a graphics card, a 1920 x 1080 and a 1280 x 720 screen or window, and display scaling of 100 and 150 percent",
+          "steps": [
+            "Open the manual from Help, User manual and with F1, search for a word, open a hit, follow a link between chapters, press Back, and use the previous and next chapter buttons.",
+            "Make the window narrow and wide, change the display scaling, and read the chapters with the longest tables (Settings reference, Keyboard shortcuts, The command line) in English and in German.",
+            "Start with --manual outputs and with --manual outputs/<section id> and check the page that opens."
+          ],
+          "measure": "Text that is cut off or overlaps, tables that are unreadable, links that do not work, frame time while the window is open",
+          "criteria": "Proposed: all text is readable at both sizes and both scalings, every link and the Back button work, and opening the window does not change the frame time by more than the noise of the measurement."
+        },
+        {
+          "id": "M-MN-3",
+          "title": "The website in real browsers, on a phone, with the keyboard and in print",
+          "needs": "Firefox, Safari or Edge on a desktop, a phone with a browser (iOS or Android), and a screen reader if one is available",
+          "steps": [
+            "Open the start page, the contents of the manual, a chapter with pictures and the one-page version in English and in German, at desktop and at phone width.",
+            "Go through a chapter with the keyboard only, and with a screen reader if one is available; check the contents, the links, the pictures and their descriptions.",
+            "Print a chapter and the one-page version, or save them as PDF."
+          ],
+          "measure": "Layout breaks, overlapping or cut-off text, unreachable links, missing alt texts, page breaks in the printout",
+          "criteria": "Proposed: no layout break at 360 px or wider, every link is reachable with the keyboard, every picture has a useful description, and the printout is readable."
+        },
+        {
+          "id": "M-MN-4",
+          "title": "The statements about hardware and other programs in the manual, checked with the real devices",
+          "needs": "A MIDI controller, OBS with Spout, an NDI source or receiver, a camera or capture card, an LTC or MTC source, an Art-Net or DMX device, and VRChat with a VRSL world",
+          "steps": [
+            "Follow the chapters Control, Live sources, Outputs, Show sync, Stage and Recording step by step on the real devices.",
+            "Write down every step that does not work as described, every missing step and every statement about a device, a menu in another program or VRChat that is wrong."
+          ],
+          "measure": "Number of wrong or missing steps per chapter, with the device and its version",
+          "criteria": "Proposed: every step works as written, or the chapter says that it was not tried."
+        }
+      ]
     }
   ]
 }

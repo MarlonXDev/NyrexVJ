@@ -5,4 +5,6 @@
 *.sh text eol=lf
 *.py text eol=lf
 *.webp binary
+tests/data/manual_fixture.* text eol=lf
+docs/manual/*.md text eol=lf
 site/ export-ignore

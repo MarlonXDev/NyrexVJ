@@ -1,0 +1,15 @@
+C first|First chapter
+B paragraph spans=9 links=2
+S2 sec-a|A section
+B bullets items=3 spans=6 links=1
+B numbered items=2 spans=2 links=0
+S3 deeper-heading|Deeper heading
+B table cells=6 columns=2 spans=7 links=0
+B code lines=2
+B note tip spans=3 links=0
+B note warning spans=1 links=0
+B note note spans=1 links=0
+B figure assets/manual/main.webp|A picture
+C strasse-ueberschrift|Straße, Überschrift
+S2 sec-b|Section B
+B paragraph spans=3 links=0

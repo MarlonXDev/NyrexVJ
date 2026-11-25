@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Clip Creator - NyrexVJ Manual</title>
+<meta name="description" content="The Clip Creator builds your own 3D scenes from shapes, models and lights. You let everything move with the music and save the result as a portable .nyxclip file. The...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/creator.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/creator.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html" aria-current="page">The Clip Creator</a>
+<ul><li><a href="#creator-what">What it is</a></li><li><a href="#creator-layout">The three columns</a></li><li><a href="#creator-objects">Objects, materials and animation</a></li><li><a href="#creator-cameras">Cameras and sky</a></li><li><a href="#creator-save">Templates, saving and using</a></li></ul>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html" aria-current="page">The Clip Creator</a>
+<ul><li><a href="#creator-what">What it is</a></li><li><a href="#creator-layout">The three columns</a></li><li><a href="#creator-objects">Objects, materials and animation</a></li><li><a href="#creator-cameras">Cameras and sky</a></li><li><a href="#creator-save">Templates, saving and using</a></li></ul>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Your own content</p>
+<h1>The Clip Creator</h1>
+<p class="meta">Chapter 18 of 35 &middot; 3 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#creator-what">What it is</a><a href="#creator-layout">The three columns</a><a href="#creator-objects">Objects, materials and animation</a><a href="#creator-cameras">Cameras and sky</a><a href="#creator-save">Templates, saving and using</a></nav>
+<h2 id="creator-what"><a class="anchor" href="#creator-what" aria-label="Link">#</a>What it is</h2>
+<p>The Clip Creator builds your own 3D scenes from shapes, models and lights. You let everything move with the music and save the result as a portable <code>.nyxclip</code> file. The scene then plays like any other clip. Open it from the Creator menu, Open Clip Creator.</p>
+<h2 id="creator-layout"><a class="anchor" href="#creator-layout" aria-label="Link">#</a>The three columns</h2>
+<ul><li>The left column lists the objects, the lights and the scene settings. Add object offers Sphere, Cube, Cylinder, Cone, Plane, Torus, Torus Knot and Model from the library. Add light gives a Directional light or a Point light, up to four.</li><li>The middle shows a live preview. Drag to orbit, use the mouse wheel to zoom. Free camera, Simulate audio and Reset camera help you look around, and Use this view as the clip camera keeps the view you found.</li><li>The right column is the inspector for the selected object. It has Transform (position, rotation, scale), Repeat (a ring or a line of copies), Material, Texture, Animation, Audio reactions and the settings for cameras and the sky.</li></ul>
+<figure class="shot"><a href="../assets/manual/en/creator.webp"><img src="../assets/manual/en/creator.webp" width="1324" height="784" loading="lazy" alt="The Clip Creator with a sphere, the object list and the material settings"></a><figcaption>The Clip Creator with a sphere, the object list and the material settings</figcaption></figure>
+<h2 id="creator-objects"><a class="anchor" href="#creator-objects" aria-label="Link">#</a>Objects, materials and animation</h2>
+<p>A material has a colour, Metallic, Roughness, a glow colour and strength, and optional texture, normal map and glow map. Tick Follow the layer colors to let the object take the colours of the layer it plays on, so one scene can be recoloured with one click. Animation offers movements such as Spin, Bob, Orbit, Pulse and Sway, each with its own settings like speed, height or radius.</p>
+<p>Under Audio reactions a band (Bass, Mid, High, Level or Kick) moves the object: it gets bigger, glows, twists or lifts. The music can also move the light intensity and the zoom of the camera.</p>
+<h2 id="creator-cameras"><a class="anchor" href="#creator-cameras" aria-label="Link">#</a>Cameras and sky</h2>
+<p>A scene can hold up to eight cameras. Pick the one that plays, or let the clip cut between all of them every few beats with Cut (beats). A camera has a distance, a height angle, a start angle, a field of view, an orbit speed and a height sway. Sky and exposure set the colours of the sky, the horizon and the ground, the sky brightness and the exposure.</p>
+<h2 id="creator-save"><a class="anchor" href="#creator-save" aria-label="Link">#</a>Templates, saving and using</h2>
+<p>Start from a template (Creator menu, Start from a template, or Open in the window) or from an empty scene with New. Save writes a <code>.nyxclip</code> file into the clips folder. It contains the scene description and, as copies, the .glb models and the PNG or JPEG textures the scene uses, up to 200 MiB, so one file is all you need to share a scene. It then shows up in the Library under Scenes as Scene: name. Use as clip also puts it into the selected cell of the deck. Save copy saves the scene under a new name.</p>
+<p>Only .glb models can be stored in a scene. A .gltf that needs separate files is listed in the Assets view but cannot be used. Undo and Redo work inside the Creator while it has the focus. An unsaved scene is kept in the recovery folder in case the program closes unexpectedly.</p>
+<nav class="pager" aria-label="Pager"><a class="prev" href="models.html"><small>Previous</small><span>3D models</span></a><a class="next" href="nodes.html"><small>Next</small><span>The node effect editor</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

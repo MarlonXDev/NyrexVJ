@@ -2,6 +2,7 @@
 
 #include "app/creator.hpp"
 #include "app/engine_host.hpp"
+#include "app/manual_view.hpp"
 #include "app/node_editor.hpp"
 #include "app/timeline_view.hpp"
 #include "audio/audio_system.hpp"
@@ -72,6 +73,8 @@ struct StartOptions {
     std::string nodeEffect;
     bool openNodes = false;
     bool openTimeline = false;
+    bool openManual = false;
+    std::string manualChapter;
     float transitionSeconds = -1.0f;
     int column = -1;
     int resolution = -1;
@@ -189,6 +192,9 @@ private:
     void updateSync(double dt);
     void updateTimeline(double dt);
     void drawTimeline();
+    void drawManual();
+    void openManual(const std::string& target);
+    void manualGo(size_t chapter, const std::string& section, bool remember);
     void drawTimelineToolbar();
     void drawTimelineCanvas();
     void drawTimelineTargetPicker();
@@ -282,6 +288,9 @@ private:
     bool timelineOpen_ = false;
     bool timelineFocus_ = false;
     bool timelineHasFocus_ = false;
+    bool manualOpen_ = false;
+    bool manualFocus_ = false;
+    ManualView manualView_;
     int ltcDeviceListedFrame_ = -1;
     char cueTimeBuffer_[24] = {};
     int cueTargetPick_ = -1;

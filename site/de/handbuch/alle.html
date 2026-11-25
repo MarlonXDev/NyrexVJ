@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NyrexVJ-Handbuch - das ganze Handbuch auf einer Seite</title>
+<meta name="description" content="Das komplette NyrexVJ-Handbuch auf einer Seite, zum Suchen mit Strg+F und zum Drucken.">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/all.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/all.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual all">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="#welcome">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="#install">Installation und erster Start</a>
+</li>
+<li><a href="#tour">Das Fenster im Überblick</a>
+</li>
+<li><a href="#first-show">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="#clip-grid">Das Clip-Raster</a>
+</li>
+<li><a href="#decks">Decks und Übergänge</a>
+</li>
+<li><a href="#layers">Layer und Mischmodi</a>
+</li>
+<li><a href="#clip-window">Das Clip-Fenster</a>
+</li>
+<li><a href="#effects">Effekte</a>
+</li>
+<li><a href="#library">Die Bibliothek</a>
+</li>
+<li><a href="#presets">Presets und Sitzungen</a>
+</li>
+<li><a href="#master">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="#audio">Audio und Musik</a>
+</li>
+<li><a href="#modulation">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="#video">Video- und Bild-Clips</a>
+</li>
+<li><a href="#shaders">Deine eigenen Shader</a>
+</li>
+<li><a href="#models">3D-Modelle</a>
+</li>
+<li><a href="#creator">Der Clip Creator</a>
+</li>
+<li><a href="#nodes">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="#live-sources">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="#outputs">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="#recording">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="#control">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="#sync">Show-Sync und Timecode</a>
+</li>
+<li><a href="#timeline">Die Show-Zeitleiste</a>
+</li>
+<li><a href="#stage">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="#plugins">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="#settings">Einstellungen im Überblick</a>
+</li>
+<li><a href="#shortcuts">Tastenkürzel und Maus</a>
+</li>
+<li><a href="#performance">Leistung</a>
+</li>
+<li><a href="#files">Dateien und der Datenordner</a>
+</li>
+<li><a href="#troubleshooting">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="#cli">Die Befehlszeile</a>
+</li>
+<li><a href="#languages">Sprachen</a>
+</li>
+<li><a href="#glossary">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="index.html">Handbuch</a></p>
+</aside>
+<main id="main" class="doc">
+<span id="top"></span>
+<p class="crumb"><a href="index.html">Handbuch</a></p>
+<h1>Das ganze Handbuch auf einer Seite</h1>
+<p class="lead">Mit der Suche deines Browsers (Strg+F) findest du jedes Wort im ganzen Handbuch.</p>
+<details class="toc-m" open><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="#welcome">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="#install">Installation und erster Start</a>
+</li>
+<li><a href="#tour">Das Fenster im Überblick</a>
+</li>
+<li><a href="#first-show">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="#clip-grid">Das Clip-Raster</a>
+</li>
+<li><a href="#decks">Decks und Übergänge</a>
+</li>
+<li><a href="#layers">Layer und Mischmodi</a>
+</li>
+<li><a href="#clip-window">Das Clip-Fenster</a>
+</li>
+<li><a href="#effects">Effekte</a>
+</li>
+<li><a href="#library">Die Bibliothek</a>
+</li>
+<li><a href="#presets">Presets und Sitzungen</a>
+</li>
+<li><a href="#master">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="#audio">Audio und Musik</a>
+</li>
+<li><a href="#modulation">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="#video">Video- und Bild-Clips</a>
+</li>
+<li><a href="#shaders">Deine eigenen Shader</a>
+</li>
+<li><a href="#models">3D-Modelle</a>
+</li>
+<li><a href="#creator">Der Clip Creator</a>
+</li>
+<li><a href="#nodes">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="#live-sources">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="#outputs">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="#recording">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="#control">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="#sync">Show-Sync und Timecode</a>
+</li>
+<li><a href="#timeline">Die Show-Zeitleiste</a>
+</li>
+<li><a href="#stage">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="#plugins">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="#settings">Einstellungen im Überblick</a>
+</li>
+<li><a href="#shortcuts">Tastenkürzel und Maus</a>
+</li>
+<li><a href="#performance">Leistung</a>
+</li>
+<li><a href="#files">Dateien und der Datenordner</a>
+</li>
+<li><a href="#troubleshooting">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="#cli">Die Befehlszeile</a>
+</li>
+<li><a href="#languages">Sprachen</a>
+</li>
+<li><a href="#glossary">Glossar</a>
+</li>
+</ul></details>
+<section class="chapter" id="welcome"><h2>1. Willkommen bei NyrexVJ</h2>
+<h3 id="welcome--what-is"><a class="anchor" href="#welcome--what-is" aria-label="Link">#</a>Was NyrexVJ ist</h3>
+<p>NyrexVJ ist ein Programm für Live-Visuals. Du spielst generative Clips, 3D-Modelle, Videos und eigene Shader auf Layern ab, legst Effekte darüber, lässt alles auf deine Musik reagieren und schickst das fertige Bild an OBS, einen Projektor oder einen Bildschirm. Es ist für VRChat-Events und Partys gemacht und so klein, dass es in einer Sekunde startet: eine Datei, kein Installer, keine Game-Engine.</p>
+<p>Wenn du Resolume Arena oder ähnliche Programme kennst, kommt dir die Aufteilung bekannt vor: oben ein Clip-Raster, darunter die Deck- und Tempo-Zeile, eine Vorschau und das Ausgabebild, Fenster für Layer, Clip und Master und rechts ein Browser.</p>
+<h3 id="welcome--what-you-can-do"><a class="anchor" href="#welcome--what-you-can-do" aria-label="Link">#</a>Was du damit machen kannst</h3>
+<ul><li>Clips aus einem Raster mit 8 Spalten und 4 Layern abspielen, dazu 16 Decks mit weichen Übergängen zwischen den Decks.</li><li>Layer, Master und jeden Effektwert auf Bass, Mitten, Höhen, Pegel oder Kick deiner Musik reagieren lassen, oder auf Makros, LFOs und den Beat.</li><li>Mehr als 50 eingebaute Clips und mehr als 70 Effekte nutzen, dazu eigene Shader, Bilder, Videos, glTF-Modelle und 3D-Szenen, die du selbst baust.</li><li>Eigene Effekte aus Nodes bauen, ohne Code zu schreiben.</li><li>Das Bild per Spout an OBS schicken, per NDI an andere Computer, an bis zu vier Ausgabefenster mit Mapping und Kantenüberblendung und in eine Videodatei.</li><li>Die Show mit einem MIDI-Controller, OSC, einer Webseite auf dem Handy oder einem Skript steuern und mit einer Zeitleiste und Timecode automatisieren.</li><li>Bühnenlicht per DMX über Art-Net steuern, dazu ein VRSL-Streifen im Video und VRChat-Avatar-Parameter.</li></ul>
+<h3 id="welcome--how-to-use"><a class="anchor" href="#welcome--how-to-use" aria-label="Link">#</a>So benutzt du dieses Handbuch</h3>
+<p>Du liest gerade das Handbuch-Fenster des Programms. Öffne es jederzeit mit <code>F1</code> oder über das Menü Hilfe, Handbuch. Links steht die Kapitelliste, rechts der Text. Klick auf ein blau unterstrichenes Wort, um zu einem anderen Kapitel oder Abschnitt zu springen, und geh mit Zurück über dem Text wieder zurück. Das Suchfeld oben in der Liste findet Kapitel, in denen alle eingegebenen Wörter vorkommen, und <code>Strg+F</code> setzt den Cursor dorthin.</p>
+<p>Derselbe Text steht mit Bildern auf der Webseite. Das Handbuch gibt es auf Deutsch und auf Englisch. Das Programm zeigt die deutsche Fassung, wenn die Sprache Deutsch ist, und für alle anderen Sprachen die englische.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Lies zuerst <a href="#first-show">Deine erste Show in fünf Minuten</a>. Alles danach ist Nachschlagewerk, das du in beliebiger Reihenfolge lesen kannst.</p></aside>
+<figure class="shot"><a href="../../assets/manual/de/manual-window.webp"><img src="../../assets/manual/de/manual-window.webp" width="1042" height="704" loading="lazy" alt="Das Handbuch-Fenster mit dem Inhalt links und einem Kapitel rechts"></a><figcaption>Das Handbuch-Fenster mit dem Inhalt links und einem Kapitel rechts</figcaption></figure>
+<h3 id="welcome--conventions"><a class="anchor" href="#welcome--conventions" aria-label="Link">#</a>Schreibweisen in diesem Handbuch</h3>
+<p>Menüpfade stehen als Menü, Eintrag, zum Beispiel heißt Einstellungen, Audio die Seite Audio im Einstellungsfenster. Schaltflächen, Regler und Tabs stehen so, wie sie auf dem Bildschirm erscheinen. Tasten stehen in Code-Schrift, zum Beispiel <code>Strg+Umschalt+R</code>. Ein Wert in Code-Schrift ist etwas, das du eintippst, oder ein Dateiname.</p>
+<p>Die Hinweise in diesem Handbuch gibt es in drei Arten. Ein Tipp erleichtert die Arbeit, ein Hinweis ergänzt ein Detail, und eine Warnung sagt dir, was dich eine Show kosten kann.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="install"><h2>2. Installation und erster Start</h2>
+<h3 id="install--windows"><a class="anchor" href="#install--windows" aria-label="Link">#</a>Windows</h3>
+<p>Lade <code>NyrexVJ.exe</code> von der Releases-Seite des Projekts auf GitHub herunter. Es ist eine einzelne Datei und braucht keinen Installer: Leg sie in einen beliebigen Ordner und starte sie. Windows SmartScreen warnt eventuell, weil das Programm nicht signiert ist. Wähle Weitere Informationen und dann Trotzdem ausführen.</p>
+<p>Das Release enthält außerdem <code>NyrexVJ-windows-x64.zip</code> mit dem Programm, den Changelogs und den Readmes sowie <code>SHA256SUMS.txt</code>. Vergleiche die Prüfsumme deines Downloads mit der Zeile in dieser Datei, wenn du sicher sein willst, dass die Datei vollständig und unverändert ist.</p>
+<h3 id="install--linux"><a class="anchor" href="#install--linux" aria-label="Link">#</a>Linux</h3>
+<p>Lade <code>NyrexVJ-linux-x64</code> herunter und mach die Datei mit <code>chmod +x NyrexVJ-linux-x64</code> ausführbar, oder nimm <code>NyrexVJ-linux-x64.tar.gz</code>, das das Programm mit den Lizenzen, den Changelogs und einer Liste seiner Bibliotheken enthält. Du brauchst glibc 2.35 oder neuer (Ubuntu 22.04 oder neuer, Debian 12 oder neuer, Fedora oder Arch), eine X11- oder XWayland-Sitzung und einen Grafiktreiber mit OpenGL 3.3.</p>
+<p>Audioaufnahme läuft über PulseAudio oder PipeWire, MIDI über ALSA, und Videoclips brauchen die FFmpeg-Bibliotheken. Zum Starten des Programms selbst muss nichts installiert werden.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Spout, der Weg, das Bild ohne Fensteraufnahme an OBS zu schicken, gibt es nur unter Windows. Nutze unter Linux das Ausgabefenster oder NDI.</p></aside>
+<h3 id="install--first-start"><a class="anchor" href="#install--first-start" aria-label="Link">#</a>Der erste Start</h3>
+<p>Beim ersten Start zeigt NyrexVJ das Willkommensfenster mit einem kurzen Schnellstart und der Liste dessen, was neu ist. Dort kannst du die Sprache ändern. Nach jedem Update erscheint das Willkommensfenster wieder mit den Änderungen der neuen Version. Später öffnest du es über Hilfe, Was ist neu.</p>
+<p>NyrexVJ legt beim ersten Start seinen Datenordner an. Darin liegen deine Einstellungen, Presets, deine eigenen Shader und Modelle, Aufnahmen und das Log. <a href="#files">Dateien und der Datenordner</a> listet alles auf.</p>
+<p>Wurde das Programm nicht sauber beendet, lädt der nächste Start die alte Sitzung nicht von selbst. Er fragt, von welchem Autosave du weitermachen willst, bietet eine ungespeicherte Creator-Szene an und zeigt einen Absturzbericht mit dem Ende des Logs, den du einem Fehlerbericht anhängen kannst.</p>
+<h3 id="install--updates-intro"><a class="anchor" href="#install--updates-intro" aria-label="Link">#</a>Updates</h3>
+<p>NyrexVJ prüft beim Start GitHub. Gibt es eine neuere Version, wird sie im Hintergrund geladen und vorbereitet, und oben rechts erscheint eine Karte mit Jetzt neu starten und Später. Später verkleinert die Karte zu einem kleinen Abzeichen, das bis zum Neustart bleibt. Der Download wird nur installiert, wenn seine SHA-256-Summe zu der veröffentlichten passt.</p>
+<p>Unter Einstellungen, Updates wählst du den Kanal. Neuester Build folgt jedem Commit auf dem Hauptzweig und Stabile Releases folgt den veröffentlichten Releases. Du kannst auch den automatischen Download abschalten, dann bietet die Karte eine Schaltfläche zum Installieren an. Nach Updates suchen im Hilfe-Menü startet sofort eine Prüfung.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Starte für ein Update nicht mitten in einer Show neu. Die Karte wartet auf dich, und Später gibt es nicht ohne Grund.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="tour"><h2>3. Das Fenster im Überblick</h2>
+<h3 id="tour--menu-bar"><a class="anchor" href="#tour--menu-bar" aria-label="Link">#</a>Die Menüleiste</h3>
+<p>Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Handbuchs darauf beziehen kann. Die Menüleiste oben hat diese Menüs:</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Menü</th><th scope="col">Was drin ist</th></tr></thead><tbody><tr><td>Datei</td><td>Neue leere Komposition, Als Preset speichern, Datenordner öffnen, Beenden</td></tr><tr><td>Bearbeiten</td><td>Rückgängig und Wiederherstellen</td></tr><tr><td>Ausgabe</td><td>Ausgabefenster öffnen oder schließen, Vollbild, Ausgänge und Mapping, Aufnahme starten oder beenden, Aufnahme-Einstellungen, Per Spout an OBS senden, Über NDI senden</td></tr><tr><td>Audio</td><td>Audioquelle wählen: Aus, Demo-Signal, Systemaudio, Eingang, und Geräte aktualisieren</td></tr><tr><td>Zeitleiste</td><td>Zeitleiste ausführen, Fenster der Show-Zeitleiste anzeigen, Abspielen, Pause, Stopp, Handeingriffe freigeben</td></tr><tr><td>Einstellungen</td><td>Öffnet das Einstellungsfenster</td></tr><tr><td>Creator</td><td>Clip Creator öffnen, Neue 3D-Szene, Vorlagen, der Node-Effekt-Editor</td></tr><tr><td>Hilfe</td><td>Handbuch, Was ist neu, Links, Sprache, Nach Updates suchen</td></tr></tbody></table></div>
+<figure class="shot"><a href="../../assets/manual/de/main-window.webp"><img src="../../assets/manual/de/main-window.webp" width="1600" height="900" loading="lazy" alt="Das Hauptfenster von NyrexVJ mit dem Clip-Raster oben, Ausgabe und Vorschau links und Master, Clip und Browser unten"></a><figcaption>Das Hauptfenster von NyrexVJ mit dem Clip-Raster oben, Ausgabe und Vorschau links und Master, Clip und Browser unten</figcaption></figure>
+<h3 id="tour--deck-window"><a class="anchor" href="#tour--deck-window" aria-label="Link">#</a>Das Deck-Fenster</h3>
+<p>Das große Fenster oben ist das Deck-Fenster. Es enthält das Clip-Raster mit 8 Spalten und 4 Layern, die 16 Deck-Knöpfe, die Tempo-Regler und die Übergangs-Einstellungen. Alles, was du live spielst, beginnt hier. Siehe <a href="#clip-grid">Das Clip-Raster</a> und <a href="#decks">Decks und Übergänge</a>.</p>
+<h3 id="tour--preview-output"><a class="anchor" href="#tour--preview-output" aria-label="Link">#</a>Vorschau und Ausgabe</h3>
+<p>Unter dem Deck-Fenster findest du links zwei Fenster mit einem Bild. Das Fenster Ausgabe zeigt das fertige Bild genau so, wie es NyrexVJ verlässt, mit Größe, Bildrate und Tempo. Das Fenster Vorschau zeigt eine Zelle, die du dir nur angesehen hast: Strg+Klick auf eine Zelle zeigt sie dort, ohne sie abzuspielen, und Jetzt abspielen spielt sie ab. So bereitest du den nächsten Clip vor, während das Publikum etwas anderes sieht.</p>
+<h3 id="tour--layer-clip-master"><a class="anchor" href="#tour--layer-clip-master" aria-label="Link">#</a>Layer, Clip und Master</h3>
+<p>Neben den Bildern liegen drei Fenster, die zusammengehören. Das Layer-Fenster (in der Oberfläche heißt es Ebene) enthält Deckkraft, Mischmodus, die Audio-Reaktionen und die vier Effekt-Slots des gewählten Layers. Das Clip-Fenster zeigt den Clip der gewählten Zelle und seine Regler. Das Master-Fenster wirkt auf das fertige Bild: Pegel, Blackout, Auflösung, Farbkorrektur, Makros, LFOs und vier Master-Effekte. Sie sind in <a href="#layers">Layer und Mischmodi</a>, <a href="#clip-window">Das Clip-Fenster</a> und <a href="#master">Das Master-Fenster</a> beschrieben.</p>
+<h3 id="tour--browser-window"><a class="anchor" href="#tour--browser-window" aria-label="Link">#</a>Der Browser</h3>
+<p>Der Browser rechts hat drei Tabs. Presets enthält die Werks-Looks und deine eigenen Looks, Bibliothek enthält alle Clips, Effekte und Dateien, die du nutzen kannst, und Audio enthält die Audioquelle, das Live-Spektrum und die Beat-Erkennung. Siehe <a href="#presets">Presets und Sitzungen</a>, <a href="#library">Die Bibliothek</a> und <a href="#audio">Audio und Musik</a>.</p>
+<h3 id="tour--status-bar"><a class="anchor" href="#tour--status-bar" aria-label="Link">#</a>Die Statusleiste</h3>
+<p>Die Leiste unten zeigt die Bildrate, die Prozessor- und Grafikzeit, die Ausgabegröße, das Tempo, das aktuelle Deck und den Zustand des Audios. Während einer Aufnahme zeigt sie außerdem REC mit der Zeit und den verworfenen Bildern. Du kannst sie unter Einstellungen, Aussehen ausblenden.</p>
+<h3 id="tour--layout"><a class="anchor" href="#tour--layout" aria-label="Link">#</a>Fenster verschieben</h3>
+<p>Alle Fenster lassen sich am Titel ziehen, nebeneinander andocken, als Tabs stapeln oder frei schwebend herausziehen. NyrexVJ merkt sich die Anordnung. Wenn du ein Fenster verlierst oder die Anordnung durcheinander ist, nutze Einstellungen, Aussehen, Fensteranordnung zurücksetzen. Die Größe der ganzen Oberfläche und ihre Farben findest du an derselben Stelle.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="first-show"><h2>4. Deine erste Show in fünf Minuten</h2>
+<h3 id="first-show--first-steps"><a class="anchor" href="#first-show--first-steps" aria-label="Link">#</a>Schritt für Schritt</h3>
+<p>Diese neun Schritte führen dich vom ersten Start zu einem Bild, das auf deine Musik reagiert und an OBS oder in ein Vollbildfenster geht. Die späteren Kapitel erklären jeden Schritt genauer.</p>
+<ol><li>Starte NyrexVJ. Ein Look namens Neon Club ist geladen, du siehst also sofort ein Bild.</li><li>Klick auf eine Zelle im Clip-Raster. Der Clip läuft auf seinem Layer. Mit den Tasten <code>1</code> bis <code>8</code> startest du ganze Spalten.</li><li>Öffne im Browser den Tab Audio. Wähle Systemaudio und such den Ausgang, auf dem deine Musik läuft. Starte dein DJ-Programm oder einen Player und sieh zu, wie sich die Anzeigen für Bass, Mitten, Höhen und Pegel bewegen. Keine Musik zur Hand? Wähle Demo-Signal.</li><li>Öffne den Tab Bibliothek, wechsel zu Effekte und klick auf einen Effekt. Er wird zum gewählten Layer hinzugefügt. Beweg seine Regler und sieh zu, wie sich das Bild verändert.</li><li>Öffne das Layer-Fenster. Wähle im Bereich Audio-Reaktivität Bass als Quelle für Skalierung oder Helligkeit und erhöhe die Stärke. Das Bild atmet jetzt mit deiner Kick.</li><li>Drück ein paar Mal <code>Leertaste</code> im Takt deiner Musik. Das ist das Tap-Tempo. Die Clips, die dem Beat folgen, folgen jetzt deinem.</li><li>Öffne den Tab Presets und klick auf einen anderen Werks-Look. Er wird ins aktuelle Deck geladen. Klick auf einen der Deck-Knöpfe über dem Raster, um in ein anderes Deck zu gleiten.</li><li>Schick das Bild raus: Unter Windows hakst du im Menü Ausgabe Per Spout an OBS senden an, sonst drückst du <code>F11</code> für ein Ausgabefenster im Vollbild.</li><li>Drück im Tab Presets mit einem Namen auf Speichern, um zu behalten, was du gebaut hast.</li></ol>
+<h3 id="first-show--first-next"><a class="anchor" href="#first-show--first-next" aria-label="Link">#</a>Wie es weitergeht</h3>
+<p>Wenn du wegen der Musikreaktion gekommen bist, lies <a href="#audio">Audio und Musik</a> und <a href="#modulation">Makros, LFOs und das Beat-Raster</a>. Für eigene Bilder und Videos lies <a href="#video">Video- und Bild-Clips</a>. Um das Bild auf einen Projektor zu bekommen, lies <a href="#outputs">Ausgänge, Mapping und OBS</a>. Eine Liste aller Tasten steht in <a href="#shortcuts">Tastenkürzel und Maus</a>.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Alles, was du änderst, wird mit der Sitzung gespeichert. Der nächste Start macht dort weiter, wo du aufgehört hast, außer du schaltest das unter Einstellungen, Allgemein ab.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="clip-grid"><h2>5. Das Clip-Raster</h2>
+<h3 id="clip-grid--cells"><a class="anchor" href="#clip-grid--cells" aria-label="Link">#</a>Zellen, Zeilen und Spalten</h3>
+<p>Jedes Deck hat ein Raster aus 4 Layern mal 8 Spalten. Eine Zelle enthält einen Clip. Ein Klick auf eine Zelle spielt ihren Clip auf ihrem Layer ab, und der Layer spielt ihn weiter, bis du eine andere Zelle desselben Layers abspielst oder den Layer stoppst. Layer 1 ist der unterste Layer und Layer 4 der oberste, höhere Layer werden also über niedrigere gezeichnet.</p>
+<p>Eine Spalte ist ein Satz Zellen, eine pro Layer. Ein Klick auf den Spaltenkopf oder die Taste <code>1</code> bis <code>8</code> spielt alle Zellen dieser Spalte auf einmal ab. So wechselst du einen ganzen Look mit einer Taste: Bau Looks als Spalten.</p>
+<figure class="shot"><a href="../../assets/manual/de/clip-grid.webp"><img src="../../assets/manual/de/clip-grid.webp" width="1600" height="464" loading="lazy" alt="Das Clip-Raster mit vier Layern und acht Spalten"></a><figcaption>Das Clip-Raster mit vier Layern und acht Spalten</figcaption></figure>
+<h3 id="clip-grid--filling"><a class="anchor" href="#clip-grid--filling" aria-label="Link">#</a>Das Raster füllen</h3>
+<ul><li>Zieh einen Clip aus der Bibliothek auf eine Zelle, oder auf einen Spaltenkopf, um ihn in den gewählten Layer dieser Spalte zu legen.</li><li>Wähl eine Zelle und klick einen Clip in der Bibliothek an. Der Clip kommt in die gewählte Zelle und spielt.</li><li>Klick mit rechts auf eine Zelle und wähle Clip zuweisen, um einen Clip aus einer Liste zu holen.</li><li>Zieh eine Zelle auf eine andere Zelle, um sie zu kopieren.</li><li>Klick mit rechts auf eine Zelle und wähle Zelle leeren, um sie zu leeren.</li></ul>
+<p>Eine leere Zelle zeigt einen Hinweis. Zellen zeigen ein kleines Bild ihres Clips. Eine Zelle, die gerade spielt, ist hervorgehoben.</p>
+<h3 id="clip-grid--playing"><a class="anchor" href="#clip-grid--playing" aria-label="Link">#</a>Abspielen und Vorschau</h3>
+<p>Ein normaler Klick spielt die Zelle ab. Strg+Klick zeigt sie nur im Fenster Vorschau, und Nur Vorschau, nicht abspielen im Zellmenü macht dasselbe. Damit siehst du dir den nächsten Clip an, bevor das Publikum ihn sieht, und drückst dann Jetzt abspielen.</p>
+<h3 id="clip-grid--layer-row"><a class="anchor" href="#clip-grid--layer-row" aria-label="Link">#</a>Layer-Regler im Raster</h3>
+<p>Am Anfang jeder Zeile siehst du den Namen des Layers, seinen Deckkraft-Regler, seinen Mischmodus und drei kleine Knöpfe. B schaltet den Layer auf Bypass, er wird dann komplett übersprungen. S schaltet ihn solo, es wird nur dieser Layer gezeigt. X stoppt den Layer und leert, was er spielt. Klick auf den Layer-Namen, um den Layer zu wählen, das Layer-Fenster arbeitet dann an ihm.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Mit Rechtsklick auf einen Regler setzt du ihn auf seinen Standardwert zurück. Das geht bei den meisten Reglern im Programm.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="decks"><h2>6. Decks und Übergänge</h2>
+<h3 id="decks--sixteen"><a class="anchor" href="#decks--sixteen" aria-label="Link">#</a>Sechzehn Decks</h3>
+<p>Die Reihe mit 16 Knöpfen über dem Clip-Raster wechselt die Decks. Jedes Deck ist ein vollständiger Satz: vier Layer, acht Spalten, Effekte, Farben. Das Deck, auf dem du bist, ist orange, leere Decks sind abgedunkelt und starten leer, wenn du sie anklickst. Ein neues Deck übernimmt mit einem Übergang statt mit einem harten Schnitt.</p>
+<h3 id="decks--transitions"><a class="anchor" href="#decks--transitions" aria-label="Link">#</a>Übergänge</h3>
+<div class="tablewrap"><table><thead><tr><th scope="col">Übergang</th><th scope="col">Aussehen</th></tr></thead><tbody><tr><td>Fade</td><td>Weiche Überblendung</td></tr><tr><td>Dissolve</td><td>Körniges Durchbrennen mit leuchtender Kante</td></tr><tr><td>Zoom</td><td>Zieht durch das alte Bild ins neue</td></tr><tr><td>Wipe</td><td>Weiche diagonale Wischblende</td></tr><tr><td>Radial</td><td>Ein Kreis, der sich von der Mitte aus öffnet</td></tr><tr><td>Spin</td><td>Beide Bilder drehen sich ineinander</td></tr><tr><td>Slide</td><td>Das neue Deck schiebt sich von der Seite herein</td></tr></tbody></table></div>
+<p>Wähl den Übergang und seine Länge neben den Deck-Knöpfen. Stell die Länge in Sekunden ein, oder hak Beat-Sync an, um in Beats zu zählen, damit der Wechsel dem Tempo folgt. Wenn du mitten in einem Übergang noch einmal wechselst, friert NyrexVJ das Bild ein, das du gerade siehst, und blendet von dort aus über, es gibt also nie einen Sprung.</p>
+<h3 id="decks--auto-cycle"><a class="anchor" href="#decks--auto-cycle" aria-label="Link">#</a>Auto-Wechsel</h3>
+<p>Hak Auto-Wechsel an und wähl eine Anzahl Beats von 4 bis 128. NyrexVJ geht dann von selbst durch die benutzten Decks und wechselt in diesem Abstand. Das ist gut für die ruhige Stunde einer Party, wenn du die Regler jemand anderem überlassen willst.</p>
+<h3 id="decks--deck-menu"><a class="anchor" href="#decks--deck-menu" aria-label="Link">#</a>Mit Decks arbeiten</h3>
+<p>Klick mit rechts auf einen Deck-Knopf. Du kannst das Deck umbenennen, das aktuelle Deck hineinkopieren, es mit einem Werks-Look füllen, leeren oder entfernen. Im Tab Presets lädt ein Klick auf einen Werks-Look ihn ins aktuelle Deck, und die Schaltfläche Decks mit Werks-Looks füllen legt 16 Looks auf einen Schlag in die 16 Decks. Bild auf und Bild ab springen zum vorherigen und nächsten benutzten Deck, und <code>Strg+1</code> bis <code>Strg+8</code> sowie <code>Strg+Umschalt+1</code> bis <code>Strg+Umschalt+8</code> springen zu den Decks 1 bis 16.</p>
+<p>Decks werden mit einem Preset und mit der Sitzung gespeichert. <a href="#presets">Presets und Sitzungen</a> erklärt, was genau abgelegt wird.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="layers"><h2>7. Layer und Mischmodi</h2>
+<h3 id="layers--stack"><a class="anchor" href="#layers--stack" aria-label="Link">#</a>Der Layer-Stapel</h3>
+<p>Ein Deck hat vier Layer. NyrexVJ zeichnet Layer 1 zuerst und jeden höheren Layer darüber. Jeder Layer hat seinen eigenen Clip, Deckkraft, Mischmodus, Geschwindigkeit, Skalierung, Farben, Farbkorrektur, Audio-Reaktionen und vier Effekt-Slots. Die Effekte eines Layers verändern nur diesen Layer, die Master-Effekte verändern alles.</p>
+<p>Klick auf den Layer-Namen im Raster oder auf eine der Zahlen oben im Layer-Fenster, um einen Layer zu wählen. Die Fenster Layer, Clip und Master zeigen dann seine Einstellungen.</p>
+<h3 id="layers--opacity-blend"><a class="anchor" href="#layers--opacity-blend" aria-label="Link">#</a>Deckkraft und Mischmodus</h3>
+<p>Deckkraft blendet den Layer von unsichtbar bis voll sichtbar ein. Ein Layer mit Deckkraft null wird gar nicht gezeichnet, ein verborgener Layer kostet also nichts. Der Mischmodus bestimmt, wie sich der Layer mit dem Bild darunter mischt. Das sind die 14 Modi:</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Modus</th><th scope="col">Was er macht</th></tr></thead><tbody><tr><td>Normal</td><td>Der Layer deckt das Bild darunter ab, entsprechend seiner Deckkraft</td></tr><tr><td>Add</td><td>Addiert das Licht beider, ein Leuchten, das nie dunkler wird</td></tr><tr><td>Screen</td><td>Hellt auf wie zwei Projektoren auf derselben Leinwand</td></tr><tr><td>Multiply</td><td>Dunkelt ab, Schwarz bleibt Schwarz, Weiß ändert nichts</td></tr><tr><td>Subtract</td><td>Zieht die Helligkeit des Layers vom Bild darunter ab</td></tr><tr><td>Difference</td><td>Zeigt, wie stark sich die beiden Bilder unterscheiden, gut für Konturen</td></tr><tr><td>Exclusion</td><td>Eine weichere Difference mit weniger Kontrast</td></tr><tr><td>Overlay</td><td>Verstärkt den Kontrast des Bildes darunter, der Layer dient als Muster</td></tr><tr><td>Soft Light</td><td>Eine sanfte Version von Overlay</td></tr><tr><td>Hard Light</td><td>Eine kräftige Version von Overlay</td></tr><tr><td>Lighten</td><td>Behält an jeder Stelle das hellere von beiden</td></tr><tr><td>Darken</td><td>Behält an jeder Stelle das dunklere von beiden</td></tr><tr><td>Color Dodge</td><td>Hellt das Bild darunter stark auf, wo der Layer hell ist</td></tr><tr><td>Linear Burn</td><td>Dunkelt das Bild darunter stark ab, wo der Layer dunkel ist</td></tr></tbody></table></div>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Schwarz zählt bei Add und Screen als nichts. Ein heller Clip auf schwarzem Hintergrund zeigt mit Add nur seine hellen Teile, und genau das willst du bei den meisten Neon-Looks.</p></aside>
+<h3 id="layers--bypass-solo"><a class="anchor" href="#layers--bypass-solo" aria-label="Link">#</a>Bypass, Solo und Stopp</h3>
+<p>Bypass überspringt einen Layer, als wäre er nicht da, samt allen Effekten. Solo zeigt nur den Layer mit Solo. Stopp nimmt den laufenden Clip vom Layer. Alle drei findest du in der Zeile des Rasters und im Layer-Fenster, und auch per OSC und MIDI.</p>
+<h3 id="layers--layer-mods"><a class="anchor" href="#layers--layer-mods" aria-label="Link">#</a>Auf Musik reagieren</h3>
+<p>Das Layer-Fenster hat unter Audio-Reaktivität zwei Modulations-Slots. Ein Slot nimmt eine Quelle (ein Frequenzband der Musik, ein Makro, einen LFO, den Beat), ein Ziel (Deckkraft, Skalierung, Geschwindigkeit, Farbton, Helligkeit oder Sättigung) und eine Stärke. <a href="#audio">Audio und Musik</a> und <a href="#modulation">Makros, LFOs und das Beat-Raster</a> erklären die Quellen.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="clip-window"><h2>8. Das Clip-Fenster</h2>
+<h3 id="clip-window--selected-clip"><a class="anchor" href="#clip-window--selected-clip" aria-label="Link">#</a>Der gewählte Clip</h3>
+<p>Das Clip-Fenster zeigt den Clip der gewählten Zelle. Ist die Zelle leer, aber der Layer spielt etwas, zeigt es, was der Layer spielt. Oben siehst du ein Bild des Clips, seinen Namen und seine Art: Video, Bild, Shader-Datei, 3D-Modell, 3D-Szene, Spout-Eingang, NDI-Eingang, Kamera oder Plugin-Quelle. Ist kein Clip gewählt, bittet dich das Fenster, einen im Deck zu wählen oder einen Clip in der Bibliothek anzuklicken.</p>
+<figure class="shot"><a href="../../assets/manual/de/clip-window.webp"><img src="../../assets/manual/de/clip-window.webp" width="328" height="386" loading="lazy" alt="Das Clip-Fenster mit Geschwindigkeit, Skalierung, Farben und Farbkorrektur"></a><figcaption>Das Clip-Fenster mit Geschwindigkeit, Skalierung, Farben und Farbkorrektur</figcaption></figure>
+<h3 id="clip-window--look"><a class="anchor" href="#clip-window--look" aria-label="Link">#</a>Look und Farbe</h3>
+<p>Der Bereich Look hat Geschwindigkeit und Skalierung. Geschwindigkeit reicht vom 0,1- bis zum 4-Fachen und ändert, wie schnell sich der Clip bewegt, Skalierung zoomt den Clip vom 0,25- bis zum 4-Fachen. Beide gehören zum Layer, sie bleiben also erhalten, wenn du den Clip auf diesem Layer wechselst.</p>
+<p>Der Bereich Farbe hat zwei Farben, A und B, eine Schaltfläche Tauschen, einen Schalter Regenbogen und eine Palette-Liste. Generative Clips nutzen diese beiden Farben, ein Klick auf eine Palette färbt also einen ganzen Look um. Unter Farbkorrektur findest du Farbton, Sättigung, Helligkeit und Kontrast für den Layer, daneben Farbkorrektur zurücksetzen.</p>
+<h3 id="clip-window--special-controls"><a class="anchor" href="#clip-window--special-controls" aria-label="Link">#</a>Regler besonderer Clips</h3>
+<p>Manche Clips bringen eigene Regler ins Clip-Fenster mit.</p>
+<ul><li>Videoclips zeigen die Wiedergabe-Regler aus <a href="#video">Video- und Bild-Clips</a>.</li><li>Shader-Dateien zeigen ihre Fehlermeldungen und ihre eigenen Regler, siehe <a href="#shaders">Deine eigenen Shader</a>.</li><li>3D-Modelle und -Szenen zeigen ihren Ladezustand und Angaben zum Modell, siehe <a href="#models">3D-Modelle</a>.</li><li>Spout-, NDI- und Kamera-Clips zeigen die Quellenwahl und den Verbindungszustand, siehe <a href="#live-sources">Live-Quellen: Spout, NDI und Kameras</a>.</li><li>Plugin-Quellen zeigen die Parameter des Plugins, siehe <a href="#plugins">Plugins</a>.</li></ul>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="effects"><h2>9. Effekte</h2>
+<h3 id="effects--slots"><a class="anchor" href="#effects--slots" aria-label="Link">#</a>Effekt-Slots</h3>
+<p>Jeder Layer hat vier Effekt-Slots, und der Master auch. Die Effekte laufen von Slot 1 bis Slot 4, die Reihenfolge ist also wichtig: Ein Blur vor einer Farbänderung sieht anders aus als eine Farbänderung vor einem Blur. Die Effekte eines Layers verändern nur diesen Layer, die Effekte des Masters verändern das fertige Bild.</p>
+<p>Jeder Slot hat ein Häkchen zum Ein- und Ausschalten, eine Liste zur Wahl des Effekts (tipp in die Liste, um zu suchen), bis zu vier Regler und eine Zeile für die Musikreaktion. Ein Regler, den du bewegt hast, geht mit Rechtsklick auf seinen Standardwert zurück. Effekte, die dreidimensional zeichnen, tragen in der Liste die Markierung [3D].</p>
+<h3 id="effects--adding-effects"><a class="anchor" href="#effects--adding-effects" aria-label="Link">#</a>Effekte hinzufügen</h3>
+<ul><li>Öffne die Bibliothek, wechsel zu Effekte und klick einen Effekt an: Er kommt in den ersten freien Slot des gewählten Layers. Sind alle vier Slots belegt, sagt dir NyrexVJ das.</li><li>Zieh einen Effekt aus der Bibliothek auf einen Slot, um ihn genau dort abzulegen.</li><li>Klick mit rechts auf einen Effekt in der Bibliothek, um ihn zu einem gewählten Layer oder zum Master hinzuzufügen.</li><li>Wähl einen Effekt aus der Liste im Slot selbst.</li></ul>
+<figure class="shot"><a href="../../assets/manual/de/effects-library.webp"><img src="../../assets/manual/de/effects-library.webp" width="460" height="386" loading="lazy" alt="Der Tab Bibliothek in der Ansicht Effekte"></a><figcaption>Der Tab Bibliothek in der Ansicht Effekte</figcaption></figure>
+<h3 id="effects--effect-react"><a class="anchor" href="#effects--effect-react" aria-label="Link">#</a>Auf die Musik reagieren</h3>
+<p>Unter den Reglern eines Slots findest du eine Band-Liste, einen Modus und ein Ziel. Wähl Bass, Mitten, Höhen, Pegel oder Kick (oder ein Makro, einen LFO, Beat oder Bar) als Band. Dann bestimmst du, wie es wirkt:</p>
+<ul><li><strong>Parameter</strong> bewegt einen Wert des Effekts, den du als Ziel wählst, um die eingestellte Stärke.</li><li><strong>Gate</strong> zeigt den Effekt nur, solange das Band laut ist, und blendet ihn in der Stille aus. Der eingestellte Wert bestimmt, wie empfindlich das Gate ist.</li></ul>
+<p>Mit Gate baust du schnell ein Stroboskop oder einen Glitch, der nur auf den Beat trifft.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Leg einen langsamen LFO auf einen Parameter und Kick auf einen zweiten Effekt. Das Bild hat dann eine ruhige Bewegung und einen Puls zugleich.</p></aside>
+<h3 id="effects--own-effects"><a class="anchor" href="#effects--own-effects" aria-label="Link">#</a>Eigene Effekte</h3>
+<p>Neben den eingebauten Effekten gibt es Effekte, die du selbst baust oder installierst: Node-Effekte aus dem Node-Editor (angezeigt als Node: Name) und ISF-Filter aus deinem Shader-Ordner (angezeigt als ISF: Name). Sie funktionieren in den Slots wie jeder andere Effekt. Siehe <a href="#nodes">Der Node-Effekt-Editor</a> und <a href="#shaders">Deine eigenen Shader</a>.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="library"><h2>10. Die Bibliothek</h2>
+<h3 id="library--library-modes"><a class="anchor" href="#library--library-modes" aria-label="Link">#</a>Clips, Effekte und Dateien</h3>
+<p>Der Tab Bibliothek im Browser hat drei Ansichten. Clips listet alles auf, was du in eine Zelle legen kannst, Effekte listet alles auf, was du in einen Effekt-Slot legen kannst, und Dateien zeigt die Dateien, die deine eigenen Szenen nutzen können. Das Suchfeld oben findet Einträge über ihren Namen.</p>
+<figure class="shot"><a href="../../assets/manual/de/library.webp"><img src="../../assets/manual/de/library.webp" width="460" height="386" loading="lazy" alt="Der Tab Bibliothek in der Ansicht Clips"></a><figcaption>Der Tab Bibliothek in der Ansicht Clips</figcaption></figure>
+<h3 id="library--filters"><a class="anchor" href="#library--filters" aria-label="Link">#</a>Clips filtern</h3>
+<p>In der Ansicht Clips grenzt eine Reihe von Filtern die Liste ein: Alle, 2D, 3D, Modelle, Szenen, Spout, Medien, Shader und Live. Clips, die in der aktuellen Version neu dazugekommen sind, tragen eine kleine Markierung, die mit der nächsten Nebenversion verschwindet.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Filter</th><th scope="col">Was er zeigt</th></tr></thead><tbody><tr><td>2D</td><td>Jeden Clip, der kein 3D-Clip ist, also generative Clips, Bilder, Videos und Shader</td></tr><tr><td>3D</td><td>Clips mit echtem 3D-Inhalt, etwa die eingebauten Meshes, Modelle und Szenen</td></tr><tr><td>Modelle</td><td>Deine eigenen .glb- und .gltf-Dateien</td></tr><tr><td>Szenen</td><td>Szenen, die du mit dem Clip Creator gemacht hast</td></tr><tr><td>Spout</td><td>Die vier Spout-Eingangs-Clips</td></tr><tr><td>Medien</td><td>Deine Bilder und Videos</td></tr><tr><td>Shader</td><td>Deine eigenen Shader-Dateien und ISF-Generatoren</td></tr><tr><td>Live</td><td>NDI-Eingangs- und Kamera-Clips</td></tr></tbody></table></div>
+<h3 id="library--using-clips"><a class="anchor" href="#library--using-clips" aria-label="Link">#</a>Einen Clip benutzen</h3>
+<p>Ein Klick auf einen Clip legt ihn in die gewählte Zelle und spielt ihn ab. Du kannst ihn auch auf eine beliebige Zelle ziehen oder auf einen Spaltenkopf, um ihn in den gewählten Layer dieser Spalte zu legen. Ein Rechtsklick bietet In die gewählte Zelle legen, In die nächste freie Zelle eines Layers legen und bei Szenen Im Clip Creator bearbeiten.</p>
+<h3 id="library--library-files"><a class="anchor" href="#library--library-files" aria-label="Link">#</a>Dateien und Ordner</h3>
+<p>Unten in der Bibliothek steht, wohin deine eigenen Dateien gehören, mit einer Schaltfläche für jeden Ordner: Modelle, Medien und Shader. Leg die Dateien dort ab und drück Neu einlesen, oder zieh sie einfach auf das NyrexVJ-Fenster. Beispiel-Shader erstellen schreibt einen kleinen Shader, den du in jedem Texteditor öffnen kannst. Die Ansicht Dateien listet die Modelle und Texturen auf, die deine Szenen nutzen können, und die Szenen, die du gespeichert hast. <a href="#files">Dateien und der Datenordner</a> zeigt, wo diese Ordner auf deinem Computer liegen.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="presets"><h2>11. Presets und Sitzungen</h2>
+<h3 id="presets--factory-looks"><a class="anchor" href="#presets--factory-looks" aria-label="Link">#</a>Werks-Looks</h3>
+<p>Der Tab Presets beginnt mit den Werks-Looks. Ein Klick lädt den Look ins aktuelle Deck, mit Rechtsklick lädst du ihn in ein anderes Deck. Es gibt 18: Neon Club, Milky Red, Crystal Cavern, Crystal Lines, Acid Rainbow, Deep Space, Synthwave Night, Laser Show, Minimal Mono, 3D Showcase, Warp Tunnel, Audio Reactor, Fractal Dream, Cyber Rain, Inferno, 3D Worlds, Crystal Cube und Pop Art.</p>
+<p>Die Schaltfläche Decks mit Werks-Looks füllen legt 16 Looks in die 16 Decks, ein schneller Weg, für jede Stimmung etwas bereit zu haben.</p>
+<figure class="shot"><a href="../../assets/manual/de/presets.webp"><img src="../../assets/manual/de/presets.webp" width="460" height="386" loading="lazy" alt="Der Tab Presets mit den Werks-Looks"></a><figcaption>Der Tab Presets mit den Werks-Looks</figcaption></figure>
+<h3 id="presets--own-presets"><a class="anchor" href="#presets--own-presets" aria-label="Link">#</a>Eigene Presets</h3>
+<p>Gib unter Aktuellen Look speichern einen Namen ein und drück Speichern. Ein gespeichertes Preset enthält alle 16 Decks mit ihren Layern, Clips, Effekten, Farben, den Master, Makros und LFOs und die Tempo-Einstellungen. Die Liste Meine Presets zeigt, was du gespeichert hast. Ein Klick lädt ein Preset, und ein Rechtsklick bietet Mit aktuellem Look überschreiben und Löschen.</p>
+<p>Datei, Als Preset speichern macht dasselbe aus dem Menü. Presets sind kleine Dateien im Ordner presets, du kannst sie also auf einen anderen Computer kopieren.</p>
+<h3 id="presets--session"><a class="anchor" href="#presets--session" aria-label="Link">#</a>Die Sitzung</h3>
+<p>Neben Presets führt NyrexVJ eine Sitzung: den Zustand des Programms, wie du ihn verlassen hast. Beim nächsten Start öffnet es sich genau so, außer du schaltest Letzte Sitzung beim Start wiederherstellen unter Einstellungen, Allgemein aus. Die Sitzung wird alle 30 Sekunden gespeichert, wenn sich etwas geändert hat, und eine rotierende Reihe der letzten zehn Autosaves liegt im Ordner recovery.</p>
+<h3 id="presets--undo"><a class="anchor" href="#presets--undo" aria-label="Link">#</a>Rückgängig und Wiederherstellen</h3>
+<p>Bearbeiten, Rückgängig und Wiederherstellen, oder <code>Strg+Z</code> und <code>Strg+Y</code> (auch <code>Strg+Umschalt+Z</code> stellt wieder her), gehen durch deine Änderungen an Reglern, Clips, Effekten und Decks. Einen Clip abspielen, eine Spalte starten und die Makro-Regler bewegen sind Performance-Aktionen und gehören nicht zu Rückgängig. In der Zeitleiste und im Node-Editor wirken dieselben Tasten auf ihren eigenen Verlauf, solange diese Fenster den Fokus haben.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="master"><h2>12. Das Master-Fenster</h2>
+<h3 id="master--level-blackout"><a class="anchor" href="#master--level-blackout" aria-label="Link">#</a>Pegel und Blackout</h3>
+<p>Pegel oben ist die Helligkeit des fertigen Bildes von 0 bis 1, ein Master-Fader. Blackout macht das ganze Bild auf einen Schlag schwarz und wieder zurück, auch mit der Taste <code>B</code>. Er ist die Notbremse deiner Show und auch per MIDI und OSC erreichbar.</p>
+<figure class="shot"><a href="../../assets/manual/de/master-window.webp"><img src="../../assets/manual/de/master-window.webp" width="406" height="386" loading="lazy" alt="Das Master-Fenster mit Pegel, Blackout, Auflösung und den Effekt-Slots"></a><figcaption>Das Master-Fenster mit Pegel, Blackout, Auflösung und den Effekt-Slots</figcaption></figure>
+<h3 id="master--resolution"><a class="anchor" href="#master--resolution" aria-label="Link">#</a>Auflösung</h3>
+<p>Die Liste Auflösung legt die Größe des fertigen Bildes fest: 960 x 540, 1280 x 720, 1920 x 1080 (der Standard) oder 2560 x 1440. Eine kleinere Größe schont die Grafikkarte. Die Ausgabefenster skalieren das Bild auf ihre eigene Größe, die Auflösung hier ist also die Qualität dessen, was gerendert wird.</p>
+<h3 id="master--master-sections"><a class="anchor" href="#master--master-sections" aria-label="Link">#</a>Farbkorrektur, Reaktionen und Effekte</h3>
+<p>Der Bereich Farbkorrektur hat Farbton, Sättigung, Helligkeit und Kontrast für das ganze Bild und Farbkorrektur zurücksetzen. Audio-Reaktivität funktioniert wie die Slots eines Layers. Der Bereich Makros und LFOs enthält die acht Makro-Regler und vier LFOs, siehe <a href="#modulation">Makros, LFOs und das Beat-Raster</a>. Effekte sind die vier Master-Effekt-Slots, siehe <a href="#effects">Effekte</a>.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Nutze die Master-Effekte für Dinge, die immer an sein sollen, wie einen leichten Bloom oder eine Vignette, und die Layer-Effekte für die Looks, die du während der Show wechselst.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="audio"><h2>13. Audio und Musik</h2>
+<h3 id="audio--sources"><a class="anchor" href="#audio--sources" aria-label="Link">#</a>Eine Quelle wählen</h3>
+<p>Öffne den Tab Audio im Browser, oder Einstellungen, Audio, oder das Menü Audio.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Quelle</th><th scope="col">Worauf sie hört</th></tr></thead><tbody><tr><td>Systemaudio</td><td>Alles, was dein Computer abspielt, zum Beispiel Rekordbox, Serato, Spotify oder ein Browser. Unter Linux ist das Systemaudio (Standardausgabe) und jede Monitor-Quelle von PulseAudio oder PipeWire</td></tr><tr><td>Eingang</td><td>Ein Mikrofon oder ein Line-In. Unter Linux der Standardeingang und jede andere PulseAudio- oder PipeWire-Quelle</td></tr><tr><td>Demo-Signal</td><td>Ein eingebauter Beat, damit du Looks ohne Musik bauen kannst</td></tr><tr><td>Aus</td><td>Nichts. Clips und Effekte folgen stattdessen dem BPM-Takt</td></tr></tbody></table></div>
+<p>Der Tab zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und ein erkanntes Tempo. Liefert das gewählte Gerät einige Sekunden lang keinen Ton, sagen das der Tab und die Statusleiste und schlagen vor, etwas abzuspielen oder eine andere Quelle zu wählen.</p>
+<figure class="shot"><a href="../../assets/manual/de/audio-tab.webp"><img src="../../assets/manual/de/audio-tab.webp" width="460" height="386" loading="lazy" alt="Der Tab Audio mit Audioquelle, Spektrum und den Anzeigen für Bass, Mitten, Höhen und Pegel"></a><figcaption>Der Tab Audio mit Audioquelle, Spektrum und den Anzeigen für Bass, Mitten, Höhen und Pegel</figcaption></figure>
+<h3 id="audio--analysis"><a class="anchor" href="#audio--analysis" aria-label="Link">#</a>Analyse-Einstellungen</h3>
+<p>Verstärkung hebt oder senkt den Pegel, den die Analyse sieht, Glättung macht die Bänder ruhiger, und Beat-Schwelle bestimmt, wie leicht ein Beat gefunden wird. Du findest sie im Tab Audio und unter Einstellungen, Audio. Wenn die Anzeigen dauernd oben anschlagen, senk die Verstärkung, und wenn in jedem Geräusch ein Beat gefunden wird, senk die Empfindlichkeit.</p>
+<p>Erkanntes Tempo zeigt die Schätzung, und Verwenden übernimmt sie als Tempo. BPM mit Audio synchronisieren hält das Tempo dauerhaft am erkannten Beat. Das klappt am besten mit Musik mit klarer Kick. Für eine gleichmäßige Show mit einem DJ ist es oft besser, das Tempo selbst zu tappen oder einer Clock zu folgen, siehe <a href="#sync">Show-Sync und Timecode</a>.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-audio.webp"><img src="../../assets/manual/de/settings-audio.webp" width="874" height="584" loading="lazy" alt="Die Seite Audio in den Einstellungen"></a><figcaption>Die Seite Audio in den Einstellungen</figcaption></figure>
+<h3 id="audio--making-react"><a class="anchor" href="#audio--making-react" aria-label="Link">#</a>Visuals reagieren lassen</h3>
+<p>Die Reaktivität stellst du an drei Stellen ein:</p>
+<ul><li>Das Layer-Fenster hat zwei Slots, die Deckkraft, Skalierung, Geschwindigkeit, Farbton, Helligkeit oder Sättigung mit einem Band bewegen.</li><li>Das Master-Fenster hat dieselben Slots für das fertige Bild.</li><li>Jeder Effekt-Slot hat ein Band und einen Modus, siehe <a href="#effects--effect-react">Effekte</a>.</li></ul>
+<p>Bass, Mitten, Höhen und Pegel sind die Stärke dieser Teile des Spektrums von 0 bis 1, Kick ist ein kurzer Puls auf den Bass-Beats. Nimm Bass für langsames Atmen, Kick für Schläge, Höhen für Funkeln.</p>
+<p>Manche Clips zeichnen den echten Ton: Bars, Equalizer, Spectrum Circle, Oscilloscope, Spectrum Warp und der Effekt Oscilloscope zeigen das echte Spektrum oder die echte Wellenform. Ohne Audioquelle laufen sie auf einem virtuellen Beat, der dem BPM folgt.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Die Aufnahme von Systemaudio hört alles, was dein Computer abspielt, auch Benachrichtigungen. Schließ Chat-Programme und schalte Systemklänge stumm, bevor eine Show beginnt.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="modulation"><h2>14. Makros, LFOs und das Beat-Raster</h2>
+<h3 id="modulation--more-sources"><a class="anchor" href="#modulation--more-sources" aria-label="Link">#</a>Quellen außer der Musik</h3>
+<p>Jede Stelle, die Bass, Mitten, Höhen, Pegel oder Kick folgen kann, also die zwei Slots eines Layers, der Master und jeder Effekt-Slot, kann drei weiteren Arten von Quellen folgen.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Quelle</th><th scope="col">Wert</th></tr></thead><tbody><tr><td>Makro 1 bis 8</td><td>Die Stellung eines Reglers, den du von Hand drehst</td></tr><tr><td>LFO 1 bis 4</td><td>Ein Oszillator, der am Tempo hängt</td></tr><tr><td>Beat</td><td>Eine Rampe von 0 bis 1 über einen Beat</td></tr><tr><td>Bar</td><td>Eine Rampe von 0 bis 1 über einen Takt</td></tr></tbody></table></div>
+<h3 id="modulation--macros"><a class="anchor" href="#modulation--macros" aria-label="Link">#</a>Makros</h3>
+<p>Das Master-Fenster hat einen Bereich Makros und LFOs mit acht Makro-Reglern. Ein Makro kann viele Werte auf einmal steuern: Wähl Makro 1 an mehreren Stellen als Quelle, dann bewegt ein Regler sie alle. Jedes Makro lässt sich unter Einstellungen, Steuerung einem MIDI-Controller zuordnen oder per OSC unter <code>/nyrex/macro/1</code> bis <code>/nyrex/macro/8</code> setzen. Makros zurücksetzen stellt alle Regler zurück.</p>
+<h3 id="modulation--lfos"><a class="anchor" href="#modulation--lfos" aria-label="Link">#</a>LFOs</h3>
+<p>Ein LFO ist eine sich wiederholende Bewegung. NyrexVJ hat vier, mit den Formen Sine, Triangle, Saw, Square, Random und Smooth random. Der Zyklus reicht von einem Viertel Beat bis 32 Beats, und die Phase legt fest, wo im Zyklus der LFO startet. Weil ein LFO Beats zählt, bewegen Tap, Neu sync, Pause und das Tempo ihn mit, und ein Sweep läuft nie vom Beat weg.</p>
+<h3 id="modulation--tempo"><a class="anchor" href="#modulation--tempo" aria-label="Link">#</a>Tempo und Beat-Clock</h3>
+<p>Unter dem Clip-Raster liegt die Tempo-Zeile: das BPM-Feld mit den Knöpfen Minus, Plus, /2 und x2, dann Tap und Neu sync, dann Pause. Tap setzt das Tempo aus deinen Taps, auch mit der <code>Leertaste</code>. Neu sync startet die Beat-Zählung wieder bei 1, das hilft, wenn das Bild um einen Beat daneben liegt. Pause friert die Tempo-Clock und alle Clip-Bewegung ein. Das Tempo kann auch vom Audio, von MIDI-Clock, von Timecode oder von Pro DJ Link kommen, siehe <a href="#sync">Show-Sync und Timecode</a>.</p>
+<h3 id="modulation--beat-grid"><a class="anchor" href="#modulation--beat-grid" aria-label="Link">#</a>Das Beat-Raster</h3>
+<p>Klick auf die Beat-Anzeige neben den Tempo-Reglern, um das Beat-Raster zu öffnen.</p>
+<ul><li>Schläge pro Takt, von 2 bis 8, legt fest, wie lang ein Takt ist.</li><li>Die Knöpfe für früher und später verschieben das Raster um eine Sechzehntel-Note eines Beats. Nutze sie, wenn dein Beat leicht neben der Musik liegt.</li><li>Auf Schlag einrasten richtet das Raster am nächsten Beat aus, ohne die Zählung zu ändern.</li><li>Takt beginnt hier macht den nächsten Beat zum ersten Beat eines Takts.</li></ul>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Wenn die Visuals an der falschen Stelle des Takts treffen, drück Takt beginnt hier genau auf der Eins deiner Musik.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="video"><h2>15. Video- und Bild-Clips</h2>
+<h3 id="video--add-media"><a class="anchor" href="#video--add-media" aria-label="Link">#</a>Dateien hinzufügen</h3>
+<p>Leg Bilder und Videos in den Ordner media oder zieh sie auf das NyrexVJ-Fenster. Gezogene Dateien werden im Hintergrund in den Ordner kopiert, bis zu 256 MiB je Datei, und erscheinen in der Bibliothek unter Medien. Bilder sind PNG, JPG, JPEG, BMP, TGA und GIF (erstes Bild). Videos sind MP4, MOV, M4V, MKV, AVI und WEBM. Es werden höchstens 128 Medien-Clips aufgelistet.</p>
+<p>Bilder mit Transparenz behalten sie, ein Logo mit weichen Kanten liegt also ohne Rand über den Layern darunter. Das Bild wird mit seinen eigenen Proportionen in den Layer eingepasst, nichts wird gestreckt. Der Regler Skalierung zoomt es. Ton in Videos wird ignoriert.</p>
+<h3 id="video--ffmpeg"><a class="anchor" href="#video--ffmpeg" aria-label="Link">#</a>FFmpeg</h3>
+<p>Videoclips brauchen die FFmpeg-Bibliotheken. Fehlen sie, zeigt das Clip-Fenster FFmpeg einrichten. Unter Einstellungen, Leistung lädt die Schaltfläche FFmpeg herunterladen und einrichten ein fertiges LGPL-Build in den NyrexVJ-Ordner, prüft Prüfsumme und Lizenz und fasst ein bereits installiertes FFmpeg nie an. Ohne Druck auf die Schaltfläche wird nichts heruntergeladen. Du kannst die Bibliotheksdateien auch von Hand in den Ordner kopieren. HAP, H.264, HEVC und andere Codecs laufen dann.</p>
+<h3 id="video--playback"><a class="anchor" href="#video--playback" aria-label="Link">#</a>Wiedergabe-Regler</h3>
+<p>Jede Video-Zelle hat ihren eigenen Abspielkopf. Im Clip-Fenster findest du diese Regler:</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Regler</th><th scope="col">Was er macht</th></tr></thead><tbody><tr><td>Abspielen und Pause</td><td>Startet und stoppt das Video</td></tr><tr><td>Ein Bild zurück und vor</td><td>Springt um ein Bild</td></tr><tr><td>Der Positionsregler</td><td>Springt an jede beliebige Stelle</td></tr><tr><td>Startpunkt und Endpunkt</td><td>Begrenzen den Teil des Videos, der spielt</td></tr><tr><td>Schleifenmodus</td><td>Schleife, Ping-Pong, Einmal mit letztem Bild halten oder Einmal und dann verschwinden</td></tr><tr><td>Clip-Tempo</td><td>Von minus 4 bis plus 4, negative Werte spielen rückwärts</td></tr><tr><td>Clip-Länge in Beats</td><td>Spielt den Bereich von Start bis Ende in genau dieser Zahl Beats ab und folgt dem Tempo</td></tr><tr><td>Wiedergabe zurücksetzen</td><td>Zurück zu den Standardwerten für diese Zelle</td></tr></tbody></table></div>
+<p>Rückwärtswiedergabe dekodiert kurze Stücke im Voraus. Videos mit langen Keyframe-Abständen brauchen dafür mehr Prozessorzeit und Speicher. Ein Video, das in mehreren Layern läuft, teilt sich einen Decoder.</p>
+<h3 id="video--prewarm"><a class="anchor" href="#video--prewarm" aria-label="Link">#</a>Saubere Clip-Wechsel</h3>
+<p>Der nächste Clip jedes Layers wird im Hintergrund vorbereitet, ein Clip-Wechsel zeigt also kein leeres Bild. Ein Video, das einige Sekunden auf keinem Layer liegt, wird freigegeben und bei Bedarf wieder geladen.</p>
+<h3 id="video--dxv"><a class="anchor" href="#video--dxv" aria-label="Link">#</a>DXV-Videos</h3>
+<p>DXV-Videos aus Resolume brauchen viel Prozessorzeit. NyrexVJ kann im Hintergrund HAP-Kopien davon erstellen und spielt die Kopie über den komprimierten HAP-Weg ab, der fast keine Prozessorzeit und nur einen Bruchteil des Videospeichers braucht. Unter Einstellungen, Leistung, DXV-Videos in HAP umwandeln findest du den Importmodus Aus, Nachfragen (der Standard) oder Automatisch, das HAP-Format und ein Größenlimit für den Zwischenspeicher. Die Originaldateien bleiben unberührt, und das Video läuft so weiter, wie es ist, bis die Kopie fertig ist. HAP Q mit Transparenz wird nicht unterstützt.</p>
+<h3 id="video--decoder"><a class="anchor" href="#video--decoder" aria-label="Link">#</a>Den Video-Decoder wählen</h3>
+<p>Unter Einstellungen, Leistung, Videowiedergabe wählst du den Decoder: Automatisch, Hardware bevorzugen oder Software erzwingen. Eine Schaltfläche testet die Hardware-Dekodierung auf deinem Computer. Der Video-Monitor listet jedes laufende Video mit Codec, Decode- und Upload-Zeiten, verworfenen und späten Bildern und seinem Speicher. Sieht ein Video flau aus, weil es HDR ist, sagt der Monitor das: HDR wird ohne Tone Mapping gezeigt.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="shaders"><h2>16. Deine eigenen Shader</h2>
+<h3 id="shaders--shader-clip"><a class="anchor" href="#shaders--shader-clip" aria-label="Link">#</a>Einen Shader-Clip machen</h3>
+<p>Jeder Fragment-Shader kann ein Clip werden. Leg eine <code>.glsl</code>-, <code>.frag</code>- oder <code>.fs</code>-Datei in den Ordner shaders oder zieh die Datei auf das Fenster. Sie erscheint in der Bibliothek als Shader: Dateiname unter dem Filter Shader. Sie funktioniert wie jeder andere Clip: Geschwindigkeit, Skalierung, Farben, Effekte, Audio, LFOs und Makros wirken alle.</p>
+<p>NyrexVJ sieht einmal pro Sekunde in den Ordner. Eine gespeicherte Änderung lädt den Shader neu, während er läuft, du kannst die Datei also in jedem Texteditor bearbeiten. Lässt sich der Shader nicht kompilieren, zeigt das Clip-Fenster die Meldung mit der Zeilennummer deiner Datei, und die letzte funktionierende Version läuft weiter. Bibliothek, Beispiel-Shader erstellen schreibt einen kleinen Shader als Ausgangspunkt.</p>
+<h3 id="shaders--shader-styles"><a class="anchor" href="#shaders--shader-styles" aria-label="Link">#</a>Zwei Stile</h3>
+<p>Eine Datei mit <code>void main()</code> ist ein Shader im NyrexVJ-Stil, eine Datei mit einer <code>mainImage</code>-Funktion und ohne <code>void main()</code> ist ein Shader im Shadertoy-Stil. NyrexVJ erkennt das selbst. Im NyrexVJ-Stil sind diese Namen sofort nutzbar: <code>vUv</code>, <code>uRes</code>, <code>uTime</code>, <code>uBeat</code>, <code>uBpm</code>, <code>uColorA</code>, <code>uColorB</code>, <code>uAudio</code> mit Bass, Mitten, Höhen und Pegel, <code>uKick</code> und die Helfer <code>spec(x)</code> und <code>wave(x)</code> für Spektrum und Wellenform. Im Shadertoy-Stil gibt es <code>iResolution</code>, <code>iTime</code> und <code>iChannel0</code> für das Audio.</p>
+<p>Die vollständige Liste der Namen, Helfer und Grenzen steht im Dokument <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SHADERS.md" target="_blank" rel="noopener noreferrer">docs/SHADERS.md</a> des Projekts.</p>
+<h3 id="shaders--shader-passes"><a class="anchor" href="#shaders--shader-passes" aria-label="Link">#</a>Transparenz und mehrere Durchgänge</h3>
+<p>Eine Zeile <code>#pragma nyrexvj alpha</code> macht den Clip transparent. Abschnitte namens <code>buffer a</code> bis <code>buffer d</code>, <code>image</code> und <code>channel</code> machen die Datei zu einem Multipass-Shader mit Feedback, wie bei Shadertoy. Bilder und Videos aus der Bibliothek lassen sich als Eingänge nutzen. Eine Datei ohne so eine Zeile verhält sich genau wie immer.</p>
+<h3 id="shaders--isf"><a class="anchor" href="#shaders--isf" aria-label="Link">#</a>ISF-Dateien</h3>
+<p>ISF-Dateien, das Format von VDMX und anderen mit einem Kopf zwischen <code>/*{</code> und <code>}*/</code>, werden aus demselben Ordner gelesen. Eine Datei mit einem Eingang <code>inputImage</code> wird zu einem Effekt namens ISF: Dateiname. Jede andere ISF-Datei wird zu einem Clip. Die Eingänge der Datei erscheinen als Regler im Clip-Fenster oder als die vier Regler des Effekts. Was eine ISF-Datei nicht kann, wie Vertex-Shader, Übergänge und Audio-Eingänge, steht im Clip-Fenster.</p>
+<h3 id="shaders--shader-controls"><a class="anchor" href="#shaders--shader-controls" aria-label="Link">#</a>Regler für deinen Shader</h3>
+<p>Ein Shader kann mit <code>#pragma nyrexvj param</code> eigene Regler und Schalter anmelden. Sie erscheinen im Clip-Fenster unter Shader-Regler. Ein Rechtsklick setzt einen Regler auf den Standardwert der Datei zurück, und Regler zurücksetzen setzt alle zurück.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Shader-Dateien sind Programme für deine Grafikkarte. Ein kaputter Shader kann das Bild ausbremsen. NyrexVJ begrenzt die Zeit, die ein Shader brauchen darf, und schaltet einen zu langsamen ab.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="models"><h2>17. 3D-Modelle</h2>
+<h3 id="models--builtin-3d"><a class="anchor" href="#models--builtin-3d" aria-label="Link">#</a>Eingebaute 3D-Clips</h3>
+<p>Neben den Shader-Clips gibt es Clips, die echte 3D-Meshes zeichnen: Torus Knot Mesh, Crystal Cluster Mesh, Orbit Rings Mesh, Chrome Orbs Mesh, Neon Cubes Mesh, Gold Knot Mesh und Pulse Columns Mesh. Sie stehen wie jeder andere Clip in der Bibliothek, folgen den Layer-Farben, der Geschwindigkeit und der Skalierung, pulsieren mit Bass und Kick und laufen durch dieselben Effekte.</p>
+<h3 id="models--own-models"><a class="anchor" href="#models--own-models" aria-label="Link">#</a>Deine eigenen Modelle</h3>
+<p>Leg eine <code>.glb</code>- oder <code>.gltf</code>-Datei in den Ordner models. Die Bibliothek zeigt den Pfad und hat eine Schaltfläche, die ihn öffnet. Drück in der Bibliothek Neu einlesen, ein Neustart ist nicht nötig. Das Modell erscheint als Model: Dateiname.</p>
+<ul><li>Texturen in PNG und JPEG, Node-Animation, Charaktere mit Skelett-Animation, Morph Targets und mehrere Meshes werden unterstützt.</li><li>Ein Modell lädt im Hintergrund, wenn ein Deck es zum ersten Mal enthält, das Bild bleibt also nie stehen. Es gibt ein Zeitlimit von 60 Sekunden und eine Schaltfläche Laden abbrechen.</li><li>Eine Datei, die beschädigt oder zu groß ist oder etwas Nicht-Unterstütztes nutzt, wird abgelehnt. Der Grund steht im Log und im Tooltip des Clips.</li><li>Layer, die dasselbe Modell spielen, teilen es sich im Speicher.</li></ul>
+<h3 id="models--lighting"><a class="anchor" href="#models--lighting" aria-label="Link">#</a>Licht und Materialien</h3>
+<p>Modelle mit Metallic-Roughness-Materialien, Normal Maps, Emissive Maps und ausgestanzter Transparenz werden mit physikalisch basierter Beleuchtung gezeichnet. Gemischte Transparenz wird pro Mesh von hinten nach vorn sortiert. Mit Meshopt komprimierte Dateien werden standardmäßig gelesen. Draco-Dateien funktionieren nur in einem Build mit der Option <code>-DNYREXVJ_DRACO=ON</code>, sonst werden sie mit einer Meldung abgelehnt, die die Option nennt.</p>
+<p>Lichter und Kameras in einer Datei werden gezählt, aber nicht benutzt, die Szene behält ihre eigenen. Grenzen schützen den Videospeicher: 128 Joints pro Skin, 32 Morph Targets und 640 MiB pro Szene. Noch nicht unterstützt sind Tangenten und zweite UV-Sätze, Textur-Transformationen und Material-Erweiterungen über die Emissive-Stärke hinaus.</p>
+<h3 id="models--model-info"><a class="anchor" href="#models--model-info" aria-label="Link">#</a>Die Modell-Informationen</h3>
+<p>Wähl einen Modell-Clip und sieh ins Clip-Fenster. Es zeigt den Ladezustand, die Zahl der Vertices und Dreiecke, Skins, Joints, Morph Targets, gemischte Materialien, die Lichter und Kameras in der Datei, die nicht benutzt werden, den GPU-Speicher und die Ladezeit. Schlägt das Laden fehl, lädt Erneut versuchen die Datei noch einmal. Eine Animation in der Datei läuft von selbst.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Modelle mit vielen Dreiecken kosten auf jedem Layer, der sie zeigt, Grafikzeit. Schau unter Einstellungen, Leistung nach, wenn ein Modell die Show ausbremst.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="creator"><h2>18. Der Clip Creator</h2>
+<h3 id="creator--creator-what"><a class="anchor" href="#creator--creator-what" aria-label="Link">#</a>Was er ist</h3>
+<p>Der Clip Creator baut deine eigenen 3D-Szenen aus Formen, Modellen und Lichtern. Du lässt alles zur Musik bewegen und speicherst das Ergebnis als portable <code>.nyxclip</code>-Datei. Die Szene spielt dann wie jeder andere Clip. Öffne ihn über das Menü Creator, Clip Creator öffnen.</p>
+<h3 id="creator--creator-layout"><a class="anchor" href="#creator--creator-layout" aria-label="Link">#</a>Die drei Spalten</h3>
+<ul><li>Die linke Spalte listet die Objekte, die Lichter und die Szenen-Einstellungen. Objekt hinzufügen bietet Kugel, Würfel, Zylinder, Kegel, Fläche, Ring (Torus), Torusknoten und Modell aus der Bibliothek. Licht hinzufügen gibt ein Gerichtetes Licht oder ein Punktlicht, bis zu vier.</li><li>Die Mitte zeigt eine Live-Vorschau. Zieh, um zu orbiten, und nutze das Mausrad zum Zoomen. Freie Kamera, Audio simulieren und Kamera zurücksetzen helfen beim Umsehen, und Diese Ansicht als Clip-Kamera nehmen behält die gefundene Ansicht.</li><li>Die rechte Spalte ist der Inspektor für das gewählte Objekt. Er hat Transformation (Position, Drehung, Skalierung), Wiederholen (ein Ring oder eine Reihe von Kopien), Material, Textur, Animation, Audio-Reaktionen und die Einstellungen für Kameras und Himmel.</li></ul>
+<figure class="shot"><a href="../../assets/manual/de/creator.webp"><img src="../../assets/manual/de/creator.webp" width="1324" height="784" loading="lazy" alt="Der Clip Creator mit einer Kugel, der Objektliste und den Material-Einstellungen"></a><figcaption>Der Clip Creator mit einer Kugel, der Objektliste und den Material-Einstellungen</figcaption></figure>
+<h3 id="creator--creator-objects"><a class="anchor" href="#creator--creator-objects" aria-label="Link">#</a>Objekte, Materialien und Animation</h3>
+<p>Ein Material hat eine Farbe, Metallisch, Rauheit, eine Leuchtfarbe und -stärke und optional Textur, Normal Map und Glow Map. Hak Farben des Layers übernehmen an, damit das Objekt die Farben des Layers nimmt, auf dem es spielt, so lässt sich eine Szene mit einem Klick umfärben. Animation bietet Bewegungen wie Rotation, Wippen, Kreisen, Pulsieren und Schwanken, jede mit eigenen Einstellungen wie Tempo, Höhe oder Radius.</p>
+<p>Unter Audio-Reaktionen bewegt ein Band (Bass, Mitten, Höhen, Pegel oder Kick) das Objekt: Es wird größer, glüht, verdreht sich oder hebt ab. Die Musik kann auch die Lichtstärke und den Zoom der Kamera bewegen.</p>
+<h3 id="creator--creator-cameras"><a class="anchor" href="#creator--creator-cameras" aria-label="Link">#</a>Kameras und Himmel</h3>
+<p>Eine Szene kann bis zu acht Kameras enthalten. Wähl die, die spielt, oder lass den Clip mit Schnitt (Beats) alle paar Beats zwischen allen schneiden. Eine Kamera hat einen Abstand, einen Höhenwinkel, einen Startwinkel, ein Sichtfeld, eine Kreisgeschwindigkeit und ein Höhen-Schwanken. Himmel und Belichtung legen die Farben von Himmel, Horizont und Boden, die Himmelshelligkeit und die Belichtung fest.</p>
+<h3 id="creator--creator-save"><a class="anchor" href="#creator--creator-save" aria-label="Link">#</a>Vorlagen, Speichern und Benutzen</h3>
+<p>Starte mit einer Vorlage (Menü Creator, Mit einer Vorlage starten, oder Öffnen im Fenster) oder mit einer leeren Szene über Neu. Speichern schreibt eine <code>.nyxclip</code>-Datei in den Ordner clips. Sie enthält die Szenenbeschreibung und als Kopien die .glb-Modelle und die PNG- oder JPEG-Texturen, die die Szene nutzt, bis zu 200 MiB, eine Datei reicht also, um eine Szene weiterzugeben. Sie erscheint dann in der Bibliothek unter Szenen als Scene: Name. Als Clip nutzen legt sie außerdem in die gewählte Zelle des Decks. Kopie speichern speichert die Szene unter einem neuen Namen.</p>
+<p>In einer Szene lassen sich nur .glb-Modelle speichern. Eine .gltf-Datei, die getrennte Dateien braucht, steht in der Ansicht Dateien, lässt sich aber nicht nutzen. Rückgängig und Wiederherstellen funktionieren im Creator, solange er den Fokus hat. Eine ungespeicherte Szene liegt im Ordner recovery, falls das Programm unerwartet schließt.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="nodes"><h2>19. Der Node-Effekt-Editor</h2>
+<h3 id="nodes--nodes-what"><a class="anchor" href="#nodes--nodes-what" aria-label="Link">#</a>Was er macht</h3>
+<p>Der Node-Editor baut deine eigenen Effekte ohne Code. Du verbindest Nodes für Bilder, Audio, Beats, LFOs, Mathe, Farbe, Verzerrung, Rauschen und Formen, und NyrexVJ macht aus dem Graphen einen einzigen Shader. Das Ergebnis ist ein normaler Effekt: Er steht in der Bibliothek als Node: Name, passt in jeden Slot eines Layers oder des Masters, hat bis zu vier Regler und kann die Makros, das Audio und den Beat lesen. Ein Node-Effekt kostet so viel wie derselbe Effekt von Hand geschrieben.</p>
+<h3 id="nodes--nodes-quick"><a class="anchor" href="#nodes--nodes-quick" aria-label="Link">#</a>Schnellstart</h3>
+<ol><li>Öffne den Editor über Creator, Node-Effekt-Editor, oder über Nodes bearbeiten unter einem Node-Effekt im Effekt-Rack.</li><li>Drück Neu, oder Beispiele erstellen für vier fertige Effekte: Wavy Rainbow, Mirror Swirl, Kick Pulse und Trails.</li><li>Klick mit rechts in den Graphen und such einen Node. Zieh von einem Ausgangs-Pin rechts an einem Node zu einem Eingangs-Pin links an einem anderen, um sie zu verbinden. Der Output-Node ist das Ende jedes Effekts.</li><li>Der Effekt wird nach jeder Änderung einen Moment später gespeichert und neu gebaut. Die Statuszeile zeigt, ob er kompiliert, wie oft er das Bild liest und die Meldung auf dem Node, der falsch ist. Eine ungültige Änderung lässt den letzten guten Shader weiterlaufen.</li><li>Drück Zu Layer hinzufügen, um den Effekt auf dem gewählten Layer zu nutzen.</li></ol>
+<figure class="shot"><a href="../../assets/manual/de/node-editor.webp"><img src="../../assets/manual/de/node-editor.webp" width="1244" height="764" loading="lazy" alt="Der Node-Effekt-Editor mit einem Graphen aus verbundenen Nodes"></a><figcaption>Der Node-Effekt-Editor mit einem Graphen aus verbundenen Nodes</figcaption></figure>
+<h3 id="nodes--nodes-graph"><a class="anchor" href="#nodes--nodes-graph" aria-label="Link">#</a>Im Graphen arbeiten</h3>
+<div class="tablewrap"><table><thead><tr><th scope="col">Aktion</th><th scope="col">So geht es</th></tr></thead><tbody><tr><td>Node hinzufügen</td><td>Rechtsklick auf leere Fläche, zum Suchen tippen, Node anklicken</td></tr><tr><td>Verbinden</td><td>Von einem Ausgangs-Pin auf einen Eingangs-Pin ziehen</td></tr><tr><td>Verbindung entfernen</td><td>Einen verbundenen Eingang wegziehen, oder rechts auf den Node klicken und Eingänge trennen wählen</td></tr><tr><td>Wert ändern</td><td>Das Wertefeld ziehen, oder doppelklicken und eine Zahl tippen</td></tr><tr><td>Node löschen</td><td>Wählen und Entf oder Rücktaste drücken</td></tr><tr><td>Duplizieren</td><td>Strg+D oder Rechtsklick, Duplizieren</td></tr><tr><td>Ansicht verschieben</td><td>Mittlere Maustaste, oder auf leerer Fläche ziehen</td></tr><tr><td>Rückgängig und Wiederherstellen</td><td>Strg+Z und Strg+Y</td></tr><tr><td>Aufräumen</td><td>Die Schaltfläche Anordnen setzt die Nodes in Spalten von den Eingängen zum Ausgang</td></tr></tbody></table></div>
+<p>Eine Zahl kann einen Vektor oder eine Farbe speisen, und eine Farbe kann eine Farbe mit Alpha speisen. Eine Verbindung, die eine Schleife ergäbe oder sich nicht umwandeln lässt, wird beim Loslassen abgelehnt.</p>
+<h3 id="nodes--nodes-catalogue"><a class="anchor" href="#nodes--nodes-catalogue" aria-label="Link">#</a>Die 68 Nodes</h3>
+<p>Die Nodes sind in Gruppen geordnet: Input (Bild, vorheriges Bild für Feedback, Position, Zeit, Beat, Audio, Spektrum, Wellenform, Regler, Makros, LFO und Konstanten), Maths, Vector, Colour, Distort, Noise, Shape, Filter und Output. Nodes lesen das Bild, die Audio-Analyse, den Beat, die acht Makros und vier Regler. Ein LFO-Node läuft im Shader auf der Beat-Clock und folgt der Sync-Quelle ganz ohne Prozessorarbeit. Der vollständige Katalog mit jedem Eingang und jeder Option steht in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/NODES.md" target="_blank" rel="noopener noreferrer">docs/NODES.md</a> des Projekts.</p>
+<h3 id="nodes--nodes-share"><a class="anchor" href="#nodes--nodes-share" aria-label="Link">#</a>Regler, Weitergeben und Grenzen</h3>
+<p>Jeder Effekt hat vier Regler. Unter Effekt-Regler gibst du jedem eine Beschriftung und einen Standardwert, und ein Regler ohne Beschriftung wird nicht angezeigt. Effekte werden als <code>.nyxfx</code>-Dateien im Ordner <code>nodes</code> des Datenordners gespeichert. Schick die Datei an einen Freund, oder zieh eine Datei auf das NyrexVJ-Fenster, um sie zu importieren.</p>
+<p>Ein Graph darf das Bild höchstens 64 Mal lesen. Der Editor hat keinen Zoom. Werte, die du in einen Eingang ohne Verbindung tippst, werden fest in den Shader eingebaut.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Der Node-Editor wurde mit Skripten und auf einem Software-Renderer getestet. Wenn auf deiner Grafikkarte etwas falsch aussieht, melde es bitte auf GitHub.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="live-sources"><h2>20. Live-Quellen: Spout, NDI und Kameras</h2>
+<h3 id="live-sources--spout-input"><a class="anchor" href="#live-sources--spout-input" aria-label="Link">#</a>Spout-Eingang</h3>
+<p>Vier Clips, Spout Input 1 bis 4, zeigen das Bild, das ein anderes Programm über Spout sendet, zum Beispiel Unreal Engine, TouchDesigner oder ein Spiel. Leg einen in eine Zelle, wähl ihn und such den Sender im Clip-Fenster aus. Automatisch nimmt den ersten Sender, der nicht die Ausgabe von NyrexVJ selbst ist.</p>
+<p>Das Bild wird ohne Strecken in den Layer eingepasst und läuft wie jeder Clip durch die Layer-Effekte. Es verbindet sich neu, wenn der Sender zurückkommt, und zeigt einen Platzhalter, solange keiner da ist. Kommt das Bild auf dem Kopf an, hak Bild vertikal spiegeln an. Spout funktioniert nur unter Windows.</p>
+<h3 id="live-sources--ndi-input"><a class="anchor" href="#live-sources--ndi-input" aria-label="Link">#</a>NDI-Eingang</h3>
+<p>Vier Clips, NDI Input 1 bis 4, zeigen das Bild eines anderen Programms oder Computers im Netzwerk. NDI-Sender werden automatisch aufgelistet. Automatisch nimmt den ersten Sender, der nicht die Ausgabe von NyrexVJ ist. NDI braucht die NDI-Runtime, die NyrexVJ nicht mitliefert. Installiere die kostenlosen NDI Tools von ndi.video. Das Clip-Fenster hat eine Schaltfläche zur Download-Seite.</p>
+<h3 id="live-sources--cameras"><a class="anchor" href="#live-sources--cameras" aria-label="Link">#</a>Kameras und Capture-Karten</h3>
+<p>Vier Clips, Camera 1 bis 4, zeigen eine Webcam oder eine Capture-Karte. Das Clip-Fenster listet die Kameras mit einer Schaltfläche Aktualisieren. Auflösung und Bildrate sind Anfragen an das Gerät, und Kameras antworten mit ihrem nächstliegenden Modus. Kameras brauchen die FFmpeg-Bibliotheken samt der Geräte-Bibliothek.</p>
+<h3 id="live-sources--live-state"><a class="anchor" href="#live-sources--live-state" aria-label="Link">#</a>Zustand und Wiederverbinden</h3>
+<p>Das Clip-Fenster zeigt den Zustand einer Live-Quelle: Suche, Verbinde, Live, Signal verloren oder Verbinde neu, dazu Größe, Bildrate, verworfene Bilder und die Latenz von der Ankunft bis zum Ende des Uploads. Eine verlorene Quelle wird von selbst wieder gesucht, zuerst nach einer halben Sekunde und dann mit wachsenden Pausen bis zu 10 Sekunden. Das letzte Bild bleibt währenddessen auf dem Layer.</p>
+<p>Eine Quelle wird geöffnet, wenn ein Layer ihren Clip zeigt, und drei Sekunden nach der letzten Nutzung geschlossen, sie kostet also nichts, solange sie nicht gebraucht wird. Die Einzelheiten und was noch nicht getestet wurde, etwa echte Capture-Karten, stehen in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/LIVE.md" target="_blank" rel="noopener noreferrer">docs/LIVE.md</a> des Projekts.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Die ersten Live-Quellen von NyrexVJ wurden nur mit Testquellen und einem Software-Aufbau geprüft. Wenn du eine echte Capture-Karte oder ein großes NDI-Netzwerk nutzt, teste deinen Aufbau vor der Show.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="outputs"><h2>21. Ausgänge, Mapping und OBS</h2>
+<h3 id="outputs--obs"><a class="anchor" href="#outputs--obs" aria-label="Link">#</a>Das Bild an OBS schicken</h3>
+<p>Spout gibt das fertige Bild unter Windows ohne Bildschirmaufnahme an OBS weiter. Du richtest es einmal in diesen Schritten ein.</p>
+<ol><li>Hak in NyrexVJ im Menü Ausgabe oder unter Einstellungen, Ausgabe Per Spout an OBS senden an und wähl einen Sendernamen.</li><li>Installiere in OBS einmalig das obs-spout2-plugin.</li><li>Füge eine Quelle namens Spout2 Capture hinzu und wähl den Sender aus der Liste.</li></ol>
+<p>Spout funktioniert nur unter Windows. Das Ausgabefenster mit einer Fensteraufnahme in OBS bleibt eine Alternative, ebenso NDI. Über NDI senden im Menü Ausgabe schickt das Hauptbild über das Netzwerk an OBS mit NDI-Plugin, Resolume, vMix oder den NDI Studio Monitor.</p>
+<h3 id="outputs--output-windows"><a class="anchor" href="#outputs--output-windows" aria-label="Link">#</a>Ausgabefenster</h3>
+<p>Einstellungen, Ausgabe hat einen Tab für jeden von bis zu vier Ausgängen. Ausgang 1 ist immer in Benutzung, die Ausgänge 2 bis 4 schaltest du mit Diesen Ausgang verwenden ein. Jeder Ausgang hat sein eigenes Display, Öffnen und Schließen, Vollbild oder Fenster und ein Testbild. <code>F11</code> schaltet den Vollbildmodus für alle offenen Ausgänge um, und <code>Esc</code> verlässt ihn. Zwei Ausgänge auf demselben Display bekommen eine Warnung, weil sie übereinander lägen.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-output.webp"><img src="../../assets/manual/de/settings-output.webp" width="874" height="584" loading="lazy" alt="Die Seite Ausgabe in den Einstellungen"></a><figcaption>Die Seite Ausgabe in den Einstellungen</figcaption></figure>
+<h3 id="outputs--slices"><a class="anchor" href="#outputs--slices" aria-label="Link">#</a>Slices und Bildausschnitt</h3>
+<p>Ein Ausgang enthält bis zu acht Slices. Ein Slice zeigt einen Teil des Bildes in einem Teil des Ausgangs. Slice hinzufügen, Duplizieren und Entfernen verwalten sie. Der Bildausschnitt legt fest, welchen Teil der Komposition ein Slice zeigt, als Links, Oben, Breite und Höhe in Prozent oder mit den Schaltflächen Ganzes Bild und den vier Hälften. So verteilst du ein Bild auf mehrere Projektoren. Ganzes Fenster füllen streckt es, Horizontal spiegeln und Vertikal spiegeln drehen es für Rückprojektion.</p>
+<h3 id="outputs--warp-masks"><a class="anchor" href="#outputs--warp-masks" aria-label="Link">#</a>Ecken, Verzerrung und Masken</h3>
+<p>Die Zeichenfläche zeigt den Ausgang so, wie ihn der Projektor zeichnet. Zieh an den orangen Quadraten, um die vier Ecken zu verschieben, damit ein Projektor, der schräg steht, auf eine Wand passt. Zieh an den runden Punkten, um das Bild zu biegen. Verzerrungspunkte stellt das Raster von 2 x 2 bis 17 x 17 ein. Ecken zurücksetzen und Verzerrung zurücksetzen gehen zurück zum einfachen Rechteck.</p>
+<p>Eine Maske schneidet einen Slice auf eine Form zu, zum Beispiel um einen Pfeiler oder ein Bühnenbild. Sie ist ein Polygon mit 3 bis 32 Punkten, das gekrümmte Kanten haben kann, eine Form, die du frei mit der Maus zeichnest, oder ein Bild wie eine PNG-Datei. Weiche Kante verwischt den Rand, und Invertieren versteckt das Innere statt des Äußeren.</p>
+<h3 id="outputs--blending"><a class="anchor" href="#outputs--blending" aria-label="Link">#</a>Kantenüberblendung und Farbe</h3>
+<p>Stell bei Projektoren, die sich überlappen, die Überblendbreite der gemeinsamen Kanten in Prozent des Ausgangs ein. Verlauf und Gamma formen die Blende, sodass die beiden Blenden in der Überlappung die ursprüngliche Helligkeit ergeben. Schwarzwert hebt das Schwarz des Bildes außerhalb der Überblendzonen an, denn zwei überlappende Projektoren addieren ihr Grau, die Überlappung sieht also heller aus als der Rest. Helligkeit dimmt einen Projektor, der heller ist als sein Nachbar.</p>
+<p>Jeder Slice hat seine eigene Farbkorrektur, und das ganze Ausgangsbild auch: Verstärkung für Rot, Grün und Blau, Sättigung, Kontrast, Gamma und Schwarzanhebung. Damit gleichst du Projektoren unterschiedlichen Alters an.</p>
+<h3 id="outputs--arrange"><a class="anchor" href="#outputs--arrange" aria-label="Link">#</a>Mehrere Projektoren auf einmal</h3>
+<p>Ausgänge anordnen richtet ein Raster aus überlappenden Projektoren mit einem Klick ein. Gib die Zahl der Spalten und Zeilen und die Überlappung in Prozent des ganzen Bildes ein. NyrexVJ richtet dann die Bildausschnitte und die Kantenüberblendung für dieses Raster ein. Feinjustiere danach.</p>
+<h3 id="outputs--venues"><a class="anchor" href="#outputs--venues" aria-label="Link">#</a>Venue-Setups</h3>
+<p>Ein Venue-Setup speichert alle Ausgänge eines Raums als kleine Datei, mit den Displays, Slices, Verzerrung, Masken, Überblendung und Farbe. Speichern unter, Laden, Duplizieren, Exportieren und Importieren verwalten sie, und du kannst eine Setup-Datei auf das Fenster ziehen. <code>--venue NAME</code> lädt eins beim Start. So baust du das Mapping einmal in einem Club auf und lädst es beim nächsten Mal mit einem Klick.</p>
+<h3 id="outputs--ndi-output"><a class="anchor" href="#outputs--ndi-output" aria-label="Link">#</a>NDI pro Ausgang</h3>
+<p>Jeder Ausgang kann seine eigene NDI-Quelle senden, die den Ausgang genau so trägt, wie ihn das Fenster zeigt, mit Masken, Verzerrung und Farbe. Die NDI-Bibliothek wird nicht mit NyrexVJ geliefert, installiere die kostenlosen NDI Tools. Ein Speicherbudget von 384 MiB wird für Masken, Verzögerung und NDI-Auslesen mitgezählt, und die Einstellungen zeigen, wie viel das aktuelle Setup braucht.</p>
+<h3 id="outputs--frame-lock"><a class="anchor" href="#outputs--frame-lock" aria-label="Link">#</a>Frame-Lock und Verzögerung</h3>
+<p>Frame-Lock zeichnet zuerst alle Ausgabefenster und tauscht sie dann direkt nacheinander, damit mehrere Bildschirme dasselbe Bild zeigen. Jeder Ausgang lässt sich um 0 bis 8 Bilder verzögern, um Bildschirme mit unterschiedlicher Verarbeitungszeit auszurichten. Die Einstellungen zeigen die gemessene Tausch-Abweichung, und das Testbild Sync-Balken hilft dir, mehrere Bildschirme zum Vergleich zu filmen. Es ist kein Hardware-Genlock.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Die Mapping-Funktionen wurden mit Testbildern und einem Software-Renderer gebaut und getestet. Einen Test mit echtem Projektor oder mehreren Monitoren gab es noch nicht. Probiere deinen Aufbau im Veranstaltungsort aus, bevor die Show beginnt.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="recording"><h2>22. Aufnahme</h2>
+<h3 id="recording--record-start"><a class="anchor" href="#recording--record-start" aria-label="Link">#</a>Starten und beenden</h3>
+<p>NyrexVJ kann das fertige Bild der Show in eine Videodatei aufnehmen, während es läuft. Nutze das Menü Ausgabe, Aufnahme starten, oder <code>Strg+Umschalt+R</code>, und dieselben Tasten beenden sie wieder. Einstellungen, Aufnahme hat alle Optionen und Live-Zahlen. Die Statusleiste zeigt REC, die aufgenommene Zeit und in Orange die verworfenen Bilder.</p>
+<p>Beenden speichert die Datei. Schließt du das Programm während der Aufnahme, speichert es die Datei zuerst. Abbrechen und löschen hält sofort an und löscht die Datei. Dateien tragen Datum und Uhrzeit des Starts im Namen und liegen im Ordner Recordings des Datenordners, außer du wählst einen anderen Ordner.</p>
+<h3 id="recording--record-what"><a class="anchor" href="#recording--record-what" aria-label="Link">#</a>Was aufgenommen wird</h3>
+<p>Das Bild, das die Engine für die Komposition rendert, dasselbe Bild, das an die Vorschau, an Spout und an NDI geht. Es hat die Auflösung der Komposition und wird auf die Größe skaliert, die du für die Datei wählst. Was ein einzelnes Ausgabefenster nach dem Mapping zeigt, wird nicht aufgenommen, nutze dafür NDI pro Ausgang oder eine Aufnahme des Fensters. Die Aufnahme hat keine Transparenz und keinen Ton aus Videos. Der Ton kommt aus der Audioquelle unter Einstellungen, Audio, wenn Ton aufnehmen angehakt ist.</p>
+<h3 id="recording--record-formats"><a class="anchor" href="#recording--record-formats" aria-label="Link">#</a>Formate</h3>
+<p>NyrexVJ probiert jedes Format mit einem kleinen Testbild aus und listet nur die, die auf deinem Computer funktionieren. FFmpeg übernimmt das Kodieren.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Format</th><th scope="col">Datei</th><th scope="col">Gut für</th></tr></thead><tbody><tr><td>H.264</td><td>MP4</td><td>Weitergeben und kleine Dateien, der Prozessor arbeitet</td></tr><tr><td>H.264 auf der Grafikkarte</td><td>MP4</td><td>Dasselbe, die Grafikkarte arbeitet</td></tr><tr><td>HEVC auf der Grafikkarte</td><td>MP4</td><td>Kleinere Dateien als H.264</td></tr><tr><td>ProRes 422 HQ und 4444</td><td>MOV</td><td>Videoschnittprogramme</td></tr><tr><td>HAP, HAP Alpha und HAP Q</td><td>MOV</td><td>VJ-Programme, sehr leicht abzuspielen</td></tr><tr><td>Motion JPEG</td><td>MOV</td><td>Einfach und robust</td></tr><tr><td>FFV1</td><td>MKV</td><td>Verlustfreie Archive</td></tr><tr><td>VP9</td><td>MKV</td><td>Das Web, langsam zu kodieren</td></tr></tbody></table></div>
+<h3 id="recording--record-size"><a class="anchor" href="#recording--record-size" aria-label="Link">#</a>Größe, Bildrate und Qualität</h3>
+<p>Die Größe ist wie die Ausgabe, 1280 x 720, 1920 x 1080, 2560 x 1440, 3840 x 2160 oder eine benutzerdefinierte Größe, mit insgesamt bis zu 3840 x 2160 Pixeln. Die Bildrate ist 24, 25, 30, 48, 50, 60, 90 oder 120. Qualität legt die Bitrate von H.264, HEVC und VP9 fest und den Quantisierer von Motion JPEG, die anderen Formate haben eine feste Qualität. Einstellungen, Aufnahme zeigt den Speicher, den die Aufnahme braucht.</p>
+<h3 id="recording--record-safe"><a class="anchor" href="#recording--record-safe" aria-label="Link">#</a>Die Show geht vor</h3>
+<p>Die Aufnahme lässt die Show nie warten. Im Render-Thread wird nur eine Kopie des Bildes gemacht, und alles Langsame läuft in einem anderen Thread. Ist der Encoder langsamer als die Show, werden Bilder verworfen und gezählt, statt das Bild anzuhalten. Die Datei hält Echtzeit, Video und Ton bleiben also im Takt, auch wenn die Show stockt. Mit der Option Datei nach einem Absturz lesbar halten übersteht die Datei einen Absturz, und eine volle Festplatte beendet die Aufnahme sauber.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Nimm eine lange Show mit H.264 oder einem Hardware-Format in mäßiger Qualität auf. ProRes und FFV1 füllen eine Platte schnell.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="control"><h2>23. Steuerung: MIDI, OSC und die Webseite</h2>
+<h3 id="control--control-where"><a class="anchor" href="#control--control-where" aria-label="Link">#</a>Wo es liegt</h3>
+<p>Alles steht unter Einstellungen, Steuerung. Die Zuordnungen und Adressen beziehen sich auf das Arbeits-Deck, also das, das du im Clip-Raster siehst.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-control.webp"><img src="../../assets/manual/de/settings-control.webp" width="874" height="584" loading="lazy" alt="Die Seite Steuerung in den Einstellungen"></a><figcaption>Die Seite Steuerung in den Einstellungen</figcaption></figure>
+<h3 id="control--midi"><a class="anchor" href="#control--midi" aria-label="Link">#</a>MIDI</h3>
+<p>MIDI funktioniert unter Windows und unter Linux. Unter Linux muss der Controller als ALSA-Sequencer-Port auftauchen, <code>aconnect -l</code> listet sie auf. Wähl deinen Controller unter Gerät, drück Zuordnung hinzufügen, such aus, was er steuern soll, und dreh dann an einem Regler oder drück eine Taste am Controller. Die beiden sind ab diesem Moment verbunden.</p>
+<p>Regler und Fader (CC) setzen Werte. Tasten (Noten) lösen Trigger aus oder schalten etwas ein, solange sie gehalten werden. Hak Invertieren an, um einen Fader umzudrehen, drück Lernen, um einer Zeile einen neuen Regler zu geben, und Entfernen, um sie zu löschen. Die Zuordnungen werden in <code>controls.json</code> im Datenordner gespeichert. Ein Controller, den ein anderes Programm exklusiv geöffnet hat, lässt sich nicht von zwei Programmen gleichzeitig nutzen.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Leg den Blackout-Schalter zuerst auf ein großes Pad. Er ist der Regler, den du am meisten willst, wenn etwas schiefgeht.</p></aside>
+<h3 id="control--osc"><a class="anchor" href="#control--osc" aria-label="Link">#</a>OSC-Eingang</h3>
+<p>Hak OSC-Nachrichten empfangen an. OSC ist standardmäßig aus und hört auf Port 9010, weil VRChat 9000 nutzt und die beiden sich nicht in die Quere kommen sollen. Nur dieser Computer darf senden, außer du hakst Nachrichten von anderen Computern annehmen an, dann kann jeder in deinem Netzwerk NyrexVJ steuern.</p>
+<p>Schick eine Zahl an eine Adresse. Fließkommazahlen, ganze Zahlen und wahr oder falsch werden akzeptiert und als 0 bis 1 gelesen. Eine Nachricht ohne Wert löst einen Trigger aus oder kippt einen Schalter. Die Einstellungsseite listet jede Adresse, und ein Klick darauf kopiert sie.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Adresse</th><th scope="col">Bedeutung</th></tr></thead><tbody><tr><td><code>/nyrex/master/level</code></td><td>Master-Pegel, 0 bis 1</td></tr><tr><td><code>/nyrex/master/blackout</code></td><td>Blackout, an ab 0,5</td></tr><tr><td><code>/nyrex/master/bpm</code></td><td>Tempo, 0 bis 1 entspricht 40 bis 240 BPM</td></tr><tr><td><code>/nyrex/master/tap</code></td><td>Tap-Tempo</td></tr><tr><td><code>/nyrex/master/resync</code></td><td>Den Beat neu starten</td></tr><tr><td><code>/nyrex/deck/1</code> bis <code>/nyrex/deck/16</code></td><td>Zu diesem Deck wechseln</td></tr><tr><td><code>/nyrex/deck/next</code></td><td>Nächstes benutztes Deck</td></tr><tr><td><code>/nyrex/column/1</code> bis <code>/nyrex/column/8</code></td><td>Eine Spalte starten</td></tr><tr><td><code>/nyrex/layer/L/clip/C</code></td><td>Den Clip von Layer L in Spalte C starten</td></tr><tr><td><code>/nyrex/layer/L/opacity</code></td><td>Deckkraft eines Layers</td></tr><tr><td><code>/nyrex/layer/L/bypass</code></td><td>Einen Layer auf Bypass schalten</td></tr><tr><td><code>/nyrex/layer/L/clear</code></td><td>Den Layer stoppen</td></tr><tr><td><code>/nyrex/layer/L/fx/S/enable</code></td><td>Effekt-Slot S ein- oder ausschalten</td></tr><tr><td><code>/nyrex/layer/L/fx/S/param/P</code></td><td>Parameter P des Effekts in Slot S</td></tr><tr><td><code>/nyrex/macro/1</code> bis <code>/nyrex/macro/8</code></td><td>Die acht Makro-Regler</td></tr></tbody></table></div>
+<p>Layer gehen von 1 bis 4, Effekt-Slots von 1 bis 4 und Parameter von 1 bis 4. Der Master hat dieselben Effekt-Adressen unter <code>/nyrex/master/fx/S/</code>. Es gibt weitere Adressen für Farbe, Geschwindigkeit, Skalierung und Solo, die Einstellungsseite hat die vollständige Liste.</p>
+<h3 id="control--osc-out"><a class="anchor" href="#control--osc-out" aria-label="Link">#</a>OSC-Ausgang</h3>
+<p>Hak unter OSC-Ausgang OSC-Daten senden an. NyrexVJ sendet dann an <code>127.0.0.1</code> auf Port 9011, 60 Mal pro Sekunde. Adresse, Port und Rate lassen sich ändern, nur IPv4-Adressen und <code>localhost</code> werden akzeptiert. Alle Nachrichten beginnen mit <code>/nyrex/out/</code>. Du bekommst die Audio-Pegel, das Spektrum in 32 Bändern, die Clock mit Tempo und Beat-Position, Beat- und Onset-Ereignisse und bis zu 16 eigene Werte, die jeweils einem Regler folgen, zum Beispiel der Deckkraft eines Layers. Programme wie Unreal Engine, TouchDesigner oder Max können damit auf die Show reagieren. Die vollständige Tabelle steht in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/UNREAL.md" target="_blank" rel="noopener noreferrer">docs/UNREAL.md</a> des Projekts.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Die Daten werden an die Adresse gesendet, die du eingibst. Nutze nur Adressen in einem Netzwerk, dem du vertraust.</p></aside>
+<h3 id="control--web"><a class="anchor" href="#control--web" aria-label="Link">#</a>Die Web-Oberfläche</h3>
+<p>Hak unter Einstellungen, Steuerung, Web-Oberfläche die Option Web-Oberfläche einschalten an und klick Web-Oberfläche öffnen. NyrexVJ startet einen kleinen Webserver auf <code>127.0.0.1</code> Port 9020 und öffnet eine Seite in deinem Browser. Die Seite zeigt den Status und steuert den Master-Pegel, Blackout, Tap-Tempo, die 16 Decks, die Spalten-Trigger, das Clip-Raster aller vier Layer mit Deckkraft, Bypass, Solo und Leeren, die Werks-Looks und deine eigenen Looks sowie die Ausgänge.</p>
+<p>Sie ist aus, bis du sie einschaltest, und nur dieser Computer kommt heran. Hakst du Andere Geräte im Netzwerk erlauben an, kann jedes Gerät, das das Token kennt, NyrexVJ steuern, über eine Verbindung, die nicht verschlüsselt ist, tu das also nur in einem Netzwerk, dem du vertraust. So nutzt du ein Handy als Fernbedienung.</p>
+<p>Jede Anfrage braucht das Token. Es steht auf der Einstellungsseite und liegt in einer eigenen Datei. Token kopieren kopiert es, und Neues Token ersetzt es und meldet jede offene Seite ab. Zeig das Token nicht in einem Stream. Derselbe Server bietet eine dokumentierte REST-API unter <code>/api/v1/</code> für Skripte, beschrieben in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/API.md" target="_blank" rel="noopener noreferrer">docs/API.md</a> des Projekts.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="sync"><h2>24. Show-Sync und Timecode</h2>
+<h3 id="sync--sync-clock"><a class="anchor" href="#sync--sync-clock" aria-label="Link">#</a>Eine Beat-Clock</h3>
+<p>Eine Beat-Clock treibt alles an, was dem Beat folgt. Einstellungen, Sync wählt ihre Quelle. Automatisch nimmt die beste vorhandene Quelle in dieser Reihenfolge: Pro DJ Link, Timecode, MIDI-Clock, Audio, manuell. Oder du legst eine Quelle fest. Die Clock korrigiert einen Phasenfehler schrittweise, ein Bild auf dem Beat ruckelt also nicht.</p>
+<p>Die Seite zeigt die aktive Quelle, einen Zustand (Freilaufend, Suche, Erfasse, Eingerastet oder Verloren), den Phasenfehler in Millisekunden und einen Latenz-Ausgleich von minus 500 bis plus 500 ms, den du setzen kannst, wenn das Bild gegen den Ton etwas zu früh oder zu spät ist.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-sync.webp"><img src="../../assets/manual/de/settings-sync.webp" width="874" height="584" loading="lazy" alt="Die Seite Sync in den Einstellungen"></a><figcaption>Die Seite Sync in den Einstellungen</figcaption></figure>
+<h3 id="sync--timecode"><a class="anchor" href="#sync--timecode" aria-label="Link">#</a>Timecode</h3>
+<p>Timecode kann als LTC von einem eigenen Audioeingang kommen, mit 24, 25, 29,97 Drop Frame oder 30 Bildern pro Sekunde, oder als MTC über MIDI. Nimm für LTC einen Line-Eingang, der nur das Timecode-Signal trägt. Laufen LTC und MTC beide, wird LTC benutzt. Timecode steuert die Clock-Position, zwei Modulationsquellen (Timecode-Sekunde und -Minute) und die Cue-Liste.</p>
+<h3 id="sync--midi-clock"><a class="anchor" href="#sync--midi-clock" aria-label="Link">#</a>MIDI-Clock</h3>
+<p>MIDI-Clock, Start, Stopp und Song-Position werden verfolgt. Das MIDI-Gerät wählst du auf der Seite Steuerung, und die Seite Sync zeigt, ob eine Clock ankommt, ob der Transport läuft und die Position.</p>
+<h3 id="sync--prodjlink"><a class="anchor" href="#sync--prodjlink" aria-label="Link">#</a>Pro DJ Link</h3>
+<p>Hak Auf Pro-DJ-Link-Beats hören an, um den Beat-Paketen von DJ-Playern zu folgen, die Pro DJ Link nutzen, in deinem lokalen Netzwerk. NyrexVJ öffnet dazu einen UDP-Listener auf Port 50001. Es meldet sich nie als Player an und sendet nichts, es gibt also keinen Wiedergabe-Zustand und kein Master-Flag, nur die Beats. Wähl, welchem Player gefolgt wird.</p>
+<h3 id="sync--cues"><a class="anchor" href="#sync--cues" aria-label="Link">#</a>Die Cue-Liste</h3>
+<p>Die Cue-Liste löst zu einer Zeit des Timecodes ein beliebiges Steuerziel aus: einen Clip, eine Spalte, ein Deck oder einen Wert. Cue hinzufügen legt einen Cue beim aktuellen Timecode an, oder hinter dem letzten, wenn es keinen Timecode gibt. Jeder Cue hat eine Zeit, eine Aktion und bei Werten einen Wert. Test löst ihn sofort aus. Cues ausführen schaltet die Liste ein, und jeder Cue löst einmal aus, wenn der Timecode seine Zeit passiert. Nach großen Sprüngen lösen Cues nicht aus, ein Springen durch den Timecode löst also nicht alles dazwischen aus.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Pro DJ Link, LTC und MTC wurden mit erzeugten Signalen getestet und nicht mit echten Playern, Mischpulten oder Timecode-Generatoren. Teste deine Kette am Veranstaltungsort.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="timeline"><h2>25. Die Show-Zeitleiste</h2>
+<h3 id="timeline--timeline-what"><a class="anchor" href="#timeline--timeline-what" aria-label="Link">#</a>Wofür sie da ist</h3>
+<p>Die Show-Zeitleiste ist ein optionales Fenster, das Regler und Schalter entlang einer Zeitachse automatisiert. Du blendest einen Layer oder den Master-Pegel über einen Song aus, ohne einen Regler anzufassen, oder du fährst eine vorbereitete Show gegen einen Timecode. Sie zeigt die Cue-Liste aus Einstellungen, Sync auf demselben Lineal. Sie ist standardmäßig aus.</p>
+<h3 id="timeline--timeline-on"><a class="anchor" href="#timeline--timeline-on" aria-label="Link">#</a>Einschalten</h3>
+<p>Das Menü Zeitleiste hat Zeitleiste ausführen, was die Zeitleiste einschaltet, und Fenster der Show-Zeitleiste anzeigen, was sie öffnet. Solange sie nicht an ist, wird nichts geschrieben und die Zeitleiste löst keine Cues aus, du kannst aber das Fenster öffnen und Spuren vorbereiten. Das Menü hat außerdem Abspielen oder Pause, Stopp und Handeingriffe freigeben.</p>
+<h3 id="timeline--timeline-lanes"><a class="anchor" href="#timeline--timeline-lanes" aria-label="Link">#</a>Spuren und Keyframes</h3>
+<p>Füge mit Spur hinzufügen eine Spur für einen beliebigen Regler oder Schalter hinzu. Doppelklick auf eine Spur setzt einen Keyframe, zieh ihn, um ihn in Zeit und Wert zu verschieben, und klick mit rechts darauf, um Halten, Linear oder Weich zu wählen. Ein quadratischer Griff ist ein Halten, ein Kreis ist weich und eine Raute ist linear. Umschalt beim Ziehen behält den Wert, und Strg behält die Zeit. Das Häkchen an einer Spur schaltet sie stumm, und das X entfernt sie.</p>
+<p>Clips, Spalten und Decks sind Trigger und gehören auf die Cue-Spur, nicht auf eine Spur mit Kurve. Die Regler von Shader-Clips lassen sich noch nicht automatisieren.</p>
+<figure class="shot"><a href="../../assets/manual/de/timeline.webp"><img src="../../assets/manual/de/timeline.webp" width="1184" height="562" loading="lazy" alt="Die Show-Zeitleiste mit drei Spuren, Keyframes und Cues"></a><figcaption>Die Show-Zeitleiste mit drei Spuren, Keyframes und Cues</figcaption></figure>
+<h3 id="timeline--timeline-position"><a class="anchor" href="#timeline--timeline-position" aria-label="Link">#</a>Position, Schleife und Handeingriffe</h3>
+<p>Die Position folgt einem Timecode, wenn es einen gibt, und läuft sonst mit den Knöpfen Abspielen, Pause und Stopp des Fensters. Klick oder zieh auf dem Lineal, um den Abspielkopf zu bewegen, und Umschalt und Ziehen auf dem Lineal markiert eine Schleife. Bewegst du einen gesteuerten Regler von Hand, lässt die Zeitleiste ihn los, bis zum nächsten Keyframe-Abschnitt oder bis du ihn freigibst. Handeingriffe freigeben gibt alle Regler an die Zeitleiste zurück.</p>
+<p>Strg und das Mausrad zoomen um den Mauszeiger, Umschalt und das Rad scrollen. Einpassen zoomt so, dass jeder Keyframe und jeder Cue sichtbar ist. Rückgängig und Wiederherstellen gelten für die Zeitleiste, solange sie den Fokus hat.</p>
+<h3 id="timeline--timeline-save"><a class="anchor" href="#timeline--timeline-save" aria-label="Link">#</a>Speichern</h3>
+<p>Spuren werden in <code>timeline.json</code> im Datenordner gespeichert, getrennt von Presets und von <code>cues.json</code>. Einstellungen des Fensters, etwa was passiert, wenn der Timecode verloren geht, liegen in seinem Einstellungen-Popup. Einzelheiten, Grenzen und was nicht getestet wurde stehen in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/TIMELINE.md" target="_blank" rel="noopener noreferrer">docs/TIMELINE.md</a> des Projekts.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="stage"><h2>26. Bühne: DMX, VRSL und VRChat</h2>
+<h3 id="stage--stage-what"><a class="anchor" href="#stage--stage-what" aria-label="Link">#</a>Was sie macht</h3>
+<p>Einstellungen, Bühne macht aus jedem Regler Licht-Daten. Drei Teile arbeiten unabhängig voneinander. Art-Net sendet DMX-Kanäle über das Netzwerk, zum Beispiel an HNode, QLC+ oder ein Lichtpult. Der DMX-Streifen zeichnet dieselben Kanäle als Reihe grauer Blöcke ins Ausgabevideo, so wie VRSL DMX in einem Videostream liest. Die VRChat-Parameter senden Werte über OSC an deinen Avatar.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-stage.webp"><img src="../../assets/manual/de/settings-stage.webp" width="874" height="584" loading="lazy" alt="Die Seite Bühne in den Einstellungen"></a><figcaption>Die Seite Bühne in den Einstellungen</figcaption></figure>
+<h3 id="stage--channels"><a class="anchor" href="#stage--channels" aria-label="Link">#</a>Kanäle</h3>
+<p>Jede Kanal-Zeile hat einen Namen, ein Universum von 1 bis 4, einen Kanal von 1 bis 512 und eine Quelle. Die Quelle ist Fest, mit einem Wert, den du einstellst, oder eine Modulationsquelle: Bass, Mitten, Höhen, Pegel, Kick, ein LFO, ein Makro, Beat oder Bar. Zwei Zahlen legen den Wert bei Quelle 0 und bei Quelle 1 fest, und Invertieren kehrt ihn um. 16 Bit nutzt den gewählten Kanal und den nächsten. Du kannst bis zu 128 Kanäle anlegen. Ein Makro bewegt ein Licht genau wie einen Effekt.</p>
+<h3 id="stage--artnet"><a class="anchor" href="#stage--artnet" aria-label="Link">#</a>Art-Net</h3>
+<p>Art-Net senden schaltet den Ausgang ein. Stell die Adresse des Knotens, den Port, das Net und das Erste Universum ein. Universum 1 von NyrexVJ wird als erstes Art-Net-Universum gesendet, die nächsten folgen. Pakete pro Sekunde legt die Rate fest. NyrexVJ sendet nur und antwortet nicht auf Abfragen anderer Geräte.</p>
+<h3 id="stage--strip"><a class="anchor" href="#stage--strip" aria-label="Link">#</a>Der Streifen im Video</h3>
+<p>Streifen ins Video zeichnen legt einen Streifen aus 120 mal 13 Blöcken an den oberen oder unteren Rand des Ausgabebildes. Jeder Block zeigt einen Kanal als Grau, von Schwarz für 0 bis Weiß für 255. Mit Kanalanordnung wählst du, wie die Kanäle angeordnet werden. Bei 1920 x 1080 hat jeder Block genau 16 x 16 Pixel. Der Streifen überdeckt das Bild darunter, halte diesen Rand in deinen Visuals also frei.</p>
+<h3 id="stage--vrchat"><a class="anchor" href="#stage--vrchat" aria-label="Link">#</a>VRChat-Parameter</h3>
+<p>An VRChat senden schickt Werte über OSC an VRChat. Füge einen Parameter hinzu, tipp seinen Namen so ein, wie er im Avatar heißt, und wähl die Quelle. Updates pro Sekunde legt die Rate fest.</p>
+<h3 id="stage--stage-test"><a class="anchor" href="#stage--stage-test" aria-label="Link">#</a>Testbilder</h3>
+<p>Die Testmuster überschreiben die Kanäle mit einem Signal auf Art-Net und im Streifen, bis du Aus wählst. Nutze sie, um die Verkabelung und die Welt zu prüfen, bevor du eine Show baust.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Die Reihenfolge der Kanäle und Blöcke im Streifen folgt der öffentlichen VRSL-Beschreibung, wurde aber nicht an einer echten VRSL-Welt geprüft. Mit echten Art-Net-Knoten oder in VRChat wurde noch nichts ausprobiert. Teste alles vor einem Event.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="plugins"><h2>27. Plugins</h2>
+<h3 id="plugins--plugin-what"><a class="anchor" href="#plugins--plugin-what" aria-label="Link">#</a>Was ein Plugin ist</h3>
+<p>Ein Plugin ist eine Bibliothek mit einer kleinen C-Schnittstelle, die Modulationsquellen und Bildquellen aus deinem eigenen Code hinzufügt. Eine Modulationsquelle ist eine Zahl von 0 bis 1 etwa 60 Mal pro Sekunde. Sie erscheint als Plugin 1 bis Plugin 8 neben den Audio-Bändern, du kannst sie also überall nutzen, wo ein Band erlaubt ist. Eine Bildquelle liefert etwa 30 Mal pro Sekunde ein Bild mit 1280 x 720 und erscheint als die Clips Plugin Source 1 bis Plugin Source 4.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Ein Plugin ist nativer Code und läuft mit denselben Rechten wie NyrexVJ. Es gibt keine Sandbox. Aktiviere nur Plugins aus Quellen, denen du vertraust.</p></aside>
+<h3 id="plugins--plugin-enable"><a class="anchor" href="#plugins--plugin-enable" aria-label="Link">#</a>Plugins aktivieren</h3>
+<p>Plugins sind aus, bis du sie anhakst. Einstellungen, Plugins listet die Plugin-Ordner auf, die im Ordner plugins des Datenordners gefunden werden. Ein Ordner braucht eine Datei <code>plugin.json</code>. Hak Aktivieren für ein Plugin an und wähl dann seine Quelle für Plugin 1 bis Plugin 8 oder für einen der vier Bild-Slots. Jede Quelle hat bis zu vier Parameter. Die Startoption <code>--no-plugins</code> schaltet alle Plugins für einen Lauf ab.</p>
+<h3 id="plugins--plugin-safety"><a class="anchor" href="#plugins--plugin-safety" aria-label="Link">#</a>Sicherheit</h3>
+<p>Plugin-Code läuft nie im Render-Thread. Jeder Aufruf hat ein Zeitbudget. Ein Plugin, das zu langsam ist, hängt oder fehlschlägt, wird für die Sitzung abgeschaltet, ohne das Bild anzuhalten, und die Liste zeigt, warum. Ein Plugin, das lief, als das Programm abstürzte, kommt in den abgesicherten Modus und bleibt aus, bis du es wieder aktivierst. Plugin-Bänder sind im Bühnen-Ausgang nicht verfügbar.</p>
+<h3 id="plugins--plugin-write"><a class="anchor" href="#plugins--plugin-write" aria-label="Link">#</a>Ein Plugin schreiben</h3>
+<p>Der C-Header, ein Beispiel-Plugin und die vollständige Referenz stehen in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">docs/PLUGINS.md</a> des Projekts. Die Schnittstelle bleibt für jede 1.x-Version stabil.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="settings"><h2>28. Einstellungen im Überblick</h2>
+<h3 id="settings--settings-open"><a class="anchor" href="#settings--settings-open" aria-label="Link">#</a>Einstellungen öffnen</h3>
+<p>Öffne die Einstellungen über das Menü Einstellungen oder mit <code>Strg+,</code>. Das Fenster hat links eine Liste von Seiten.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Seite</th><th scope="col">Was du findest</th></tr></thead><tbody><tr><td>Allgemein</td><td>Sprache, letzte Sitzung wiederherstellen, Ausgabefenster beim Start öffnen, Decks</td></tr><tr><td>Aussehen</td><td>Farbthema, Oberflächengröße, Statusleiste, Fensteranordnung zurücksetzen</td></tr><tr><td>Audio</td><td>Audioquelle, Verstärkung, Glättung, Beat-Schwelle, BPM mit Audio synchronisieren</td></tr><tr><td>Ausgabe</td><td>Qualität und Auflösung, Spout, NDI, bis zu vier Ausgabefenster mit Slices, Mapping, Überblendung, Venue-Setups und Frame-Lock</td></tr><tr><td>Aufnahme</td><td>Format, Größe, Bildrate, Qualität, Ton, Ordner und die Aufnahme-Schaltflächen</td></tr><tr><td>Steuerung</td><td>MIDI, OSC-Ein- und Ausgang, die Web-Oberfläche und ihr Token</td></tr><tr><td>Bühne</td><td>Art-Net, der DMX-Streifen, VRChat-Parameter, Kanäle und Testbilder</td></tr><tr><td>Sync</td><td>Clock-Quelle, Timecode, MIDI-Clock, Pro DJ Link, die Cue-Liste</td></tr><tr><td>Updates</td><td>Update-Kanal, automatische Prüfungen und Downloads, der Update-Status</td></tr><tr><td>Tastenkürzel</td><td>Die Liste der Tastenkürzel</td></tr><tr><td>Leistung</td><td>Bildratenbegrenzung, Bildzeit-Budget, Renderqualität, gemessene Bildzeiten, Speicher, Video und FFmpeg, DXV-Umwandlung</td></tr><tr><td>Plugins</td><td>Installierte Plugins und ihre Quellen</td></tr><tr><td>Info</td><td>Version, Links, der Datenordner</td></tr></tbody></table></div>
+<figure class="shot"><a href="../../assets/manual/de/settings-general.webp"><img src="../../assets/manual/de/settings-general.webp" width="874" height="584" loading="lazy" alt="Die Seite Allgemein in den Einstellungen"></a><figcaption>Die Seite Allgemein in den Einstellungen</figcaption></figure>
+<h3 id="settings--settings-appearance"><a class="anchor" href="#settings--settings-appearance" aria-label="Link">#</a>Aussehen</h3>
+<p>Das Farbthema ändert den Akzent der ganzen Oberfläche. Es gibt zehn Themen: Studio (der Standard, ein neutrales Dunkel mit rot-orangem Akzent), Orange, Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono. Die Oberflächengröße skaliert alle Fenster und Texte, und Zurücksetzen stellt sie wieder her.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="shortcuts"><h2>29. Tastenkürzel und Maus</h2>
+<h3 id="shortcuts--keys"><a class="anchor" href="#shortcuts--keys" aria-label="Link">#</a>Tastatur</h3>
+<p>Diese Tasten funktionieren im Hauptfenster überall, außer wenn du gerade in ein Textfeld tippst.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Taste</th><th scope="col">Aktion</th></tr></thead><tbody><tr><td><code>1</code> bis <code>8</code></td><td>Eine Spalte starten</td></tr><tr><td><code>Leertaste</code></td><td>Tap-Tempo</td></tr><tr><td><code>B</code></td><td>Blackout</td></tr><tr><td><code>Bild auf</code> und <code>Bild ab</code></td><td>Vorheriges und nächstes benutztes Deck</td></tr><tr><td><code>Strg+1</code> bis <code>Strg+8</code></td><td>Deck 1 bis 8</td></tr><tr><td><code>Strg+Umschalt+1</code> bis <code>Strg+Umschalt+8</code></td><td>Deck 9 bis 16</td></tr><tr><td><code>Strg+Z</code></td><td>Rückgängig</td></tr><tr><td><code>Strg+Y</code> oder <code>Strg+Umschalt+Z</code></td><td>Wiederherstellen</td></tr><tr><td><code>Strg+,</code></td><td>Einstellungen öffnen</td></tr><tr><td><code>Strg+Umschalt+R</code></td><td>Aufnahme starten oder beenden</td></tr><tr><td><code>F1</code></td><td>Dieses Handbuch öffnen oder schließen</td></tr><tr><td><code>F11</code></td><td>Vollbild für die Ausgabefenster</td></tr><tr><td><code>Esc</code></td><td>Vollbild verlassen</td></tr></tbody></table></div>
+<p>Die Tasten tun nichts, solange du in ein Textfeld tippst. Im Zeitleisten-Fenster spielt die <code>Leertaste</code> ab und pausiert, und <code>Pos1</code> springt zum Anfang.</p>
+<h3 id="shortcuts--mouse"><a class="anchor" href="#shortcuts--mouse" aria-label="Link">#</a>Maus</h3>
+<div class="tablewrap"><table><thead><tr><th scope="col">Aktion</th><th scope="col">Ergebnis</th></tr></thead><tbody><tr><td>Zelle anklicken</td><td>Diesen Clip auf seinem Layer abspielen</td></tr><tr><td>Strg+Klick auf eine Zelle</td><td>In der Vorschau zeigen, ohne abzuspielen</td></tr><tr><td>Spaltenkopf anklicken</td><td>Die ganze Spalte starten</td></tr><tr><td>Rechtsklick auf eine Zelle</td><td>Einen Clip zuweisen oder leeren, oder Vorschau</td></tr><tr><td>Rechtsklick auf einen Deck-Knopf</td><td>Das Deck umbenennen, kopieren, füllen, leeren oder entfernen</td></tr><tr><td>Rechtsklick auf einen Regler</td><td>Auf den Standardwert zurücksetzen</td></tr><tr><td>Clip in der Bibliothek anklicken</td><td>In die gewählte Zelle legen und abspielen</td></tr><tr><td>Aus der Bibliothek auf eine Zelle ziehen</td><td>Den Clip zuweisen</td></tr><tr><td>Effekt in der Bibliothek anklicken oder ziehen</td><td>Zum gewählten Layer hinzufügen</td></tr><tr><td>B, S und X an einem Layer</td><td>Bypass, Solo und Stopp des Layers</td></tr></tbody></table></div>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="performance"><h2>30. Leistung</h2>
+<h3 id="performance--perf-why"><a class="anchor" href="#performance--perf-why" aria-label="Link">#</a>Warum sie wichtig ist</h3>
+<p>Eine Live-Show braucht eine gleichmäßige Bildrate. NyrexVJ ist leicht, aber viele Layer, schwere Effekte, große Videos und 3D-Modelle summieren sich. Einstellungen, Leistung zeigt, was die Zeit braucht, und die Statusleiste kann die Zeiten zeigen, wenn du Zeiten in der Statusleiste zeigen anhakst.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-performance.webp"><img src="../../assets/manual/de/settings-performance.webp" width="874" height="584" loading="lazy" alt="Die Seite Leistung in den Einstellungen"></a><figcaption>Die Seite Leistung in den Einstellungen</figcaption></figure>
+<h3 id="performance--perf-frame"><a class="anchor" href="#performance--perf-frame" aria-label="Link">#</a>Bildrate und Budget</h3>
+<p>Die Bildratenbegrenzung begrenzt, wie oft das Programm ein Bild zeichnet, mit oder ohne VSync. Eine niedrigere Grenze lässt auf demselben Computer mehr Grafik- und Prozessorzeit für VRChat. Das Bildzeit-Budget ist die Zeit, die ein Bild brauchen darf, abgeleitet aus deiner Ziel-Bildrate. Bilder darüber zählen als zu langsam, und die Seite zeigt, wie viele Bilder im Budget blieben, den Durchschnitt, die langsamsten fünf Prozent und das schlechteste Bild.</p>
+<h3 id="performance--perf-quality"><a class="anchor" href="#performance--perf-quality" aria-label="Link">#</a>Renderqualität</h3>
+<p>Die Layer-Auflösung zeichnet die Layer und ihre Effekte in kleinerer Größe und skaliert sie hoch, wenn sie gemischt werden. Volle Qualität ändert nichts, Ausgewogen zeichnet mit 75 Prozent, Leistung mit 50 Prozent. Automatisch senkt die Auflösung in kleinen Schritten nur, solange ein Bild länger als das Budget braucht, und hebt sie wieder an, wenn Platz ist. Master-Effekte und jeder Ausgang bleiben in voller Auflösung.</p>
+<h3 id="performance--perf-cost"><a class="anchor" href="#performance--perf-cost" aria-label="Link">#</a>Was Zeit kostet</h3>
+<ul><li>Ein Layer mit Deckkraft null wird nicht gezeichnet, verborgene Layer kosten also nichts.</li><li>Jeder Effekt ist ein weiterer Durchgang über das Bild. Ersetze einen Stapel Effekte durch einen Node-Effekt, wenn es geht.</li><li>Große Videos kosten Dekodierzeit. HAP-Videos kosten fast nichts am Prozessor, siehe <a href="#video">Video- und Bild-Clips</a>.</li><li>Live-Quellen werden drei Sekunden nach der letzten Nutzung geschlossen.</li><li>3D-Modelle und -Szenen kosten Grafikzeit entsprechend ihrer Dreieckszahl.</li></ul>
+<p>Die Seite zeigt auch den Speicher: eine Schätzung des Grafikspeichers, den Videospeicher und den Programmspeicher, und welcher Clip oder Effekt die Zeit braucht. Gemessene Zahlen und Grenzen stehen in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PERFORMANCE.md" target="_blank" rel="noopener noreferrer">docs/PERFORMANCE.md</a> des Projekts.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Läuft eine Show auf demselben Computer wie VRChat, setz eine Bildratenbegrenzung und stell die Layer-Auflösung auf Ausgewogen oder Automatisch. Der Spielraum ist mehr wert als ein etwas schärferes Bild.</p></aside>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="files"><h2>31. Dateien und der Datenordner</h2>
+<h3 id="files--data-where"><a class="anchor" href="#files--data-where" aria-label="Link">#</a>Wo er liegt</h3>
+<p>NyrexVJ legt alles in seinem Datenordner ab. Unter Windows ist das <code>%APPDATA%\NyrexVJ</code>, unter Linux <code>~/.config/NyrexVJ</code>, oder <code>$XDG_CONFIG_HOME/NyrexVJ</code>, falls das gesetzt ist. Setze die Umgebungsvariable <code>NYREXVJ_DATA_DIR</code>, um einen anderen Ordner zu nutzen. Datei, Datenordner öffnen und Einstellungen, Info öffnen ihn.</p>
+<h3 id="files--data-contents"><a class="anchor" href="#files--data-contents" aria-label="Link">#</a>Was darin liegt</h3>
+<div class="tablewrap"><table><thead><tr><th scope="col">Eintrag</th><th scope="col">Was er enthält</th></tr></thead><tbody><tr><td><code>settings.json</code></td><td>Deine Programm-Einstellungen, einschließlich Ausgänge, Bühne und Sync</td></tr><tr><td><code>controls.json</code></td><td>MIDI-Zuordnungen</td></tr><tr><td><code>cues.json</code></td><td>Die Cue-Liste</td></tr><tr><td><code>timeline.json</code></td><td>Die Spuren der Show-Zeitleiste</td></tr><tr><td><code>autosave.json</code> und <code>recovery</code></td><td>Die letzte Sitzung und eine rotierende Reihe von Autosaves</td></tr><tr><td><code>presets</code></td><td>Deine eigenen Presets</td></tr><tr><td><code>shaders</code></td><td>Deine eigenen Shader-Dateien</td></tr><tr><td><code>models</code></td><td>Deine eigenen 3D-Modelle</td></tr><tr><td><code>media</code></td><td>Bilder und Videos</td></tr><tr><td><code>clips</code></td><td>Mit dem Clip Creator gespeicherte Szenen</td></tr><tr><td><code>nodes</code></td><td>Node-Effekte</td></tr><tr><td><code>languages</code></td><td>Deine eigenen Sprachdateien</td></tr><tr><td><code>plugins</code></td><td>Plugins</td></tr><tr><td><code>venues</code></td><td>Venue-Setups</td></tr><tr><td><code>masks</code></td><td>Als Masken genutzte Bilder</td></tr><tr><td><code>Recordings</code></td><td>Deine Aufnahmen</td></tr><tr><td><code>nyrexvj.log</code></td><td>Das Log, nützlich für Fehlerberichte</td></tr></tbody></table></div>
+<h3 id="files--data-backup"><a class="anchor" href="#files--data-backup" aria-label="Link">#</a>Sichern und umziehen</h3>
+<p>Kopiere den Datenordner an einen sicheren Ort, um alles zu sichern. Zum Umzug auf einen anderen Computer kopierst du ihn dort an dieselbe Stelle. Presets und Sitzungen merken sich Clips über ihren Namen, behalte also die Dateinamen deiner Shader, Modelle und Medien, wenn du sie verschiebst.</p>
+<p>Das Token der Web-Oberfläche liegt in einer eigenen Datei im Ordner. Gib es nicht weiter.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="troubleshooting"><h2>32. Fehlersuche und häufige Fragen</h2>
+<h3 id="troubleshooting--black-picture"><a class="anchor" href="#troubleshooting--black-picture" aria-label="Link">#</a>Das Bild ist schwarz</h3>
+<p>Prüf zuerst die einfachen Dinge. Ist Blackout an, die Taste <code>B</code> schaltet ihn um? Steht der Master-Pegel auf null? Steht die Layer-Deckkraft auf null oder der Layer auf Bypass? Spielt die Zelle wirklich? Ist das Ausgabefenster schwarz, das Fenster Ausgabe aber nicht, prüf die Ausgabe-Einstellungen, das Testbild und das Display.</p>
+<h3 id="troubleshooting--no-reaction"><a class="anchor" href="#troubleshooting--no-reaction" aria-label="Link">#</a>Die Visuals reagieren nicht auf die Musik</h3>
+<p>Wähl im Tab Audio eine Audioquelle. Die Anzeigen müssen sich bewegen. Tun sie das nicht, sagt der Tab, dass auf diesem Gerät kein Ton ankommt. Spiel etwas auf dem gewählten Ausgang ab oder wähl eine andere Quelle. Prüf dann, dass ein Layer, der Master oder ein Effekt ein Band mit einer Stärke über null hat. Ohne Quelle folgen die Clips dem BPM-Takt.</p>
+<h3 id="troubleshooting--obs-nothing"><a class="anchor" href="#troubleshooting--obs-nothing" aria-label="Link">#</a>OBS zeigt nichts</h3>
+<p>Spout funktioniert nur unter Windows. Hak Per Spout an OBS senden an, installiere das obs-spout2-plugin, füge in OBS eine Quelle Spout2 Capture hinzu und wähl den Sender. Ist es schwarz, prüf den Sendernamen. Als Alternative öffnest du das Ausgabefenster und nimmst es auf, oder nutzt NDI.</p>
+<h3 id="troubleshooting--video-no-play"><a class="anchor" href="#troubleshooting--video-no-play" aria-label="Link">#</a>Ein Video spielt nicht</h3>
+<p>Video braucht die FFmpeg-Bibliotheken. Sieh ins Clip-Fenster. Sagt es, dass FFmpeg fehlt, nutz FFmpeg einrichten. Spielt das Video ruckelig, sieh dir den Video-Monitor unter Einstellungen, Leistung an und probier eine HAP-Version der Datei.</p>
+<h3 id="troubleshooting--shader-error"><a class="anchor" href="#troubleshooting--shader-error" aria-label="Link">#</a>Ein Shader lässt sich nicht kompilieren</h3>
+<p>Das Clip-Fenster zeigt die Meldung mit der Zeilennummer deiner Datei. Korrigiere die Datei und speichere sie, NyrexVJ lädt sie neu. Bis dahin läuft die letzte funktionierende Version weiter.</p>
+<h3 id="troubleshooting--control-nothing"><a class="anchor" href="#troubleshooting--control-nothing" aria-label="Link">#</a>MIDI oder OSC tut nichts</h3>
+<p>Wähl bei MIDI das Gerät unter Gerät und prüf, dass der Controller nicht von einem anderen Programm benutzt wird. Prüf unter Linux, dass er in <code>aconnect -l</code> auftaucht. Hak bei OSC OSC-Nachrichten empfangen an, nutz Port 9010 und erlaube das Programm in deiner Firewall, wenn der Sender ein anderer Computer ist. Die Einstellungsseite zeigt die letzte Nachricht, die angekommen ist.</p>
+<h3 id="troubleshooting--crash"><a class="anchor" href="#troubleshooting--crash" aria-label="Link">#</a>Das Programm ist abgestürzt</h3>
+<p>NyrexVJ speichert die Sitzung alle 30 Sekunden. Nach einem Absturz fragt der nächste Start, von welchem Autosave du weitermachen willst, und zeigt einen Absturzbericht. Häng diesen Bericht und das Ende von <code>nyrexvj.log</code> an einen Fehlerbericht auf GitHub.</p>
+<h3 id="troubleshooting--faq"><a class="anchor" href="#troubleshooting--faq" aria-label="Link">#</a>Fragen, die oft kommen</h3>
+<p>Ist es kostenlos? Ja. NyrexVJ ist Open Source unter der MIT-Lizenz.</p>
+<p>Braucht es das Internet? Nur um nach Updates zu suchen und, wenn du die Schaltfläche drückst, um FFmpeg herunterzuladen. Alles andere funktioniert offline.</p>
+<p>Läuft es unter macOS? Nein. Es gibt Builds für Windows und Linux.</p>
+<p>Kann ich es mit VRChat nutzen? Ja, schick das Bild an OBS oder nimm das Ausgabefenster auf, und nutze die VRChat-Parameter der Seite Bühne, wenn du magst. Spout gibt es nur unter Windows.</p>
+<p>Warum bleiben die Clip-Namen englisch? Damit sie zu dem passen, wie andere VJ-Programme sie nennen.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="cli"><h2>33. Die Befehlszeile</h2>
+<h3 id="cli--cli-common"><a class="anchor" href="#cli--cli-common" aria-label="Link">#</a>Häufige Optionen</h3>
+<p>NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screenshots, ein paar sind im Alltag nützlich.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Option</th><th scope="col">Wirkung</th></tr></thead><tbody><tr><td><code>--preset NAME</code></td><td>Beim Start ein Werks- oder eigenes Preset laden</td></tr><tr><td><code>--fresh</code></td><td>Die gespeicherte Sitzung ignorieren</td></tr><tr><td><code>--lang CODE</code></td><td>In dieser Sprache starten: en, de, es, fr, it, pt, nl, ja oder der Code einer Sprachdatei</td></tr><tr><td><code>--output</code></td><td>Die Ausgabefenster beim Start öffnen</td></tr><tr><td><code>--venue NAME</code></td><td>Beim Start ein gespeichertes Venue-Setup laden</td></tr><tr><td><code>--ndi NAME</code></td><td>Den NDI-Sender mit diesem Namen starten</td></tr><tr><td><code>--osc-port N</code></td><td>Auf OSC an Port N hören, auch wenn es in den Einstellungen aus ist</td></tr><tr><td><code>--audio-demo</code></td><td>Das Demo-Audiosignal nutzen</td></tr><tr><td><code>--no-update-check</code></td><td>Die Update-Prüfung überspringen</td></tr><tr><td><code>--no-plugins</code></td><td>Plugins für diesen Lauf abschalten</td></tr><tr><td><code>--welcome</code> und <code>--no-welcome</code></td><td>Das Willkommensfenster erzwingen oder überspringen</td></tr><tr><td><code>--manual</code></td><td>Dieses Handbuch beim Start öffnen, auf Wunsch bei einem Kapitel, zum Beispiel <code>--manual outputs</code></td></tr><tr><td><code>--timeline</code></td><td>Das Fenster der Show-Zeitleiste beim Start öffnen</td></tr><tr><td><code>--settings IDX</code></td><td>Die Einstellungen auf Seite IDX öffnen, ab 0 gezählt in der Reihenfolge der Seitenliste</td></tr><tr><td><code>--check-shaders</code></td><td>Jeden Shader kompilieren und beenden</td></tr></tbody></table></div>
+<h3 id="cli--cli-tests"><a class="anchor" href="#cli--cli-tests" aria-label="Link">#</a>Tests und Messungen</h3>
+<p>Es gibt Optionen, die Selbsttests und Benchmarks ausführen und dann beenden, zum Beispiel für Shader, Ausgänge, Aufnahme, Live-Quellen, die Web-Oberfläche und den 3D-Player. Sie sind in der README und in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/TESTING.md" target="_blank" rel="noopener noreferrer">docs/TESTING.md</a> des Projekts beschrieben. Optionen, die einen Wert brauchen, nehmen ihn als nächstes Wort.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="languages"><h2>34. Sprachen</h2>
+<h3 id="languages--lang-built-in"><a class="anchor" href="#languages--lang-built-in" aria-label="Link">#</a>Eingebaute Sprachen</h3>
+<p>Englisch ist die Standardsprache. Deutsch, Spanisch, Französisch, Italienisch, Portugiesisch, Niederländisch und Japanisch sind eingebaut. Ändere die Sprache unter Einstellungen, Allgemein, unter Hilfe, Sprache oder im Willkommensfenster. Die Wahl wird gespeichert. Alles außer Deutsch wurde mit maschineller Hilfe übersetzt und ist noch nicht von Muttersprachlern geprüft. Korrekturen sind auf GitHub willkommen.</p>
+<p>Dieses Handbuch gibt es auf Englisch und Deutsch. Bei jeder anderen Sprache als Deutsch zeigt das Programm das englische Handbuch.</p>
+<h3 id="languages--japanese"><a class="anchor" href="#languages--japanese" aria-label="Link">#</a>Japanisch</h3>
+<p>Japanisch braucht eine japanische Schrift auf dem Computer, Yu Gothic oder Meiryo unter Windows und Noto Sans CJK unter Linux. NyrexVJ fügt sie seiner eigenen Schrift nur für die fehlenden Zeichen hinzu. Es wird nichts mitgeliefert. Ohne so eine Schrift kann der japanische Text nicht angezeigt werden, und die Einstellungen sagen das.</p>
+<h3 id="languages--own-language"><a class="anchor" href="#languages--own-language" aria-label="Link">#</a>Deine eigene Sprache</h3>
+<p>Eine Sprache ist eine <code>.json</code>-Datei im Ordner languages. Einstellungen, Allgemein, Übersetzungsvorlage exportieren schreibt eine Datei mit jedem Text. Kopiere sie, setz einen Code und einen Namen und übersetze, was du willst. Texte, die du auslässt, bleiben englisch. Drück dann Sprachen neu laden. Die Schrift zeigt bei eigenen Sprachen nur lateinische Buchstaben. Alles ist in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/LANGUAGES.md" target="_blank" rel="noopener noreferrer">docs/LANGUAGES.md</a> des Projekts erklärt.</p>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<section class="chapter" id="glossary"><h2>35. Glossar</h2>
+<h3 id="glossary--terms"><a class="anchor" href="#glossary--terms" aria-label="Link">#</a>Begriffe</h3>
+<p>Das sind die Wörter, die dieses Handbuch für Teile des Programms und für Show-Begriffe nutzt, in alphabetischer Reihenfolge.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Begriff</th><th scope="col">Bedeutung</th></tr></thead><tbody><tr><td>Blackout</td><td>Macht das fertige Bild auf einen Schlag schwarz, Taste B</td></tr><tr><td>Bypass</td><td>Überspringt einen Layer oder Effekt, als wäre er nicht da</td></tr><tr><td>Clip</td><td>Etwas, das ein Bild zeichnet: ein generativer Clip, ein Video, ein Bild, ein Modell, ein Shader oder eine Live-Quelle</td></tr><tr><td>Cue</td><td>Eine Aktion, die zu einer Zeit des Timecodes auslöst</td></tr><tr><td>Deck</td><td>Ein vollständiger Satz aus vier Layern und acht Spalten, es gibt 16</td></tr><tr><td>Effekt</td><td>Eine Veränderung, die auf das Bild eines Layers oder des Masters angewendet wird</td></tr><tr><td>Gate</td><td>Ein Modus, in dem ein Effekt nur zu sehen ist, solange ein Band laut ist</td></tr><tr><td>ISF</td><td>Interactive Shader Format, ein Shader-Dateiformat mit Beschreibungskopf</td></tr><tr><td>Kick</td><td>Ein kurzer Puls, den die Analyse auf den Bass-Beats findet</td></tr><tr><td>Komposition</td><td>Alles an einer Show: Decks, Layer, Effekte, Farben und Einstellungen</td></tr><tr><td>Layer</td><td>Eine von vier Ebenen des Bildes, höhere Layer liegen über niedrigeren</td></tr><tr><td>LFO</td><td>Ein Niederfrequenz-Oszillator, eine Bewegung, die sich über eine Zahl Beats wiederholt</td></tr><tr><td>LTC</td><td>Linear Timecode, Timecode, der als Audiosignal kommt</td></tr><tr><td>Makro</td><td>Ein Regler, der viele Werte auf einmal steuern kann</td></tr><tr><td>Master</td><td>Das fertige Bild und die Regler, die auf alles davon wirken</td></tr><tr><td>Mischmodus</td><td>Wie sich ein Layer mit den Layern darunter mischt</td></tr><tr><td>MTC</td><td>MIDI-Timecode</td></tr><tr><td>NDI</td><td>Ein Weg, ein Bild über das Netzwerk zu senden</td></tr><tr><td>Preset</td><td>Ein gespeicherter Look mit allen 16 Decks</td></tr><tr><td>Sitzung</td><td>Der Zustand des Programms, wie du ihn verlassen hast, beim nächsten Start wiederhergestellt</td></tr><tr><td>Slice</td><td>Ein Teil eines Ausgangs mit eigenem Bildausschnitt, eigener Verzerrung, Maske und Farbe</td></tr><tr><td>Spalte</td><td>Die acht Zellen mit derselben Nummer über alle Layer, gemeinsam gestartet</td></tr><tr><td>Spout</td><td>Ein Weg, ein Bild zwischen Programmen unter Windows zu teilen</td></tr><tr><td>Tap-Tempo</td><td>Das Tempo einstellen, indem du im Takt der Musik auf eine Taste tippst</td></tr><tr><td>Venue-Setup</td><td>Die gespeicherten Ausgabe- und Mapping-Einstellungen eines Raums</td></tr><tr><td>VRSL</td><td>VR Stage Lighting, das DMX-Daten aus einem Streifen im Video liest</td></tr><tr><td>Zelle</td><td>Ein Platz im Clip-Raster, der einen Clip enthält</td></tr></tbody></table></div>
+<p class="small"><a href="#top">&uarr; Inhalt</a></p></section>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

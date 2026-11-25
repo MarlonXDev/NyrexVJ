@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting and FAQ - NyrexVJ Manual</title>
+<meta name="description" content="Check the simple things first. Is Blackout on, the key B toggles it? Is the Master level at zero? Is the layer opacity at zero or the layer on bypass? Is the cell really...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/troubleshooting.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/troubleshooting.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html" aria-current="page">Troubleshooting and FAQ</a>
+<ul><li><a href="#black-picture">The picture is black</a></li><li><a href="#no-reaction">The visuals do not react to the music</a></li><li><a href="#obs-nothing">OBS shows nothing</a></li><li><a href="#video-no-play">A video does not play</a></li><li><a href="#shader-error">A shader does not compile</a></li><li><a href="#control-nothing">MIDI or OSC does nothing</a></li><li><a href="#crash">The program crashed</a></li><li><a href="#faq">Questions that come up</a></li></ul>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html" aria-current="page">Troubleshooting and FAQ</a>
+<ul><li><a href="#black-picture">The picture is black</a></li><li><a href="#no-reaction">The visuals do not react to the music</a></li><li><a href="#obs-nothing">OBS shows nothing</a></li><li><a href="#video-no-play">A video does not play</a></li><li><a href="#shader-error">A shader does not compile</a></li><li><a href="#control-nothing">MIDI or OSC does nothing</a></li><li><a href="#crash">The program crashed</a></li><li><a href="#faq">Questions that come up</a></li></ul>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Reference and help</p>
+<h1>Troubleshooting and FAQ</h1>
+<p class="meta">Chapter 32 of 35 &middot; 2 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#black-picture">The picture is black</a><a href="#no-reaction">The visuals do not react to the music</a><a href="#obs-nothing">OBS shows nothing</a><a href="#video-no-play">A video does not play</a><a href="#shader-error">A shader does not compile</a><a href="#control-nothing">MIDI or OSC does nothing</a><a href="#crash">The program crashed</a><a href="#faq">Questions that come up</a></nav>
+<h2 id="black-picture"><a class="anchor" href="#black-picture" aria-label="Link">#</a>The picture is black</h2>
+<p>Check the simple things first. Is Blackout on, the key <code>B</code> toggles it? Is the Master level at zero? Is the layer opacity at zero or the layer on bypass? Is the cell really playing? If the output window is black but the Output panel is not, check the output settings, the test pattern and the display.</p>
+<h2 id="no-reaction"><a class="anchor" href="#no-reaction" aria-label="Link">#</a>The visuals do not react to the music</h2>
+<p>Choose an audio source in the Audio tab. The meters must move. If they do not, the tab says that no sound arrives on this device. Play something on the chosen output, or pick another source. Then check that a layer, the master or an effect has a band set with an amount above zero. Without a source the clips follow the BPM clock.</p>
+<h2 id="obs-nothing"><a class="anchor" href="#obs-nothing" aria-label="Link">#</a>OBS shows nothing</h2>
+<p>Spout works on Windows only. Tick Send to OBS via Spout, install the obs-spout2-plugin, add a Spout2 Capture source in OBS and pick the sender. If it is black, check the sender name. As an alternative open the output window and capture it, or use NDI.</p>
+<h2 id="video-no-play"><a class="anchor" href="#video-no-play" aria-label="Link">#</a>A video does not play</h2>
+<p>Video needs the FFmpeg libraries. Look at the Clip window. If it says that FFmpeg is missing, use Set up FFmpeg. If the video plays slowly, look at the video monitor in Settings, Performance, and try a HAP version of the file.</p>
+<h2 id="shader-error"><a class="anchor" href="#shader-error" aria-label="Link">#</a>A shader does not compile</h2>
+<p>The Clip window shows the message with the line number of your file. Fix the file and save it, NyrexVJ reloads it. The last working version keeps playing until then.</p>
+<h2 id="control-nothing"><a class="anchor" href="#control-nothing" aria-label="Link">#</a>MIDI or OSC does nothing</h2>
+<p>For MIDI, pick the device under Device and check that the controller is not used by another program. On Linux check that it appears in <code>aconnect -l</code>. For OSC tick Receive OSC messages, use port 9010 and allow the program in your firewall if the sender is another computer. The Settings page shows the last message that arrived.</p>
+<h2 id="crash"><a class="anchor" href="#crash" aria-label="Link">#</a>The program crashed</h2>
+<p>NyrexVJ saves the session every 30 seconds. After a crash the next start asks which autosave to continue from and shows a crash report. Attach that report and the end of <code>nyrexvj.log</code> to a bug report on GitHub.</p>
+<h2 id="faq"><a class="anchor" href="#faq" aria-label="Link">#</a>Questions that come up</h2>
+<p>Is it free? Yes. NyrexVJ is open source under the MIT license.</p>
+<p>Does it need the internet? Only to check for updates and, when you press the button, to download FFmpeg. Everything else works offline.</p>
+<p>Does it run on macOS? No. There are builds for Windows and Linux.</p>
+<p>Can I use it with VRChat? Yes, send the picture to OBS or capture the output window, and use the VRChat parameters of the Stage page if you want. Spout is Windows only.</p>
+<p>Why do the clip names stay in English? So they match what other VJ programs call them.</p>
+<nav class="pager" aria-label="Pager"><a class="prev" href="files.html"><small>Previous</small><span>Files and the data folder</span></a><a class="next" href="cli.html"><small>Next</small><span>The command line</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

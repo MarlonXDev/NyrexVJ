@@ -1,0 +1,128 @@
+{
+  "controls": [
+    {
+      "label": "Length",
+      "value": 0.699999988079071
+    },
+    {
+      "label": "",
+      "value": 0.5
+    },
+    {
+      "label": "",
+      "value": 0.5
+    },
+    {
+      "label": "",
+      "value": 0.5
+    }
+  ],
+  "format": "nyrexvj-effect",
+  "links": [
+    {
+      "from": 3,
+      "fromPort": 0,
+      "to": 4,
+      "toPort": 0
+    },
+    {
+      "from": 1,
+      "fromPort": 0,
+      "to": 5,
+      "toPort": 0
+    },
+    {
+      "from": 4,
+      "fromPort": 0,
+      "to": 5,
+      "toPort": 1
+    },
+    {
+      "from": 5,
+      "fromPort": 0,
+      "to": 6,
+      "toPort": 0
+    },
+    {
+      "from": 2,
+      "fromPort": 0,
+      "to": 6,
+      "toPort": 1
+    },
+    {
+      "from": 6,
+      "fromPort": 0,
+      "to": 7,
+      "toPort": 0
+    }
+  ],
+  "name": "Trails",
+  "nodes": [
+    {
+      "id": 1,
+      "type": "previous",
+      "values": [],
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "id": 2,
+      "type": "picture",
+      "values": [],
+      "x": 0.0,
+      "y": 66.0
+    },
+    {
+      "id": 3,
+      "type": "control",
+      "values": [
+        1.0
+      ],
+      "x": 0.0,
+      "y": 132.0
+    },
+    {
+      "id": 4,
+      "type": "remap",
+      "values": [
+        0.5,
+        0.0,
+        1.0,
+        0.699999988079071,
+        0.9800000190734863
+      ],
+      "x": 232.0,
+      "y": 0.0
+    },
+    {
+      "id": 5,
+      "type": "multiply",
+      "values": [
+        1.0,
+        1.0
+      ],
+      "x": 464.0,
+      "y": 0.0
+    },
+    {
+      "id": 6,
+      "type": "max",
+      "values": [
+        0.0,
+        1.0
+      ],
+      "x": 696.0,
+      "y": 0.0
+    },
+    {
+      "id": 7,
+      "type": "output",
+      "values": [
+        0.0
+      ],
+      "x": 928.0,
+      "y": 0.0
+    }
+  ],
+  "version": 1
+}

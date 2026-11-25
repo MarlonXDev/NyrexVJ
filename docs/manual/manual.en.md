@@ -76,7 +76,7 @@ This chapter names every part of the main window, so the rest of the manual can 
 | --- | --- |
 | File | New empty composition, Save as preset, Open data folder, Quit |
 | Edit | Undo and Redo |
-| Output | Open or close the output windows, Fullscreen, Outputs and mapping, Start or stop recording, Recording settings, Send to OBS via Spout, Send via NDI |
+| Output | Open or close the output windows, Fullscreen, Outputs and mapping, Start or stop recording, Recording settings, Send to OBS via Spout, Send via NDI, Video routing |
 | Audio | Choose the audio source: Off, Demo signal, System audio, Input, and Refresh devices |
 | Timeline | Run the timeline, Show the timeline window, Play, Pause, Stop, Release hand moves |
 | Settings | Opens the Settings window |
@@ -875,6 +875,23 @@ Spout hands the finished picture to OBS on Windows without a screen capture. You
 
 Spout works on Windows only. The output window with a window capture in OBS keeps working as an alternative, and so does NDI. Send via NDI in the Output menu sends the main picture over the network to OBS with the NDI plugin, Resolume, vMix or NDI Studio Monitor.
 
+## Video routing {#video-routing}
+
+Output, Video routing opens a window that shows what can be used as a source and who uses it. A route clip plays the picture of another layer, of several layers together or of the master in a layer of its own. Find the route clips in the Library under the filter Routing and put one into a cell like any other clip. A route clip is a normal layer: its effects, opacity, blend mode and colour grade apply to the routed picture.
+
+- The sources are Layer 1 to 4 (the picture of the layer after its effects, before its opacity and blend mode), Layers 1-2, 1-3 and 1-4 (the mix of the first layers after their opacity and blend modes) and Master (after the master effects, before the master level and colour grade).
+- Clips named Route show a source of the same frame: a layer can use a layer below it, and a layer can use the mix of the layers below it. Clips named Feedback show the previous frame, can use any source, even the layer's own picture, and are exactly one frame late.
+- A choice that would make a loop is blocked: the layer draws nothing and the window says Blocked, this would be a loop. Use a Feedback clip when you want a loop on purpose.
+- When the source is not playing (empty cell, bypass, solo of another layer) the route clip is transparent and the window says so. A source layer with opacity 0 is still drawn while something uses it.
+- Under Pictures sent to other programs, Spout, NDI and Recording each have a choice: Master, or one of the layers, or the first two, three or four layers together. Another source than Master is sent as an opaque copy at the size of the composition, without the master effects, level and colour grade, and only while that sender runs. If its source is not playing, the sender sends black. The output windows always show the master.
+- The window shows each source with a small live preview, its size, how many layers or senders use it and its memory. Copies are made on the graphics card, never through the processor, and are released about a second and a half after the last user. The memory of all copies is limited to 512 MiB.
+
+> Note: In a transition the outgoing deck keeps its own routes while it fades out, and senders follow the incoming deck.
+
+> Tip: To send only the background to OBS, choose Layer 1 for Spout and leave the output windows on the master.
+
+> Warning: Video routing was only tested with a software renderer. Try a show that routes several layers on your own computer and graphics card, and watch the graphics memory, before you rely on it.
+
 ## Output windows {#output-windows}
 
 Settings, Output has a tab for each of up to four outputs. Output 1 is always in use, outputs 2 to 4 are switched on with Use this output. Each output has its own display, Open and Close, Fullscreen or Windowed and a test pattern. `F11` switches fullscreen for all open outputs and `Esc` leaves it. Two outputs on the same display get a warning because they would lie on top of each other.
@@ -1362,6 +1379,8 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--shader-editor [FILE]` | Open the shader editor on start, with a file of the shaders folder if you give one, otherwise with a template |
 | `--shader-editor-selftest [FRAMES]` | Check the shader editor in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--shader-editor-uitest` | Drive the shader editor with real key and mouse events, check what it holds and exit with code 0 or 1, with `--bench-out FILE.json` for the result |
+| `--routing-selftest [FRAMES]` | Check video routing in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
+| `--routing-demo` | Build a small example with route clips and open the Video routing window, for screenshots |
 
 ## Tests and measurements {#cli-tests}
 

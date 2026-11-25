@@ -1475,6 +1475,7 @@ GpuMemory Engine::gpuMemory() const {
     for (const RenderTarget& target : previews_) {
         memory.thumbnails += bytes(target);
     }
+    memory.routing = routeBytes();
     memory.sceneDepth = sceneRenderer_.depthBytes();
     memory.shaderBuffers = shaderBufferBytes();
     for (const std::unique_ptr<LiveInput>& input : liveInputs_) {
@@ -1533,6 +1534,9 @@ bool Engine::ensureClip(size_t index) {
     }
     if (index < generators_.size() && generators_[index]) {
         return ensureGenerator(index);
+    }
+    if (clipLibrary()[index].isRoute()) {
+        return true;
     }
     ClipProgram& clip = clips_[index];
     if (clip.tried) {
@@ -1843,6 +1847,7 @@ void Engine::shutdown() {
 
 bool Engine::createTargets(int width, int height) {
     destroyTransitionTargets();
+    releaseRouting();
     return layerA_.create(width, height) && layerB_.create(width, height) && compA_.create(width, height) && compB_.create(width, height) && out_.create(width, height);
 }
 
@@ -1874,6 +1879,7 @@ bool Engine::ensureTransitionTargets() {
 
 void Engine::destroyTargets() {
     destroyTransitionTargets();
+    releaseRouting();
     layerLoA_.destroy();
     layerLoB_.destroy();
     layerA_.destroy();
@@ -2972,7 +2978,7 @@ void Engine::renderClipThumbnails(int maxCount) {
             clipThumbs_[i].bind();
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
-            if (ensureClip(i)) {
+            if (ensureClip(i) && !clipLibrary()[i].isRoute()) {
                 if (clipLibrary()[i].isAdvancedShader()) {
                     renderShaderThumbnail(i, clipThumbs_[i]);
                 } else {
@@ -3002,6 +3008,11 @@ void Engine::renderClipThumbnails(int maxCount) {
             continue;
         }
         clipThumbs_[i].bind();
+        if (clipLibrary()[i].isRoute()) {
+            glClearColor(0.05f, 0.07f, 0.10f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            continue;
+        }
         if (clipLibrary()[i].isAdvancedShader()) {
             renderShaderThumbnail(i, clipThumbs_[i]);
         } else {
@@ -3034,6 +3045,10 @@ void Engine::blit(const RenderTarget& source, const RenderTarget& target) {
 
 void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target) {
     const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
+    if (clipDef.isRoute()) {
+        drawRouted(clipDef.sceneIndex, instance, target);
+        return;
+    }
     const bool spoutClip = clipDef.kind == ClipKind::SpoutSource;
     const bool liveClip = clipDef.isLive();
     if (spoutClip) {
@@ -3278,14 +3293,28 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         anySolo = anySolo || layer.solo;
     }
 
+    std::array<int, kLayerCount> clipOf{};
     for (int l = 0; l < kLayerCount; ++l) {
         const Layer& layer = layers[static_cast<size_t>(l)];
-        const size_t li = static_cast<size_t>(l);
         int clipIndex = -1;
         if (!layer.bypass && !(anySolo && !layer.solo) && layer.activeColumn >= 0) {
             clipIndex = layer.cells[static_cast<size_t>(layer.activeColumn)];
         }
         if (clipIndex < 0 || clipIndex >= static_cast<int>(clips_.size()) || !ensureClip(static_cast<size_t>(clipIndex))) {
+            clipIndex = -1;
+        }
+        clipOf[static_cast<size_t>(l)] = clipIndex;
+    }
+    const routing::Plan plan = planRouting(clipOf, deck);
+
+    for (int l = 0; l < kLayerCount; ++l) {
+        const Layer& layer = layers[static_cast<size_t>(l)];
+        const size_t li = static_cast<size_t>(l);
+        if (l >= 2) {
+            routeCapture(deck, routing::slotOf(routing::Source{routing::SourceKind::Group, l, false}), *accum, plan);
+        }
+        const int clipIndex = clipOf[li];
+        if (clipIndex < 0) {
             if (updatePreviews) {
                 if (live_[li]) {
                     clearTarget(previews_[li]);
@@ -3299,7 +3328,7 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         }
 
         const bool hidden = !layerVisible(effective[li].opacity) && !chainHasFeedback(layer.fx);
-        if (hidden && (!updatePreviews || frameId_ - hiddenPreviewFrame_[li] < kHiddenPreviewInterval)) {
+        if (hidden && !plan.forceRender[li] && (!updatePreviews || frameId_ - hiddenPreviewFrame_[li] < kHiddenPreviewInterval)) {
             continue;
         }
 
@@ -3309,6 +3338,7 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         drawLayerSource(clipIndex, deck * kLayerCount + l, layer, layer.playback[static_cast<size_t>(layer.activeColumn)], effective[li].scale, clocks[li], *chainSource);
 
         RenderTarget* result = runChain(layer.fx, chainFeedback(chainBase + l), chainUsed(chainBase + l), chainSource, chainScratch, deck, l + 1);
+        routeCapture(deck, l, *result, plan);
         if (updatePreviews) {
             profiler_.mark(PassKind::Preview, deck, l + 1, 0, "");
             downsample(*result, previews_[li]);
@@ -3354,7 +3384,10 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
     }
 
     glDisable(GL_BLEND);
-    return runChain(master.fx, chainFeedback(chainBase + kLayerCount), chainUsed(chainBase + kLayerCount), accum, spare, deck, 0);
+    routeCapture(deck, routing::slotOf(routing::Source{routing::SourceKind::Group, kLayerCount, false}), *accum, plan);
+    RenderTarget* masterResult = runChain(master.fx, chainFeedback(chainBase + kLayerCount), chainUsed(chainBase + kLayerCount), accum, spare, deck, 0);
+    routeCapture(deck, routing::slotOf(routing::Source{routing::SourceKind::Master, 0, false}), *masterResult, plan);
+    return masterResult;
 }
 
 void Engine::finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination) {
@@ -3443,6 +3476,8 @@ void Engine::render() {
             feedback_[k].destroy();
         }
     }
+
+    serviceRouting();
 
     if (stripEnabled_) {
         profiler_.mark(PassKind::Other, 0, 0, 0, "strip");

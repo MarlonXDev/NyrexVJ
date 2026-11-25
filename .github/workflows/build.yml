@@ -210,6 +210,8 @@ jobs:
           test -s "$RUNNER_TEMP/shaderedit.json"
           NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-shaderedit-ui" build/NyrexVJ --fresh --no-update-check --no-welcome --audio-demo --frames 100000 --shader-editor-uitest --bench-out "$RUNNER_TEMP/shaderedit-ui.json"
           test -s "$RUNNER_TEMP/shaderedit-ui.json"
+          NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-routing" build/NyrexVJ --fresh --no-update-check --no-welcome --routing-selftest 30 --bench-out "$RUNNER_TEMP/routing.json"
+          test -s "$RUNNER_TEMP/routing.json"
           build/NyrexVJ --scene-selftest tests/data/models
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data

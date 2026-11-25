@@ -13,6 +13,7 @@
 - `src/platform`: platform-specific integration.
 - `src/update`: updater.
 - Live recording (v0.35.0, see [ADR 0028](adr/0028-live-recording.md) and [RECORDING.md](RECORDING.md)): `src/render/recorder.*` does the OpenGL part on the render thread (one scaled copy and an asynchronous read back with a fence), `src/media/video_recorder.*` runs the colour conversion, the encoding and the writing on one thread at background priority and has no OpenGL, `src/core/record_plan.*` holds the formats, the checks, the frame schedule and the audio sync as plain code that is unit tested, and `AudioSystem` gives the samples of a real input to the recorder through `AudioSink`.
+- Video routing (v0.47.0, see [ADR 0040](adr/0040-video-routing.md) and [OUTPUTS.md](OUTPUTS.md)): `src/core/routing.*` holds the sources, the rules, the plan per frame, the surface checks and the cache tracker (no OpenGL, unit tested), `src/render/routing_engine.cpp` copies pictures with `glBlitFramebuffer` at fixed points in `Engine::renderDeck` and draws them for the clips of kind `RouteSource` and for the senders, and `src/app/ui_routing.cpp` is the window.
 - Spout sender, a Spout receiver with four input slots (v0.10.0, see [ADR 0007](adr/0007-spout-receiver.md)) and the fullscreen output are documented.
 
 Inspect source and tests before claiming exact internal ownership, threading, or data flow.

@@ -22,7 +22,8 @@ enum class ClipKind {
     CameraSource,
     PluginSource,
     TextFile,
-    ParticleClip
+    ParticleClip,
+    RouteSource
 };
 
 struct ClipDef {
@@ -45,6 +46,7 @@ struct ClipDef {
     bool isMedia() const { return kind == ClipKind::ImageFile || kind == ClipKind::VideoFile; }
     bool isLive() const { return kind == ClipKind::NdiSource || kind == ClipKind::CameraSource || kind == ClipKind::PluginSource; }
     bool isGenerator() const { return kind == ClipKind::TextFile || kind == ClipKind::ParticleClip; }
+    bool isRoute() const { return kind == ClipKind::RouteSource; }
 };
 
 constexpr size_t kMaxModelClips = 64;

@@ -4,6 +4,7 @@
 #include "app/bench_convert.hpp"
 #include "app/generator_selftest.hpp"
 #include "app/gpu_diag_selftest.hpp"
+#include "app/routing_selftest.hpp"
 #include "app/shader_editor_selftest.hpp"
 #include "app/gpu_particle_selftest.hpp"
 #include "app/output_selftest.hpp"
@@ -67,6 +68,9 @@ struct Options {
     bool gpuParticleSelfTest = false;
     int gpuParticleSelfTestBench = 0;
     bool gpuDiagSelfTest = false;
+    bool routingSelfTest = false;
+    bool routingDemo = false;
+    int routingSelfTestBench = 0;
     int gpuDiagSelfTestBench = 0;
     bool shaderEditorSelfTest = false;
     bool shaderEditorUiTest = false;
@@ -170,6 +174,13 @@ Options parseOptions(int argc, char** argv) {
             options.gpuDiagSelfTest = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') {
                 options.gpuDiagSelfTestBench = std::max(0, std::atoi(argv[++i]));
+            }
+        } else if (arg == "--routing-demo") {
+            options.routingDemo = true;
+        } else if (arg == "--routing-selftest") {
+            options.routingSelfTest = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                options.routingSelfTestBench = std::max(0, std::atoi(argv[++i]));
             }
         } else if (arg == "--shader-editor-selftest") {
             options.shaderEditorSelfTest = true;
@@ -494,7 +505,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -519,6 +530,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runGpuParticleSelfTest(app.engine(), options.gpuParticleSelfTestBench, options.benchOut);
         } else if (options.gpuDiagSelfTest) {
             benchExit = nvj::runGpuDiagSelfTest(app.engine(), options.gpuDiagSelfTestBench, options.benchOut);
+        } else if (options.routingSelfTest) {
+            benchExit = nvj::runRoutingSelfTest(app.engine(), options.routingSelfTestBench, options.benchOut);
         } else if (options.shaderEditorSelfTest) {
             benchExit = nvj::runShaderEditorSelfTest(app.engine(), options.shaderEditorSelfTestBench, options.benchOut);
         } else if (options.liveSelfTest) {
@@ -611,6 +624,9 @@ int main(int argc, char** argv) {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         ++frameCount;
+        if (options.routingDemo && frameCount == 2) {
+            app.startRoutingDemo();
+        }
         if (options.shaderEditorUiTest) {
             if (frameCount == 1) {
                 app.startShaderEditorTest();

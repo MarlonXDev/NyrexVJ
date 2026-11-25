@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.46.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.47.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -177,6 +177,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/gpu_particles.cpp
     src/core/gpu_diag.cpp
     src/core/shader_editor.cpp
+    src/core/routing.cpp
     src/core/effect_json.cpp
     src/core/effect_chain.cpp
     src/core/show_workflow.cpp
@@ -352,6 +353,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/generator_selftest.cpp
     src/app/gpu_particle_selftest.cpp
     src/app/gpu_diag_selftest.cpp
+    src/app/routing_selftest.cpp
     src/app/shader_editor_selftest.cpp
     src/app/scene_selftest.cpp
     src/app/theme.cpp
@@ -375,9 +377,11 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_packs.cpp
     src/app/ui_generators.cpp
     src/app/ui_shader_editor.cpp
+    src/app/ui_routing.cpp
     src/app/shader_editor_uitest.cpp
     src/app/pack_cli.cpp
     src/render/engine.cpp
+    src/render/routing_engine.cpp
     src/render/gpu_profiler.cpp
     src/render/gl_util.cpp
     src/render/generators.cpp
@@ -567,6 +571,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_gpudiag_tests PRIVATE nvj_core)
     target_include_directories(nvj_gpudiag_tests PRIVATE tests)
     add_test(NAME nvj_gpudiag_tests COMMAND nvj_gpudiag_tests)
+    add_executable(nvj_routing_tests tests/test_routing.cpp)
+    target_link_libraries(nvj_routing_tests PRIVATE nvj_core)
+    target_include_directories(nvj_routing_tests PRIVATE tests)
+    add_test(NAME nvj_routing_tests COMMAND nvj_routing_tests)
     add_executable(nvj_shaderedit_tests tests/test_shader_editor.cpp)
     target_link_libraries(nvj_shaderedit_tests PRIVATE nvj_core)
     target_include_directories(nvj_shaderedit_tests PRIVATE tests)

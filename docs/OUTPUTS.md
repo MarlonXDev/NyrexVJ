@@ -111,6 +111,23 @@ Every output tab has NDI output with Send this output as NDI and a name (empty u
 
 Recording ([RECORDING.md](RECORDING.md)) saves the picture of the composition into a video file. Like the NDI source of the main picture it does not use the mapping: slices, corners, warp, masks, edge blending and the colour of an output are not in the file. What an output shows after mapping can be recorded from its NDI source with another program. The recording has its own memory (a pool of pictures in main memory and four pictures on the graphics side) and does not count against the output memory budget below.
 
+## Video routing: layers, groups and the master as sources
+
+Output, Video routing ([ADR 0040](adr/0040-video-routing.md)) shows what can be used as a source and who uses it. A **route clip** plays the picture of another layer, of several layers together or of the master in a layer of its own; a **sender source** sends one of these pictures to Spout, NDI or the recording instead of the master. The Library lists the route clips under the filter Routing.
+
+| Source | What it is | Same frame | Previous frame |
+| --- | --- | --- | --- |
+| Layer N | The picture of layer N after its effects, before its opacity, blend mode and grade | Layer 1 to 3, used by a layer above it | Layer 1 to 4, used by any layer |
+| Layers 1-n | The mix of the first n layers after their opacity, blend modes and grades, before the master effects | Layers 1-2 and 1-3, used by layer n or above | Layers 1-2, 1-3 and 1-4, used by any layer |
+| Master | The picture after the master effects, before the master level, grade and blackout | not possible (it is drawn last) | Master, used by any layer |
+
+- **No loops.** A same-frame source has to be drawn before the layer that uses it. A layer that uses itself, a lower layer that uses a higher one or a layer that uses the master of the same frame is refused: the layer draws nothing and the window says Blocked, this would be a loop. Feedback is allowed on purpose, with the sources that come from the previous frame; it is exactly one frame late, and the first frame after it starts (and after a resolution change) is transparent.
+- **A source that is not playing** (empty cell, bypass, solo of another layer) gives a transparent picture to its users, and the window says so. A source layer that is faded out to opacity 0 is still drawn when something uses it.
+- **GPU only, with a limit.** A source is copied on the graphics card with one blit and read by its users with another; nothing goes through the processor. A copy costs width x height x 4 bytes (8 bytes per pixel for a float chain), a feedback source holds two. Copies are released 90 frames after the last use and when the resolution changes, and the total is limited to 512 MiB. They count in the graphics memory estimate of Settings, Performance.
+- **Senders.** Spout, NDI and the recording can each take Master (the output texture itself, no copy), Layer 1 to 4 or Layers 1-2, 1-3, 1-4. Another source than Master is sent as an opaque copy at the size of the composition and without the master effects, level and grade; it is made only while that sender runs. If its source is not playing the sender sends black. The choice is saved in `settings.json` only when it is not Master. The output windows always show the master.
+- **Transitions.** The outgoing deck keeps its own routes while it fades out. Senders follow the incoming deck.
+- **What is tested, and what is not.** See [TESTING.md](TESTING.md): `nvj_routing_tests` and `--routing-selftest` run in CI on a software renderer; no graphics card, no Windows run, no recording of a routed source and no receiver on the other side of a routed sender was tested.
+
 ## Output memory budget
 
 Masks, vertex and index buffers, the delay ring and the NDI readback buffers of all outputs share one budget of 384 MiB of video memory. The tab shows `used / 384 MiB`, and a line in orange when the current setup would need more (a 4 x 4K setup with NDI and a long delay does). `estimateOutputBudget` computes the same numbers without a graphics card: meshes (vertices and indices per slice by warp grid), masks (1024 x 576 hard, 512 x 288 soft, a picture mask counts like a hard one), the delay ring (frames + 1 pictures of the composition) and the NDI readback (two buffers of the window size). `--output-selftest` checks that the estimate matches the measured memory exactly for eight masked 17 x 17 slices and for one plain slice. Only the NDI readback is refused when it does not fit; meshes, masks and the delay ring are never refused, they are small or the person chose them.

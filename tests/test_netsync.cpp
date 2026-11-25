@@ -352,10 +352,13 @@ void testMessages() {
 void testNegotiate() {
     CHECK(negotiate(1, 1, 5, 5).compat == Compat::Full);
     CHECK(negotiate(1, 1, 5, 5).protocol == 1);
-    CHECK(negotiate(1, 3, 5, 5).protocol == 1);
+    CHECK(negotiate(1, 3, 5, 5).protocol == kProtocol);
+    CHECK(negotiate(1, 1, 5, 5).protocol == 1);
+    CHECK(negotiate(2, 2, 5, 5).protocol == 2);
+    CHECK(negotiate(2, 2, 5, 5).compat == Compat::Full);
     CHECK(negotiate(0, 1, 5, 5).compat == Compat::Full);
     CHECK(negotiate(1, 1, 5, 6).compat == Compat::ClockOnly);
-    CHECK(negotiate(2, 3, 5, 5).compat == Compat::Refused);
+    CHECK(negotiate(kProtocol + 1, kProtocol + 2, 5, 5).compat == Compat::Refused);
     CHECK(negotiate(3, 1, 5, 5).compat == Compat::Refused);
     CHECK(negotiate(0, 0, 5, 5).compat == Compat::Refused);
     const std::vector<std::string> a = {"master/level", "layer/1/opacity"};
@@ -1036,8 +1039,8 @@ void testVersionAndSchema() {
     Follower future(config);
     future.start(0.0);
     Hello hello;
-    hello.protocolMin = 2;
-    hello.protocolMax = 4;
+    hello.protocolMin = kProtocol + 1;
+    hello.protocolMax = kProtocol + 3;
     hello.schema = old.schema;
     hello.nonce = 5;
     hello.name = "Future";
@@ -1266,6 +1269,249 @@ void testPacketSizes() {
 
 }
 
+void testFailoverMessages() {
+    ClockMsg clock;
+    clock.masterTime = 12.5;
+    clock.beat = 33.0;
+    clock.bpm = 126.0f;
+    clock.extended = true;
+    clock.epoch = 7;
+    clock.health = kHealthDecoder | kHealthOutput;
+    clock.showHash = 0x1122334455667788ull;
+    ClockMsg clockBack;
+    CHECK(decodeBody(encodeBody(clock), clockBack));
+    CHECK(clockBack.extended);
+    CHECK(clockBack.epoch == 7);
+    CHECK(clockBack.health == (kHealthDecoder | kHealthOutput));
+    CHECK(clockBack.showHash == 0x1122334455667788ull);
+    clock.extended = false;
+    ClockMsg plain;
+    CHECK(decodeBody(encodeBody(clock), plain));
+    CHECK(!plain.extended);
+    CHECK(plain.epoch == 0);
+    Bytes cut = encodeBody(clock);
+    cut.push_back(1);
+    CHECK(!decodeBody(cut, plain));
+
+    PingMsg ping;
+    ping.t0 = 4.0;
+    ping.number = 3;
+    ping.extended = true;
+    ping.readiness = kReadinessDegraded;
+    ping.health = kHealthOverloaded;
+    ping.showHash = 99;
+    PingMsg pingBack;
+    CHECK(decodeBody(encodeBody(ping), pingBack));
+    CHECK(pingBack.extended && pingBack.readiness == kReadinessDegraded && pingBack.health == kHealthOverloaded && pingBack.showHash == 99);
+    ping.extended = false;
+    CHECK(decodeBody(encodeBody(ping), pingBack));
+    CHECK(!pingBack.extended);
+    ping.extended = true;
+    ping.readiness = 9;
+    CHECK(!decodeBody(encodeBody(ping), pingBack));
+
+    TakeoverMsg takeover;
+    takeover.epoch = 5;
+    takeover.port = 9030;
+    takeover.name = "Standby PC";
+    TakeoverMsg takeoverBack;
+    CHECK(decodeBody(encodeBody(takeover), takeoverBack));
+    CHECK(takeoverBack.epoch == 5 && takeoverBack.port == 9030 && takeoverBack.name == "Standby PC");
+    takeover.epoch = 0;
+    CHECK(!decodeBody(encodeBody(takeover), takeoverBack));
+    takeover.epoch = 5;
+    takeover.port = 0;
+    CHECK(!decodeBody(encodeBody(takeover), takeoverBack));
+}
+
+void testFailoverReports() {
+    Sim sim;
+    sim.frame.clock.health = kHealthDecoder;
+    sim.frame.clock.showHash = 0xabcdefull;
+    Node& node = sim.addFollower();
+    node.follower->setReport(kReadinessReady, kHealthOutput, 0x777);
+    sim.run(3.0);
+    CHECK(node.follower->protocol() == 2);
+    const PrimaryView view = node.follower->primary();
+    CHECK(view.known);
+    CHECK(view.epoch == 1);
+    CHECK(view.health == kHealthDecoder);
+    CHECK(view.showHash == 0xabcdefull);
+    CHECK(!view.byeSeen);
+    const std::vector<FollowerInfo> list = sim.master->followers();
+    CHECK(list.size() == 1);
+    CHECK(list[0].reports);
+    CHECK(list[0].readiness == kReadinessReady);
+    CHECK(list[0].health == kHealthOutput);
+    CHECK(list[0].showHash == 0x777);
+    node.follower->setReport(kReadinessNotReady, 0, 0x778);
+    sim.run(2.5);
+    CHECK(sim.master->followers()[0].readiness == kReadinessNotReady);
+    CHECK(sim.master->followers()[0].showHash == 0x778);
+    sim.frame.clock.health = 0;
+    sim.run(1.0);
+    CHECK(node.follower->primary().health == 0);
+    node.up.setDown(true);
+    node.down.setDown(true);
+    sim.run(4.0);
+    CHECK(node.follower->phase() == FollowerPhase::Lost);
+    CHECK(node.follower->primary().known);
+    CHECK(node.follower->primary().epoch == 1);
+}
+
+void testFailoverOldPeer() {
+    Sim sim;
+    Hello hello;
+    hello.protocolMin = 1;
+    hello.protocolMax = 1;
+    hello.schema = sim.schema;
+    hello.nonce = 7;
+    hello.name = "Old";
+    const Peer peer{0x7f000001u, 50001};
+    const Bytes helloPacket = encodePacket(sim.key, 1, Type::Hello, 555, 1, encodeBody(hello));
+    sim.master->receive(peer, helloPacket.data(), helloPacket.size(), sim.masterNow());
+    std::vector<Datagram> out = sim.master->takeOutgoing();
+    CHECK(out.size() == 1);
+    Header header;
+    Bytes body;
+    CHECK(decodePacket(sim.key, out[0].data.data(), out[0].data.size(), header, body) == Decode::Ok);
+    CHECK(header.type == Type::Welcome);
+    CHECK(header.version == 1);
+    Welcome welcome;
+    CHECK(decodeBody(body, welcome));
+    CHECK(welcome.protocol == 1);
+    PingMsg ping;
+    ping.t0 = 1.0;
+    ping.number = 1;
+    const Bytes pingPacket = encodePacket(sim.key, 1, Type::Ping, 555, 2, encodeBody(ping));
+    sim.master->receive(peer, pingPacket.data(), pingPacket.size(), sim.masterNow());
+    bool sawClock = false;
+    for (int i = 0; i < 12; ++i) {
+        sim.master->update(sim.masterNow() + 0.15 * static_cast<double>(i + 1), sim.frame);
+        for (const Datagram& datagram : sim.master->takeOutgoing()) {
+            Header h;
+            Bytes b;
+            if (decodePacket(sim.key, datagram.data.data(), datagram.data.size(), h, b) != Decode::Ok) {
+                continue;
+            }
+            CHECK(h.version == 1);
+            if (h.type == Type::Clock) {
+                ClockMsg clock;
+                CHECK(decodeBody(b, clock));
+                CHECK(!clock.extended);
+                sawClock = true;
+            }
+        }
+    }
+    CHECK(sawClock);
+    CHECK(!sim.master->followers().empty());
+    CHECK(!sim.master->followers()[0].reports);
+    CHECK(sim.master->stats().malformed == 0);
+}
+
+void testFailoverTakeover() {
+    Sim sim;
+    const Peer other{0x0a000002u, 9030};
+    TakeoverMsg message;
+    message.epoch = 2;
+    message.port = 9030;
+    message.name = "Standby";
+    Bytes packet = encodePacket(sim.key, kProtocol, Type::Takeover, 0, 1, encodeBody(message));
+    sim.master->receive(other, packet.data(), packet.size(), sim.masterNow());
+    std::vector<TakeoverNotice> notices = sim.master->takeTakeovers();
+    CHECK(notices.size() == 1);
+    CHECK(notices[0].epoch == 2 && notices[0].port == 9030 && notices[0].name == "Standby");
+    CHECK(notices[0].peer == other);
+    CHECK(sim.master->takeOutgoing().empty());
+
+    sim.master->receive(other, packet.data(), packet.size(), sim.masterNow() + 1.0);
+    CHECK(sim.master->takeTakeovers().empty());
+
+    message.epoch = 1;
+    packet = encodePacket(sim.key, kProtocol, Type::Takeover, 0, 2, encodeBody(message));
+    sim.master->receive(other, packet.data(), packet.size(), sim.masterNow() + 2.0);
+    CHECK(sim.master->takeTakeovers().empty());
+
+    message.epoch = 3;
+    const Bytes forged = encodePacket(testKey(9), kProtocol, Type::Takeover, 0, 3, encodeBody(message));
+    sim.master->receive(other, forged.data(), forged.size(), sim.masterNow() + 3.0);
+    CHECK(sim.master->takeTakeovers().empty());
+    CHECK(sim.master->stats().badAuth == 1);
+    CHECK(sim.master->takeOutgoing().empty());
+
+    Bytes broken = encodePacket(sim.key, kProtocol, Type::Takeover, 0, 4, Bytes{1, 2, 3});
+    sim.master->receive(other, broken.data(), broken.size(), sim.masterNow() + 4.0);
+    CHECK(sim.master->takeTakeovers().empty());
+
+    const Bytes later = encodePacket(sim.key, kProtocol, Type::Takeover, 0, 5, encodeBody(message));
+    sim.master->receive(other, later.data(), later.size(), sim.masterNow() + 5.0);
+    notices = sim.master->takeTakeovers();
+    CHECK(notices.size() == 1 && notices[0].epoch == 3);
+
+    MasterConfig config;
+    config.key = sim.key;
+    config.schema = sim.schema;
+    config.stateSize = kState;
+    config.epoch = 4;
+    Master newer(config);
+    newer.receive(other, later.data(), later.size(), 10.0);
+    CHECK(newer.takeTakeovers().empty());
+    CHECK(newer.epoch() == 4);
+
+    Sim announcer;
+    announcer.master->announceTakeover(other, 9, 9031, "New leader");
+    std::vector<Datagram> out = announcer.master->takeOutgoing();
+    CHECK(out.size() == 1);
+    CHECK(out[0].peer == other);
+    Header header;
+    Bytes body;
+    CHECK(decodePacket(announcer.key, out[0].data.data(), out[0].data.size(), header, body) == Decode::Ok);
+    CHECK(header.type == Type::Takeover);
+    Sim receiver;
+    receiver.master->receive(other, out[0].data.data(), out[0].data.size(), 1.0);
+    notices = receiver.master->takeTakeovers();
+    CHECK(notices.size() == 1 && notices[0].epoch == 9 && notices[0].port == 9031 && notices[0].name == "New leader");
+}
+
+void testFailoverNoReplyLoop() {
+    Sim sim;
+    const Peer stranger{0x0a000009u, 5000};
+    RejectMsg reject;
+    reject.code = RejectCode::UnknownSession;
+    reject.text = "x";
+    const Bytes packet = encodePacket(sim.key, kProtocol, Type::Reject, 31, 1, encodeBody(reject));
+    sim.master->receive(stranger, packet.data(), packet.size(), 5.0);
+    CHECK(sim.master->takeOutgoing().empty());
+    CHECK(sim.master->stats().stray == 1);
+    ByeMsg bye;
+    const Bytes byePacket = encodePacket(sim.key, kProtocol, Type::Bye, 31, 2, encodeBody(bye));
+    sim.master->receive(stranger, byePacket.data(), byePacket.size(), 6.0);
+    CHECK(sim.master->takeOutgoing().empty());
+    PingMsg ping;
+    const Bytes pingPacket = encodePacket(sim.key, kProtocol, Type::Ping, 31, 3, encodeBody(ping));
+    sim.master->receive(stranger, pingPacket.data(), pingPacket.size(), 7.0);
+    CHECK(sim.master->takeOutgoing().size() == 1);
+}
+
+void testFailoverBye() {
+    for (std::uint8_t reason : {kByeEnded, kByeSuperseded}) {
+        Sim sim;
+        Node& node = sim.addFollower();
+        sim.run(3.0);
+        CHECK(node.follower->phase() == FollowerPhase::Live);
+        CHECK(!node.follower->primary().byeSeen);
+        sim.master->shutdown(sim.masterNow(), reason);
+        for (const Datagram& datagram : sim.master->takeOutgoing()) {
+            node.down.push(datagram.data, sim.time);
+        }
+        sim.masterReachable = false;
+        sim.run(0.2);
+        CHECK(node.follower->phase() == FollowerPhase::Lost);
+        CHECK(node.follower->primary().byeSeen);
+        CHECK(node.follower->primary().byeReason == reason);
+    }
+}
+
 int main() {
     testHmac();
     testKeys();
@@ -1294,5 +1540,11 @@ int main() {
     testFollowerStop();
     testLargeChange();
     testPacketSizes();
+    testFailoverMessages();
+    testFailoverReports();
+    testFailoverOldPeer();
+    testFailoverTakeover();
+    testFailoverNoReplyLoop();
+    testFailoverBye();
     return testing::finish();
 }

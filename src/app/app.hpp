@@ -11,6 +11,7 @@
 #include "app/timeline_view.hpp"
 #include "audio/audio_system.hpp"
 #include "app/api_system.hpp"
+#include "app/failover_system.hpp"
 #include "app/netsync_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
@@ -131,6 +132,7 @@ public:
     ControlSystem& control() { return control_; }
     ApiSystem& api() { return api_; }
     NetSyncSystem& netSync() { return netSync_; }
+    FailoverSystem& failover() { return failover_; }
     SyncSystem& syncSystem() { return sync_; }
     bool wantsRestart() const { return restart_; }
     int dumpOutputs(const std::string& prefix);
@@ -172,6 +174,7 @@ private:
     void drawPerformancePage();
     void drawGpuDiagnostics();
     void drawRoutingWindow();
+    void drawFailoverWindow();
     void applySenderSources();
     bool senderRunning(int kind) const;
     void drawDiagnosticsBadge();
@@ -349,6 +352,7 @@ private:
     StageOutput stage_;
     SyncSystem sync_;
     NetSyncSystem netSync_{engine_, control_, sync_};
+    FailoverSystem failover_{engine_, netSync_};
     char netHostText_[80] = {};
     char netNameText_[64] = {};
     char netKeyText_[96] = {};
@@ -399,6 +403,9 @@ private:
     std::unique_ptr<NodeEditorState> nodes_;
     bool nodesOpen_ = false;
     bool routingOpen_ = false;
+    bool failoverOpen_ = false;
+    bool failoverConfirm_ = false;
+    double snapshotAt_ = -1.0;
     bool nodesFocus_ = false;
     bool nodesHasFocus_ = false;
     bool creatorOpen_ = false;

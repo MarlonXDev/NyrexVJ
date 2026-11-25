@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.48.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.49.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -213,6 +213,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/cue_list.cpp
     src/core/show_timeline.cpp
     src/core/beat_clock.cpp
+    src/core/failover.cpp
     src/core/netsync.cpp src/control/netsync_key.cpp src/control/netsync_show.cpp src/control/netsync_transport.cpp
     src/core/ndi_runtime.cpp
     src/core/ndi_receiver.cpp
@@ -343,7 +344,7 @@ set(NYREXVJ_APP_SOURCES
     src/main.cpp
     src/app/app.cpp
     src/app/api_system.cpp
-    src/app/netsync_system.cpp src/app/netsync_selftest.cpp
+    src/app/netsync_system.cpp src/app/netsync_selftest.cpp src/app/failover_system.cpp src/app/failover_selftest.cpp
     src/app/api_selftest.cpp
     src/app/fonts.cpp
     src/app/bench.cpp
@@ -380,6 +381,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_generators.cpp
     src/app/ui_shader_editor.cpp
     src/app/ui_routing.cpp
+    src/app/ui_failover.cpp
     src/app/shader_editor_uitest.cpp
     src/app/pack_cli.cpp
     src/render/engine.cpp
@@ -502,6 +504,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_netsync_tests PRIVATE nvj_core)
     target_include_directories(nvj_netsync_tests PRIVATE tests)
     add_test(NAME nvj_netsync_tests COMMAND nvj_netsync_tests)
+    add_executable(nvj_failover_tests tests/test_failover.cpp)
+    target_link_libraries(nvj_failover_tests PRIVATE nvj_core)
+    target_include_directories(nvj_failover_tests PRIVATE tests)
+    add_test(NAME nvj_failover_tests COMMAND nvj_failover_tests)
     add_executable(nvj_netsync_show_tests tests/test_netsync_show.cpp)
     target_link_libraries(nvj_netsync_show_tests PRIVATE nvj_core)
     target_include_directories(nvj_netsync_show_tests PRIVATE tests)

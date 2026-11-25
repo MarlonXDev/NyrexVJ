@@ -103,6 +103,11 @@ struct Settings {
     bool netSyncFollowControls = true;
     bool netSyncFollowClips = true;
     bool netSyncFollowClock = true;
+    bool failoverEnabled = false;
+    bool failoverAutoTakeover = false;
+    float failoverLostAfter = 5.0f;
+    bool failoverHoldOutputs = true;
+    int failoverLeaderPort = 0;
     bool cuesEnabled = true;
     bool timelineEnabled = false;
     std::string timelineSource = "auto";

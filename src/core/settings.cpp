@@ -287,6 +287,15 @@ bool loadSettings(Settings& settings) {
     result.netSyncFollowControls = boolean("netSyncFollowControls", true);
     result.netSyncFollowClips = boolean("netSyncFollowClips", true);
     result.netSyncFollowClock = boolean("netSyncFollowClock", true);
+    result.failoverEnabled = boolean("failoverEnabled", false);
+    result.failoverAutoTakeover = boolean("failoverAutoTakeover", false);
+    result.failoverLostAfter = number("failoverLostAfter", 5.0f, 3.0f, 60.0f);
+    result.failoverHoldOutputs = boolean("failoverHoldOutputs", true);
+    auto leaderPort = doc.find("failoverLeaderPort");
+    if (leaderPort != doc.end() && leaderPort->is_number_integer()) {
+        const int value = leaderPort->get<int>();
+        result.failoverLeaderPort = value >= 1024 && value <= 65535 ? value : 0;
+    }
     auto ltcDevice = doc.find("ltcDevice");
     if (ltcDevice != doc.end() && ltcDevice->is_string()) {
         result.ltcDevice = ltcDevice->get<std::string>().substr(0, 256);
@@ -444,6 +453,11 @@ bool saveSettings(const Settings& settings) {
     doc["netSyncFollowControls"] = settings.netSyncFollowControls;
     doc["netSyncFollowClips"] = settings.netSyncFollowClips;
     doc["netSyncFollowClock"] = settings.netSyncFollowClock;
+    doc["failoverEnabled"] = settings.failoverEnabled;
+    doc["failoverAutoTakeover"] = settings.failoverAutoTakeover;
+    doc["failoverLostAfter"] = settings.failoverLostAfter;
+    doc["failoverHoldOutputs"] = settings.failoverHoldOutputs;
+    doc["failoverLeaderPort"] = settings.failoverLeaderPort;
     doc["cuesEnabled"] = settings.cuesEnabled;
     doc["timelineEnabled"] = settings.timelineEnabled;
     doc["timelineSource"] = settings.timelineSource;

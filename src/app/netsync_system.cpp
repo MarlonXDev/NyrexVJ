@@ -51,7 +51,50 @@ NetSyncSystem::NetSyncSystem(Engine& engine, ControlSystem& control, SyncSystem&
 NetSyncSystem::~NetSyncSystem() = default;
 
 void NetSyncSystem::configure(const NetSyncSettings& settings) {
+    if (!(settings == wanted_)) {
+        override_.reset();
+    }
     wanted_ = settings;
+}
+
+void NetSyncSystem::becomeLeader(std::uint32_t epoch, int port) {
+    NetSyncSettings next = effective();
+    next.role = netsync::Role::Master;
+    next.port = std::clamp(port, 1024, 65535);
+    next.allowRemote = true;
+    override_ = next;
+    epoch_ = std::max<std::uint32_t>(epoch, 1);
+}
+
+void NetSyncSystem::stepDown(const std::string& host, int port, std::uint32_t epoch) {
+    NetSyncSettings next = effective();
+    next.role = netsync::Role::Follower;
+    next.host = host;
+    next.port = std::clamp(port, 1024, 65535);
+    transport_.setByeReason(netsync::kByeSuperseded);
+    override_ = next;
+    epoch_ = std::max(epoch_, epoch);
+}
+
+void NetSyncSystem::setFailoverReport(std::uint8_t readiness, std::uint8_t health, std::uint64_t showHash) {
+    reportReadiness_ = readiness;
+    reportHealth_ = health;
+    reportHash_ = showHash;
+}
+
+std::vector<netsync::TakeoverNotice> NetSyncSystem::takeTakeovers() {
+    netsync::Master* master = transport_.master();
+    return master != nullptr ? master->takeTakeovers() : std::vector<netsync::TakeoverNotice>();
+}
+
+void NetSyncSystem::announceTakeover(const std::string& host, int port, std::uint32_t epoch) {
+    netsync::Master* master = transport_.master();
+    std::uint32_t address = 0;
+    if (master == nullptr || !UdpSocket::parseIpv4(host, address) || port < 1 || port > 65535) {
+        return;
+    }
+    const NetSyncSettings eff = effective();
+    master->announceTakeover(netsync::Peer{address, static_cast<std::uint16_t>(port)}, epoch, static_cast<std::uint16_t>(eff.port), netsync::limitName(eff.name.empty() ? std::string("NyrexVJ") : eff.name));
 }
 
 bool NetSyncSystem::ensureKey() {
@@ -153,15 +196,17 @@ void NetSyncSystem::clearFollowerState() {
 void NetSyncSystem::update(double dt, double now) {
     error_.clear();
     netsync::TransportConfig config;
-    config.role = wanted_.role;
+    const NetSyncSettings eff = effective();
+    config.role = eff.role;
     if (config.role != netsync::Role::Off && !ensureKey()) {
         config.role = netsync::Role::Off;
         error_ = "Could not create a secure key for the network sync";
     }
-    config.port = wanted_.port;
-    config.allowRemote = wanted_.allowRemote;
-    config.host = wanted_.host;
-    config.name = netsync::limitName(wanted_.name.empty() ? std::string("NyrexVJ") : wanted_.name);
+    config.port = eff.port;
+    config.allowRemote = eff.allowRemote;
+    config.host = eff.host;
+    config.epoch = epoch_;
+    config.name = netsync::limitName(eff.name.empty() ? std::string("NyrexVJ") : eff.name);
     config.appVersion = NYREXVJ_VERSION;
     config.key = haveKey_ ? key_ : netsync::Key{};
     config.schema = netsync::ShowLayout::get().schema;
@@ -212,6 +257,9 @@ void NetSyncSystem::updateMaster(double dt, double now) {
     data.timecodeRate = data.timecodeValid ? static_cast<int>(sync_.timecode().rate) : 0;
     data.jumps = static_cast<std::uint16_t>(jumps_ & 0xffff);
     data.cues = cues_;
+    data.epoch = epoch_;
+    data.health = reportHealth_;
+    data.showHash = reportHash_;
     if (now >= nextManifest_) {
         frame_.manifest = netsync::buildManifest(engine_.comp, *host_);
         nextManifest_ = now + 0.25;
@@ -225,6 +273,7 @@ void NetSyncSystem::updateFollower(double now) {
     if (follower == nullptr) {
         return;
     }
+    follower->setReport(reportReadiness_, reportHealth_, reportHash_);
     const netsync::Follow follow = wanted_.follow;
     const std::vector<netsync::Change> changes = follower->takeChanges();
     if (follower->hasState() && (!changes.empty() || !followApplied_ || !(follow == lastFollow_))) {
@@ -332,6 +381,8 @@ nlohmann::json statsJson(const netsync::Stats& s) {
 nlohmann::json NetSyncSystem::report() const {
     nlohmann::json j;
     j["role"] = netsync::roleName(transport_.role());
+    j["epoch"] = epoch_;
+    j["overridden"] = override_.has_value();
     j["running"] = transport_.running();
     j["error"] = error();
     j["warning"] = warning_;

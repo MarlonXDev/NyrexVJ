@@ -1209,6 +1209,84 @@
       "test": "A-MS-6",
       "command": "python3 scripts/check_i18n.py",
       "notes": "all 2491 translation keys covered, 69 of them new for network sync"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.49.0 (branch feature/backup-failover, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hot-standby",
+      "test": "A-HS-1",
+      "command": "ctest -j2 in the build folder (nvj_failover_tests)",
+      "notes": "144 checks passed: the readiness checks, the fingerprint, the state machine with a simulated clock (loss, one shot, clean close, decoder fault, manual two step, automatic takeover, epoch rules); the whole suite of 48 tests passed in 48 s"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.49.0 (branch feature/backup-failover, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hot-standby",
+      "test": "A-HS-2",
+      "command": "ctest -j2 in the build folder (nvj_netsync_tests)",
+      "notes": "10,493 checks passed, among them the protocol 2 tails on Clock and Ping, an old peer that is never sent a tail, the signed Takeover with its epoch rule and the Bye reason"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.49.0 (branch feature/backup-failover, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hot-standby",
+      "test": "A-HS-3",
+      "command": "NYREXVJ_DATA_DIR=dir xvfb-run -a NyrexVJ --fresh --no-update-check --no-welcome --failover-selftest --bench-out result.json",
+      "notes": "74 checks passed in two runs after the last change (74 of 74 each); detection 3.02 s with lost-after 3 s, serving after the decision 0.035 s, ready 10.5 s before the loss, brightness 0.0 held against 169.6 and 167.8; the update step 12.6 and 13.1 microseconds on average. One check of an earlier run failed (the primary saw the readiness of the standby after 0.5 s, the ping goes once a second); the test now waits up to 3 s"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.49.0 (branch feature/backup-failover, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hot-standby",
+      "test": "A-HS-4",
+      "command": "xvfb-run -a python3 scripts/test_failover_two_instances.py build/NyrexVJ --output result.json",
+      "notes": "32 checks passed in 112 s with two and four real programs at the software renderer; frozen primary (SIGSTOP) to the leader observed after 3.22 s (detection 3.05 s, serving 0.08 s), killed primary (SIGKILL) after 3.44 s (serving 0.13 s), a fader value 0.15 s old before the kill present on the leader, the old primary stepped down after SIGCONT, a clean close gave no automatic takeover and the takeover by hand gave epoch 2"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.49.0 (branch feature/backup-failover, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hot-standby",
+      "test": "A-HS-5",
+      "command": "ctest -j2 in the build folder (nvj_control_tests)",
+      "notes": "619 checks passed, among them the failover settings with their defaults, a round trip and the clamped values"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.49.0 (branch feature/backup-failover, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hot-standby",
+      "test": "A-HS-6",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "all 2584 translation keys covered, 93 of them new for the hot standby"
     }
   ]
 }

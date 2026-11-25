@@ -216,6 +216,10 @@ jobs:
           test -s "$RUNNER_TEMP/netsync.json"
           python3 scripts/test_netsync_two_instances.py build/NyrexVJ --output "$RUNNER_TEMP/netsync-two.json"
           test -s "$RUNNER_TEMP/netsync-two.json"
+          NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-failover" build/NyrexVJ --fresh --no-update-check --no-welcome --failover-selftest --bench-out "$RUNNER_TEMP/failover.json"
+          test -s "$RUNNER_TEMP/failover.json"
+          python3 scripts/test_failover_two_instances.py build/NyrexVJ --output "$RUNNER_TEMP/failover-two.json"
+          test -s "$RUNNER_TEMP/failover-two.json"
           build/NyrexVJ --scene-selftest tests/data/models
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data

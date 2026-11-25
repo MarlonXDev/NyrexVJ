@@ -119,6 +119,65 @@ Settings, Sync, Network sync. Off by default. One NyrexVJ is the **master** and 
 
 **Measured here** (Linux, Mesa software renderer, loopback network, two programs or one program with a relay; see [PERFORMANCE.md](PERFORMANCE.md)): beat of a follower within 2 to 17 ms mean and 31 ms worst of the master, including 25 percent packet loss, up to 25 ms added delay and a 6 s outage; the update step costs 10 to 18 microseconds a frame on average; one follower takes about 1.1 kB/s idle and 2.9 kB/s with three faders moving.
 
+## Hot standby (a backup PC)
+
+Output, Hot standby... Off by default. The standby is the follower of [Network sync](#network-sync-several-pcs) with one more option, Use hot standby. It follows the show, proves with eleven checks that it could play it, holds its own output black, and can take over when the primary stops. The decision and the alternatives are in [ADR 0042](adr/0042-hot-standby.md).
+
+**What it needs.** Two PCs with NyrexVJ 0.49.0, the same show files in the same folders (a show package, [ADR 0034](adr/0034-show-packages.md), is the way), the output windows already open on the standby (Output page), the same key, and protocol 2 on both sides. Against a v0.48.0 master the standby can still follow, but no fingerprint and no health arrive (Show only warns, Primary cannot see a fault), and a v0.48.0 master does not know the Takeover message and would not step down; that combination was not run. The standby needs its own video path to the audience: one input on a video switcher, a matrix, an NDI router or a capture device per PC.
+
+**Readiness.** The page shows eleven checks, each Ok, Warn or Fail with the number behind it:
+
+| Check | Fails when | Warns when |
+| --- | --- | --- |
+| Link | no master, or not in sync yet | |
+| Version | the control list of the master differs (Clock only) or there is no common protocol | |
+| Clock | no usable offset | round trip over 50 ms or jitter over 15 ms |
+| State | no state yet, or the newest is older than 1 s | |
+| Assets | a clip named in the cells of the master is missing here | another clip in a cell, a deck not in use here |
+| Files | a clip file of this PC is missing on its disk | |
+| Show | the fingerprint of the deck and clip names differs | the primary does not report one yet |
+| Outputs | outputs are wanted and none is open | fewer are open than wanted, or none wanted |
+| Decoders | a clip that plays failed to open or to run | |
+| Primary | | the primary reports a fault of its own |
+| Snapshot | | no session snapshot yet, or older than 150 s |
+
+A single Fail makes the standby Not ready and blocks the automatic takeover; the primary sees the readiness of the standby in its own window. The fingerprint compares **names**: two files with the same name and different content pass. The output check is conservative: a PC that wants its output and has no window open is not a standby.
+
+**Takeover.** Two ways, one gate.
+
+- *By hand:* Take over... asks again; if the primary still answers, the dialog says that two PCs would play and the confirm button is disabled for 0.6 s.
+- *Automatic:* only if Take over automatically is ticked, and only when the standby was Ready for at least 10 s before the loss, no clean goodbye arrived (a primary that is closed on purpose is **not** replaced), this PC has no decoder fault and has its output open, and no automatic takeover was used since the standby was armed (one shot; Arm again resets it). The time without packets that counts as lost is a setting, 3 to 60 s, default 5.
+
+**What happens.** The standby becomes the leader with the epoch of the lost master plus 1, opens the leader port (the setting Port as leader, 0 = the port of the old master; use another one when both PCs share one address), releases its output and announces itself with a signed Takeover message to the old master's address until it joins. A master that gets a Takeover with a higher epoch steps down: it sends Bye with the reason Superseded to its own followers and follows the new leader. A Takeover whose epoch is not higher than the master's own, or than one already seen, is ignored. The old master therefore comes back as a follower and the former standby leads; the page and the report show the epoch.
+
+**What it does not do.** It never opens windows, changes monitors or touches a switcher. It does not move OSC, MIDI or the web interface: controllers must be pointed at the new leader (the page shows its address). It does not copy media, the timeline position, presets or settings, and it has no third voter: during a real network split both PCs may think they lead.
+
+**RTO and RPO as criteria.** These are the definitions used by the tests; they are measured and not promised.
+
+- *RTO (the time until the leader serves).* From the last packet of the old master to the moment the leader answers a follower. It has three parts: detection (the lost-after time plus at most one frame), decision (zero for automatic, the time of the person for manual, at least 0.6 s because of the confirm delay) and serving (from the decision to the leader socket answering).
+- *RPO (the data the new leader may be behind).* The age of the newest state the standby had. It is bounded by the delta interval (1/30 s), the network time, a frame and lost packets (a missing last packet is noticed after 0.4 s and resynced). Media, timeline position, presets, settings and the cue list state are not replicated at all.
+
+| Criterion | Measured here | Conditions |
+| --- | --- | --- |
+| Detection | 3.02 s | lost-after 3 s (the minimum), simulated primary, real engine |
+| Serving after the decision | 0.035 s (self test), 0.08 to 0.13 s (real programs) | loopback network |
+| Frozen primary (SIGSTOP) to a serving leader | 3.2 to 3.6 s | two real programs, polled every 0.5 s, so an upper bound |
+| Killed primary (SIGKILL) to a serving leader | 3.3 to 3.5 s | same |
+| Standby ready before the loss | 10.5 s | rule: at least 10 s |
+| Last control change before the kill | a change 0.15 s before the kill was on the leader | one value, not a statistic |
+| Held output of the standby | brightness 0.0, against 169.6 on the primary before and 167.8 as the leader | software rendering |
+
+Not measured: the default lost-after time of 5 s (it follows the same rule, 5 s plus a frame), a pulled cable, a switch that dies, two real PCs, real projectors, 60 frames a second.
+
+**Simulated faults.** `--failover-selftest` and `scripts/test_failover_two_instances.py` run: an app crash (SIGKILL of the primary), a frozen primary (SIGSTOP, then SIGCONT to see the old master step down), a clean close (no automatic takeover, manual takeover works), a decoder failure on the standby (an unreadable image file in a playing cell: no automatic takeover, manual works), a show that differs (the check fails and recovers), and a network cut (the primary is silent while the process lives). A network cut by pulling a real cable was **not** run; a frozen process is the closest thing here and is not the same.
+
+**What you need outside NyrexVJ for a seamless switch.** NyrexVJ switches no video. What the audience sees changes only if something outside selects the other PC:
+
+- a video switcher, matrix or NDI router with an input for each PC (for example a Blackmagic ATEM, an HDMI matrix, an NDI router or a capture based switcher), set up by a person with a rule for who selects what;
+- both PCs on the same resolution, refresh rate and output mapping, or the picture jumps at the switch;
+- if the switch must not tear, a frame synchronised path (genlock on the switcher and on the cards, see [Output frame lock](#output-frame-lock)); NyrexVJ does not build it;
+- a decision about tally, GPIO or a control command from NyrexVJ to the switcher: **not built**. The person or an operator presses the button on the switcher, after the page says that the standby is the leader.
+
 ## Files
 
 - `src/core/beat_clock.*` the clock, `timecode.*` frame maths, MTC decoder and tracker, `ltc.*` the LTC decoder, `midi_clock.*`, `djlink.*`, `cue_list.*`, `frame_lock.*` (delay ring logic, swap skew, sync bar numbers).
@@ -126,11 +185,13 @@ Settings, Sync, Network sync. Off by default. One NyrexVJ is the **master** and 
 - `src/render/output_manager.*`, `output_window.*` (draw and swap are separate steps), `texture_history.*` (the delay ring).
 - `src/app/ui_sync.cpp` the Sync page.
 - Network sync: `src/core/netsync.*` (protocol, state machines, clock estimator), `netsync_link.hpp` (simulated network), `src/control/netsync_key.*`, `netsync_show.*`, `netsync_transport.*`, `src/app/netsync_system.*`, `netsync_selftest.*`, `scripts/test_netsync_two_instances.py`.
-- Tests: `test_beat_clock`, `test_timecode` (LTC, MTC, cues), `test_djlink` with a packet simulator, `test_midi_clock`, `test_sync_system`, `test_frame_lock`, `test_netsync`, `test_netsync_show`, `test_netsync_transport`, and the cases of `--output-selftest` and `--netsync-selftest`.
+- Hot standby: `src/core/failover.*` (readiness checks, state machine, measures), `src/app/failover_system.*`, `ui_failover.cpp`, `failover_selftest.*`, `scripts/test_failover_two_instances.py`.
+- Tests: `test_beat_clock`, `test_timecode` (LTC, MTC, cues), `test_djlink` with a packet simulator, `test_midi_clock`, `test_sync_system`, `test_frame_lock`, `test_netsync`, `test_netsync_show`, `test_netsync_transport`, `test_failover`, and the cases of `--output-selftest`, `--netsync-selftest` and `--failover-selftest`.
 
 ## What was not tested
 
 - Network sync on a real network: switches, Wi-Fi, a firewall, loss and delay of a real link, a second network segment, three or more real PCs, two different program versions on real PCs, a master that runs for hours, and Windows at run time (the socket code is built in CI; the two program test was run on Linux only). The simulated and the local tests share one author, so a shared misunderstanding of the protocol would not be found. No encryption, no discovery, no IPv6.
+- Hot standby on two real PCs: a pulled network cable, a switch that dies, a power loss, a real projector or capture card on the standby, a real video switcher, matrix or NDI router and the person who presses its button, a graphics card, hardware decoders that fail in their own ways, a show of hours, Windows at run time, and a v0.48.0 master against a v0.49.0 follower. A network split in which both PCs lead was reasoned about and not run. The times above are those of one container with software rendering.
 - Real Pioneer players or mixers, real Denon gear, a real network with switches, a firewall or a second network segment. The packet layout comes from the public analysis; the simulator was written from the same description, so a shared misunderstanding would not be found.
 - Real LTC or MTC sources: timecode generators, DAWs, hardware that sends timecode, audio interfaces and their line levels, cables, drop frame material at 29.97 and any reverse or varispeed playback.
 - Real MIDI clock hardware and USB MIDI jitter, and MIDI clock over network MIDI.

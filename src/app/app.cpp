@@ -310,6 +310,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.openManual) {
         openManual(options.manualChapter);
     }
+    if (options.showPackageTab >= 0) {
+        openShowPackages(options.showPackageTab);
+    }
     if (options.openCreator) {
         if (options.creator.empty()) {
             openCreator();
@@ -442,7 +445,9 @@ void App::queueDroppedFiles(const std::vector<std::string>& paths) {
     for (const std::string& path : paths) {
         std::string extension = pathFromUtf8(path).extension().string();
         std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (extension == ".json") {
+        if (extension == ".nyxshow") {
+            importShowPackage(path);
+        } else if (extension == ".json") {
             importDroppedVenue(path);
         } else if (extension == ".nyxfx") {
             importNodeGraph(path);
@@ -756,6 +761,7 @@ void App::frame(double dt) {
     drawNodeEditor();
     drawTimeline();
     drawManual();
+    drawShowPackages();
     drawSettingsWindow();
     drawUpdateCard();
     drawConversionCards();
@@ -895,6 +901,13 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Save as preset..."))) {
             focusTab_ = 0;
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem(tr("Export show package..."))) {
+            openShowPackages(0);
+        }
+        if (ImGui::MenuItem(tr("Import show package..."))) {
+            openShowPackages(1);
         }
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Open data folder"))) {

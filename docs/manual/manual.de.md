@@ -362,6 +362,42 @@ Datei, Als Preset speichern macht dasselbe aus dem Menü. Presets sind kleine Da
 
 Neben Presets führt NyrexVJ eine Sitzung: den Zustand des Programms, wie du ihn verlassen hast. Beim nächsten Start öffnet es sich genau so, außer du schaltest Letzte Sitzung beim Start wiederherstellen unter Einstellungen, Allgemein aus. Die Sitzung wird alle 30 Sekunden gespeichert, wenn sich etwas geändert hat, und eine rotierende Reihe der letzten zehn Autosaves liegt im Ordner recovery.
 
+## Show-Pakete {#show-packages}
+
+Ein Show-Paket ist eine einzelne Datei, in der deine aktuelle Show und alle Dateien stecken, die sie nutzt, damit du sie auf einem USB-Stick zu einem anderen Computer mitnehmen kannst. Sie endet auf `.nyxshow`. Nutze sie, wenn du in einer Location spielst, auf einen neuen Computer umziehst oder ein Freund dieselbe Show öffnen soll. Presets und Sitzungen merken sich Clips nur über ihren Namen, ein Paket bringt die Clips selbst mit.
+
+**Ein Paket erstellen.** Datei, Show-Paket exportieren öffnet das Fenster Show-Paket im Tab Exportieren.
+
+1. Gib der Show einen Namen und, wenn du magst, Hinweise für alle, die das Paket öffnen.
+2. Wähle, wohin gespeichert wird. Die Schaltfläche Ort vorschlagen trägt eine Datei im Ordner shows des Datenordners ein. Die Endung `.nyxshow` wird ergänzt, falls sie fehlt.
+3. Öffne Presets, die mitgepackt werden und Venue-Setups, die mitgepackt werden und hake an, was mit der Show reisen soll. Cue-Liste mitpacken und Zeitleiste mitpacken nehmen diese beiden Dateien dazu.
+4. Drück Prüfen, was hineinkommt. NyrexVJ geht die Show durch, findet jeden Clip und Effekt, den sie nutzt, und listet die Dateien auf: die Art, die Größe, was die Datei braucht und ein Feld für einen Hinweis.
+5. Drück Paket erstellen. Ein Fortschrittsbalken zeigt die Arbeit, und Abbrechen stoppt sie, ohne eine halb geschriebene Datei zu hinterlassen.
+
+Dateien, die fehlen, für ein Paket zu groß sind oder einen unbrauchbaren Namen haben, werden aufgelistet und weggelassen, und du siehst, warum. Nichts wird heimlich ersetzt, und eingebaute Clips und Effekte werden nicht eingepackt, weil jedes NyrexVJ sie hat.
+
+**Quelle und Lizenz.** NyrexVJ kann nicht wissen, ob du eine Datei weitergeben darfst. Schreib in die letzte Spalte, woher eine Datei stammt oder welche Lizenz sie hat. Der Hinweis wird im Paket gespeichert und beim Import angezeigt, und das Fenster sagt dir, wie viele Mediendateien keinen haben.
+
+**Was nie in einem Paket steckt.** Plugins kommen nie in ein Paket. Das Paket listet nur ihre Namen, und der andere Computer muss sie selbst installiert haben. So kann das Öffnen eines Pakets nie Code starten, der aus dem Paket kam. Live-Quellen wie Spout, NDI und Kameras werden ebenfalls nur aufgelistet, sie kommen vom anderen Computer.
+
+**Ein Paket öffnen.** Nimm Datei, Show-Paket importieren oder zieh eine `.nyxshow`-Datei auf das NyrexVJ-Fenster. Das Fenster öffnet sich im Tab Importieren und prüft das Paket. Es sagt dir Datei für Datei, was passieren würde: wird hinzugefügt, schon da und gleich, du hast eine andere Datei, nicht im Paket oder der Name kann nicht verwendet werden. Geändert wird nichts, bevor du auf Importieren drückst.
+
+Wenn auf deinem Computer schon eine Datei mit gleichem Namen liegt, wählst du, was passiert:
+
+- Meine behalten lässt deine Datei in Ruhe. Das ist die Voreinstellung.
+- Beide behalten kopiert die neue Datei unter einem Namen wie `loop (2).mp4` und stellt die Show auf diese Datei um.
+- Meine ersetzen, vorher sichern kopiert deine Datei in den Ordner `show_backups` und ersetzt sie dann.
+
+Zwei weitere Haken, Auch meine Cue-Liste ersetzen und Auch meine Zeitleiste ersetzen, sind standardmäßig aus. Eine ersetzte Cue-Liste oder Zeitleiste gilt nach dem nächsten Start von NyrexVJ.
+
+Ist der Import fertig, siehst du, wie viele Dateien hinzugefügt, umbenannt, ersetzt und behalten wurden. Show öffnen macht sie zur aktuellen Show, und Ordner mit den gesicherten Dateien öffnen zeigt deine alten Dateien, falls du Ersetzen gewählt hast. Geht unterwegs etwas schief, wird alles wieder so hergestellt, wie es war, und das Fenster sagt es dir.
+
+**Fehlende Clips.** Fehlt ein Clip oder Effekt der Show im Paket und auf deinem Computer, bleibt seine Zelle leer und das Fenster listet ihn auf. NyrexVJ setzt nie einen anderen Clip an seine Stelle. Liegen die Dateien auf einem Laufwerk, das du hast, nimm Fehlende Dateien suchen: Gib einen Ordner an, zum Beispiel das ursprüngliche Medienlaufwerk, und NyrexVJ durchsucht ihn. Nur Dateien, die genau denen entsprechen, die das Paket kannte, sind angehakt. Eine Datei, die nur den gleichen Namen hat, wird angezeigt, aber nicht angehakt und mit dem Hinweis versehen, dass ihr Inhalt nicht geprüft werden kann, du entscheidest also selbst. Mit Markierte Dateien kopieren holst du sie herein.
+
+**Sicherheit.** Ein Paket besteht nur aus Daten. Jede Datei darin hat eine Prüfsumme, die geprüft wird, bevor etwas an seinen Platz kommt. Dateinamen müssen einfache Namen ohne Ordner sein, und den Ordner bestimmt die Art der Datei, ein Paket kann also nicht außerhalb des Datenordners schreiben. Nur die üblichen Endungen jeder Art werden angenommen, jede Art hat ein Größenlimit, und die Dateien liegen ohne Kompression im Paket, ein kleines Paket kann sich also nicht zu etwas Riesigem entpacken. Ein Paket aus einer neueren NyrexVJ-Version, ein abgeschnittenes oder beschädigtes Paket und ein Paket mit irgendetwas, das nicht zusammenpasst, wird abgelehnt, und auf deinem Computer ändert sich nichts.
+
+![Das Fenster Show-Paket](show-packages.webp)
+
 ## Rückgängig und Wiederherstellen {#undo}
 
 Bearbeiten, Rückgängig und Wiederherstellen, oder `Strg+Z` und `Strg+Y` (auch `Strg+Umschalt+Z` stellt wieder her), gehen durch deine Änderungen an Reglern, Clips, Effekten und Decks. Einen Clip abspielen, eine Spalte starten und die Makro-Regler bewegen sind Performance-Aktionen und gehören nicht zu Rückgängig. In der Zeitleiste und im Node-Editor wirken dieselben Tasten auf ihren eigenen Verlauf, solange diese Fenster den Fokus haben.
@@ -1031,6 +1067,8 @@ NyrexVJ legt alles in seinem Datenordner ab. Unter Windows ist das `%APPDATA%\Ny
 | `timeline.json` | Die Spuren der Show-Zeitleiste |
 | `autosave.json` und `recovery` | Die letzte Sitzung und eine rotierende Reihe von Autosaves |
 | `presets` | Deine eigenen Presets |
+| `shows` | Der Ort, den das Exportfenster für Show-Pakete vorschlägt |
+| `show_backups` | Deine eigenen Dateien, die ein Import eines Show-Pakets ersetzt hat, ein Ordner pro Import |
 | `shaders` | Deine eigenen Shader-Dateien |
 | `models` | Deine eigenen 3D-Modelle |
 | `media` | Bilder und Videos |
@@ -1045,7 +1083,7 @@ NyrexVJ legt alles in seinem Datenordner ab. Unter Windows ist das `%APPDATA%\Ny
 
 ## Sichern und umziehen {#data-backup}
 
-Kopiere den Datenordner an einen sicheren Ort, um alles zu sichern. Zum Umzug auf einen anderen Computer kopierst du ihn dort an dieselbe Stelle. Presets und Sitzungen merken sich Clips über ihren Namen, behalte also die Dateinamen deiner Shader, Modelle und Medien, wenn du sie verschiebst.
+Kopiere den Datenordner an einen sicheren Ort, um alles zu sichern. Zum Umzug auf einen anderen Computer kopierst du ihn dort an dieselbe Stelle. Presets und Sitzungen merken sich Clips über ihren Namen, behalte also die Dateinamen deiner Shader, Modelle und Medien, wenn du sie verschiebst. Um eine Show samt allem, was sie nutzt, umzuziehen, ist ein Show-Paket einfacher als den Ordner zu kopieren, siehe [Show-Pakete](#presets/show-packages).
 
 Das Token der Web-Oberfläche liegt in einer eigenen Datei im Ordner. Gib es nicht weiter.
 
@@ -1112,6 +1150,7 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--welcome` und `--no-welcome` | Das Willkommensfenster erzwingen oder überspringen |
 | `--manual` | Dieses Handbuch beim Start öffnen, auf Wunsch bei einem Kapitel, zum Beispiel `--manual outputs` |
 | `--timeline` | Das Fenster der Show-Zeitleiste beim Start öffnen |
+| `--show-packages` | Das Fenster Show-Paket beim Start öffnen, im Tab Exportieren, oder mit `--show-packages 1` im Tab Importieren |
 | `--settings IDX` | Die Einstellungen auf Seite IDX öffnen, ab 0 gezählt in der Reihenfolge der Seitenliste |
 | `--check-shaders` | Jeden Shader kompilieren und beenden |
 

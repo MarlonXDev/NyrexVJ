@@ -1296,6 +1296,91 @@
           "criteria": "Proposed: search needs no visible wait, no cell keeps the old clip, one undo restores all of them, and the profile loads with every mapping."
         }
       ]
+    },
+    {
+      "id": "show-packages",
+      "title": "Show packages: export, import, dry run, path repair, rollback, the Show package window",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SHOWS.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0034-show-packages.md"
+      ],
+      "sources": [
+        "src/core/show_package.cpp",
+        "src/core/show_workflow.cpp",
+        "src/app/show_dialog.hpp",
+        "src/app/ui_show.cpp",
+        "src/app/app.cpp",
+        "tests/test_show_package.cpp",
+        "tests/test_show_workflow.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-SP-1",
+          "kind": "ctest",
+          "name": "nvj_show_tests"
+        },
+        {
+          "id": "A-SP-2",
+          "kind": "ctest",
+          "name": "nvj_show_workflow_tests"
+        },
+        {
+          "id": "A-SP-3",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Show package window and every message of the package and workflow code has a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-SP-4",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --show-packages 0 --frames 40",
+          "note": "opens the Show package window on the Export tab and runs 40 frames through a real OpenGL context; a smoke test of the window, not a test of its use"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-SP-1",
+          "title": "A real show moved from one Windows computer to another and back",
+          "needs": "Two Windows computers (or two user accounts) with NyrexVJ, a real show with video clips, 3D models, own shaders, a node effect, a venue setup and a cue list, and a USB stick",
+          "steps": [
+            "Export the show with all of it, write a source or licence note for two files, and carry the package on the stick.",
+            "On the other computer open Import show package, read the plan, import with Keep mine, and open the show.",
+            "Change one media file on the second computer and import again with Keep both and then with Replace, and look in show_backups.",
+            "Export from the second computer and import on the first."
+          ],
+          "measure": "Time to pack and to import in seconds, the size of the package against the size of the files, whether every cell plays the same clip as before, whether the licence notes appear, and what show_backups holds",
+          "criteria": "Proposed: no cell is empty that was not reported missing, no file outside the data folder is touched, Keep both leaves both files and the show uses the new one, Replace leaves the old file in show_backups, and the second round trip gives the same show."
+        },
+        {
+          "id": "M-SP-2",
+          "title": "A package of several gigabytes on a slow USB stick and a network drive",
+          "needs": "A show with at least 8 GB of video, a USB stick of USB 2 speed, and a network drive",
+          "steps": [
+            "Export to the stick and to the network drive and cancel one export half way.",
+            "Import from each, cancel one import half way, and import once with the stick removed half way.",
+            "Watch whether the program keeps drawing and the progress bar moves."
+          ],
+          "measure": "Seconds for each step, the frame rate of the program while a job runs, and whether a cancelled or interrupted run leaves a .part or .nyxshow-new file or a half imported show",
+          "criteria": "Proposed: the program never freezes, a cancelled write leaves no file, a cancelled or interrupted import leaves the data folder as it was (the window says everything was put back), and the free space check refuses a destination that is too small before any copy starts."
+        },
+        {
+          "id": "M-SP-3",
+          "title": "Clicking through the Show package window",
+          "needs": "The program on Windows with a mouse and the English and the German interface",
+          "steps": [
+            "Open File, Export show package and File, Import show package, drop a .nyxshow file on the window, and drop a .nyxclip file.",
+            "In Export tick and untick presets and venue setups, press Check what goes in, write notes and licence texts, and press Create the package.",
+            "In Import try a missing file, a file that differs, Find missing files with a folder, and Open the show."
+          ],
+          "measure": "Anything that is cut off, overlaps, cannot be clicked, shows an English text in the German interface or a wrong state",
+          "criteria": "Proposed: every button and checkbox does what its text says, a dropped .nyxclip is not taken for a show package, and no text is cut off at the default window size and at 125 and 150 percent scale."
+        }
+      ]
     }
   ]
 }

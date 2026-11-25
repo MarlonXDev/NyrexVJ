@@ -632,6 +632,33 @@ void testLearnAndFiles() {
     Settings clamped;
     CHECK(loadSettings(clamped));
     CHECK(clamped.syncMode == "manual" && clamped.syncLatencyMs == 500.0f && clamped.djLinkPlayer == 6);
+
+    CHECK(loaded.netSyncRole == "off" && loaded.netSyncPort == 9030 && !loaded.netSyncAllowRemote && loaded.netSyncHost == "127.0.0.1" && loaded.netSyncName.empty());
+    CHECK(loaded.netSyncFollowControls && loaded.netSyncFollowClips && loaded.netSyncFollowClock);
+    Settings network;
+    network.syncMode = "network";
+    network.netSyncRole = "follower";
+    network.netSyncPort = 9100;
+    network.netSyncAllowRemote = true;
+    network.netSyncHost = "192.168.1.20";
+    network.netSyncName = "Stage left";
+    network.netSyncFollowControls = false;
+    network.netSyncFollowClips = false;
+    network.netSyncFollowClock = false;
+    CHECK(saveSettings(network));
+    Settings networked;
+    CHECK(loadSettings(networked));
+    CHECK(networked.syncMode == "network" && networked.netSyncRole == "follower" && networked.netSyncPort == 9100 && networked.netSyncAllowRemote);
+    CHECK(networked.netSyncHost == "192.168.1.20" && networked.netSyncName == "Stage left");
+    CHECK(!networked.netSyncFollowControls && !networked.netSyncFollowClips && !networked.netSyncFollowClock);
+    network.netSyncRole = "boss";
+    network.netSyncPort = 80;
+    network.netSyncHost = std::string(200, 'x');
+    network.netSyncName = std::string(200, 'n');
+    CHECK(saveSettings(network));
+    Settings hostile;
+    CHECK(loadSettings(hostile));
+    CHECK(hostile.netSyncRole == "off" && hostile.netSyncPort == 1024 && hostile.netSyncHost.size() == 64 && hostile.netSyncName.size() == 60);
 }
 
 #ifndef _WIN32

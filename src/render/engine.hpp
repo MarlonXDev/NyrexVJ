@@ -121,6 +121,7 @@ public:
     int transitionTarget() const { return transition_.target; }
     int transitionSource() const { return transition_.from; }
     void trigger(int layer, int column);
+    std::uint32_t triggerCount(int layer) const { return layer >= 0 && layer < kLayerCount ? triggerCounts_[static_cast<size_t>(layer)] : 0; }
     void triggerColumn(int column);
     void clearLayer(int layer);
     void requestTrigger(int layer, int column);
@@ -678,6 +679,7 @@ private:
     int currentResolution_ = -1;
     double time_ = 0.0;
     double beat_ = 0.0;
+    std::array<std::uint32_t, kLayerCount> triggerCounts_{};
     BeatClock beatClock_;
     LaunchQuantizer quantizer_;
     double lastCompBpm_ = 0.0;

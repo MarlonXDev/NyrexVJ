@@ -95,6 +95,14 @@ struct Settings {
     bool djLinkEnabled = false;
     int djLinkPlayer = 0;
     std::string ltcDevice;
+    std::string netSyncRole = "off";
+    int netSyncPort = 9030;
+    bool netSyncAllowRemote = false;
+    std::string netSyncHost = "127.0.0.1";
+    std::string netSyncName;
+    bool netSyncFollowControls = true;
+    bool netSyncFollowClips = true;
+    bool netSyncFollowClock = true;
     bool cuesEnabled = true;
     bool timelineEnabled = false;
     std::string timelineSource = "auto";

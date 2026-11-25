@@ -11,6 +11,7 @@
 #include "app/timeline_view.hpp"
 #include "audio/audio_system.hpp"
 #include "app/api_system.hpp"
+#include "app/netsync_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
 #include "control/stage_out.hpp"
@@ -129,6 +130,8 @@ public:
     Engine& engine() { return engine_; }
     ControlSystem& control() { return control_; }
     ApiSystem& api() { return api_; }
+    NetSyncSystem& netSync() { return netSync_; }
+    SyncSystem& syncSystem() { return sync_; }
     bool wantsRestart() const { return restart_; }
     int dumpOutputs(const std::string& prefix);
     bool wantsVsync() const { return settings_.vsync; }
@@ -216,6 +219,7 @@ private:
     void drawSyncMidiSection();
     void drawSyncTimecodeSection();
     void drawSyncDjLinkSection();
+    void drawSyncNetworkSection();
     void drawSyncCueSection();
     void updateSync(double dt);
     void updateTimeline(double dt);
@@ -344,6 +348,11 @@ private:
     OscSender oscOut_;
     StageOutput stage_;
     SyncSystem sync_;
+    NetSyncSystem netSync_{engine_, control_, sync_};
+    char netHostText_[80] = {};
+    char netNameText_[64] = {};
+    char netKeyText_[96] = {};
+    bool netTextsReady_ = false;
     TimelineSystem timeline_;
     TimelineView timelineView_;
     bool timelineOpen_ = false;

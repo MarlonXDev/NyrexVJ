@@ -90,7 +90,7 @@
 <li><a href="control.html">Control: MIDI, OSC and the web page</a>
 </li>
 <li><a href="sync.html" aria-current="page">Show sync and timecode</a>
-<ul><li><a href="#sync-clock">One beat clock</a></li><li><a href="#timecode">Timecode</a></li><li><a href="#midi-clock">MIDI clock</a></li><li><a href="#prodjlink">Pro DJ Link</a></li><li><a href="#cues">The cue list</a></li></ul>
+<ul><li><a href="#sync-clock">One beat clock</a></li><li><a href="#timecode">Timecode</a></li><li><a href="#midi-clock">MIDI clock</a></li><li><a href="#prodjlink">Pro DJ Link</a></li><li><a href="#sync-network">Network sync: several PCs</a></li><li><a href="#cues">The cue list</a></li></ul>
 </li>
 <li><a href="timeline.html">The show timeline</a>
 </li>
@@ -180,7 +180,7 @@
 <li><a href="control.html">Control: MIDI, OSC and the web page</a>
 </li>
 <li><a href="sync.html" aria-current="page">Show sync and timecode</a>
-<ul><li><a href="#sync-clock">One beat clock</a></li><li><a href="#timecode">Timecode</a></li><li><a href="#midi-clock">MIDI clock</a></li><li><a href="#prodjlink">Pro DJ Link</a></li><li><a href="#cues">The cue list</a></li></ul>
+<ul><li><a href="#sync-clock">One beat clock</a></li><li><a href="#timecode">Timecode</a></li><li><a href="#midi-clock">MIDI clock</a></li><li><a href="#prodjlink">Pro DJ Link</a></li><li><a href="#sync-network">Network sync: several PCs</a></li><li><a href="#cues">The cue list</a></li></ul>
 </li>
 <li><a href="timeline.html">The show timeline</a>
 </li>
@@ -209,8 +209,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Live control and shows</p>
 <h1>Show sync and timecode</h1>
-<p class="meta">Chapter 25 of 36 &middot; 2 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#sync-clock">One beat clock</a><a href="#timecode">Timecode</a><a href="#midi-clock">MIDI clock</a><a href="#prodjlink">Pro DJ Link</a><a href="#cues">The cue list</a></nav>
+<p class="meta">Chapter 25 of 36 &middot; 5 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#sync-clock">One beat clock</a><a href="#timecode">Timecode</a><a href="#midi-clock">MIDI clock</a><a href="#prodjlink">Pro DJ Link</a><a href="#sync-network">Network sync: several PCs</a><a href="#cues">The cue list</a></nav>
 <h2 id="sync-clock"><a class="anchor" href="#sync-clock" aria-label="Link">#</a>One beat clock</h2>
 <p>One beat clock drives everything that follows the beat. Settings, Sync chooses its source. Automatic takes the best source that is present, in this order: Pro DJ Link, timecode, MIDI clock, audio, manual. Or you fix one source. The clock corrects a phase error gradually, so a picture on the beat does not stutter.</p>
 <p>The page shows the active source, a lock state (Free running, Searching, Acquiring, Locked or Lost), the phase error in milliseconds and a latency offset from minus 500 to plus 500 ms that you can set if the picture is a little early or late against the sound.</p>
@@ -221,6 +221,14 @@
 <p>MIDI clock, start, stop and song position are followed. The MIDI device is chosen on the Control page and the Sync page shows whether clock is received, whether the transport runs and the position.</p>
 <h2 id="prodjlink"><a class="anchor" href="#prodjlink" aria-label="Link">#</a>Pro DJ Link</h2>
 <p>Tick Listen for Pro DJ Link beats to follow the beat packets of DJ players that use Pro DJ Link in your local network. NyrexVJ opens a UDP listener on port 50001. It never announces itself as a player and sends nothing, so there is no play state and no master flag, only the beats. Choose which player to follow.</p>
+<h2 id="sync-network"><a class="anchor" href="#sync-network" aria-label="Link">#</a>Network sync: several PCs</h2>
+<p>Two or more PCs that run NyrexVJ can follow one master: the beat, the tempo, play and pause, the timecode, the levels, colours, effects, macros and blackout, the deck and the clip that plays on each layer. Use it for a second output, for a second computer that carries a heavy layer, or for a backup that should stay warm. It is <strong>off by default</strong>. Open Settings, Sync and look for the block Network sync.</p>
+<ol><li><strong>On the master PC</strong> choose the role Master. Tick Allow other PCs in the network if the followers are other computers; leave it off for two programs on one PC. Press Copy key.</li><li><strong>On each follower PC</strong> choose the role Follower, type the IPv4 address of the master (for example <code>192.168.1.20</code>, or <code>127.0.0.1</code> for two programs on one PC) and the same port as on the master (9030 at the start), paste the key and press Use this key.</li><li><strong>Compare the Key check code</strong> on both pages. It is a short code made from the key, it is safe to read out loud and it must be the same on every PC.</li><li><strong>Allow the UDP port</strong> in the firewall of the master PC.</li></ol>
+<p>The status of the follower goes from Connecting through Getting the show state to In sync. The page shows the offset, the round trip and the jitter of the clock, the tempo and how many controls, clips and deck switches were applied. Three ticks decide what a follower takes over: Follow the controls, Follow decks and clips, and Follow beat, tempo and timecode. While a follower follows the controls, its own timeline and cue list are paused, because they would fight the master.</p>
+<aside class="note note"><strong class="note-label">Note</strong><p>Media files are never sent. Every PC needs its own copy of the images, videos, models and shaders. A show package (File, Export show package) is a good way to put the same files on every PC. The master sends the names of its decks and clips, and a follower lists what is different here: a clip that only the master has, a cell that holds another clip, a deck that is not in use. A clip whose name differs is not started, so a wrong picture never plays by mistake.</p></aside>
+<p>If the connection drops, the follower says Master lost, holding the last state: it keeps the last values, the tempo keeps running at the last value, its timeline and cues stay paused, and it reconnects on its own. After that only what changed on the master meanwhile is applied; something you edited on the follower that did not change on the master stays as you left it. If the two programs are different versions and their controls do not match, the follower shows Clock only (other version) and follows the beat alone.</p>
+<aside class="note warning"><strong class="note-label">Warning</strong><p>Network sync is signed and not encrypted. Only a PC with the key can join or send, and a stranger cannot change the show, but someone in your network can read it. Use it in a network you trust, keep the key private, do not show it on a stream and press New key if it got out. A new key disconnects every follower until it has the new key.</p></aside>
+<aside class="note note"><strong class="note-label">Note</strong><p>This follows beat, tempo and show state over the network. It is not a hardware frame lock: each PC draws at its own frame time, so two outputs can differ by about one frame, and graphics cards, displays and projectors add their own delay. A master serves up to 8 followers. Finding PCs automatically, encryption, IPv6 and a shared timeline are not built, and it was tested on one computer and with simulated networks, not yet on a real network with real PCs.</p></aside>
 <h2 id="cues"><a class="anchor" href="#cues" aria-label="Link">#</a>The cue list</h2>
 <p>The cue list fires any control target at a time of the timecode: a clip, a column, a deck or a value. Add cue creates a cue at the current timecode, or after the last one if there is no timecode. Each cue has a time, an action and, for values, a value. Test fires it at once. Run cues turns the list on, and each cue fires once when the timecode passes its time. Cues do not fire after large jumps, so skipping through the timecode does not fire everything in between.</p>
 <aside class="note note"><strong class="note-label">Note</strong><p>Pro DJ Link, LTC and MTC were tested with generated signals and not with real players, mixers or timecode generators. Test your chain at the venue.</p></aside>

@@ -1957,6 +1957,140 @@
           "criteria": "Proposed: the estimate returns to its starting value after every change, the frame time stays within the noise, and no warning stays on."
         }
       ]
+    },
+    {
+      "id": "multi-pc-sync",
+      "title": "Network sync: one master and followers over UDP with a signed protocol, a state snapshot with incremental updates, sequence numbers, packet loss and reconnect, a clock estimate for the beat and the timecode, missing media shown instead of sent, version negotiation, and the Network sync block on the Sync page",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SYNC.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0041-multi-pc-sync.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/netsync.cpp",
+        "src/control/netsync_show.cpp",
+        "src/control/netsync_transport.cpp",
+        "src/control/netsync_key.cpp",
+        "src/app/netsync_system.cpp",
+        "src/app/netsync_selftest.cpp",
+        "src/app/ui_sync.cpp",
+        "tests/test_netsync.cpp",
+        "tests/test_netsync_show.cpp",
+        "tests/test_netsync_transport.cpp",
+        "scripts/test_netsync_two_instances.py"
+      ],
+      "automated": [
+        {
+          "id": "A-MS-1",
+          "kind": "ctest",
+          "name": "nvj_netsync_tests",
+          "note": "the protocol with a simulated network: signature, sequence numbers, duplicates, reordering, loss, handshake retries, versions, resync, reconnect and the clock estimator"
+        },
+        {
+          "id": "A-MS-2",
+          "kind": "ctest",
+          "name": "nvj_netsync_show_tests",
+          "note": "the state vector of 159 values, deltas, the manifest and the conflict rules"
+        },
+        {
+          "id": "A-MS-3",
+          "kind": "ctest",
+          "name": "nvj_netsync_transport_tests",
+          "note": "the same protocol over real UDP sockets on the loopback interface, the key file and the limit per address"
+        },
+        {
+          "id": "A-MS-4",
+          "kind": "cli",
+          "command": "NYREXVJ_DATA_DIR=dir NyrexVJ --fresh --no-update-check --no-welcome --netsync-selftest --bench-out result.json",
+          "note": "in the real engine, in both roles, with a relay that drops, delays and duplicates packets: controls, decks, clips, beat, tempo, pause, timecode cues, missing media, a different version, a wrong key, a flood, and the cost of the update step; it replaces the key file for the run and puts it back"
+        },
+        {
+          "id": "A-MS-5",
+          "kind": "script",
+          "command": "xvfb-run -a python3 scripts/test_netsync_two_instances.py build/NyrexVJ --output result.json",
+          "note": "two real NyrexVJ programs on one computer (master and follower over UDP on the loopback interface), a calm phase, then 25 percent loss and up to 25 ms jitter, a 6 s outage and a reconnect, with the beat of both compared by wall clock and every synced control compared at the end"
+        },
+        {
+          "id": "A-MS-6",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Network sync block has a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-MS-1",
+          "title": "Master and follower on two computers in a real network",
+          "needs": "Two computers with NyrexVJ in the same network (a wired switch, then Wi-Fi), the same version on both, the same media files (a show package) and a firewall you can open for UDP port 9030",
+          "steps": [
+            "On the first computer choose Role Master, tick Allow other PCs in the network and copy the key.",
+            "On the second choose Role Follower, type the IPv4 address of the first, paste the key and compare the Key check code.",
+            "Run the same deck on both, move faders and colours on the master, switch decks and start clips, change the tempo and pause.",
+            "Unplug the cable of the follower for 10 seconds and plug it back in. Then do the same with the Wi-Fi switched off and on.",
+            "Run NyrexVJ --netsync-report report.json on the follower with --run-seconds 300 and keep the file."
+          ],
+          "measure": "The status on the follower in every step, how long it took to reach In sync and to recover, how far the two outputs differ when you film both screens with a camera at 60 frames a second, and the clock offset, round trip and jitter on the page",
+          "criteria": "Proposed: the follower reaches In sync within a few seconds, follows every change within about a quarter of a second, says Master lost after the unplugging and comes back by itself within the backoff of 5 s, the two outputs differ by no more than about one frame, and no value ends up different on the two computers."
+        },
+        {
+          "id": "M-MS-2",
+          "title": "Three or more followers and the limit of eight",
+          "needs": "Three to nine computers with NyrexVJ in one network, or several programs on a few computers",
+          "steps": [
+            "Connect one follower after the other to one master and note the status and the CPU use of the master on the Performance page.",
+            "Move several faders and run an effect with a lot of changes for ten minutes.",
+            "Connect a ninth follower and read what it says.",
+            "Press New key on the master and watch every follower."
+          ],
+          "measure": "The status of every follower, the frame time of the master with one, four and eight followers, the packet counters on the page, and what the ninth follower said",
+          "criteria": "Proposed: the master serves eight followers without a visible change in its frame time, a ninth is refused with a reason, and after New key every follower stays out until it has the new key."
+        },
+        {
+          "id": "M-MS-3",
+          "title": "Windows at run time",
+          "needs": "A Windows 10 or 11 computer, NyrexVJ 0.48.0 or later and a second computer (any system) with the same version",
+          "steps": [
+            "Use the Windows computer as master and then as follower with the second computer.",
+            "Check that the Windows firewall asks for the permission and that the port can be opened.",
+            "Look at the permissions of the netsync_key file in the data folder.",
+            "Run NyrexVJ --netsync-selftest --bench-out result.json with NYREXVJ_DATA_DIR set to an empty folder."
+          ],
+          "measure": "Whether the connection works in both directions, what the firewall asked, who can read the key file, and whether every check of the self test passed",
+          "criteria": "Proposed: both directions work, the key file is readable only by your own account as far as the system shows, and the self test passes."
+        },
+        {
+          "id": "M-MS-4",
+          "title": "Different versions, a wrong key and a hostile network",
+          "needs": "Two computers, an older and a newer NyrexVJ version, and a third computer or a script that sends packets",
+          "steps": [
+            "Connect the older and the newer version and read what the follower shows.",
+            "Use a wrong key on the follower and read both pages.",
+            "Send garbage and the packets of a valid session with changed bytes to the port of the master from the third computer.",
+            "Send many thousands of packets a second for a minute."
+          ],
+          "measure": "What each page showed, whether the master answered anything to a packet with a wrong signature, the frame time of the master while it was flooded, and whether the show was changed",
+          "criteria": "Proposed: a different control list gives Clock only with the reason shown, a wrong key gives no answer and a clear message on the follower, forged and changed packets change nothing, and the flood is limited to 400 packets a second for each address without a visible effect on the output."
+        },
+        {
+          "id": "M-MS-5",
+          "title": "A long show with a follower",
+          "needs": "Two computers with graphics cards, a real show with video and 3D layers on both, and about two hours",
+          "steps": [
+            "Run the show with the Performance page open on both and the network sync on.",
+            "Every ten minutes change decks, start clips and change the tempo on the master.",
+            "Restart the follower once and the master once during the show.",
+            "Run NyrexVJ --netsync-report with --run-seconds 7200 on the follower."
+          ],
+          "measure": "The frame time on both, the clock offset and its change over two hours, the number of resyncs, mismatches and lost periods in the report, and whether the beat drifted",
+          "criteria": "Proposed: no drift beyond the frame time over two hours, no growth in memory, every restart ends in In sync by itself, and the report lists only the differences of media you know about."
+        }
+      ]
     }
   ]
 }

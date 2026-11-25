@@ -34,6 +34,7 @@ public:
     void injectMidi(const MidiMessage& message);
     void takeSyncMessages(std::vector<MidiMessage>& out);
     bool fireTarget(const std::string& id, float value);
+    bool setTarget(int target, float value);
     void refreshMidiDevices();
     void refreshMidiOutDevices();
     void useMidiOutput(std::unique_ptr<MidiOutput> output);

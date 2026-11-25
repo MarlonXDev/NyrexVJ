@@ -77,6 +77,81 @@ bool UdpSocket::openShared(int port, std::string& error) {
     return true;
 }
 
+bool UdpSocket::openExclusive(int port, bool allowRemote, std::string& error) {
+    close();
+    if (port < 0 || port > 65535) {
+        error = "The network port must be between 0 and 65535";
+        return false;
+    }
+    const int handle = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (handle < 0) {
+        error = "Could not create the network socket";
+        return false;
+    }
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(static_cast<unsigned short>(port));
+    address.sin_addr.s_addr = htonl(allowRemote ? INADDR_ANY : INADDR_LOOPBACK);
+    if (::bind(handle, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+        ::close(handle);
+        error = "Could not open the network port, it may be in use";
+        return false;
+    }
+    const int flags = ::fcntl(handle, F_GETFL, 0);
+    ::fcntl(handle, F_SETFL, flags | O_NONBLOCK);
+    impl_->handle = handle;
+    return true;
+}
+
+int UdpSocket::localPort() const {
+    if (impl_->handle < 0) {
+        return 0;
+    }
+    sockaddr_in address{};
+    socklen_t length = sizeof(address);
+    if (::getsockname(impl_->handle, reinterpret_cast<sockaddr*>(&address), &length) != 0) {
+        return 0;
+    }
+    return ntohs(address.sin_port);
+}
+
+int UdpSocket::receiveFrom(unsigned char* buffer, int capacity, std::uint32_t& address, std::uint16_t& port) {
+    if (impl_->handle < 0) {
+        return -1;
+    }
+    sockaddr_in from{};
+    socklen_t length = sizeof(from);
+    const ssize_t count = ::recvfrom(impl_->handle, buffer, static_cast<size_t>(capacity), 0, reinterpret_cast<sockaddr*>(&from), &length);
+    if (count < 0) {
+        return 0;
+    }
+    address = ntohl(from.sin_addr.s_addr);
+    port = ntohs(from.sin_port);
+    return static_cast<int>(count);
+}
+
+bool UdpSocket::sendTo(std::uint32_t address, std::uint16_t port, const unsigned char* data, int size) {
+    if (impl_->handle < 0 || size <= 0) {
+        return false;
+    }
+    sockaddr_in target{};
+    target.sin_family = AF_INET;
+    target.sin_port = htons(port);
+    target.sin_addr.s_addr = htonl(address);
+    const ssize_t sent = ::sendto(impl_->handle, data, static_cast<size_t>(size), 0, reinterpret_cast<const sockaddr*>(&target), sizeof(target));
+    return sent == size;
+}
+
+bool UdpSocket::parseIpv4(const std::string& host, std::uint32_t& address) {
+    const std::string literal = host == "localhost" ? std::string("127.0.0.1") : host;
+    in_addr parsed{};
+    if (::inet_pton(AF_INET, literal.c_str(), &parsed) != 1) {
+        return false;
+    }
+    address = ntohl(parsed.s_addr);
+    return true;
+}
+
 void UdpSocket::close() {
     if (impl_->handle >= 0) {
         ::close(impl_->handle);

@@ -152,28 +152,22 @@ std::string tokenPath() {
     return (std::filesystem::path(userDataDir()) / "api_token").string();
 }
 
-bool loadToken(std::string& token) {
-    std::ifstream file(tokenPath(), std::ios::binary);
+bool loadSecretFile(const std::string& path, std::string& text) {
+    std::ifstream file(path, std::ios::binary);
     if (!file) {
         return false;
     }
-    std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    while (!text.empty() && (text.back() == '\n' || text.back() == '\r' || text.back() == ' ')) {
-        text.pop_back();
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    while (!content.empty() && (content.back() == '\n' || content.back() == '\r' || content.back() == ' ')) {
+        content.pop_back();
     }
-    if (!validTokenFormat(text)) {
-        return false;
-    }
-    token = text;
+    text = content;
     return true;
 }
 
-bool saveToken(const std::string& token) {
-    if (!validTokenFormat(token)) {
-        return false;
-    }
+bool saveSecretFile(const std::string& path, const std::string& text) {
     namespace fs = std::filesystem;
-    const fs::path target = tokenPath();
+    const fs::path target = path;
     fs::path temp = target;
     temp += ".tmp";
     std::error_code ec;
@@ -183,7 +177,7 @@ bool saveToken(const std::string& token) {
         if (!file) {
             return false;
         }
-        file << token << "\n";
+        file << text << "\n";
         if (!file) {
             return false;
         }
@@ -193,7 +187,7 @@ bool saveToken(const std::string& token) {
     if (descriptor < 0) {
         return false;
     }
-    const std::string line = token + "\n";
+    const std::string line = text + "\n";
     size_t done = 0;
     while (done < line.size()) {
         const ssize_t wrote = ::write(descriptor, line.data() + done, line.size() - done);
@@ -213,6 +207,22 @@ bool saveToken(const std::string& token) {
         return false;
     }
     return true;
+}
+
+bool loadToken(std::string& token) {
+    std::string text;
+    if (!loadSecretFile(tokenPath(), text) || !validTokenFormat(text)) {
+        return false;
+    }
+    token = text;
+    return true;
+}
+
+bool saveToken(const std::string& token) {
+    if (!validTokenFormat(token)) {
+        return false;
+    }
+    return saveSecretFile(tokenPath(), token);
 }
 
 bool hostAllowed(const std::string& hostHeader, int port, bool allowRemote) {

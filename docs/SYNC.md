@@ -89,16 +89,48 @@ Settings, Output, Frame lock. Several output windows are separate windows with t
 
 **What this is not.** It is not a hardware genlock. The swap skew is the CPU time when the swaps are handed to the graphics driver; the driver, the graphics card, the display and the projector add their own time, and the windows are not locked to the vertical blank of each other. Windows on different graphics cards or at different refresh rates still drift. For tear free output on several cards, use a card with a frame lock option (for example NVIDIA Quadro Sync or AMD FirePro S400) and its driver tools; NyrexVJ does not control them. Use the sync bars with a camera to see what you get on your hardware.
 
+## Network sync (several PCs)
+
+Settings, Sync, Network sync. Off by default. One NyrexVJ is the **master** and up to eight others are **followers**. The decision and the alternatives are in [ADR 0041](adr/0041-multi-pc-sync.md).
+
+**What a follower takes over** (three ticks, each can be off):
+
+- *Follow the controls:* every control that is not a trigger and not the tempo (150 values: master, layer, colour, effect and macro controls, blackout). While this is on the timeline and the cue list of the follower are paused so that they do not fight the master.
+- *Follow decks and clips:* the active deck and the clip that plays on each layer. A clip started again on the master restarts on the follower.
+- *Follow beat, tempo and timecode:* the beat clock (a new source `Network`, first in Automatic), the tempo, play and pause, the timecode (a fifth timecode source, so cues work) and jumps of the beat. A PC set to Manual takes Network while it follows; a PC set to another fixed source keeps it and the page says so.
+
+**What it never does.** It never sends media: images, videos, 3D models and shaders must exist on every PC; a show package ([ADR 0034](adr/0034-show-packages.md)) is the way to get the same files everywhere. A follower never changes the master. It does not send audio, and it does not share the timeline, the presets or the settings.
+
+**Setting it up.** Master: Role Master, tick Allow other PCs in the network if the followers are other computers, press Copy key. Follower: Role Follower, type the IPv4 address of the master (`127.0.0.1` for two programs on one PC), the same port (default 9030), paste the key and press Use this key. Both pages show the same Key check code. Allow the UDP port in the firewall of the master. The follower goes through Connecting and Getting the show state to In sync, and the page shows offset, round trip and jitter of the clock, the tempo and what was applied.
+
+**The protocol** (version 1, details in the ADR). UDP datagrams of at most 1200 bytes with a header of 26 bytes and a 16 byte HMAC-SHA256 tag. Messages: Hello, Welcome, State, Delta, Clock, Ping, Pong, Resync, Manifest, Bye, Reject. The state is a vector of 159 floats (150 controls, the deck, and for each layer the active column and a start counter). The master sends a Delta of what changed at most 30 times a second, a full State as a keyframe every 5 s and when asked, a Clock beacon every 0.1 s and the manifest every 5 s and when it changes. Every packet of a session has a sequence number that only grows; duplicates and old packets are dropped and counted, a gap makes the follower ask for a resync until a State arrives, and a tail check catches a lost last packet. Hello and Welcome repeat until the handshake is confirmed.
+
+**Versions.** The Hello carries the protocols the follower speaks and a hash of the list of control ids. Same hash: Full. Different hash with a common protocol: **Clock only**, so only the beat is followed and the page says why. No common protocol: refused with a reason. A packet with a wrong tag gets no answer.
+
+**The clock.** The follower pings once a second and keeps the last 40 round trips. It uses the lowest third by round trip time, takes the mean offset and fits a drift only when the samples span at least 10 s and the slope is more than three standard errors from zero (clamped to plus or minus 200 ppm). The master beat is predicted as the last beacon plus the time since then times the tempo while the master plays, and given to the beat clock as a phase observation once per frame, so the clock's smoothing and lock states apply. A jump of the beat on the master is counted in the beacon and the follower jumps with it.
+
+**Conflict rules.** (1) The master wins: a value that changes on the master is applied. (2) The first connection applies the whole state. (3) After a reconnect only values that changed on the master are applied; a value edited on the follower that did not change on the master stays. (4) A deck switch is applied before the controls that came with it. (5) A clip is not started when the local cell holds a clip with another name than the master's, and a deck is not switched when it is not in use here; both are shown. (6) After 3 s without packets the follower is Lost: it holds the last values, the beat keeps running at the last tempo, the timeline and cues stay paused and it reconnects with a backoff of 0.5 to 5 s.
+
+**Missing media is shown.** The manifest holds the names of the used decks and of the 32 clip cells of the active deck. The page lists up to 10 differences: a clip only the master has (missing here), a cell that holds another clip here, a deck not in use here, a deck with another name.
+
+**Safe defaults.** Off, no socket, no key. The master listens on this PC only until Allow other PCs in the network is ticked. A follower connects only to the address that you typed. No discovery. The key comes from the secure random source, lives in `netsync_key` in the data folder, is hidden on the page until you press Show, and is not part of settings, presets, packages or the log. A new key disconnects every follower. At most 8 followers; each address is limited to 400 packets a second. It is **signed and not encrypted**: someone on the network can read the show state but cannot change it or join without the key. Use it in a network you trust.
+
+**What this is not.** It is not a hardware frame lock. Each PC draws at its own frame time, so two outputs can differ by about one frame, and cards, displays and projectors add their own delay. The beat of a follower is accurate to within the frame time and the network jitter. For tear free output across machines use hardware genlock (prompt 12, not built).
+
+**Measured here** (Linux, Mesa software renderer, loopback network, two programs or one program with a relay; see [PERFORMANCE.md](PERFORMANCE.md)): beat of a follower within 2 to 17 ms mean and 31 ms worst of the master, including 25 percent packet loss, up to 25 ms added delay and a 6 s outage; the update step costs 10 to 18 microseconds a frame on average; one follower takes about 1.1 kB/s idle and 2.9 kB/s with three faders moving.
+
 ## Files
 
 - `src/core/beat_clock.*` the clock, `timecode.*` frame maths, MTC decoder and tracker, `ltc.*` the LTC decoder, `midi_clock.*`, `djlink.*`, `cue_list.*`, `frame_lock.*` (delay ring logic, swap skew, sync bar numbers).
 - `src/control/sync_system.*` ties the sources to the clock, `djlink_input.*` is the UDP listener, `udp_socket*` has a shared open mode.
 - `src/render/output_manager.*`, `output_window.*` (draw and swap are separate steps), `texture_history.*` (the delay ring).
 - `src/app/ui_sync.cpp` the Sync page.
-- Tests: `test_beat_clock`, `test_timecode` (LTC, MTC, cues), `test_djlink` with a packet simulator, `test_midi_clock`, `test_sync_system`, `test_frame_lock`, and the cases of `--output-selftest`.
+- Network sync: `src/core/netsync.*` (protocol, state machines, clock estimator), `netsync_link.hpp` (simulated network), `src/control/netsync_key.*`, `netsync_show.*`, `netsync_transport.*`, `src/app/netsync_system.*`, `netsync_selftest.*`, `scripts/test_netsync_two_instances.py`.
+- Tests: `test_beat_clock`, `test_timecode` (LTC, MTC, cues), `test_djlink` with a packet simulator, `test_midi_clock`, `test_sync_system`, `test_frame_lock`, `test_netsync`, `test_netsync_show`, `test_netsync_transport`, and the cases of `--output-selftest` and `--netsync-selftest`.
 
 ## What was not tested
 
+- Network sync on a real network: switches, Wi-Fi, a firewall, loss and delay of a real link, a second network segment, three or more real PCs, two different program versions on real PCs, a master that runs for hours, and Windows at run time (the socket code is built in CI; the two program test was run on Linux only). The simulated and the local tests share one author, so a shared misunderstanding of the protocol would not be found. No encryption, no discovery, no IPv6.
 - Real Pioneer players or mixers, real Denon gear, a real network with switches, a firewall or a second network segment. The packet layout comes from the public analysis; the simulator was written from the same description, so a shared misunderstanding would not be found.
 - Real LTC or MTC sources: timecode generators, DAWs, hardware that sends timecode, audio interfaces and their line levels, cables, drop frame material at 29.97 and any reverse or varispeed playback.
 - Real MIDI clock hardware and USB MIDI jitter, and MIDI clock over network MIDI.

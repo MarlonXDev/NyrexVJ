@@ -27,7 +27,7 @@ struct SyncConfig {
     bool cues = true;
 };
 
-enum class TimecodeSource { None, Ltc, Mtc };
+enum class TimecodeSource { None, Ltc, Mtc, Network };
 
 class SyncSystem {
 public:
@@ -38,6 +38,8 @@ public:
     void update(double dt, const std::vector<MidiMessage>& midi, BeatClock& clock);
     void update(double dt, const std::vector<MidiMessage>& midi, BeatClock& clock, double now);
     void pushLtcSamples(const float* samples, size_t count, int sampleRate);
+    void reportNetworkTimecode(double seconds, double age, FrameRate rate);
+    void clearNetworkTimecode();
 
     bool timecodeActive() const { return source_ != TimecodeSource::None; }
     TimecodeSource timecodeSource() const { return source_; }
@@ -48,6 +50,7 @@ public:
     const MidiClockTracker& midiClock() const { return midiClock_; }
     const TimecodeTracker& mtcTracker() const { return mtcTracker_; }
     const TimecodeTracker& ltcTracker() const { return ltcTracker_; }
+    const TimecodeTracker& networkTracker() const { return networkTracker_; }
     const MtcDecoder& mtc() const { return mtc_; }
     const LtcDecoder& ltc() const { return ltc_; }
     const DjLinkTracker& djLink() const { return dj_; }
@@ -76,6 +79,7 @@ private:
     MtcDecoder mtc_;
     TimecodeTracker mtcTracker_;
     TimecodeTracker ltcTracker_;
+    TimecodeTracker networkTracker_;
     LtcDecoder ltc_;
     DjLinkTracker dj_;
     DjLinkInput djInput_;

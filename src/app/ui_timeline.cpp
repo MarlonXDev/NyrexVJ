@@ -235,11 +235,11 @@ void App::timelineRedo() {
 
 void App::updateTimeline(double dt) {
     TimelineConfig config;
-    config.enabled = settings_.timelineEnabled;
+    config.enabled = settings_.timelineEnabled && !netSync_.suppressesAutomation();
     config.source = timelineSourceFromName(settings_.timelineSource);
     config.lost = lostPolicyFromName(settings_.timelineLost);
     config.override = overridePolicyFromName(settings_.timelineOverride);
-    config.cues = settings_.cuesEnabled;
+    config.cues = settings_.cuesEnabled && !netSync_.suppressesAutomation();
     timeline_.configure(config);
     timeline_.update(dt, timelineInputs(sync_, engine_.beatClock().time(), !engine_.paused), sync_, control_);
 }

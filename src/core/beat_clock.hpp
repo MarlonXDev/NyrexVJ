@@ -5,11 +5,11 @@
 
 namespace nvj {
 
-enum class SyncSource { Manual = 0, Audio, MidiClock, Timecode, DjLink };
+enum class SyncSource { Manual = 0, Audio, MidiClock, Timecode, DjLink, Network };
 
-constexpr int kSyncSourceCount = 5;
+constexpr int kSyncSourceCount = 6;
 
-enum class SyncMode { Auto = 0, Manual, Audio, MidiClock, Timecode, DjLink };
+enum class SyncMode { Auto = 0, Manual, Audio, MidiClock, Timecode, DjLink, Network };
 
 enum class LockState { Free, Searching, Acquiring, Locked, Lost };
 

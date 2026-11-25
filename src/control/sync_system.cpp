@@ -98,12 +98,14 @@ void SyncSystem::serviceLtc(double dt) {
 
 void SyncSystem::serviceTimecodeSource() {
     TimecodeSource wanted = TimecodeSource::None;
-    if (ltcTracker_.running()) {
+    if (networkTracker_.running()) {
+        wanted = TimecodeSource::Network;
+    } else if (ltcTracker_.running()) {
         wanted = TimecodeSource::Ltc;
     } else if (mtcTracker_.running()) {
         wanted = TimecodeSource::Mtc;
     }
-    const TimecodeTracker* tracker = wanted == TimecodeSource::Ltc ? &ltcTracker_ : wanted == TimecodeSource::Mtc ? &mtcTracker_ : nullptr;
+    const TimecodeTracker* tracker = wanted == TimecodeSource::Network ? &networkTracker_ : wanted == TimecodeSource::Ltc ? &ltcTracker_ : wanted == TimecodeSource::Mtc ? &mtcTracker_ : nullptr;
     if (tracker == nullptr) {
         source_ = TimecodeSource::None;
         return;
@@ -111,6 +113,14 @@ void SyncSystem::serviceTimecodeSource() {
     source_ = wanted;
     seconds_ = tracker->position();
     timecode_ = timecodeFromSeconds(seconds_, tracker->rate());
+}
+
+void SyncSystem::reportNetworkTimecode(double seconds, double age, FrameRate rate) {
+    networkTracker_.report(seconds, age, rate);
+}
+
+void SyncSystem::clearNetworkTimecode() {
+    networkTracker_.reset();
 }
 
 void SyncSystem::update(double dt, const std::vector<MidiMessage>& midi, BeatClock& clock) {
@@ -149,6 +159,7 @@ void SyncSystem::update(double dt, const std::vector<MidiMessage>& midi, BeatClo
         }
     }
     mtcTracker_.advance(dt);
+    networkTracker_.advance(dt);
     serviceLtc(dt);
     dj_.advance(dt);
     djInput_.poll(dj_);
@@ -165,6 +176,9 @@ void SyncSystem::update(double dt, const std::vector<MidiMessage>& midi, BeatClo
         clock.report(observation);
     }
     TimecodeTracker* tracker = source_ == TimecodeSource::Ltc ? &ltcTracker_ : source_ == TimecodeSource::Mtc ? &mtcTracker_ : nullptr;
+    if (source_ == TimecodeSource::Network) {
+        networkTracker_.takeJump();
+    }
     if (tracker != nullptr) {
         SyncObservation timecodeObservation;
         timecodeObservation.source = SyncSource::Timecode;

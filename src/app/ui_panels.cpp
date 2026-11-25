@@ -12,6 +12,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <string>
 
 namespace nvj {
@@ -539,6 +540,10 @@ void App::drawClipPanel() {
             drawShaderControls(*def.plan, layer.playback[static_cast<size_t>(clipColumn)]);
         }
         ImGui::TextDisabled("%s", def.path.c_str());
+        if (ImGui::SmallButton(tr("Edit in shader editor"))) {
+            openShaderEditor(std::filesystem::path(def.path).filename().string());
+        }
+        ImGui::SameLine();
         if (ImGui::SmallButton(tr("Open shaders folder"))) {
             platform::openFolder(shaderDirectory());
         }

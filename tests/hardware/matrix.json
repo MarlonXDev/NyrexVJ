@@ -1748,6 +1748,114 @@
           "criteria": "Proposed: a warning appears when the output visibly stutters and not when it does not, it goes away within about six seconds after the cause is gone, it never flickers, and the upload number is plausible for the sources in use."
         }
       ]
+    },
+    {
+      "id": "shader-editor",
+      "title": "Shader editor with a live preview: text editing with undo and redo, highlighting, compiler messages on their lines, a compile that waits for typing to stop and never blocks, the last working version kept on every failure, an isolated preview that never touches a playing clip, a cost control, templates, safe saving as a shader asset with a conflict check and hot reload",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SHADERS.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0039-shader-playground.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/shader_editor.cpp",
+        "src/render/shader_playground.cpp",
+        "src/render/engine.cpp",
+        "src/app/ui_shader_editor.cpp",
+        "src/app/shader_editor_selftest.cpp",
+        "src/app/shader_editor_uitest.cpp",
+        "tests/test_shader_editor.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-SE-1",
+          "kind": "ctest",
+          "name": "nvj_shaderedit_tests"
+        },
+        {
+          "id": "A-SE-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --shader-editor-selftest 60 --bench-out result.json",
+          "note": "in the real engine with OpenGL: valid and broken shaders (parser error, compile error, link error, empty text, text over the limit), the last working version kept and still drawn after each, recovery, the four templates compile and draw, a buffer shader with its memory counted, a refused buffer budget and its recovery, a filter file that is not previewed, a heavy shader that the cost control slows and pauses, Resume, an output clip that keeps its own shader while the preview shows another, everything released when the playground is not requested, save as a shader asset, the folder scan and hot reload, a changed disk version detected before saving, the other program's file left alone, a name that leaves the folder and a text over the limit refused; the benchmark compares the frame time with the playground off, with a light preview and with a heavy preview"
+        },
+        {
+          "id": "A-SE-3",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --audio-demo --frames 100000 --shader-editor-uitest --bench-out result.json",
+          "note": "drives the editor window with real key, character and mouse events: typing, a typed mistake shown on its line while the preview keeps the last working picture, undo and redo, comments, a selection that typing replaces, Ctrl+S with a name and Enter, a change by another program loaded when nothing is unsaved, and the conflict dialog with unsaved edits (nothing written before the decision); about 50 s on a software renderer"
+        },
+        {
+          "id": "A-SE-4",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the editor window has a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-SE-5",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-welcome --audio-demo --shader-editor broken_demo.glsl --frames 150 --screenshot editor.png",
+          "note": "opens the editor on a broken shader in a real OpenGL context and writes a picture; a smoke test of the window, not a test of its use"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-SE-1",
+          "title": "Compiling and previewing on real graphics drivers",
+          "needs": "A Windows or Linux computer with an NVIDIA, AMD or Intel graphics card (card and driver version are part of the result) and NyrexVJ",
+          "steps": [
+            "Open Creator, Shader editor and note whether the window says that the driver compiles in the background or on the spot.",
+            "Paste a large shader (several hundred lines, or a Shadertoy shader with many loops), press Compile now and watch the frame time on the Performance page while it compiles.",
+            "Break the shader in five ways (a missing semicolon, an unknown function, a wrong type, a missing main, a link error such as an unwritten input) and check that each message is on the right line, that the last working picture stays, and that the log of the driver is complete.",
+            "Run NyrexVJ --shader-editor-selftest 60 --bench-out result.json and keep the file."
+          ],
+          "measure": "Whether the parallel compile is reported, the time a large shader takes to compile, the longest frame while it compiles, whether each of the five mistakes is reported on the right line, and whether any check of the self test failed",
+          "criteria": "Proposed: the output keeps its frame rate within the noise while a shader compiles in the background, every mistake is on the right line, the last working version stays on screen, and no check fails. A driver that compiles on the spot is allowed to stutter for the time of the compile, and the window must say so."
+        },
+        {
+          "id": "M-SE-2",
+          "title": "Editing while a show is running",
+          "needs": "A computer with a graphics card, NyrexVJ with a deck that plays a shader clip on a layer, an output window or projector, and optionally VRChat running",
+          "steps": [
+            "Open the shader file of the playing clip with Edit in shader editor, put the output on a second display and start playing.",
+            "Type a change, then a mistake, then fix it, while watching the output.",
+            "Make the shader very heavy (a loop with several thousand steps) and watch the preview and the output.",
+            "Save the file and watch the clip reload."
+          ],
+          "measure": "Whether the output ever changed or dropped frames while the editor compiled or previewed, how long the preview took to be slowed down and stopped, and whether the saved change reached the clip",
+          "criteria": "Proposed: the output does not change until you save, typing and compiling cause no visible stutter, the preview is slowed or stopped and the output stays smooth, and the saved change appears in the clip within about a second. A frozen driver on a shader that never ends is a known limit and is to be written down, not hidden."
+        },
+        {
+          "id": "M-SE-3",
+          "title": "Saving and conflicts on Windows with cloud sync or antivirus",
+          "needs": "A Windows computer with the data folder inside a cloud synced folder (OneDrive, Dropbox) or a virus scanner that scans on write",
+          "steps": [
+            "Open a shader file in the editor, change it and save it a few times in a row.",
+            "Change the same file in another editor while it is open in NyrexVJ, with and without unsaved edits in NyrexVJ, and check the conflict dialog.",
+            "Open the file in another program that locks it and save from NyrexVJ.",
+            "Delete the file in Explorer while it is open."
+          ],
+          "measure": "Whether a save ever failed or left a partial file, whether the conflict dialog came up when it should and only then, and what the message said when the file was locked or deleted",
+          "criteria": "Proposed: no partial file is ever left, the conflict dialog appears exactly when the content on disk differs from what was loaded, a locked file gives the message that another program may have it open, and a deleted file can be written again. Any other behaviour is to be written down."
+        },
+        {
+          "id": "M-SE-4",
+          "title": "Typing: layouts, input methods and the clipboard",
+          "needs": "A computer with a keyboard layout that uses dead keys (for example German or French) and, if possible, a Japanese or Chinese input method, NyrexVJ",
+          "steps": [
+            "Type text with umlauts and accents in a comment, with Ctrl+/ and undo around it.",
+            "Copy a block from another program, paste it into the editor, copy a block from the editor and paste it elsewhere.",
+            "With an input method, compose a word in a comment and confirm it."
+          ],
+          "measure": "Whether every character arrives as typed, whether the clipboard works in both directions on Windows and Linux, and whether composing text works",
+          "criteria": "Proposed: finished characters arrive correctly and the clipboard works in both directions. Composing text with an input method is not expected to work yet and the result is to be written down."
+        }
+      ]
     }
   ]
 }

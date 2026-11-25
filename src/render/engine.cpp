@@ -640,6 +640,8 @@ std::string Engine::shaderNote(int clip) const {
 
 void Engine::setShaderBufferBudget(unsigned long long bytes) {
     shaderBudget_ = bytes;
+    playground_.state.destroy();
+    playground_.restart = true;
     for (auto& entry : shaderStates_) {
         entry.second.destroy();
     }
@@ -647,7 +649,7 @@ void Engine::setShaderBufferBudget(unsigned long long bytes) {
 }
 
 size_t Engine::shaderBufferBytes() const {
-    size_t total = 0;
+    size_t total = playground_.state.bytes();
     for (const auto& entry : shaderStates_) {
         total += entry.second.bytes();
     }
@@ -1581,6 +1583,36 @@ void Engine::releaseClipProgram(ClipProgram& clip) {
     clip.passes.clear();
 }
 
+Engine::PassProgram Engine::passProgramFor(GLuint program, const ShaderPlan& plan) const {
+    PassProgram pass;
+    pass.id = program;
+    pass.time = glGetUniformLocation(program, "uTime");
+    pass.beat = glGetUniformLocation(program, "uBeat");
+    pass.bpm = glGetUniformLocation(program, "uBpm");
+    pass.res = glGetUniformLocation(program, "uRes");
+    pass.colorA = glGetUniformLocation(program, "uColorA");
+    pass.colorB = glGetUniformLocation(program, "uColorB");
+    pass.rainbow = glGetUniformLocation(program, "uRainbow");
+    pass.scale = glGetUniformLocation(program, "uScale");
+    pass.audio = glGetUniformLocation(program, "uAudio");
+    pass.kick = glGetUniformLocation(program, "uKick");
+    pass.audioTex = glGetUniformLocation(program, "uAudioTex");
+    pass.frame = glGetUniformLocation(program, "uFrame");
+    pass.delta = glGetUniformLocation(program, "uDelta");
+    pass.mix = glGetUniformLocation(program, "uMix");
+    pass.picture = glGetUniformLocation(program, "uPicture");
+    for (size_t k = 0; k < plan.params.size() && k < pass.param.size(); ++k) {
+        pass.param[k] = glGetUniformLocation(program, plan.params[k].name.c_str());
+    }
+    for (int c = 0; c < kShaderChannels; ++c) {
+        const std::string index = std::to_string(c);
+        pass.channel[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannel" + index).c_str());
+        pass.channelRes[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannelRes[" + index + "]").c_str());
+        pass.channelTime[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannelTime[" + index + "]").c_str());
+    }
+    return pass;
+}
+
 bool Engine::buildPlanPasses(const ShaderPlan& plan, bool shadertoy, const std::string& name, std::vector<PassProgram>& out, std::string& errors) {
     std::vector<PassProgram> passes;
     for (int p = 0; p < static_cast<int>(plan.passes.size()); ++p) {
@@ -1590,32 +1622,7 @@ bool Engine::buildPlanPasses(const ShaderPlan& plan, bool shadertoy, const std::
             errors += plan.passes[static_cast<size_t>(p)].label() + ":\n" + error + "\n";
             continue;
         }
-        PassProgram pass;
-        pass.id = program;
-        pass.time = glGetUniformLocation(program, "uTime");
-        pass.beat = glGetUniformLocation(program, "uBeat");
-        pass.bpm = glGetUniformLocation(program, "uBpm");
-        pass.res = glGetUniformLocation(program, "uRes");
-        pass.colorA = glGetUniformLocation(program, "uColorA");
-        pass.colorB = glGetUniformLocation(program, "uColorB");
-        pass.rainbow = glGetUniformLocation(program, "uRainbow");
-        pass.scale = glGetUniformLocation(program, "uScale");
-        pass.audio = glGetUniformLocation(program, "uAudio");
-        pass.kick = glGetUniformLocation(program, "uKick");
-        pass.audioTex = glGetUniformLocation(program, "uAudioTex");
-        pass.frame = glGetUniformLocation(program, "uFrame");
-        pass.delta = glGetUniformLocation(program, "uDelta");
-        pass.mix = glGetUniformLocation(program, "uMix");
-        pass.picture = glGetUniformLocation(program, "uPicture");
-        for (size_t k = 0; k < plan.params.size() && k < pass.param.size(); ++k) {
-            pass.param[k] = glGetUniformLocation(program, plan.params[k].name.c_str());
-        }
-        for (int c = 0; c < kShaderChannels; ++c) {
-            const std::string index = std::to_string(c);
-            pass.channel[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannel" + index).c_str());
-            pass.channelRes[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannelRes[" + index + "]").c_str());
-            pass.channelTime[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannelTime[" + index + "]").c_str());
-        }
+        PassProgram pass = passProgramFor(program, plan);
         passes.push_back(pass);
     }
     if (!errors.empty()) {
@@ -1742,6 +1749,7 @@ int Engine::prepareAll(std::string& report) {
 }
 
 void Engine::shutdown() {
+    releaseShaderPlayground();
     profiler_.destroy();
     if (gpuQueries_[0]) {
         glDeleteQueries(kGpuQueries, gpuQueries_.data());
@@ -3456,6 +3464,8 @@ void Engine::render() {
         gpuSlot_ = (gpuSlot_ + 1) % kGpuQueries;
         gpuActive_ = false;
     }
+
+    servicePlayground();
 
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);

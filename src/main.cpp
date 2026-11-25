@@ -4,6 +4,7 @@
 #include "app/bench_convert.hpp"
 #include "app/generator_selftest.hpp"
 #include "app/gpu_diag_selftest.hpp"
+#include "app/shader_editor_selftest.hpp"
 #include "app/gpu_particle_selftest.hpp"
 #include "app/output_selftest.hpp"
 #include "app/pack_cli.hpp"
@@ -30,6 +31,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -66,6 +68,9 @@ struct Options {
     int gpuParticleSelfTestBench = 0;
     bool gpuDiagSelfTest = false;
     int gpuDiagSelfTestBench = 0;
+    bool shaderEditorSelfTest = false;
+    bool shaderEditorUiTest = false;
+    int shaderEditorSelfTestBench = 0;
     int shaderSelfTestBench = 0;
     std::string pluginSelfTest;
     bool outputSelfTest = false;
@@ -165,6 +170,11 @@ Options parseOptions(int argc, char** argv) {
             options.gpuDiagSelfTest = true;
             if (i + 1 < argc && argv[i + 1][0] != '-') {
                 options.gpuDiagSelfTestBench = std::max(0, std::atoi(argv[++i]));
+            }
+        } else if (arg == "--shader-editor-selftest") {
+            options.shaderEditorSelfTest = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                options.shaderEditorSelfTestBench = std::max(0, std::atoi(argv[++i]));
             }
         } else if (arg == "--output-selftest") {
             options.outputSelfTest = true;
@@ -304,6 +314,14 @@ Options parseOptions(int argc, char** argv) {
             options.start.generatorTab = 0;
             if (hasValue && argv[i + 1][0] != '-') {
                 options.start.generatorTab = std::clamp(std::atoi(argv[++i]), 0, 1);
+            }
+        } else if (arg == "--shader-editor-uitest") {
+            options.shaderEditorUiTest = true;
+            options.start.shaderEditor = true;
+        } else if (arg == "--shader-editor") {
+            options.start.shaderEditor = true;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.start.shaderEditorFile = argv[++i];
             }
         } else if (arg == "--chains") {
             options.start.chainTarget = 0;
@@ -476,7 +494,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -501,6 +519,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runGpuParticleSelfTest(app.engine(), options.gpuParticleSelfTestBench, options.benchOut);
         } else if (options.gpuDiagSelfTest) {
             benchExit = nvj::runGpuDiagSelfTest(app.engine(), options.gpuDiagSelfTestBench, options.benchOut);
+        } else if (options.shaderEditorSelfTest) {
+            benchExit = nvj::runShaderEditorSelfTest(app.engine(), options.shaderEditorSelfTestBench, options.benchOut);
         } else if (options.liveSelfTest) {
             benchExit = nvj::runLiveSelfTest(app.engine(), options.benchOut);
         } else if (!options.benchLive.empty()) {
@@ -591,6 +611,22 @@ int main(int argc, char** argv) {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         ++frameCount;
+        if (options.shaderEditorUiTest) {
+            if (frameCount == 1) {
+                app.startShaderEditorTest();
+            }
+            const int state = app.tickShaderEditorTest();
+            if (state != 0) {
+                exitCode = state == 1 ? 0 : 1;
+                const std::string report = app.shaderEditorTestReport();
+                nvj::logLine("Shader editor UI test result:\n" + report);
+                if (!options.benchOut.empty()) {
+                    std::ofstream out(options.benchOut);
+                    out << report << '\n';
+                }
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }
+        }
         for (const auto& entry : options.dumps) {
             if (entry.first == frameCount) {
                 saveOutput(entry.second, app.engine());

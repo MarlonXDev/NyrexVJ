@@ -1014,6 +1014,71 @@
       "test": "A-GD-4",
       "command": "NyrexVJ --fresh --settings 10 --audio-demo --frames 90 --screenshot page.png",
       "notes": "the Performance page opened in a real OpenGL context and the new Graphics memory and traffic block was drawn (looked at in a scrolled screenshot); a smoke test of the window only"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.46.0 (branch feature/shader-playground, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "shader-editor",
+      "test": "A-SE-1",
+      "command": "ctest -R nvj_shaderedit_tests",
+      "notes": "26,163 checks (text model with random edits against a plain string model, highlighter, compile log parser on four driver styles and random logs, compile scheduler, cost governor, file names, file stamps and the save conflict, safe save and every refusal, templates); whole suite 43 of 43 passed"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.46.0 (branch feature/shader-playground, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "shader-editor",
+      "test": "A-SE-2",
+      "command": "NyrexVJ --fresh --shader-editor-selftest 60 --bench-out result.json",
+      "notes": "67 checks passed in the real engine, three runs of the check part and two of the benchmark; frame time 2.9 and 3.1 ms without the playground, 3.1 and 3.0 ms with a light preview, preview GPU time 1.7 and 1.8 ms per drawn frame, median compile 0.6 and 0.4 ms (Mesa caches compiled shaders, so this says nothing about a real driver), a heavy shader 184 and 188 ms per frame for the 3 frames it was allowed, then 2.9 and 2.8 ms after the cost control paused it; software renderer, no speed claim for a graphics card"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.46.0 (branch feature/shader-playground, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "shader-editor",
+      "test": "A-SE-3",
+      "command": "NyrexVJ --fresh --audio-demo --frames 100000 --shader-editor-uitest --bench-out result.json",
+      "notes": "25 checks passed, 48 to 50 s, at 1700 x 1000 and at 1280 x 720 (the size of the CI display); Tab, the clipboard, double and triple click, a click on the problem list and the name rules of Save As are not driven by events in this test"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.46.0 (branch feature/shader-playground, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "shader-editor",
+      "test": "A-SE-4",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "all 2396 translation keys covered, 69 of them new for the editor"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.46.0 (branch feature/shader-playground, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "shader-editor",
+      "test": "A-SE-5",
+      "command": "NyrexVJ --fresh --no-welcome --audio-demo --shader-editor broken_demo.glsl --frames 150 --screenshot editor.png",
+      "notes": "the window opened on a broken shader showed the errors on lines 6 and 7, the red and yellow marks, the problem list and 'There is no working version yet.'; the picture was looked at once by the AI assistant that made the change, no person has used the window yet"
     }
   ]
 }

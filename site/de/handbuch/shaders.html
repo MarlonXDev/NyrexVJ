@@ -68,7 +68,7 @@
 <li><a href="video.html">Video- und Bild-Clips</a>
 </li>
 <li><a href="shaders.html" aria-current="page">Deine eigenen Shader</a>
-<ul><li><a href="#shader-clip">Einen Shader-Clip machen</a></li><li><a href="#shader-styles">Zwei Stile</a></li><li><a href="#shader-passes">Transparenz und mehrere Durchgänge</a></li><li><a href="#isf">ISF-Dateien</a></li><li><a href="#shader-controls">Regler für deinen Shader</a></li></ul>
+<ul><li><a href="#shader-clip">Einen Shader-Clip machen</a></li><li><a href="#shader-styles">Zwei Stile</a></li><li><a href="#shader-passes">Transparenz und mehrere Durchgänge</a></li><li><a href="#isf">ISF-Dateien</a></li><li><a href="#shader-controls">Regler für deinen Shader</a></li><li><a href="#shader-editor">Der Shader-Editor</a></li></ul>
 </li>
 <li><a href="models.html">3D-Modelle</a>
 </li>
@@ -158,7 +158,7 @@
 <li><a href="video.html">Video- und Bild-Clips</a>
 </li>
 <li><a href="shaders.html" aria-current="page">Deine eigenen Shader</a>
-<ul><li><a href="#shader-clip">Einen Shader-Clip machen</a></li><li><a href="#shader-styles">Zwei Stile</a></li><li><a href="#shader-passes">Transparenz und mehrere Durchgänge</a></li><li><a href="#isf">ISF-Dateien</a></li><li><a href="#shader-controls">Regler für deinen Shader</a></li></ul>
+<ul><li><a href="#shader-clip">Einen Shader-Clip machen</a></li><li><a href="#shader-styles">Zwei Stile</a></li><li><a href="#shader-passes">Transparenz und mehrere Durchgänge</a></li><li><a href="#isf">ISF-Dateien</a></li><li><a href="#shader-controls">Regler für deinen Shader</a></li><li><a href="#shader-editor">Der Shader-Editor</a></li></ul>
 </li>
 <li><a href="models.html">3D-Modelle</a>
 </li>
@@ -209,8 +209,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Eigene Inhalte</p>
 <h1>Deine eigenen Shader</h1>
-<p class="meta">Kapitel 16 von 36 &middot; 2 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#shader-clip">Einen Shader-Clip machen</a><a href="#shader-styles">Zwei Stile</a><a href="#shader-passes">Transparenz und mehrere Durchgänge</a><a href="#isf">ISF-Dateien</a><a href="#shader-controls">Regler für deinen Shader</a></nav>
+<p class="meta">Kapitel 16 von 36 &middot; 4 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#shader-clip">Einen Shader-Clip machen</a><a href="#shader-styles">Zwei Stile</a><a href="#shader-passes">Transparenz und mehrere Durchgänge</a><a href="#isf">ISF-Dateien</a><a href="#shader-controls">Regler für deinen Shader</a><a href="#shader-editor">Der Shader-Editor</a></nav>
 <h2 id="shader-clip"><a class="anchor" href="#shader-clip" aria-label="Link">#</a>Einen Shader-Clip machen</h2>
 <p>Jeder Fragment-Shader kann ein Clip werden. Leg eine <code>.glsl</code>-, <code>.frag</code>- oder <code>.fs</code>-Datei in den Ordner shaders oder zieh die Datei auf das Fenster. Sie erscheint in der Bibliothek als Shader: Dateiname unter dem Filter Shader. Sie funktioniert wie jeder andere Clip: Geschwindigkeit, Skalierung, Farben, Effekte, Audio, LFOs und Makros wirken alle.</p>
 <p>NyrexVJ sieht einmal pro Sekunde in den Ordner. Eine gespeicherte Änderung lädt den Shader neu, während er läuft, du kannst die Datei also in jedem Texteditor bearbeiten. Lässt sich der Shader nicht kompilieren, zeigt das Clip-Fenster die Meldung mit der Zeilennummer deiner Datei, und die letzte funktionierende Version läuft weiter. Bibliothek, Beispiel-Shader erstellen schreibt einen kleinen Shader als Ausgangspunkt.</p>
@@ -224,6 +224,12 @@
 <h2 id="shader-controls"><a class="anchor" href="#shader-controls" aria-label="Link">#</a>Regler für deinen Shader</h2>
 <p>Ein Shader kann mit <code>#pragma nyrexvj param</code> eigene Regler und Schalter anmelden. Sie erscheinen im Clip-Fenster unter Shader-Regler. Ein Rechtsklick setzt einen Regler auf den Standardwert der Datei zurück, und Regler zurücksetzen setzt alle zurück.</p>
 <aside class="note note"><strong class="note-label">Hinweis</strong><p>Shader-Dateien sind Programme für deine Grafikkarte. Ein kaputter Shader kann das Bild ausbremsen. NyrexVJ begrenzt die Zeit, die ein Shader brauchen darf, und schaltet einen zu langsamen ab.</p></aside>
+<h2 id="shader-editor"><a class="anchor" href="#shader-editor" aria-label="Link">#</a>Der Shader-Editor</h2>
+<p>Creator, Shader-Editor öffnet ein Fenster mit einem Texteditor links, einer Live-Vorschau rechts und einer Liste der Probleme unter dem Text. Im Clip-Fenster einer Shader-Datei öffnet Im Shader-Editor bearbeiten genau diese Datei. Neu beginnt mit einer von vier Vorlagen, Öffnen listet die Dateien des Ordners shaders, und die Schaltflächen Speichern, Speichern unter, Von Festplatte neu laden, Rückgängig, Wiederherstellen und Jetzt kompilieren tun, was draufsteht. Live-Vorschau schaltet die Vorschau und das Kompilieren aus.</p>
+<ul><li>Der Text hat Zeilennummern und Farben für Schlüsselwörter, Typen, eingebaute Funktionen, die NyrexVJ-Namen, <code>#pragma nyrexvj</code>-Zeilen, Zahlen und Kommentare. Strg+Z und Strg+Y machen rückgängig und stellen wieder her, Tab und Umschalt+Tab rücken ein, Strg+/ kommentiert eine Zeile, Strg+S speichert und F5 kompiliert sofort.</li><li>Ein Fehler wird in seiner Zeile rot markiert, die Meldung steht als Tooltip an der Markierung am Rand und in der Liste unter dem Text. Ein Klick auf einen Eintrag der Liste setzt den Cursor in diese Zeile.</li><li>Der Shader wird einen Moment nach dem Tippen kompiliert, nie während du tippst. Die Vorschau ist von deinen Clips getrennt: Sie verändert nie einen Clip, der gerade läuft, und ein Shader, der sich nicht kompilieren lässt, lässt das letzte funktionierende Bild stehen und zeigt die Meldung daneben. Gezeigte Version sagt, von welchem Text das Bild stammt.</li><li>Ein sehr langsamer Shader wird in der Vorschau nur jedes paar Bilder gezeichnet, und einer, der viel zu langsam ist, wird angehalten, bis du Fortsetzen drückst. Bildfilter werden in der Vorschau nicht gezeigt, und Bilder und Videos als Kanäle sind dort leer.</li><li>Speichern schreibt die Datei in einem Schritt in den Ordner shaders, und ein Clip, der die Datei nutzt, lädt sich von selbst neu, wie oben beschrieben. Der Name darf Buchstaben, Ziffern, Leerzeichen und <code>- _ . ( )</code> enthalten, bis zu 64 Zeichen, und muss auf <code>.glsl</code>, <code>.frag</code> oder <code>.fs</code> enden. Eine vorhandene Datei wird nur ersetzt, wenn du zustimmst. Hat ein anderes Programm die Datei geändert oder gelöscht, während du bearbeitest, fragt der Editor, ob du deine Version behalten, die Version von der Festplatte laden oder eine Kopie speichern willst.</li></ul>
+<p>Der Editor hat keine Suche, keine mehreren offenen Dateien, keine Autovervollständigung und keinen Debugger. Text über 256 KiB wird abgelehnt.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Ein Shader, der nie endet, kann den Grafiktreiber einfrieren, in der Vorschau wie in einem Clip, weil sich eine begonnene Zeichnung nicht abbrechen lässt. Probiere Schleifen zuerst mit kleinen Zählern aus.</p></aside>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Lass den Editor neben dem Ausgabefenster offen, während du an einem Shader arbeitest. Beim Schließen wird alles freigegeben, was die Vorschau benutzt hat.</p></aside>
 <nav class="pager" aria-label="Pager"><a class="prev" href="video.html"><small>Zurück</small><span>Video- und Bild-Clips</span></a><a class="next" href="models.html"><small>Weiter</small><span>3D-Modelle</span></a></nav>
 <p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
 </main>

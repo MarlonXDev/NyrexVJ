@@ -1670,6 +1670,10 @@ const Translation kItalian[] = {
     {"Could not open the port, it may be in use", "Impossibile aprire la porta, potrebbe essere in uso"},
     {"Could not listen on the port", "Impossibile restare in ascolto sulla porta"},
     {"The port must be between 1 and 65535", "La porta deve essere compresa tra 1 e 65535"},
+    {"Shader controls", "Controlli dello shader"},
+    {"Reset controls", "Reimposta i controlli"},
+    {"Notes about this file", "Note su questo file"},
+    {"Right click resets this control to the default of the file", "Il clic destro reimposta questo controllo al valore predefinito del file"},
 };
 
 }

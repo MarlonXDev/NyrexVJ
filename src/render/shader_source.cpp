@@ -1,5 +1,7 @@
 #include "render/shader_source.hpp"
 
+#include "render/isf.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -226,6 +228,8 @@ bool parseChannel(const Directive& directive, int line, ShaderInput& input, int&
         input.kind = ShaderInputKind::Buffer;
         input.buffer = buffer;
         next = 4;
+    } else if (source == "picture") {
+        input.kind = ShaderInputKind::Picture;
     } else if (source == "media") {
         if (t.size() < 4 || unquoted(t[3]).empty()) {
             error = lineError(line, "channel media needs the name of an image or video clip, for example: channel 2 media \"Video: loop\"");
@@ -235,7 +239,7 @@ bool parseChannel(const Directive& directive, int line, ShaderInput& input, int&
         input.media = unquoted(t[3]);
         next = 4;
     } else {
-        error = lineError(line, "unknown channel source '" + t[2] + "', use audio, buffer, media or none");
+        error = lineError(line, "unknown channel source '" + t[2] + "', use audio, buffer, media, picture or none");
         return false;
     }
     for (; next < t.size(); ++next) {
@@ -253,6 +257,194 @@ bool parseChannel(const Directive& directive, int line, ShaderInput& input, int&
             return false;
         }
     }
+    return true;
+}
+
+
+bool validIdentifier(const std::string& name, size_t maxLength) {
+    if (name.empty() || name.size() > maxLength) {
+        return false;
+    }
+    if (!(std::isalpha(static_cast<unsigned char>(name[0])) || name[0] == '_')) {
+        return false;
+    }
+    for (const char c : name) {
+        if (!identifierChar(c)) {
+            return false;
+        }
+    }
+    return name.find("__") == std::string::npos && name.compare(0, 3, "gl_") != 0;
+}
+
+bool parseBoolWord(const std::string& token, float& value) {
+    const std::string word = lower(token);
+    if (word == "on" || word == "true" || word == "1") {
+        value = 1.0f;
+        return true;
+    }
+    if (word == "off" || word == "false" || word == "0") {
+        value = 0.0f;
+        return true;
+    }
+    return false;
+}
+
+bool parseParam(const Directive& directive, int line, const std::vector<ShaderParam>& existing, int& nextSlot, ShaderParam& param, std::string& error) {
+    const std::vector<std::string>& t = directive.tokens;
+    if (t.size() < 5) {
+        error = lineError(line, "param needs a name, a kind and a label, for example: param speed float \"Speed\" 0 4 1");
+        return false;
+    }
+    param = ShaderParam{};
+    param.name = t[1];
+    if (!validIdentifier(param.name, 32)) {
+        error = lineError(line, "the parameter name '" + t[1] + "' is not a valid name (letters, digits and underscore, up to 32 characters, no double underscore, not starting with gl_)");
+        return false;
+    }
+    if (isReservedShaderName(param.name)) {
+        error = lineError(line, "the parameter name '" + t[1] + "' is already used by NyrexVJ or by GLSL, choose another");
+        return false;
+    }
+    for (const ShaderParam& other : existing) {
+        if (other.name == param.name) {
+            error = lineError(line, "the parameter '" + t[1] + "' is defined twice");
+            return false;
+        }
+    }
+    if (static_cast<int>(existing.size()) >= kMaxShaderParams) {
+        error = lineError(line, "a shader can have at most " + std::to_string(kMaxShaderParams) + " parameters");
+        return false;
+    }
+    const std::string kind = lower(t[2]);
+    if (!isQuoted(t[3])) {
+        error = lineError(line, "the label of a parameter must be in quotes");
+        return false;
+    }
+    param.label = unquoted(t[3]);
+    if (param.label.empty() || param.label.size() > 40) {
+        error = lineError(line, "the label of a parameter needs 1 to 40 characters");
+        return false;
+    }
+    const auto number = [&](size_t index, float& value) {
+        if (index >= t.size() || !parseNumber(t[index], value) || std::fabs(value) > 1.0e6f) {
+            error = lineError(line, "a number from -1000000 to 1000000 is expected after the label of '" + param.name + "'");
+            return false;
+        }
+        return true;
+    };
+    const auto exactly = [&](size_t count, const char* usage) {
+        if (t.size() != count) {
+            error = lineError(line, std::string("use: param ") + usage);
+            return false;
+        }
+        return true;
+    };
+    if (kind == "float" || kind == "int") {
+        if (!exactly(7, kind == "float" ? "name float \"Label\" min max default" : "name int \"Label\" min max default")) {
+            return false;
+        }
+        param.kind = kind == "float" ? ShaderParamKind::Float : ShaderParamKind::Int;
+        if (!number(4, param.min[0]) || !number(5, param.max[0]) || !number(6, param.def[0])) {
+            return false;
+        }
+        if (param.kind == ShaderParamKind::Int) {
+            param.min[0] = std::round(param.min[0]);
+            param.max[0] = std::round(param.max[0]);
+            param.def[0] = std::round(param.def[0]);
+        }
+        if (!(param.min[0] < param.max[0])) {
+            error = lineError(line, "the minimum of '" + param.name + "' must be smaller than the maximum");
+            return false;
+        }
+        if (param.def[0] < param.min[0] || param.def[0] > param.max[0]) {
+            error = lineError(line, "the default of '" + param.name + "' must be between the minimum and the maximum");
+            return false;
+        }
+        param.count = 1;
+    } else if (kind == "bool") {
+        if (!exactly(5, "name bool \"Label\" on|off")) {
+            return false;
+        }
+        param.kind = ShaderParamKind::Bool;
+        param.min[0] = 0.0f;
+        param.max[0] = 1.0f;
+        if (!parseBoolWord(t[4], param.def[0])) {
+            error = lineError(line, "the default of a bool parameter is on or off");
+            return false;
+        }
+        param.count = 1;
+    } else if (kind == "point") {
+        if (!exactly(10, "name point \"Label\" minX minY maxX maxY defaultX defaultY")) {
+            return false;
+        }
+        param.kind = ShaderParamKind::Point;
+        param.count = 2;
+        for (size_t i = 0; i < 2; ++i) {
+            if (!number(4 + i, param.min[i]) || !number(6 + i, param.max[i]) || !number(8 + i, param.def[i])) {
+                return false;
+            }
+            if (!(param.min[i] < param.max[i]) || param.def[i] < param.min[i] || param.def[i] > param.max[i]) {
+                error = lineError(line, "a point needs minimum < maximum and a default between them");
+                return false;
+            }
+        }
+    } else if (kind == "color") {
+        if (!exactly(8, "name color \"Label\" red green blue alpha")) {
+            return false;
+        }
+        param.kind = ShaderParamKind::Color;
+        param.count = 4;
+        for (size_t i = 0; i < 4; ++i) {
+            param.min[i] = 0.0f;
+            param.max[i] = 1.0f;
+            if (!number(4 + i, param.def[i])) {
+                return false;
+            }
+            param.def[i] = std::clamp(param.def[i], 0.0f, 1.0f);
+        }
+    } else if (kind == "list") {
+        if (t.size() < 7 || (t.size() - 5) % 2 != 0) {
+            error = lineError(line, "use: param name list \"Label\" defaultIndex \"First\" value \"Second\" value ...");
+            return false;
+        }
+        param.kind = ShaderParamKind::List;
+        float index = 0.0f;
+        if (!number(4, index)) {
+            return false;
+        }
+        const size_t items = (t.size() - 5) / 2;
+        if (items > static_cast<size_t>(kMaxShaderListItems)) {
+            error = lineError(line, "a list can have at most " + std::to_string(kMaxShaderListItems) + " entries");
+            return false;
+        }
+        for (size_t i = 0; i < items; ++i) {
+            const std::string& itemLabel = t[5 + i * 2];
+            float value = 0.0f;
+            if (!isQuoted(itemLabel) || unquoted(itemLabel).empty() || unquoted(itemLabel).size() > 40 || !number(6 + i * 2, value)) {
+                error = error.empty() ? lineError(line, "every list entry needs a label in quotes (1 to 40 characters) and a number") : error;
+                return false;
+            }
+            param.labels.push_back(unquoted(itemLabel));
+            param.values.push_back(std::round(value));
+        }
+        if (index < 0.0f || index >= static_cast<float>(items) || index != std::floor(index)) {
+            error = lineError(line, "the default of a list is the number of an entry, counted from 0");
+            return false;
+        }
+        param.min[0] = 0.0f;
+        param.max[0] = static_cast<float>(items - 1);
+        param.def[0] = index;
+        param.count = 1;
+    } else {
+        error = lineError(line, "unknown parameter kind '" + t[2] + "', use float, int, bool, point, color or list");
+        return false;
+    }
+    if (nextSlot + param.count > kShaderValueCount) {
+        error = lineError(line, "the parameters need more than " + std::to_string(kShaderValueCount) + " numbers in total (a point uses 2, a colour 4)");
+        return false;
+    }
+    param.slot = nextSlot;
+    nextSlot += param.count;
     return true;
 }
 
@@ -295,6 +487,7 @@ bool buildPlan(const std::string& cleaned, const std::string& code, ShaderSource
     std::array<bool, kMaxShaderBuffers> bufferSeen{};
     bool commonSeen = false;
     bool imageSeen = false;
+    int nextSlot = 0;
 
     for (size_t i = 0; i < sourceLines.size(); ++i) {
         const int line = static_cast<int>(i) + 1;
@@ -325,6 +518,26 @@ bool buildPlan(const std::string& cleaned, const std::string& code, ShaderSource
                     return true;
                 }
             }
+        } else if (d.name == "plain") {
+            if (d.tokens.size() != 1) {
+                result.error = lineError(line, "plain takes no words");
+                return true;
+            }
+            plan->plain = true;
+        } else if (d.name == "filter") {
+            if (d.tokens.size() != 1) {
+                result.error = lineError(line, "filter takes no words");
+                return true;
+            }
+            plan->filter = true;
+        } else if (d.name == "param") {
+            ShaderParam param;
+            std::string error;
+            if (!parseParam(d, line, plan->params, nextSlot, param, error)) {
+                result.error = error;
+                return true;
+            }
+            plan->params.push_back(std::move(param));
         } else if (d.name == "common") {
             if (commonSeen) {
                 result.error = lineError(line, "the common section is defined twice");
@@ -389,10 +602,10 @@ bool buildPlan(const std::string& cleaned, const std::string& code, ShaderSource
             }
             current.inputs[static_cast<size_t>(channel)] = input;
         } else if (d.name.empty()) {
-            result.error = lineError(line, "#pragma nyrexvj needs a directive: alpha, common, buffer, image or channel");
+            result.error = lineError(line, "#pragma nyrexvj needs a directive: alpha, plain, filter, param, common, buffer, image or channel");
             return true;
         } else {
-            result.error = lineError(line, "unknown directive '" + d.tokens[0] + "', use alpha, common, buffer, image or channel");
+            result.error = lineError(line, "unknown directive '" + d.tokens[0] + "', use alpha, plain, filter, param, common, buffer, image or channel");
             return true;
         }
     }
@@ -459,6 +672,14 @@ bool buildPlan(const std::string& cleaned, const std::string& code, ShaderSource
             }
         }
         plan->passes.push_back(std::move(pass));
+    }
+    if (plan->usesPicture() && !plan->filter) {
+        result.error = "channel ... picture needs the line #pragma nyrexvj filter";
+        return true;
+    }
+    if (plan->filter && plan->bufferCount() == 0 && plan->passes.size() != 1) {
+        result.error = "A filter needs an image section";
+        return true;
     }
     if (static_cast<int>(plan->mediaNames().size()) > kMaxShaderMediaInputs) {
         result.error = "A shader can use at most " + std::to_string(kMaxShaderMediaInputs) + " different images or videos";
@@ -530,6 +751,123 @@ std::vector<std::string> ShaderPlan::mediaNames() const {
     return names;
 }
 
+
+int ShaderPlan::valueCount() const {
+    int count = 0;
+    for (const ShaderParam& param : params) {
+        count = std::max(count, param.slot + param.count);
+    }
+    return count;
+}
+
+bool ShaderPlan::usesPicture() const {
+    for (const ShaderPassSource& pass : passes) {
+        for (const ShaderInput& input : pass.inputs) {
+            if (input.kind == ShaderInputKind::Picture) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+ShaderValues unsetShaderValues() {
+    return unsetClipValues();
+}
+
+bool shaderValuesUnset(const ShaderValues& values) {
+    for (const float value : values) {
+        if (value != kShaderValueUnset) {
+            return false;
+        }
+    }
+    return true;
+}
+
+float shaderValueClamp(const ShaderParam& param, int component, float value) {
+    const size_t c = static_cast<size_t>(std::clamp(component, 0, 3));
+    if (!std::isfinite(value)) {
+        return param.def[c];
+    }
+    float result = std::clamp(value, param.min[c], param.max[c]);
+    if (param.kind == ShaderParamKind::Int || param.kind == ShaderParamKind::Bool || param.kind == ShaderParamKind::List) {
+        result = std::round(result);
+    }
+    return result;
+}
+
+ShaderValues resolveShaderValues(const ShaderPlan& plan, const ShaderValues& stored) {
+    ShaderValues values;
+    values.fill(0.0f);
+    for (const ShaderParam& param : plan.params) {
+        for (int c = 0; c < param.count; ++c) {
+            const size_t index = static_cast<size_t>(param.slot + c);
+            if (index >= values.size()) {
+                continue;
+            }
+            const float value = stored[index];
+            values[index] = value == kShaderValueUnset ? param.def[static_cast<size_t>(c)] : shaderValueClamp(param, c, value);
+        }
+    }
+    return values;
+}
+
+std::vector<int> shaderFilterParams(const ShaderPlan& plan) {
+    std::vector<int> picked;
+    for (size_t i = 0; i < plan.params.size() && static_cast<int>(picked.size()) < kShaderFilterControls; ++i) {
+        if (plan.params[i].scalar()) {
+            picked.push_back(static_cast<int>(i));
+        }
+    }
+    return picked;
+}
+
+float shaderParamFromControl(const ShaderParam& param, float control) {
+    const float c = std::clamp(std::isfinite(control) ? control : 0.0f, 0.0f, 1.0f);
+    if (param.kind == ShaderParamKind::Bool) {
+        return c >= 0.5f ? 1.0f : 0.0f;
+    }
+    if (param.kind == ShaderParamKind::List) {
+        const float items = static_cast<float>(param.values.size());
+        return std::min(std::floor(c * items), items - 1.0f);
+    }
+    const float value = param.min[0] + c * (param.max[0] - param.min[0]);
+    return param.kind == ShaderParamKind::Int ? std::round(value) : value;
+}
+
+float shaderControlFromParam(const ShaderParam& param, float value) {
+    if (param.kind == ShaderParamKind::Bool) {
+        return value >= 0.5f ? 1.0f : 0.0f;
+    }
+    if (param.kind == ShaderParamKind::List) {
+        const float items = static_cast<float>(std::max<size_t>(param.values.size(), 1));
+        return std::clamp((value + 0.5f) / items, 0.0f, 1.0f);
+    }
+    const float range = param.max[0] - param.min[0];
+    return range > 0.0f ? std::clamp((value - param.min[0]) / range, 0.0f, 1.0f) : 0.0f;
+}
+
+bool isReservedShaderName(const std::string& name) {
+    static const char* const kNames[] = {
+        "main", "void", "float", "int", "uint", "bool", "double", "vec2", "vec3", "vec4", "ivec2", "ivec3", "ivec4", "bvec2", "bvec3", "bvec4",
+        "mat2", "mat3", "mat4", "sampler2D", "sampler3D", "samplerCube", "if", "else", "for", "while", "do", "return", "break", "continue", "discard",
+        "struct", "uniform", "in", "out", "inout", "const", "layout", "precision", "highp", "mediump", "lowp", "true", "false", "texture", "vUv",
+        "fragColor", "uTime", "uBeat", "uBpm", "uRes", "uColorA", "uColorB", "uRainbow", "uScale", "uAudio", "uKick", "uAudioTex", "uChannel0",
+        "uChannel1", "uChannel2", "uChannel3", "uChannelRes", "uChannelTime", "uFrame", "uDelta", "uMix", "uPicture", "iResolution", "iTime",
+        "iFrame", "iTimeDelta", "iMouse", "iDate", "iSampleRate", "iChannel0", "iChannel1", "iChannel2", "iChannel3", "iChannelResolution",
+        "iChannelTime", "mainImage", "attribute", "varying", "switch", "case", "default", "sampler2DRect", "flat", "smooth", "centroid", "patch",
+        "input", "output", "filter", "long", "short", "half", "fixed", "common", "active", "partition", "template", "this", "packed", "public",
+        "static", "external", "interface", "volatile", "inline", "noinline", "class", "enum", "union", "typedef", "goto", "asm", "extern",
+        "unsigned", "superp", "sizeof", "cast", "namespace", "using", "invariant", "noperspective", "subroutine", "uvec2", "uvec3", "uvec4",
+        "sampler1D", "sampler1DShadow", "sampler2DShadow", "sampler2DArray", "sampler3DRect", "hvec2", "hvec3", "hvec4", "fvec2", "fvec3", "fvec4"};
+    for (const char* reserved : kNames) {
+        if (name == reserved) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string shaderClipName(const std::string& stem) {
     return "Shader: " + stem;
 }
@@ -586,10 +924,28 @@ ShaderSource prepareShaderSource(const std::string& input) {
         lineStart = lineEnd + 1;
     }
 
+    ShaderInfo isfInfo;
+    bool isIsf = false;
+    if (looksLikeIsf(cleaned)) {
+        const IsfResult isf = translateIsf(cleaned);
+        if (!isf.ok) {
+            result.error = isf.error;
+            return result;
+        }
+        cleaned = isf.text;
+        isfInfo = isf.info;
+        isIsf = true;
+    }
+
     const std::string code = withoutComments(cleaned);
     ShaderSource advanced;
     if (buildPlan(cleaned, code, advanced)) {
         advanced.body = cleaned;
+        if (isIsf && advanced.ok && advanced.plan) {
+            auto plan = std::make_shared<ShaderPlan>(*advanced.plan);
+            plan->info = isfInfo;
+            advanced.plan = plan;
+        }
         return advanced;
     }
     const bool hasMain = hasFunction(code, "main", true);

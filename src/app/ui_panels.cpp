@@ -190,6 +190,25 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
         }
         if (slot.effect >= 0) {
             const EffectDef& def = library[static_cast<size_t>(slot.effect)];
+            if (def.isIsf) {
+                const std::string problem = engine_.effectError(slot.effect);
+                if (!problem.empty()) {
+                    ImGui::PushTextWrapPos(0.0f);
+                    ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.45f, 1.0f), "%s", trMessage(problem).c_str());
+                    ImGui::PopTextWrapPos();
+                }
+                if (def.plan && !def.plan->info.notes.empty()) {
+                    ImGui::TextDisabled("%s", tr("Notes about this file"));
+                    if (ImGui::BeginItemTooltip()) {
+                        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 28.0f);
+                        for (const std::string& note : def.plan->info.notes) {
+                            ImGui::BulletText("%s", note.c_str());
+                        }
+                        ImGui::PopTextWrapPos();
+                        ImGui::EndTooltip();
+                    }
+                }
+            }
             if (def.isGraph) {
                 if (!def.error.empty()) {
                     ImGui::PushTextWrapPos(0.0f);
@@ -320,6 +339,94 @@ void App::drawSceneControls(ScenePlayer& player) {
     ImGui::PopID();
 }
 
+
+static void drawShaderNotes(const ShaderPlan& plan) {
+    const ShaderInfo& info = plan.info;
+    if (!info.description.empty()) {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextDisabled("%s", info.description.c_str());
+        ImGui::PopTextWrapPos();
+    }
+    if (!info.credit.empty()) {
+        ImGui::TextDisabled("%s", info.credit.c_str());
+    }
+    if (!info.notes.empty() && ImGui::TreeNode(tr("Notes about this file"))) {
+        ImGui::PushTextWrapPos(0.0f);
+        for (const std::string& note : info.notes) {
+            ImGui::BulletText("%s", note.c_str());
+        }
+        ImGui::PopTextWrapPos();
+        ImGui::TreePop();
+    }
+}
+
+static void drawShaderControls(const ShaderPlan& plan, ClipPlayback& playback) {
+    if (plan.params.empty()) {
+        return;
+    }
+    ImGui::SeparatorText(tr("Shader controls"));
+    const ShaderValues resolved = resolveShaderValues(plan, playback.values);
+    for (const ShaderParam& param : plan.params) {
+        ImGui::PushID(param.name.c_str());
+        const size_t slot = static_cast<size_t>(param.slot);
+        bool changed = false;
+        float value[4] = {resolved[slot], resolved[std::min<size_t>(slot + 1, resolved.size() - 1)], resolved[std::min<size_t>(slot + 2, resolved.size() - 1)], resolved[std::min<size_t>(slot + 3, resolved.size() - 1)]};
+        switch (param.kind) {
+        case ShaderParamKind::Float:
+            changed = ui::sliderFloat(param.label.c_str(), &value[0], param.min[0], param.max[0], "%.3f");
+            break;
+        case ShaderParamKind::Int: {
+            int number = static_cast<int>(std::lround(value[0]));
+            changed = ImGui::SliderInt(param.label.c_str(), &number, static_cast<int>(param.min[0]), static_cast<int>(param.max[0]));
+            value[0] = static_cast<float>(number);
+            break;
+        }
+        case ShaderParamKind::Bool: {
+            bool on = value[0] >= 0.5f;
+            changed = ImGui::Checkbox(param.label.c_str(), &on);
+            value[0] = on ? 1.0f : 0.0f;
+            break;
+        }
+        case ShaderParamKind::Point:
+            changed = ImGui::SliderFloat2(param.label.c_str(), value, std::min(param.min[0], param.min[1]), std::max(param.max[0], param.max[1]), "%.1f");
+            break;
+        case ShaderParamKind::Color:
+            changed = ImGui::ColorEdit4(param.label.c_str(), value);
+            break;
+        case ShaderParamKind::List: {
+            int index = static_cast<int>(std::lround(value[0]));
+            const char* preview = index >= 0 && index < static_cast<int>(param.labels.size()) ? param.labels[static_cast<size_t>(index)].c_str() : "-";
+            if (ImGui::BeginCombo(param.label.c_str(), preview)) {
+                for (int i = 0; i < static_cast<int>(param.labels.size()); ++i) {
+                    if (ImGui::Selectable(param.labels[static_cast<size_t>(i)].c_str(), i == index)) {
+                        index = i;
+                        changed = true;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            value[0] = static_cast<float>(index);
+            break;
+        }
+        }
+        if (changed) {
+            for (int c = 0; c < param.count; ++c) {
+                playback.values[slot + static_cast<size_t>(c)] = shaderValueClamp(param, c, value[c]);
+            }
+        }
+        ImGui::SetItemTooltip("%s", tr("Right click resets this control to the default of the file"));
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+            for (int c = 0; c < param.count; ++c) {
+                playback.values[slot + static_cast<size_t>(c)] = kClipValueUnset;
+            }
+        }
+        ImGui::PopID();
+    }
+    if (!shaderValuesUnset(playback.values) && ImGui::SmallButton(tr("Reset controls"))) {
+        playback.values = unsetShaderValues();
+    }
+}
+
 void App::drawClipPanel() {
     ImGui::Begin(trId("Clip", "clip"));
     selectedLayer_ = std::clamp(selectedLayer_, 0, kLayerCount - 1);
@@ -368,6 +475,9 @@ void App::drawClipPanel() {
         if (def.isAdvancedShader() && def.plan->alpha) {
             ImGui::TextDisabled("%s", tr("Alpha output"));
         }
+        if (def.isAdvancedShader() && !def.plan->info.format.empty()) {
+            ImGui::TextDisabled("%s", def.plan->info.format.c_str());
+        }
     } else if (def.is3d) {
         ImGui::TextColored(ui::kAccent, "3D");
     }
@@ -412,6 +522,10 @@ void App::drawClipPanel() {
                     ImGui::PopTextWrapPos();
                 }
             }
+        }
+        if (def.isAdvancedShader() && shaderError.empty()) {
+            drawShaderNotes(*def.plan);
+            drawShaderControls(*def.plan, layer.playback[static_cast<size_t>(clipColumn)]);
         }
         ImGui::TextDisabled("%s", def.path.c_str());
         if (ImGui::SmallButton(tr("Open shaders folder"))) {

@@ -4,6 +4,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -271,7 +272,7 @@ void appendSceneClips(std::vector<ClipDef>& clips) {
 }
 
 
-void fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
+bool fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
     namespace fs = std::filesystem;
     std::error_code ec;
     const auto size = fs::file_size(file, ec);
@@ -284,23 +285,33 @@ void fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
     def.plan.reset();
     if (def.bytes > kMaxShaderFileBytes) {
         def.error = "The shader file is larger than 256 KiB";
-        return;
+        return false;
     }
     std::ifstream stream(file, std::ios::binary);
     if (!stream) {
         def.error = "The shader file cannot be read";
-        return;
+        return false;
     }
     std::ostringstream buffer;
     buffer << stream.rdbuf();
     const ShaderSource prepared = prepareShaderSource(buffer.str());
     if (!prepared.ok) {
         def.error = prepared.error;
-        return;
+        return false;
+    }
+    if (prepared.plan && prepared.plan->filter) {
+        def.error = "This file is an image filter. It is in the effect list as ISF or filter effect, not in the clip library";
+        return true;
     }
     def.body = prepared.body;
     def.shadertoy = prepared.shadertoy;
     def.plan = prepared.plan;
+    return false;
+}
+
+std::map<std::string, std::pair<long long, unsigned long long>>& filterFiles() {
+    static std::map<std::string, std::pair<long long, unsigned long long>> files;
+    return files;
 }
 
 int appendShaderClips(std::vector<ClipDef>& clips) {
@@ -337,11 +348,24 @@ int appendShaderClips(std::vector<ClipDef>& clips) {
         if (!taken.insert(lowerCase(name)).second) {
             continue;
         }
+        const std::string pathText = utf8(file);
+        std::error_code statEc;
+        const auto fileSize = fs::file_size(file, statEc);
+        const auto fileTime = fs::last_write_time(file, statEc);
+        const std::pair<long long, unsigned long long> stamp{static_cast<long long>(fileTime.time_since_epoch().count()), static_cast<unsigned long long>(fileSize)};
+        const auto known = filterFiles().find(pathText);
+        if (known != filterFiles().end() && known->second == stamp) {
+            continue;
+        }
         ClipDef def;
         def.name = name;
         def.kind = ClipKind::ShaderFile;
-        def.path = utf8(file);
-        fillShaderDef(def, file);
+        def.path = pathText;
+        if (fillShaderDef(def, file)) {
+            filterFiles()[pathText] = stamp;
+            continue;
+        }
+        filterFiles().erase(pathText);
         if (!def.error.empty()) {
             logLine("Shader file '" + def.name + "': " + def.error);
         }
@@ -535,16 +559,60 @@ std::string shadertoyHeader() {
     return std::string(kShadertoyUniforms) + kShadertoyLegacyDefines;
 }
 
-std::string advancedHeader(bool shadertoy) {
-    if (shadertoy) {
-        return std::string(kShadertoyUniforms) + kChannelUniforms + kShadertoyAdvancedDefines;
+std::string paramUniforms(const ShaderPlan& plan) {
+    std::string text;
+    for (const ShaderParam& param : plan.params) {
+        switch (param.kind) {
+        case ShaderParamKind::Float:
+            text += "uniform float " + param.name + ";\n";
+            break;
+        case ShaderParamKind::Int:
+        case ShaderParamKind::List:
+            text += "uniform int " + param.name + ";\n";
+            break;
+        case ShaderParamKind::Bool:
+            text += "uniform bool " + param.name + ";\n";
+            break;
+        case ShaderParamKind::Point:
+            text += "uniform vec2 " + param.name + ";\n";
+            break;
+        case ShaderParamKind::Color:
+            text += "uniform vec4 " + param.name + ";\n";
+            break;
+        }
     }
-    return std::string(kHeader) + kChannelUniforms;
+    return text;
+}
+
+std::string advancedHeader(const ShaderPlan& plan, bool shadertoy) {
+    std::string text;
+    if (shadertoy) {
+        text = std::string(kShadertoyUniforms) + kChannelUniforms + kShadertoyAdvancedDefines;
+    } else if (plan.plain) {
+        text = std::string(kShadertoyUniforms) + kChannelUniforms;
+    } else {
+        text = std::string(kHeader) + kChannelUniforms;
+    }
+    if (plan.filter) {
+        text += "uniform sampler2D uPicture;\nuniform float uMix;\n";
+    }
+    return text + paramUniforms(plan);
 }
 
 std::string passTail(const ShaderPlan& plan, bool imagePass, bool shadertoy) {
     if (!imagePass) {
         return shadertoy ? "    fragColor = shaderColor;\n}\n" : std::string();
+    }
+    if (plan.filter) {
+        const char* mixed = "uMix >= 0.999 ? SRC : mix(texture(uPicture, vUv), SRC, clamp(uMix, 0.0, 1.0))";
+        std::string expression = mixed;
+        const std::string source = shadertoy ? "shaderColor" : "fragColor";
+        expression.replace(expression.find("SRC"), 3, source);
+        expression.replace(expression.find("SRC"), 3, source);
+        if (shadertoy) {
+            return "    fragColor = " + expression + ";\n}\n";
+        }
+        return "\n#undef main\nvoid main() {\n    nyrexUserMain();\n    fragColor = " + expression + ";\n}\n";
     }
     if (shadertoy) {
         if (!plan.alpha) {
@@ -1081,26 +1149,29 @@ const std::string& clipVertexSource() {
     return source;
 }
 
-std::string clipPassFragmentSource(const ClipDef& clip, int pass) {
-    if (!clip.plan || clip.plan->passes.empty()) {
-        return clipFragmentSource(clip);
-    }
-    const ShaderPlan& plan = *clip.plan;
+std::string planPassFragmentSource(const ShaderPlan& plan, bool shadertoy, int pass) {
     const ShaderPassSource& source = plan.passes[static_cast<size_t>(std::clamp(pass, 0, static_cast<int>(plan.passes.size()) - 1))];
-    std::string text = advancedHeader(clip.shadertoy);
+    std::string text = advancedHeader(plan, shadertoy);
     if (!plan.common.empty()) {
         text += "#line " + std::to_string(plan.commonLine) + "\n" + plan.common + "\n";
     }
-    const bool alphaMain = source.image && plan.alpha && !clip.shadertoy;
+    const bool alphaMain = source.image && (plan.alpha || plan.filter) && !shadertoy;
     if (alphaMain) {
         text += "#define main nyrexUserMain\n";
     }
     text += "#line " + std::to_string(source.firstLine) + "\n" + source.code + "\n";
-    if (clip.shadertoy) {
+    if (shadertoy) {
         text += kShadertoyPassMainHead;
     }
-    text += passTail(plan, source.image, clip.shadertoy);
+    text += passTail(plan, source.image, shadertoy);
     return text;
+}
+
+std::string clipPassFragmentSource(const ClipDef& clip, int pass) {
+    if (!clip.plan || clip.plan->passes.empty()) {
+        return clipFragmentSource(clip);
+    }
+    return planPassFragmentSource(*clip.plan, clip.shadertoy, pass);
 }
 
 std::string clipFragmentSource(const ClipDef& clip) {

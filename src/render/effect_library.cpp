@@ -4,9 +4,16 @@
 #include <array>
 #include <cctype>
 #include <deque>
+#include <filesystem>
+#include <fstream>
+#include <map>
+#include <set>
+#include <sstream>
 
 #include "core/node_compile.hpp"
 #include "core/node_files.hpp"
+#include "render/clip_library.hpp"
+#include "scene3d/scene_pack.hpp"
 #include "render/effect_library_extra.hpp"
 
 namespace nvj {
@@ -494,6 +501,89 @@ bool fillGraphDef(EffectDef& def, const GraphFileInfo& file) {
     return oldHash != def.hash || !oldError.empty();
 }
 
+
+std::string isfUtf8(const std::filesystem::path& path) {
+    const std::u8string text = path.u8string();
+    return std::string(text.begin(), text.end());
+}
+
+std::map<std::string, std::pair<long long, unsigned long long>>& examinedShaderFiles() {
+    static std::map<std::string, std::pair<long long, unsigned long long>> files;
+    return files;
+}
+
+void applyIsfControls(EffectDef& def, const ShaderPlan* plan) {
+    std::array<std::string, kParamCount>& names = graphNames()[static_cast<size_t>(def.graphSlot)];
+    const std::vector<int> controls = plan ? shaderFilterParams(*plan) : std::vector<int>();
+    for (int i = 0; i < kParamCount; ++i) {
+        if (static_cast<size_t>(i) < controls.size()) {
+            const ShaderParam& param = plan->params[static_cast<size_t>(controls[static_cast<size_t>(i)])];
+            names[static_cast<size_t>(i)] = param.label;
+            def.paramNames[static_cast<size_t>(i)] = names[static_cast<size_t>(i)].c_str();
+            def.defaults[static_cast<size_t>(i)] = shaderControlFromParam(param, param.def[0]);
+        } else {
+            names[static_cast<size_t>(i)].clear();
+            def.paramNames[static_cast<size_t>(i)] = nullptr;
+            def.defaults[static_cast<size_t>(i)] = 0.5f;
+        }
+    }
+}
+
+enum class IsfRead { Filter, Other, Failed };
+
+IsfRead readIsfFile(const std::filesystem::path& file, std::shared_ptr<const ShaderPlan>& plan, std::string& error) {
+    std::error_code ec;
+    const auto size = std::filesystem::file_size(file, ec);
+    if (ec) {
+        error = "The shader file is gone";
+        return IsfRead::Failed;
+    }
+    if (size > kMaxShaderFileBytes) {
+        error = "The shader file is larger than 256 KiB";
+        return IsfRead::Failed;
+    }
+    std::ifstream stream(file, std::ios::binary);
+    if (!stream) {
+        error = "The shader file cannot be read";
+        return IsfRead::Failed;
+    }
+    std::ostringstream buffer;
+    buffer << stream.rdbuf();
+    const ShaderSource prepared = prepareShaderSource(buffer.str());
+    if (!prepared.ok) {
+        error = prepared.error;
+        return IsfRead::Failed;
+    }
+    if (!prepared.plan || !prepared.plan->filter) {
+        return IsfRead::Other;
+    }
+    plan = prepared.plan;
+    return IsfRead::Filter;
+}
+
+bool fillIsfDef(EffectDef& def, const std::filesystem::path& file) {
+    std::error_code ec;
+    def.bytes = std::filesystem::exists(file, ec) ? static_cast<unsigned long long>(std::filesystem::file_size(file, ec)) : 0;
+    const auto time = std::filesystem::last_write_time(file, ec);
+    def.stamp = ec ? 0 : static_cast<long long>(time.time_since_epoch().count());
+    std::shared_ptr<const ShaderPlan> plan;
+    std::string error;
+    const IsfRead state = readIsfFile(file, plan, error);
+    if (state == IsfRead::Other) {
+        error = "This file is not an image filter any more. It is in the clip library";
+    }
+    if (state != IsfRead::Filter) {
+        def.error = error;
+        def.plan.reset();
+        def.usesPrevious = false;
+        applyIsfControls(def, nullptr);
+        return true;
+    }
+    def.error.clear();
+    def.plan = plan;
+    applyIsfControls(def, plan.get());
+    return true;
+}
 }
 
 const std::vector<EffectDef>& effectLibrary() {
@@ -563,6 +653,108 @@ NodeScan refreshNodeEffects(const std::string& forceName) {
         library.push_back(std::move(def));
         ++count;
         ++scan.added;
+    }
+    return scan;
+}
+
+
+std::string isfEffectName(const std::string& stem) {
+    return "ISF: " + stem;
+}
+
+IsfScan refreshIsfEffects() {
+    namespace fs = std::filesystem;
+    IsfScan scan;
+    std::vector<EffectDef>& library = mutableLibrary();
+    std::error_code ec;
+    std::vector<fs::path> files;
+    const fs::path directory = pathFromUtf8(shaderDirectory());
+    for (fs::directory_iterator it(directory, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code entryEc;
+        if (it->is_regular_file(entryEc) && !entryEc && isShaderFileName(isfUtf8(it->path().filename()))) {
+            files.push_back(it->path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    size_t count = 0;
+    for (size_t i = 0; i < library.size(); ++i) {
+        EffectDef& def = library[i];
+        if (!def.isIsf) {
+            continue;
+        }
+        ++count;
+        const fs::path* match = nullptr;
+        for (const fs::path& file : files) {
+            if (isfEffectName(isfUtf8(file.stem())) == def.name) {
+                match = &file;
+                break;
+            }
+        }
+        if (!match) {
+            if (def.error != "The shader file is gone") {
+                def.error = "The shader file is gone";
+                def.plan.reset();
+                applyIsfControls(def, nullptr);
+                scan.changed.push_back(i);
+            }
+            continue;
+        }
+        std::error_code statEc;
+        const auto size = fs::file_size(*match, statEc);
+        const auto time = fs::last_write_time(*match, statEc);
+        const long long stamp = statEc ? 0 : static_cast<long long>(time.time_since_epoch().count());
+        if (stamp == def.stamp && static_cast<unsigned long long>(size) == def.bytes && def.error != "The shader file is gone") {
+            continue;
+        }
+        def.path = isfUtf8(*match);
+        if (fillIsfDef(def, *match)) {
+            scan.changed.push_back(i);
+        }
+    }
+    for (const fs::path& file : files) {
+        const std::string name = isfEffectName(isfUtf8(file.stem()));
+        bool known = false;
+        for (const EffectDef& def : library) {
+            if (def.isIsf && def.name == name) {
+                known = true;
+                break;
+            }
+        }
+        if (known) {
+            continue;
+        }
+        std::error_code statEc;
+        const auto size = fs::file_size(file, statEc);
+        const auto time = fs::last_write_time(file, statEc);
+        const std::pair<long long, unsigned long long> stamp{static_cast<long long>(time.time_since_epoch().count()), static_cast<unsigned long long>(size)};
+        const std::string key = isfUtf8(file);
+        const auto seen = examinedShaderFiles().find(key);
+        if (seen != examinedShaderFiles().end() && seen->second == stamp) {
+            continue;
+        }
+        std::shared_ptr<const ShaderPlan> plan;
+        std::string error;
+        const IsfRead state = readIsfFile(file, plan, error);
+        examinedShaderFiles()[key] = stamp;
+        if (state == IsfRead::Other || count >= kMaxIsfEffects) {
+            continue;
+        }
+        if (state == IsfRead::Failed) {
+            continue;
+        }
+        EffectDef def;
+        def.name = name;
+        def.paramNames = {nullptr, nullptr, nullptr, nullptr};
+        def.defaults = {0.5f, 0.5f, 0.5f, 0.5f};
+        def.isIsf = true;
+        def.path = key;
+        graphNames().emplace_back();
+        def.graphSlot = static_cast<int>(graphNames().size()) - 1;
+        fillIsfDef(def, file);
+        library.push_back(std::move(def));
+        ++count;
+        ++scan.added;
+        examinedShaderFiles().erase(key);
     }
     return scan;
 }

@@ -1,8 +1,10 @@
 #pragma once
 
 #include "core/composition.hpp"
+#include "render/shader_source.hpp"
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -16,9 +18,11 @@ struct EffectDef {
     bool is3d = false;
     bool usesPrevious = false;
     bool isGraph = false;
+    bool isIsf = false;
     bool usesMacros = false;
     int graphSlot = -1;
     int textureReads = 0;
+    std::shared_ptr<const ShaderPlan> plan{};
     std::string path{};
     std::string error{};
     long long stamp = 0;
@@ -33,7 +37,16 @@ struct NodeScan {
     int added = 0;
 };
 
+constexpr size_t kMaxIsfEffects = 64;
+
+struct IsfScan {
+    std::vector<size_t> changed;
+    int added = 0;
+};
+
 NodeScan refreshNodeEffects(const std::string& forceName = std::string());
+IsfScan refreshIsfEffects();
+std::string isfEffectName(const std::string& stem);
 std::string assembleEffectSource(const std::string& body);
 int registerEffect(const std::string& name, const std::string& body, bool usesPrevious, const std::array<float, kParamCount>& defaults, bool usesMacros = false);
 

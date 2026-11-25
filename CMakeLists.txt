@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.36.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.37.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -160,6 +160,7 @@ set(NYREXVJ_CORE_SOURCES
     src/render/asset_import.cpp
     src/render/clip_library.cpp
     src/render/shader_source.cpp
+    src/render/isf.cpp
     src/render/clips_extra.cpp
     src/core/clip_pack.cpp
     src/scene3d/builtin_docs.cpp
@@ -539,6 +540,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_shader_tests PRIVATE nvj_core)
     target_include_directories(nvj_shader_tests PRIVATE tests)
     add_test(NAME nvj_shader_tests COMMAND nvj_shader_tests)
+    add_executable(nvj_isf_tests tests/test_isf.cpp)
+    target_link_libraries(nvj_isf_tests PRIVATE nvj_core)
+    target_include_directories(nvj_isf_tests PRIVATE tests)
+    target_compile_definitions(nvj_isf_tests PRIVATE "NVJ_ISF_EXAMPLES=\"${CMAKE_SOURCE_DIR}/docs/shaders\"")
+    add_test(NAME nvj_isf_tests COMMAND nvj_isf_tests)
     function(nyrexvj_plugin_module target source output_name output_dir)
         add_library(${target} MODULE ${source})
         if(ARGN)

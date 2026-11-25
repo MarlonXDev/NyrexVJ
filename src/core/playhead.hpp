@@ -1,8 +1,20 @@
 #pragma once
 
+#include <array>
 #include <string>
 
 namespace nvj {
+
+constexpr int kClipValueCount = 16;
+constexpr float kClipValueUnset = -3.0e38f;
+
+constexpr std::array<float, kClipValueCount> unsetClipValues() {
+    std::array<float, kClipValueCount> values{};
+    for (float& value : values) {
+        value = kClipValueUnset;
+    }
+    return values;
+}
 
 enum class LoopMode { Loop = 0, PingPong = 1, OnceHold = 2, OnceStop = 3 };
 
@@ -17,6 +29,7 @@ struct ClipPlayback {
     LoopMode loop = LoopMode::Loop;
     float speed = 1.0f;
     float syncBeats = 0.0f;
+    std::array<float, kClipValueCount> values = unsetClipValues();
 
     bool operator==(const ClipPlayback&) const = default;
     bool isDefault() const { return *this == ClipPlayback{}; }

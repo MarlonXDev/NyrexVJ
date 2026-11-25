@@ -1670,6 +1670,10 @@ const Translation kJapanese[] = {
     {"Could not open the port, it may be in use", "ポートを開けませんでした。使用中の可能性があります"},
     {"Could not listen on the port", "ポートで待ち受けできませんでした"},
     {"The port must be between 1 and 65535", "ポートは1から65535の間で指定してください"},
+    {"Shader controls", "シェーダーのコントロール"},
+    {"Reset controls", "コントロールをリセット"},
+    {"Notes about this file", "このファイルについての注意"},
+    {"Right click resets this control to the default of the file", "右クリックでこのコントロールをファイルの初期値に戻します"},
 };
 
 }

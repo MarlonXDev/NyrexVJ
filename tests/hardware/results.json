@@ -533,6 +533,58 @@
       "test": "A-API-3",
       "command": "NyrexVJ --bench-api 240",
       "notes": "960x540, 240 frames per phase at 60 fps pacing: frame average 43.9 ms off, 42.5 ms idle, 43.4 ms with 3 polling clients, 82.6 ms under a flood of 36454 requests a second (the six load threads share the two cores with the software renderer), 41.6 ms off again; software OpenGL, says nothing about a graphics card"
+    },
+    {
+      "area": "isf-import",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.37.0 (branch feature/isf-import, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-ISF-1",
+      "command": "ctest -R nvj_isf_tests",
+      "notes": "22970 checks, 0 failed; also 0 failed and no report under AddressSanitizer and UndefinedBehaviorSanitizer; whole suite 33 of 33 passed"
+    },
+    {
+      "area": "isf-import",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.37.0 (branch feature/isf-import, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-ISF-2",
+      "command": "ctest -R nvj_shader_tests",
+      "notes": "248 checks, 0 failed; also 0 failed under AddressSanitizer and UndefinedBehaviorSanitizer"
+    },
+    {
+      "area": "isf-import",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.37.0 (branch feature/isf-import, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-ISF-3",
+      "command": "NyrexVJ --shader-selftest",
+      "notes": "94 checks (54 of them for ISF and controls), 0 failed on llvmpipe"
+    },
+    {
+      "area": "isf-import",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.37.0 (branch feature/isf-import, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-ISF-4",
+      "command": "NyrexVJ --shader-selftest 60",
+      "notes": "1280x720 on llvmpipe, two runs: plain shader 13.3 and 13.7 ms, ISF generator 13.4 and 13.9 ms, ISF generator with a half size buffer 18.2 and 18.5 ms, one pass filter 17.2 and 18.5 ms, two pass blur filter 59.3 and 59.7 ms, trails filter 30.4 and 29.4 ms; the cases that existed before are within the noise of the previous release (about 5 percent) and use the same buffer memory; software renderer, so this says nothing about a real graphics card"
     }
   ]
 }

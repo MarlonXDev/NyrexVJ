@@ -40,6 +40,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Running next to VRChat (CPU, GPU and VRAM shared) | implemented | n/a | 0 | M-VRC-1 open |
 | Media outages: file removed or truncated while it plays | implemented | automated 1/1 | 1 | M-OUT-1 open |
 | Web interface and REST API | implemented | automated 3/3 | 3 | M-API-1 open; M-API-2 open; M-API-3 open |
+| ISF shader import: generators, image filters, several passes | implemented | automated 4/4 | 4 | M-ISF-1 open; M-ISF-2 open; M-ISF-3 open; M-ISF-4 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

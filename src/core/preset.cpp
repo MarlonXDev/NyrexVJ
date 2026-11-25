@@ -202,6 +202,13 @@ json playbackToJson(const ClipPlayback& playback) {
     node["loop"] = loopModeName(playback.loop);
     node["speed"] = playback.speed;
     node["beats"] = playback.syncBeats;
+    if (std::any_of(playback.values.begin(), playback.values.end(), [](float value) { return value != kClipValueUnset; })) {
+        json values = json::array();
+        for (const float value : playback.values) {
+            values.push_back(value == kClipValueUnset ? json(nullptr) : json(value));
+        }
+        node["values"] = values;
+    }
     return node;
 }
 
@@ -215,6 +222,15 @@ ClipPlayback playbackFromJson(const json& node) {
     playback.loop = loopModeFromName(readString(node, "loop"));
     playback.speed = readNumber(node, "speed", 1.0f, kMinPlaySpeed, kMaxPlaySpeed);
     playback.syncBeats = readNumber(node, "beats", 0.0f, 0.0f, 128.0f);
+    if (node.contains("values") && node["values"].is_array()) {
+        const json& values = node["values"];
+        for (size_t i = 0; i < values.size() && i < playback.values.size(); ++i) {
+            if (values[i].is_number()) {
+                const double value = values[i].get<double>();
+                playback.values[i] = std::isfinite(value) && std::fabs(value) <= 1.0e6 ? static_cast<float>(value) : kClipValueUnset;
+            }
+        }
+    }
     return clampedPlayback(playback);
 }
 

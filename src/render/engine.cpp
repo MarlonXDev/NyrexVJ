@@ -526,13 +526,17 @@ void Engine::reloadNodeEffects(const std::vector<size_t>& indices) {
         if (index >= effects_.size() || index >= library.size()) {
             continue;
         }
-        if (!library[index].error.empty() && effects_[index].id) {
+        if (!library[index].error.empty() && (effects_[index].id || !effects_[index].passes.empty())) {
             continue;
         }
         if (effects_[index].id) {
             glDeleteProgram(effects_[index].id);
         }
+        for (const PassProgram& pass : effects_[index].passes) {
+            glDeleteProgram(pass.id);
+        }
         effects_[index] = EffectProgram{};
+        clearShaderStates(kEffectStateBase + static_cast<int>(index));
     }
 }
 
@@ -541,7 +545,13 @@ std::string Engine::effectError(int effect) const {
     if (effect < 0 || static_cast<size_t>(effect) >= library.size()) {
         return std::string();
     }
-    return library[static_cast<size_t>(effect)].error;
+    if (!library[static_cast<size_t>(effect)].error.empty()) {
+        return library[static_cast<size_t>(effect)].error;
+    }
+    if (static_cast<size_t>(effect) < effects_.size()) {
+        return effects_[static_cast<size_t>(effect)].error;
+    }
+    return std::string();
 }
 
 int Engine::checkNodeCatalogue(std::string& report) {
@@ -1037,15 +1047,13 @@ void Engine::releaseClipProgram(ClipProgram& clip) {
     clip.passes.clear();
 }
 
-bool Engine::buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& clip) {
-    (void)index;
-    std::string errors;
+bool Engine::buildPlanPasses(const ShaderPlan& plan, bool shadertoy, const std::string& name, std::vector<PassProgram>& out, std::string& errors) {
     std::vector<PassProgram> passes;
-    for (int p = 0; p < def.passCount(); ++p) {
+    for (int p = 0; p < static_cast<int>(plan.passes.size()); ++p) {
         std::string error;
-        const GLuint program = buildProgram(clipVertexSource(), clipPassFragmentSource(def, p), &error);
+        const GLuint program = buildProgram(clipVertexSource(), planPassFragmentSource(plan, shadertoy, p), &error);
         if (!program) {
-            errors += def.plan->passes[static_cast<size_t>(p)].label() + ":\n" + error + "\n";
+            errors += plan.passes[static_cast<size_t>(p)].label() + ":\n" + error + "\n";
             continue;
         }
         PassProgram pass;
@@ -1063,6 +1071,11 @@ bool Engine::buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& cl
         pass.audioTex = glGetUniformLocation(program, "uAudioTex");
         pass.frame = glGetUniformLocation(program, "uFrame");
         pass.delta = glGetUniformLocation(program, "uDelta");
+        pass.mix = glGetUniformLocation(program, "uMix");
+        pass.picture = glGetUniformLocation(program, "uPicture");
+        for (size_t k = 0; k < plan.params.size() && k < pass.param.size(); ++k) {
+            pass.param[k] = glGetUniformLocation(program, plan.params[k].name.c_str());
+        }
         for (int c = 0; c < kShaderChannels; ++c) {
             const std::string index = std::to_string(c);
             pass.channel[static_cast<size_t>(c)] = glGetUniformLocation(program, ("uChannel" + index).c_str());
@@ -1075,7 +1088,18 @@ bool Engine::buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& cl
         for (const PassProgram& pass : passes) {
             glDeleteProgram(pass.id);
         }
-        logLine("Clip shader '" + def.name + "' failed: " + errors);
+        logLine("Shader '" + name + "' failed: " + errors);
+        return false;
+    }
+    out = std::move(passes);
+    return true;
+}
+
+bool Engine::buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& clip) {
+    (void)index;
+    std::string errors;
+    std::vector<PassProgram> passes;
+    if (!buildPlanPasses(*def.plan, def.shadertoy, def.name, passes, errors)) {
         clip.error = errors.size() > 4000 ? errors.substr(0, 4000) : errors;
         return false;
     }
@@ -1089,13 +1113,28 @@ bool Engine::ensureEffect(size_t index) {
     }
     EffectProgram& effect = effects_[index];
     if (effect.tried) {
-        return effect.id != 0;
+        return effect.id != 0 || !effect.passes.empty();
     }
     effect.tried = true;
     const EffectDef& def = effectLibrary()[index];
     if (def.isGraph && !def.error.empty()) {
         logLine("Node effect '" + def.name + "' has an error: " + def.error);
         return false;
+    }
+    if (def.isIsf) {
+        if (!def.error.empty() || !def.plan || def.plan->passes.empty()) {
+            effect.error = def.error;
+            return false;
+        }
+        std::string errors;
+        std::vector<PassProgram> passes;
+        if (!buildPlanPasses(*def.plan, false, def.name, passes, errors)) {
+            effect.error = errors.size() > 4000 ? errors.substr(0, 4000) : errors;
+            return false;
+        }
+        effect.passes = std::move(passes);
+        effect.plan = def.plan;
+        return true;
     }
     std::string error;
     GLuint program = buildProgram(clipVertexSource(), effectFragmentSource(static_cast<int>(index)), &error);
@@ -1134,7 +1173,7 @@ int Engine::prepareAll(std::string& report) {
         }
     }
     for (size_t i = 0; i < effects_.size(); ++i) {
-        if (effectLibrary()[i].isGraph) {
+        if (effectLibrary()[i].isGraph || effectLibrary()[i].isIsf) {
             continue;
         }
         if (!ensureEffect(i)) {
@@ -2077,7 +2116,7 @@ bool Engine::allocateShaderState(ShaderPassState& state, size_t clipIndex, const
     return true;
 }
 
-void Engine::drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target) {
+void Engine::drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target, const ShaderValues& stored) {
     ClipProgram& clip = clips_[clipIndex];
     const ClipDef& def = clipLibrary()[clipIndex];
     ShaderPassState& state = shaderStates_[instance];
@@ -2105,7 +2144,7 @@ void Engine::drawShaderInstance(size_t clipIndex, int instance, const std::array
         state.clear();
     }
     clip.runtimeError.clear();
-    runShaderPasses(clip, def, state, colorA, colorB, rainbow, scale, clock, static_cast<float>(beat_), comp.bpm, target, false);
+    runShaderPasses(*def.plan, clip.passes, state, colorA, colorB, rainbow, scale, clock, static_cast<float>(beat_), comp.bpm, target, false, resolveShaderValues(*def.plan, stored), nullptr, 1.0f);
     state.lastDrawn = frameId_;
     state.lastClock = clock;
 }
@@ -2123,13 +2162,12 @@ void Engine::renderShaderThumbnail(size_t clipIndex, const RenderTarget& target)
     constexpr int kWarmFrames = 8;
     for (int k = 0; k < kWarmFrames; ++k) {
         const double clock = 2.6 - static_cast<double>(kWarmFrames - 1 - k) / 30.0;
-        runShaderPasses(clip, def, state, defaults.colorA, defaults.colorB, false, 1.0f, clock, 2.3f, 128.0f, target, true);
+        runShaderPasses(*def.plan, clip.passes, state, defaults.colorA, defaults.colorB, false, 1.0f, clock, 2.3f, 128.0f, target, true, resolveShaderValues(*def.plan, unsetShaderValues()), nullptr, 1.0f);
     }
     state.destroy();
 }
 
-void Engine::runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail) {
-    const ShaderPlan& plan = *def.plan;
+void Engine::runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgram>& programs, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail, const ShaderValues& values, const RenderTarget* picture, float mixAmount) {
     const std::vector<std::string> mediaNames = plan.mediaNames();
     glDisable(GL_BLEND);
     for (size_t m = 0; m < mediaNames.size() && m < state.media.size(); ++m) {
@@ -2155,9 +2193,9 @@ void Engine::runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassSt
     }
 
     const float delta = state.frame == 0 ? 0.0f : static_cast<float>(std::clamp(std::abs(clock - state.lastClock), 0.0, 0.25));
-    for (size_t p = 0; p < plan.passes.size() && p < clip.passes.size(); ++p) {
+    for (size_t p = 0; p < plan.passes.size() && p < programs.size(); ++p) {
         const ShaderPassSource& source = plan.passes[p];
-        const PassProgram& program = clip.passes[p];
+        const PassProgram& program = programs[p];
         const RenderTarget* destination = &target;
         if (!source.image) {
             const size_t b = static_cast<size_t>(source.buffer);
@@ -2175,6 +2213,40 @@ void Engine::runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassSt
         glUniform1f(program.scale, source.image ? scale : 1.0f);
         glUniform1i(program.frame, static_cast<GLint>(std::min<unsigned long long>(state.frame, 2147483647ull)));
         glUniform1f(program.delta, delta);
+        for (size_t k = 0; k < plan.params.size() && k < program.param.size(); ++k) {
+            const ShaderParam& param = plan.params[k];
+            const GLint location = program.param[k];
+            if (location < 0) {
+                continue;
+            }
+            const size_t slot = static_cast<size_t>(param.slot);
+            switch (param.kind) {
+            case ShaderParamKind::Float:
+                glUniform1f(location, values[slot]);
+                break;
+            case ShaderParamKind::Int:
+            case ShaderParamKind::Bool:
+                glUniform1i(location, static_cast<GLint>(std::lround(values[slot])));
+                break;
+            case ShaderParamKind::List: {
+                const size_t index = static_cast<size_t>(std::clamp(static_cast<int>(std::lround(values[slot])), 0, std::max(0, static_cast<int>(param.values.size()) - 1)));
+                glUniform1i(location, param.values.empty() ? 0 : static_cast<GLint>(std::lround(param.values[index])));
+                break;
+            }
+            case ShaderParamKind::Point:
+                glUniform2f(location, values[slot], values[slot + 1]);
+                break;
+            case ShaderParamKind::Color:
+                glUniform4f(location, values[slot], values[slot + 1], values[slot + 2], values[slot + 3]);
+                break;
+            }
+        }
+        if (plan.filter && picture) {
+            glUniform1f(program.mix, mixAmount);
+            glActiveTexture(GL_TEXTURE0 + 7);
+            glBindTexture(GL_TEXTURE_2D, picture->texture);
+            glUniform1i(program.picture, 7);
+        }
         setAudioUniforms(program.audio, program.kick, program.audioTex);
         for (int c = 0; c < kShaderChannels; ++c) {
             const ShaderInput& input = source.inputs[static_cast<size_t>(c)];
@@ -2185,6 +2257,12 @@ void Engine::runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassSt
                 texture = audioTexture_;
                 width = static_cast<float>(kSpectrumBins);
                 height = 2.0f;
+            } else if (input.kind == ShaderInputKind::Picture) {
+                if (picture && picture->texture) {
+                    texture = picture->texture;
+                    width = static_cast<float>(picture->width);
+                    height = static_cast<float>(picture->height);
+                }
             } else if (input.kind == ShaderInputKind::Buffer) {
                 const size_t b = static_cast<size_t>(input.buffer);
                 const RenderTarget& buffer = state.buffers[b][static_cast<size_t>(state.latest[b])];
@@ -2221,6 +2299,10 @@ void Engine::runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassSt
         const GLuint unit = static_cast<GLuint>(3 + c);
         glActiveTexture(GL_TEXTURE0 + unit);
         glBindSampler(unit, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    if (plan.filter) {
+        glActiveTexture(GL_TEXTURE0 + 7);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     glActiveTexture(GL_TEXTURE0);
@@ -2330,7 +2412,7 @@ void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, co
         drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock, &playback);
     } else if (liveClip && drawLive(clipDef, scale)) {
     } else if (clipDef.isAdvancedShader()) {
-        drawShaderInstance(static_cast<size_t>(clipIndex), instance, layer.colorA, layer.colorB, layer.rainbow, scale, clock, target);
+        drawShaderInstance(static_cast<size_t>(clipIndex), instance, layer.colorA, layer.colorB, layer.rainbow, scale, clock, target, playback.values);
     } else if (liveClip || !spoutClip || !drawSpout(clipDef.sceneIndex, scale)) {
         drawClip(clips_[static_cast<size_t>(clipIndex)], static_cast<float>(clock), static_cast<float>(beat_), comp.bpm, static_cast<float>(target.width), static_cast<float>(target.height), layer.colorA, layer.colorB, layer.rainbow, scale);
     }
@@ -2433,6 +2515,17 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
             continue;
         }
 
+        if (!effect.passes.empty()) {
+            const RenderTarget* slotAddress = &feedback[s];
+            const RenderTarget* base = feedback_.data();
+            const bool inMain = !std::less<const RenderTarget*>{}(slotAddress, base) && std::less<const RenderTarget*>{}(slotAddress, base + feedback_.size());
+            const int key = kEffectKeyBase + (inMain ? static_cast<int>(slotAddress - base) : static_cast<int>(feedback_.size()) + s);
+            if (runPlanEffect(static_cast<size_t>(slot.effect), key, slot, params, mixAmount, in, out) == out) {
+                std::swap(in, out);
+            }
+            continue;
+        }
+
         if (effect.usesPrevious && !feedback[s].fbo) {
             if (feedback[s].create(source->width, source->height)) {
                 clearTarget(feedback[s]);
@@ -2474,6 +2567,45 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         std::swap(in, out);
     }
     return in;
+}
+
+RenderTarget* Engine::runPlanEffect(size_t effectIndex, int stateKey, const EffectSlot& slot, const std::array<float, kParamCount>& params, float mixAmount, RenderTarget* in, RenderTarget* out) {
+    (void)slot;
+    EffectProgram& effect = effects_[effectIndex];
+    if (!effect.plan) {
+        return in;
+    }
+    const ShaderPlan& plan = *effect.plan;
+    const size_t owner = static_cast<size_t>(kEffectStateBase) + effectIndex;
+    ShaderPassState& state = shaderStates_[stateKey];
+    if (!state.matches(owner, in->width, in->height)) {
+        std::string error;
+        std::string note;
+        if (!allocateShaderState(state, owner, plan, in->width, in->height, error, note)) {
+            if (effect.runtimeError != error) {
+                logLine("Effect '" + effectLibrary()[effectIndex].name + "': " + error);
+            }
+            effect.runtimeError = error;
+            state.destroy();
+            return in;
+        }
+        state.lastDrawn = frameId_;
+        state.lastClock = time_;
+    } else if (state.restart || frameId_ - state.lastDrawn > kShaderRestartGapFrames) {
+        state.clear();
+    }
+    effect.runtimeError.clear();
+    ShaderValues values = resolveShaderValues(plan, unsetShaderValues());
+    const std::vector<int> controls = shaderFilterParams(plan);
+    for (size_t k = 0; k < controls.size() && k < params.size(); ++k) {
+        const ShaderParam& param = plan.params[static_cast<size_t>(controls[k])];
+        values[static_cast<size_t>(param.slot)] = shaderParamFromControl(param, params[k]);
+    }
+    const std::array<float, 3> white{1.0f, 1.0f, 1.0f};
+    runShaderPasses(plan, effect.passes, state, white, white, false, 1.0f, time_, static_cast<float>(beat_), comp.bpm, *out, false, values, in, mixAmount);
+    state.lastDrawn = frameId_;
+    state.lastClock = time_;
+    return out;
 }
 
 RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews) {

@@ -33,7 +33,7 @@ The request: make the website "much better and more detailed", and write a manua
 - **A site generator such as Jekyll or Hugo on GitHub Pages.** It adds a build tool and its themes, and the privacy rules need full control of every page. The repository already uses Python scripts for its checks.
 - **JavaScript on the website for search and navigation.** It would break the promise of no scripts that the privacy note is built on. The website has the contents page, the one-page version and the browser's own find.
 - **Pictures made by hand.** They are out of date at the next interface change. A script can be run again.
-- **A manual in all seven languages now.** The text could be machine translated, but German is the only language besides English that the maintainer can judge, and nobody here can judge the other six. A wrong manual is worse than an English one, so the other languages show the English version until someone who speaks them offers a translation.
+- **A manual in all seven languages now.** The text could be machine translated, but the interface texts in the other six languages are machine assisted (see [LANGUAGES.md](../LANGUAGES.md)) and nobody has reviewed a manual text in them. A wrong manual is worse than an English one, so the other languages show the English version until someone who speaks them offers a translation.
 
 ## Consequences
 - The program grows by the two embedded files (about 175 KB). The program starts no file read for the manual; the text is parsed on first use.

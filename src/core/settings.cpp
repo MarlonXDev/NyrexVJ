@@ -95,6 +95,26 @@ bool loadSettings(Settings& settings) {
     if (perfBudget != doc.end() && perfBudget->is_number_integer()) {
         result.perfBudgetFps = std::clamp(perfBudget->get<int>(), 24, 360);
     }
+    auto memoryBudget = doc.find("gpuMemoryBudgetMb");
+    if (memoryBudget != doc.end() && memoryBudget->is_number_integer()) {
+        const int value = memoryBudget->get<int>();
+        result.gpuMemoryBudgetMb = value <= 0 ? 0 : std::clamp(value, 256, 65536);
+    }
+    result.gpuMemoryTrim = boolean("gpuMemoryTrim", true);
+    result.gpuMemoryLowerQuality = boolean("gpuMemoryLowerQuality", false);
+    result.diagWarnings = boolean("diagWarnings", true);
+    auto diagP99 = doc.find("diagP99Percent");
+    if (diagP99 != doc.end() && diagP99->is_number_integer()) {
+        result.diagP99Percent = std::clamp(diagP99->get<int>(), 110, 600);
+    }
+    auto diagDropped = doc.find("diagDroppedPerMinute");
+    if (diagDropped != doc.end() && diagDropped->is_number_integer()) {
+        result.diagDroppedPerMinute = std::clamp(diagDropped->get<int>(), 1, 600);
+    }
+    auto diagMemory = doc.find("diagMemoryPercent");
+    if (diagMemory != doc.end() && diagMemory->is_number_integer()) {
+        result.diagMemoryPercent = std::clamp(diagMemory->get<int>(), 50, 99);
+    }
     auto renderQuality = doc.find("renderQuality");
     if (renderQuality != doc.end() && renderQuality->is_number_integer()) {
         result.renderQuality = clampQualityMode(renderQuality->get<int>());
@@ -341,6 +361,13 @@ bool saveSettings(const Settings& settings) {
     doc["showStatusBar"] = settings.showStatusBar;
     doc["showTimings"] = settings.showTimings;
     doc["perfBudgetFps"] = settings.perfBudgetFps;
+    doc["gpuMemoryBudgetMb"] = settings.gpuMemoryBudgetMb <= 0 ? 0 : std::clamp(settings.gpuMemoryBudgetMb, 256, 65536);
+    doc["gpuMemoryTrim"] = settings.gpuMemoryTrim;
+    doc["gpuMemoryLowerQuality"] = settings.gpuMemoryLowerQuality;
+    doc["diagWarnings"] = settings.diagWarnings;
+    doc["diagP99Percent"] = std::clamp(settings.diagP99Percent, 110, 600);
+    doc["diagDroppedPerMinute"] = std::clamp(settings.diagDroppedPerMinute, 1, 600);
+    doc["diagMemoryPercent"] = std::clamp(settings.diagMemoryPercent, 50, 99);
     doc["renderQuality"] = settings.renderQuality;
     doc["uiScale"] = settings.uiScale;
     doc["theme"] = settings.theme;

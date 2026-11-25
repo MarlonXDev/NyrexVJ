@@ -1191,11 +1191,25 @@ Eine Live-Show braucht eine gleichmäßige Bildrate. NyrexVJ ist leicht, aber vi
 
 ## Bildrate und Budget {#perf-frame}
 
-Die Bildratenbegrenzung begrenzt, wie oft das Programm ein Bild zeichnet, mit oder ohne VSync. Eine niedrigere Grenze lässt auf demselben Computer mehr Grafik- und Prozessorzeit für VRChat. Das Bildzeit-Budget ist die Zeit, die ein Bild brauchen darf, abgeleitet aus deiner Ziel-Bildrate. Bilder darüber zählen als zu langsam, und die Seite zeigt, wie viele Bilder im Budget blieben, den Durchschnitt, die langsamsten fünf Prozent und das schlechteste Bild.
+Die Bildratenbegrenzung begrenzt, wie oft das Programm ein Bild zeichnet, mit oder ohne VSync. Eine niedrigere Grenze lässt auf demselben Computer mehr Grafik- und Prozessorzeit für VRChat. Das Bildzeit-Budget ist die Zeit, die ein Bild brauchen darf, abgeleitet aus deiner Ziel-Bildrate. Bilder darüber zählen als zu langsam, und die Seite zeigt, wie viele Bilder im Budget blieben, den Durchschnitt, die langsamsten fünf Prozent, die langsamsten ein Prozent und das schlechteste Bild.
 
 ## Renderqualität {#perf-quality}
 
 Die Layer-Auflösung zeichnet die Layer und ihre Effekte in kleinerer Größe und skaliert sie hoch, wenn sie gemischt werden. Volle Qualität ändert nichts, Ausgewogen zeichnet mit 75 Prozent, Leistung mit 50 Prozent. Automatisch senkt die Auflösung in kleinen Schritten nur, solange ein Bild länger als das Budget braucht, und hebt sie wieder an, wenn Platz ist. Master-Effekte und jeder Ausgang bleiben in voller Auflösung.
+
+## Grafikspeicher und Warnungen {#perf-memory}
+
+Unter Grafikspeicher und Datenverkehr zeigt die Leistungsseite zwei Arten von Zahlen und hält sie getrennt. Vom Grafiktreiber gemessen ist, was der Treiber über die ganze Karte sagt, für alle Programme zusammen: belegter Speicher, freier Speicher und wie oft der Treiber Videospeicher in den Systemspeicher verschieben musste. Das können nur Treiber mit der Erweiterung GL_NVX_gpu_memory_info oder GL_ATI_meminfo, und Software-Renderer liefern sinnlose Werte, deshalb sagt die Seite auf vielen Computern, dass nichts Brauchbares gemeldet wird. Von NyrexVJ geschätzt ist, was NyrexVJ selbst angelegt hat: Render-Ziele, Vorschaubilder, Bilder, Videos, 3D-Szenen, Effekt-Puffer, Text und Partikel. VRChat oder ein anderes Programm sieht es nicht.
+
+Speicherbudget (0 = aus) ist der meiste Grafikspeicher, den NyrexVJ belegen soll. Am Anfang ist es aus, und solange es 0 ist, ändert sich nichts. Mit einem Budget werden Clips, die nicht laufen und fünf Sekunden nicht benutzt wurden, entladen, wenn die Schätzung darüber liegt: zuerst vorbereitete Videos, dann Bilder, dann 3D-Szenen. Ein Clip, der läuft, wird nie entladen, und ein Clip, den du startest, nachdem er entladen wurde, wird wieder geladen, das kann einen Moment dauern. Reicht das nicht, schaltet NyrexVJ hoch: zuerst hört es auf, die nächsten Clips vorzubereiten, dann entlädt es nach einer Sekunde, und mit angehaktem Zusätzlich die Ebenenauflösung senken zeichnet es die Ebenen mit 75 und dann 50 Prozent. Es geht zurück, wenn wieder Platz ist.
+
+Die Seite zeigt außerdem:
+
+- Upload von Video und Live-Quellen: die Bilddaten, die NyrexVJ an den Treiber übergibt, pro Sekunde, die höchste Sekunde der letzten zehn und die Summe. Bilder und Modelle werden einmal geladen und nicht mitgezählt.
+- Die langsamsten ein Prozent und, aus einem 60-Sekunden-Fenster, P95 und P99, späte Bilder (mehr als das 1,5-Fache des Budgets) und ausgefallene Bilder, aus der Zeit zwischen den Bildern geschätzt.
+- Warnungen bei langsamen Bildern, ausgefallenen Bildern, Speicher nahe am oder über dem Budget, wenig freiem Speicher auf der Karte, Verschiebungen durch den Treiber und sehr hohem Upload. Sie erscheinen nach zwei Sekunden, verschwinden nach sechs und zeigen sich als farbige Zahl in der Statusleiste. Warngrenzen ändert die drei, die von deiner Show abhängen.
+
+> Warnung: Die Schätzung zählt, was NyrexVJ angelegt hat, nicht was die Karte noch frei hat, und ein Budget kann VRChat nicht sehen. Liegt das Budget unter dem, was die laufenden Clips brauchen, lässt sich nichts freigeben, und die Seite sagt es. Erhöhe das Budget oder senke die Ebenenauflösung.
 
 ## Text und Partikel {#perf-generators}
 
@@ -1209,7 +1223,7 @@ Partikel-Obergrenze pro Ebene ist die größte Zahl an Partikeln, die ein Partik
 - Live-Quellen werden drei Sekunden nach der letzten Nutzung geschlossen.
 - 3D-Modelle und -Szenen kosten Grafikzeit entsprechend ihrer Dreieckszahl.
 
-Die Seite zeigt auch den Speicher: eine Schätzung des Grafikspeichers, den Videospeicher und den Programmspeicher, und welcher Clip oder Effekt die Zeit braucht. Gemessene Zahlen und Grenzen stehen in docs/PERFORMANCE.md des Projekts.
+Die Seite zeigt auch den Speicher: eine Schätzung des Grafikspeichers, den Videospeicher und den Programmspeicher, und welcher Clip oder Effekt die Zeit braucht. Was der Treiber misst, das Speicherbudget und die Warnungen stehen in [Grafikspeicher und Warnungen](#performance/perf-memory). Gemessene Zahlen und Grenzen stehen in docs/PERFORMANCE.md des Projekts.
 
 > Tipp: Läuft eine Show auf demselben Computer wie VRChat, setz eine Bildratenbegrenzung und stell die Layer-Auflösung auf Ausgewogen oder Automatisch. Der Spielraum ist mehr wert als ein etwas schärferes Bild.
 

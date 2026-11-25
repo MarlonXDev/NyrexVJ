@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.43.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.45.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -175,6 +175,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/text_doc.cpp
     src/core/particles.cpp
     src/core/gpu_particles.cpp
+    src/core/gpu_diag.cpp
     src/core/effect_json.cpp
     src/core/effect_chain.cpp
     src/core/show_workflow.cpp
@@ -349,6 +350,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/shader_selftest.cpp
     src/app/generator_selftest.cpp
     src/app/gpu_particle_selftest.cpp
+    src/app/gpu_diag_selftest.cpp
     src/app/scene_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
@@ -357,6 +359,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_creator.cpp
     src/app/ui_nodes.cpp
     src/app/ui_settings.cpp
+    src/app/ui_diagnostics.cpp
     src/app/ui_record.cpp
     src/app/ui_video.cpp
     src/app/ui_convert.cpp
@@ -555,6 +558,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_gpuparticles_tests PRIVATE nvj_core)
     target_include_directories(nvj_gpuparticles_tests PRIVATE tests)
     add_test(NAME nvj_gpuparticles_tests COMMAND nvj_gpuparticles_tests)
+    add_executable(nvj_gpudiag_tests tests/test_gpu_diag.cpp)
+    target_link_libraries(nvj_gpudiag_tests PRIVATE nvj_core)
+    target_include_directories(nvj_gpudiag_tests PRIVATE tests)
+    add_test(NAME nvj_gpudiag_tests COMMAND nvj_gpudiag_tests)
     add_executable(nvj_workflow_tests tests/test_workflow.cpp)
     target_link_libraries(nvj_workflow_tests PRIVATE nvj_core)
     target_include_directories(nvj_workflow_tests PRIVATE tests)

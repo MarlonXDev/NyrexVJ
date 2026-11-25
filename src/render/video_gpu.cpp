@@ -3,6 +3,7 @@
 #include "core/log.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -401,6 +402,16 @@ void copyTight(const VideoPlane& plane, unsigned char* destination) {
 
 }
 
+namespace {
+
+std::atomic<unsigned long long> g_streamedBytes{0};
+
+}
+
+unsigned long long streamedUploadBytes() {
+    return g_streamedBytes.load(std::memory_order_relaxed);
+}
+
 bool VideoUploader::present(const VideoFrame& frame) {
     const auto begin = std::chrono::steady_clock::now();
     bool ok = false;
@@ -434,6 +445,7 @@ bool VideoUploader::present(const VideoFrame& frame) {
         stats_.maxMs = spread.max;
         stats_.lastBytes = bytes;
         ++stats_.frames;
+        g_streamedBytes.fetch_add(bytes, std::memory_order_relaxed);
     }
     return ok;
 }

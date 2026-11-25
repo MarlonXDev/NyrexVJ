@@ -1663,6 +1663,91 @@
           "criteria": "Proposed: the memory stays inside the budget and does not grow, no dropped frames that were not there without the clips, and the saved clip starts from the same seed and looks the same on the same computer."
         }
       ]
+    },
+    {
+      "id": "gpu-diagnostics",
+      "title": "Graphics memory diagnostics: driver readout kept apart from the estimate, P95 and P99, dropped frames, upload traffic, eight warnings with hysteresis, an optional memory budget that releases only idle clips by priority and never a playing one, the pressure ladder and its recovery",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0038-gpu-diagnostics.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/gpu_diag.cpp",
+        "src/render/engine.cpp",
+        "src/render/video_gpu.cpp",
+        "src/app/ui_diagnostics.cpp",
+        "src/app/gpu_diag_selftest.cpp",
+        "tests/test_gpu_diag.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-GD-1",
+          "kind": "ctest",
+          "name": "nvj_gpudiag_tests"
+        },
+        {
+          "id": "A-GD-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --gpu-diag-selftest 5 --bench-out result.json",
+          "note": "in the real engine with OpenGL: eight images of 3584 x 3584 pixels are imported and loaded with the budget off, a budget of 256 MB releases the idle ones and keeps the playing and the next one, a released image loads again when launched, turning the budget off restores the old behaviour, four playing layers push the pressure to step 4 with layers at half resolution and the playing images kept, the warning logic reports resident memory over the budget, the pressure comes back to step 0 once the layers are cleared, the upload counter matches a known byte count and the engine reports it, the driver readout is plausible or rejected, no GL state is left behind; the probe images are removed again; the benchmark compares the frame time with the budget off and on"
+        },
+        {
+          "id": "A-GD-3",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Graphics memory and traffic block, the warnings and the new settings has a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-GD-4",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --settings 10 --audio-demo --frames 90 --screenshot page.png",
+          "note": "opens the Performance page with the new block in a real OpenGL context and writes a picture; a smoke test of the window, not a test of its use"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-GD-1",
+          "title": "The driver readout on a real graphics card",
+          "needs": "A Windows or Linux computer with an NVIDIA or AMD graphics card (card and driver version are part of the result), NyrexVJ, and another program that uses video memory such as VRChat",
+          "steps": [
+            "Open Settings, Performance and read Measured by the graphics driver with only NyrexVJ running, then start VRChat in a heavy world and read it again.",
+            "Run NyrexVJ --gpu-diag-selftest 5 --bench-out result.json and keep the file; a failed check of the driver readout is a result too.",
+            "Compare the in use number with the one the operating system shows for the card (Task Manager on Windows, nvidia-smi or the vendor tool on Linux)."
+          ],
+          "measure": "Total, free and in use video memory in NyrexVJ and in the operating system tool with and without VRChat, whether the eviction count ever rises, and whether any check of the self test failed",
+          "criteria": "Proposed: the driver block is filled, total and free match the operating system tool within a few percent, free memory drops when VRChat starts, and no check fails. If the numbers differ strongly, the readout or its wording is to be revisited."
+        },
+        {
+          "id": "M-GD-2",
+          "title": "The memory budget with a VRChat like load",
+          "needs": "A computer with a graphics card and NyrexVJ, a show with more clips (images, videos and 3D scenes) than fit your budget, and VRChat or a similar game running at the same time",
+          "steps": [
+            "Set a Memory budget a little under what the estimate shows with every clip loaded, tick Release clips that are not in use when over the budget and play through the clips for 30 minutes.",
+            "Watch the estimate, the released count, the pressure step, the warnings and the frame rate, and launch a clip that was released a while ago.",
+            "Tick Also lower the layer resolution, set a budget below what the playing layers need and watch the steps up and back down."
+          ],
+          "measure": "The estimate against the budget over time, how many clips were released, how long a released clip takes to show after its launch, the P99 and the dropped frames with the budget off and on, and the pressure steps",
+          "criteria": "Proposed: the estimate stays inside the budget, a playing clip is never released, a released clip shows within a quarter of a second at the longest, the dropped frames do not rise with the budget on, and the steps come back down when there is room. If a launch shows a visible gap, the idle time of 5 s or the preparation of the next clips is to be revisited."
+        },
+        {
+          "id": "M-GD-3",
+          "title": "The warnings in a show",
+          "needs": "A computer with NyrexVJ, a show with video and live sources, and the output setup you use for events",
+          "steps": [
+            "Play the show for 30 minutes with the warnings on and look at the status bar and the Warnings list.",
+            "Start a second heavy program, or raise the output resolution, until a frame time warning should appear.",
+            "Change Warning limits and watch the warning appear and go away."
+          ],
+          "measure": "Which warnings appeared and when, whether each matched what you saw on the output (stutters, dropped frames), how long a warning stayed after the cause was gone, and the upload rate with the live sources running",
+          "criteria": "Proposed: a warning appears when the output visibly stutters and not when it does not, it goes away within about six seconds after the cause is gone, it never flickers, and the upload number is plausible for the sources in use."
+        }
+      ]
     }
   ]
 }

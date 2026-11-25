@@ -39,6 +39,13 @@ struct Settings {
     bool openOutputOnStart = false;
     bool showStatusBar = true;
     int perfBudgetFps = 60;
+    int gpuMemoryBudgetMb = 0;
+    bool gpuMemoryTrim = true;
+    bool gpuMemoryLowerQuality = false;
+    bool diagWarnings = true;
+    int diagP99Percent = 150;
+    int diagDroppedPerMinute = 5;
+    int diagMemoryPercent = 85;
     int renderQuality = 0;
     bool showTimings = true;
     float uiScale = 1.0f;

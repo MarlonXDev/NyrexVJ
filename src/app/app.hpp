@@ -160,6 +160,8 @@ private:
     bool creatorSave(bool copy, bool useAsClip);
     void undoEdit();
     void drawPerformancePage();
+    void drawGpuDiagnostics();
+    void drawDiagnosticsBadge();
     void drawPluginsPage();
     void drawPluginFrameSlot(int slot);
     void updatePlugins();
@@ -384,6 +386,7 @@ private:
     FrameSummary perfFrameSummary_;
     FrameSummary perfCpuSummary_;
     FrameSummary perfGpuSummary_;
+    std::unique_ptr<gpudiag::Monitor> diagMonitor_ = std::make_unique<gpudiag::Monitor>();
     std::future<HardwareProbeReport> hardwareProbe_;
     HardwareProbeReport hardwareReport_;
     bool hasHardwareReport_ = false;

@@ -13,6 +13,7 @@ namespace nvj {
 
 class OutputManager {
 public:
+    OutputManager() { markerSelected_.fill(-1); }
     void attach(std::array<OutputSpec, kMaxOutputs>* specs) { specs_ = specs; }
     std::array<OutputSpec, kMaxOutputs>& specs() { return *specs_; }
     const std::array<OutputSpec, kMaxOutputs>& specs() const { return *specs_; }
@@ -30,6 +31,9 @@ public:
     void toggleFullscreen(GLFWwindow* share);
     void setTestPattern(int index, bool on);
     bool testPattern(int index) const;
+    void setMarkers(int index, bool on, int selected);
+    bool markers(int index) const;
+    bool depthAvailable(int index) const;
     void render(GLuint texture, int width, int height);
     bool capture(int index, GLuint texture, int width, int height, OutputCapture& out);
     size_t gpuBytes() const;
@@ -55,6 +59,8 @@ private:
     std::array<OutputWindow, kMaxOutputs> windows_;
     size_t budget_ = kOutputGpuBudgetBytes;
     std::array<bool, kMaxOutputs> patterns_{};
+    std::array<bool, kMaxOutputs> markers_{};
+    std::array<int, kMaxOutputs> markerSelected_{};
     TextureHistory history_;
     SkewTracker skew_;
     long long frame_ = 0;

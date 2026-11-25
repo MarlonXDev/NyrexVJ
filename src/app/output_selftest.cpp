@@ -5,6 +5,7 @@
 #include "core/log.hpp"
 #include "core/mask_images.hpp"
 #include "core/output_map.hpp"
+#include "core/spatial_mesh.hpp"
 #include "render/output_manager.hpp"
 #include "render/texture_history.hpp"
 
@@ -948,6 +949,347 @@ void caseNdiOutput(Runner& run) {
     logLine(text);
 }
 
+constexpr float kSpatialHeight = 2.0f;
+constexpr float kSpatialWidth = kSpatialHeight * 16.0f / 9.0f;
+constexpr float kSpatialDistance = 4.0f;
+
+SpatialMapping fillingWall() {
+    SpatialMapping spatial;
+    spatial.enabled = true;
+    spatial.projector.pose = SpatialPose{Vec3f{0.0f, 0.0f, kSpatialDistance}, 0.0f, 0.0f, 0.0f};
+    spatial.projector.lens = SpatialLens{static_cast<float>(2.0 * std::atan(0.5 * kSpatialHeight / kSpatialDistance) * 180.0 / 3.14159265358979), 16.0f / 9.0f, 0.0f, 0.0f, 0.1f, 100.0f};
+    SpatialSurface wall;
+    wall.name = "Wall";
+    wall.corners = {{{-kSpatialWidth * 0.5f, 1.0f, 0.0f}, {kSpatialWidth * 0.5f, 1.0f, 0.0f}, {kSpatialWidth * 0.5f, -1.0f, 0.0f}, {-kSpatialWidth * 0.5f, -1.0f, 0.0f}}};
+    spatial.surfaces.push_back(wall);
+    return spatial;
+}
+
+OutputSpec spatialSpec(const SpatialMapping& spatial) {
+    OutputSpec spec = defaultOutputSpec(0);
+    spec.map.spatial = spatial;
+    return spec;
+}
+
+Rgb pictureColor(float u, float v) {
+    const bool top = v > 0.5f;
+    const bool left = u < 0.5f;
+    return top ? (left ? kRed : kGreen) : (left ? kBlue : kYellow);
+}
+
+struct Agreement {
+    int tested = 0;
+    int matched = 0;
+    int lit = 0;
+};
+
+Agreement compareWithCpu(Runner& run, const OutputMapping& map) {
+    Agreement result;
+    const int columns = 48;
+    const int rows = 27;
+    for (int j = 0; j < rows; ++j) {
+        for (int i = 0; i < columns; ++i) {
+            const float x = (static_cast<float>(i) + 0.5f) / static_cast<float>(columns);
+            const float y = (static_cast<float>(j) + 0.5f) / static_cast<float>(rows);
+            const SpatialHit centre = castProjectorRay(map, x, y);
+            bool stable = true;
+            const float offsets[4][2] = {{0.006f, 0.0f}, {-0.006f, 0.0f}, {0.0f, 0.01f}, {0.0f, -0.01f}};
+            for (const auto& o : offsets) {
+                const SpatialHit n = castProjectorRay(map, x + o[0], y + o[1]);
+                if (n.hit != centre.hit || n.surface != centre.surface || n.contentValid != centre.contentValid) {
+                    stable = false;
+                }
+            }
+            if (!stable) {
+                continue;
+            }
+            Rgb want = kBlack;
+            if (centre.hit && centre.contentValid) {
+                if (std::fabs(centre.u - 0.5f) < 0.025f || std::fabs(centre.v - 0.5f) < 0.04f || centre.u < 0.02f || centre.u > 0.98f || centre.v < 0.02f || centre.v > 0.98f) {
+                    continue;
+                }
+                want = pictureColor(centre.u, centre.v);
+                const float f = edgeFactor(map.blend, x, y) * map.brightness;
+                want = {static_cast<int>(std::lround(want.r * f)), static_cast<int>(std::lround(want.g * f)), static_cast<int>(std::lround(want.b * f))};
+                ++result.lit;
+            }
+            ++result.tested;
+            const Rgb got = run.at(x, y);
+            if (std::abs(got.r - want.r) <= 6 && std::abs(got.g - want.g) <= 6 && std::abs(got.b - want.b) <= 6) {
+                ++result.matched;
+            }
+        }
+    }
+    return result;
+}
+
+void expectAgreement(Runner& run, const std::string& label, const OutputMapping& map, int minimumLit) {
+    const Agreement a = compareWithCpu(run, map);
+    if (a.matched != a.tested || a.lit < minimumLit) {
+        logLine("Output self test: " + label + " matched " + std::to_string(a.matched) + " of " + std::to_string(a.tested) + " probes, " + std::to_string(a.lit) + " lit");
+    }
+    run.condition((label + " agrees with the CPU model on every probe").c_str(), a.matched == a.tested && a.tested > 0);
+    run.condition((label + " lights enough probes").c_str(), a.lit >= minimumLit);
+}
+
+void caseSpatialBasics(Runner& run) {
+    SpatialMapping spatial = fillingWall();
+    run.draw(spatialSpec(spatial));
+    quadrants(run, "spatial wall that fills the picture", kRed, kGreen, kBlue, kYellow);
+    run.condition("the output window has a depth buffer", run.manager().depthAvailable(0));
+
+    SpatialMapping half = spatial;
+    half.projector.pose.position.z = 2.0f * kSpatialDistance;
+    half.projector.lens.fovY = spatial.projector.lens.fovY;
+    run.draw(spatialSpec(half));
+    run.expect("far projector leaves the border dark", 0.05f, 0.05f, kBlack);
+    run.expect("far projector leaves the border dark on the right", 0.95f, 0.5f, kBlack);
+    run.expect("far projector keeps the top left of the picture", 0.4f, 0.4f, kRed);
+    run.expect("far projector keeps the top right of the picture", 0.6f, 0.4f, kGreen);
+    run.expect("far projector keeps the bottom left of the picture", 0.4f, 0.6f, kBlue);
+    run.expect("far projector keeps the bottom right of the picture", 0.6f, 0.6f, kYellow);
+
+    OutputSpec flipped = spatialSpec(spatial);
+    flipped.map.flipX = true;
+    run.draw(flipped);
+    quadrants(run, "spatial wall with flip X", kGreen, kRed, kYellow, kBlue);
+    flipped.map.flipX = false;
+    flipped.map.flipY = true;
+    run.draw(flipped);
+    quadrants(run, "spatial wall with flip Y", kBlue, kYellow, kRed, kGreen);
+
+    OutputSpec area = spatialSpec(spatial);
+    area.map.slice = {0.5f, 0.0f, 0.5f, 1.0f};
+    run.draw(area);
+    run.expect("picture area right half fills the wall at the top", 0.25f, 0.25f, kGreen);
+    run.expect("picture area right half fills the wall at the bottom", 0.75f, 0.75f, kYellow);
+
+    SpatialMapping behind = spatial;
+    behind.projector.pose.position.z = -kSpatialDistance;
+    run.draw(spatialSpec(behind));
+    run.expect("a wall behind the projector stays dark", 0.5f, 0.5f, kBlack);
+    run.expect("a wall behind the projector stays dark at a corner", 0.25f, 0.25f, kBlack);
+
+    SpatialMapping empty = spatial;
+    empty.surfaces.clear();
+    run.draw(spatialSpec(empty));
+    run.expect("spatial mapping without a surface draws nothing", 0.25f, 0.25f, kBlack);
+
+    SpatialMapping off = spatial;
+    off.enabled = false;
+    run.draw(spatialSpec(off));
+    quadrants(run, "spatial mapping switched off gives the flat picture", kRed, kGreen, kBlue, kYellow);
+}
+
+void caseSpatialPerspective(Runner& run) {
+    SpatialMapping spatial = fillingWall();
+    spatial.surfaces[0] = wallSurface("Oblique", Vec3f{0.0f, 0.0f, 0.0f}, 3.4f, 2.0f, 35.0f, 0.0f);
+    spatial.surfaces[0].divisions = 6;
+    spatial.projector.pose = poseLookAt(Vec3f{-1.0f, 0.3f, 4.5f}, Vec3f{0.0f, 0.0f, 0.0f}, 0.0f);
+    spatial.projector.lens.fovY = 40.0f;
+    OutputSpec spec = spatialSpec(spatial);
+    run.draw(spec);
+    expectAgreement(run, "oblique wall", spec.map, 200);
+    run.expect("outside the oblique wall", 0.02f, 0.5f, kBlack);
+
+    spec.map.flipX = true;
+    run.draw(spec);
+    expectAgreement(run, "oblique wall with flip X", spec.map, 200);
+    spec.map.flipX = false;
+    spec.map.slice = {0.25f, 0.25f, 0.5f, 0.5f};
+    run.draw(spec);
+    expectAgreement(run, "oblique wall with a picture area", spec.map, 150);
+
+    spec.map.slice = {0.0f, 0.0f, 1.0f, 1.0f};
+    spec.map.blend.left = 0.3f;
+    spec.map.blend.top = 0.2f;
+    run.draw(spec);
+    expectAgreement(run, "oblique wall with an edge blend measured on the output", spec.map, 200);
+
+    SpatialMapping tilted = spatial;
+    tilted.surfaces[0] = wallSurface("Tilted", Vec3f{0.0f, 0.0f, 0.0f}, 3.0f, 2.0f, -20.0f, 25.0f);
+    tilted.surfaces[0].divisions = 8;
+    OutputSpec tiltedSpec = spatialSpec(tilted);
+    run.draw(tiltedSpec);
+    expectAgreement(run, "wall tilted both ways", tiltedSpec.map, 200);
+}
+
+void caseSpatialOcclusion(Runner& run) {
+    SpatialMapping spatial = fillingWall();
+    SpatialSurface pillar = wallSurface("Pillar", Vec3f{-0.6f, -0.4f, 2.0f}, 0.6f, 1.0f, 0.0f, 0.0f);
+    pillar.uv = {0.0f, 0.0f, 0.25f, 0.25f};
+    spatial.surfaces.insert(spatial.surfaces.begin(), pillar);
+    OutputSpec spec = spatialSpec(spatial);
+    run.draw(spec);
+    const ProjectedPoint centre = projectPoint(spatial.projector, Vec3f{-0.6f, -0.4f, 2.0f});
+    const Vec3f behindPillar{-1.2f, -0.8f, 0.0f};
+    run.condition("the wall point behind the pillar is hidden for the projector", !pointLitByProjector(spec.map, behindPillar));
+    run.condition("a wall point beside the pillar is lit", pointLitByProjector(spec.map, Vec3f{1.0f, 0.5f, 0.0f}));
+    run.expect("the pillar hides the wall behind it", centre.x, centre.y, kRed);
+    run.expect("the wall shows beside the pillar", 0.8f, 0.8f, kYellow);
+    expectAgreement(run, "wall with a pillar in front", spec.map, 200);
+
+    spatial.surfaces = {fillingWall().surfaces[0], pillar};
+    OutputSpec reversed = spatialSpec(spatial);
+    run.draw(reversed);
+    run.expect("drawing order does not matter, the pillar still hides the wall", centre.x, centre.y, kRed);
+
+    SpatialMapping facing = fillingWall();
+    SpatialSurface away = wallSurface("Away", Vec3f{0.0f, 0.0f, 0.0f}, kSpatialWidth, kSpatialHeight, 180.0f, 0.0f);
+    facing.surfaces = {away};
+    OutputSpec culled = spatialSpec(facing);
+    run.draw(culled);
+    run.expect("a surface that faces away is not drawn", 0.25f, 0.25f, kBlack);
+    run.expect("a surface that faces away is not drawn at the centre", 0.6f, 0.6f, kBlack);
+    facing.surfaces[0].doubleSided = true;
+    OutputSpec both = spatialSpec(facing);
+    run.draw(both);
+    expectAgreement(run, "double sided surface seen from behind", both.map, 150);
+
+    SpatialMapping floorScene = fillingWall();
+    SpatialSurface ground = wallSurface("Floor", Vec3f{0.0f, 0.0f, 0.0f}, 12.0f, 24.0f, 0.0f, -90.0f);
+    ground.divisions = 8;
+    floorScene.surfaces = {ground};
+    floorScene.projector.pose = SpatialPose{Vec3f{0.0f, 2.0f, 2.0f}, 0.0f, -30.0f, 0.0f};
+    floorScene.projector.lens.fovY = 50.0f;
+    OutputSpec floorSpec = spatialSpec(floorScene);
+    run.draw(floorSpec);
+    const SpatialMesh mesh = buildSpatialMesh(floorSpec.map);
+    run.condition("the floor crosses the near plane", mesh.stats.clipped > 0);
+    expectAgreement(run, "floor that reaches behind the projector", floorSpec.map, 300);
+}
+
+void caseSpatialCamera(Runner& run) {
+    SpatialMapping spatial = fillingWall();
+    spatial.surfaces[0] = wallSurface("Oblique", Vec3f{0.0f, 0.0f, 0.0f}, 3.4f, 2.0f, 25.0f, 0.0f);
+    spatial.surfaces[0].divisions = 6;
+    spatial.projector.pose = poseLookAt(Vec3f{-1.2f, 0.3f, 4.5f}, Vec3f{0.0f, 0.0f, 0.0f}, 0.0f);
+    spatial.projector.lens.fovY = 45.0f;
+    spatial.source = SpatialSource::ViewerCamera;
+    spatial.camera.pose = poseLookAt(Vec3f{0.0f, 0.0f, 7.0f}, Vec3f{0.0f, 0.0f, 0.0f}, 0.0f);
+    spatial.camera.lens.fovY = 28.0f;
+    OutputSpec spec = spatialSpec(spatial);
+    run.draw(spec);
+    expectAgreement(run, "viewer camera content", spec.map, 150);
+
+    SpatialMapping narrow = spatial;
+    narrow.camera.lens.fovY = 11.0f;
+    OutputSpec narrowSpec = spatialSpec(narrow);
+    run.draw(narrowSpec);
+    expectAgreement(run, "viewer camera that sees only part of the wall", narrowSpec.map, 80);
+    int dark = 0;
+    int onWall = 0;
+    for (int j = 0; j < 27; ++j) {
+        for (int i = 0; i < 48; ++i) {
+            const float x = (static_cast<float>(i) + 0.5f) / 48.0f;
+            const float y = (static_cast<float>(j) + 0.5f) / 27.0f;
+            const SpatialHit hit = castProjectorRay(narrowSpec.map, x, y);
+            if (hit.hit) {
+                ++onWall;
+                dark += hit.contentValid ? 0 : 1;
+            }
+        }
+    }
+    run.condition("a narrow camera leaves part of the wall without picture", dark > 40 && onWall > dark);
+
+    OutputSpec areaSpec = spec;
+    areaSpec.map.slice = {0.25f, 0.25f, 0.5f, 0.5f};
+    run.draw(areaSpec);
+    expectAgreement(run, "viewer camera with a picture area", areaSpec.map, 100);
+    OutputSpec flipSpec = spec;
+    flipSpec.map.flipX = true;
+    flipSpec.map.flipY = true;
+    run.draw(flipSpec);
+    expectAgreement(run, "viewer camera with both flips", flipSpec.map, 150);
+}
+
+void caseSpatialBlendAndSlices(Runner& run) {
+    SpatialMapping spatial = fillingWall();
+    OutputSpec spec = spatialSpec(spatial);
+    spec.map.blend.left = 0.25f;
+    spec.map.blend.right = 0.25f;
+    run.draw(spec);
+    for (float x : {0.04f, 0.1f, 0.2f, 0.8f, 0.95f}) {
+        const float f = edgeFactor(spec.map.blend, x, 0.25f);
+        const int level = static_cast<int>(std::lround(255.0f * f));
+        const Rgb want = x < 0.5f ? Rgb{level, 0, 0} : Rgb{0, level, 0};
+        run.expect("edge blend ramp on a spatial output", x, 0.25f, want, 7);
+    }
+    run.expect("inside the blend zone the picture is untouched", 0.4f, 0.25f, kRed);
+
+    OutputSpec brightnessSpec = spatialSpec(spatial);
+    brightnessSpec.map.brightness = 0.5f;
+    run.draw(brightnessSpec);
+    run.expect("brightness applies to a spatial output", 0.25f, 0.25f, {128, 0, 0}, 3);
+
+    OutputSpec withSlice = spatialSpec(spatial);
+    addSlice(withSlice);
+    withSlice.slices[0].map = region(0.0f, 0.0f, 0.5f, 0.5f, 0.6f, 0.6f, 0.3f, 0.3f);
+    run.draw(withSlice);
+    run.expect("a flat slice can sit on top of a spatial slice", 0.75f, 0.75f, kRed);
+    run.expect("the spatial slice stays elsewhere", 0.25f, 0.75f, kBlue);
+
+    OutputSpec spatialSecond = defaultOutputSpec(0);
+    spatialSecond.map = region(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.5f, 1.0f);
+    addSlice(spatialSecond);
+    spatialSecond.slices[0].map.spatial = spatial;
+    spatialSecond.slices[0].map.spatial.projector.pose.position.z = 3.0f * kSpatialDistance;
+    run.draw(spatialSecond);
+    run.expect("a spatial second slice is drawn over the flat one", 0.4f, 0.4f, kRed);
+    run.expect("a spatial second slice shows where the flat one has nothing", 0.6f, 0.4f, kGreen);
+    run.expect("the flat slice stays outside the spatial wall", 0.1f, 0.9f, kBlue);
+}
+
+void caseSpatialSwitching(Runner& run) {
+    OutputSpec flat = defaultOutputSpec(0);
+    OutputSpec spatial = spatialSpec(fillingWall());
+    run.draw(flat);
+    const size_t baseline = run.gpuBytes();
+    for (int round = 0; round < 3; ++round) {
+        run.draw(flat);
+        quadrants(run, "flat after switching", kRed, kGreen, kBlue, kYellow);
+        run.draw(spatial);
+        quadrants(run, "spatial after switching", kRed, kGreen, kBlue, kYellow);
+    }
+    run.draw(flat);
+    run.condition("switching between flat and spatial returns the video memory to its start value", run.gpuBytes() == baseline);
+
+    std::array<OutputSpec, kMaxOutputs> planned = defaultOutputs();
+    planned[0] = spatial;
+    const OutputBudget estimate = estimateOutputBudget(planned, 64, 36, 1280, 720);
+    run.draw(spatial);
+    SpatialMapping wall = fillingWall();
+    const size_t expected = (5u * 5u) * sizeof(SpatialVertex) + 4u * 4u * 6u * sizeof(uint32_t);
+    run.condition("the budget estimate of a spatial wall matches its mesh", estimate.meshBytes == expected && spatialMeshBytesEstimate(wall) == expected);
+    run.condition("the budget estimate of a spatial wall matches the measured memory", run.gpuBytes() == expected);
+}
+
+void caseSpatialMarkers(Runner& run) {
+    SpatialMapping spatial = fillingWall();
+    CalibrationPoint point;
+    point.name = "P1";
+    point.world = Vec3f{0.0f, 0.0f, 0.0f};
+    point.outputX = 0.3f;
+    point.outputY = 0.3f;
+    spatial.points.push_back(point);
+    OutputSpec spec = spatialSpec(spatial);
+    run.draw(spec);
+    run.expect("no marker while markers are off", 0.3f, 0.3f, kRed, 4);
+    run.manager().setMarkers(0, true, -1);
+    run.draw(spec);
+    run.expect("target marker where the point should land", 0.3f, 0.3f, {26, 255, 102}, 6);
+    run.expect("predicted marker where the pose puts the point", 0.5f, 0.5f, {255, 140, 26}, 6);
+    run.manager().setMarkers(0, true, 0);
+    run.draw(spec);
+    run.expect("selected marker is white", 0.3f, 0.3f, kWhiteColor, 4);
+    spec.map.spatial.points[0].enabled = false;
+    run.draw(spec);
+    run.expect("switched off marker is grey", 0.3f, 0.3f, {115, 115, 115}, 6);
+    run.manager().setMarkers(0, false, -1);
+    run.draw(spec);
+    run.expect("markers disappear again", 0.3f, 0.3f, kRed, 4);
+}
+
 void measureHistory() {
     const int width = 1920;
     const int height = 1080;
@@ -1130,6 +1472,13 @@ int runOutputSelfTest(GLFWwindow* share) {
     caseNdiFallback(run);
     caseNdiOutput(run);
     caseWarp(run);
+    caseSpatialBasics(run);
+    caseSpatialPerspective(run);
+    caseSpatialOcclusion(run);
+    caseSpatialCamera(run);
+    caseSpatialBlendAndSlices(run);
+    caseSpatialSwitching(run);
+    caseSpatialMarkers(run);
     caseSyncBars(run);
     caseDelay(run);
     caseFrameLock(run);

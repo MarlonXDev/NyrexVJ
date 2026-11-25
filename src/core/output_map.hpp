@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/spatial_map.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -87,6 +89,7 @@ struct OutputMapping {
     bool fill = false;
     SliceMask mask;
     OutputColor sliceColor;
+    SpatialMapping spatial;
     bool operator==(const OutputMapping&) const = default;
 };
 

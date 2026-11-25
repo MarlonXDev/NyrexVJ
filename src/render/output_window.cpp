@@ -7,6 +7,8 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <cmath>
+#include <string>
 
 namespace nvj {
 
@@ -132,6 +134,57 @@ void main() {
 }
 )glsl";
 
+const char* kSpatialVertex = R"glsl(#version 330 core
+layout(location = 0) in vec2 aPos;
+layout(location = 1) in vec2 aUv;
+layout(location = 2) in vec3 aDwq;
+out vec3 vUvq;
+noperspective out vec2 vOut;
+uniform vec4 uRect;
+void main() {
+    vUvq = vec3(aUv, aDwq.z);
+    vOut = aPos;
+    vec2 p = uRect.xy + aPos * uRect.zw;
+    float w = aDwq.y;
+    gl_Position = vec4((p.x * 2.0 - 1.0) * w, (1.0 - p.y * 2.0) * w, aDwq.x * w, w);
+}
+)glsl";
+
+const char* kMarkerVertex = R"glsl(#version 330 core
+layout(location = 0) in vec2 aPos;
+layout(location = 1) in vec3 aColor;
+out vec3 vColor;
+void main() {
+    vColor = aColor;
+    gl_Position = vec4(aPos, 0.0, 1.0);
+}
+)glsl";
+
+const char* kMarkerFragment = R"glsl(#version 330 core
+in vec3 vColor;
+out vec4 fragColor;
+void main() {
+    fragColor = vec4(vColor, 1.0);
+}
+)glsl";
+
+bool replaceOnce(std::string& text, const std::string& from, const std::string& to) {
+    const size_t at = text.find(from);
+    if (at == std::string::npos) {
+        return false;
+    }
+    text.replace(at, from.size(), to);
+    return true;
+}
+
+std::string spatialFragmentSource() {
+    std::string source = kMeshFragment;
+    bool ok = replaceOnce(source, "in vec2 vUv;\nin vec2 vOut;", "in vec3 vUvq;\nnoperspective in vec2 vOut;");
+    ok = replaceOnce(source, "uniform vec2 uBlack;\n", "uniform vec2 uBlack;\nuniform vec4 uCrop;\nuniform int uCropOn;\n") && ok;
+    ok = replaceOnce(source, "void main() {\n    vec3 c =", "void main() {\n    if (vUvq.z <= 1e-6) discard;\n    vec2 vUv = vUvq.xy / vUvq.z;\n    if (uCropOn == 1 && (vUv.x < uCrop.x - 1e-4 || vUv.x > uCrop.z + 1e-4 || vUv.y < uCrop.y - 1e-4 || vUv.y > uCrop.w + 1e-4)) discard;\n    vec3 c =") && ok;
+    return ok ? source : std::string();
+}
+
 GLFWmonitor* pickMonitor(int index) {
     int count = 0;
     GLFWmonitor** monitors = glfwGetMonitors(&count);
@@ -220,28 +273,80 @@ void OutputWindow::close() {
     logLine("Output window closed");
 }
 
-bool OutputWindow::createResources() {
+bool OutputWindow::buildMeshProgram(MeshProgram& out, const std::string& vertex, const std::string& fragment, const char* label) {
     std::string error;
-    program_ = buildProgram(kMeshVertex, kMeshFragment, &error);
-    if (!program_) {
-        logLine("Output shader failed: " + error);
+    out = MeshProgram{};
+    out.program = buildProgram(vertex, fragment, &error);
+    if (!out.program) {
+        logLine(std::string(label) + " shader failed: " + error);
         return false;
     }
-    textureLocation_ = glGetUniformLocation(program_, "uTex");
-    maskLocation_ = glGetUniformLocation(program_, "uMask");
-    maskOnLocation_ = glGetUniformLocation(program_, "uMaskOn");
-    rectLocation_ = glGetUniformLocation(program_, "uRect");
-    blendLocation_ = glGetUniformLocation(program_, "uBlend");
-    shapeLocation_ = glGetUniformLocation(program_, "uShape");
-    brightnessLocation_ = glGetUniformLocation(program_, "uBrightness");
-    patternLocation_ = glGetUniformLocation(program_, "uPattern");
-    syncLocation_ = glGetUniformLocation(program_, "uSync");
-    gainLocation_ = glGetUniformLocation(program_, "uGain");
-    toneLocation_ = glGetUniformLocation(program_, "uTone");
-    blackLocation_ = glGetUniformLocation(program_, "uBlack");
-    sliceGainLocation_ = glGetUniformLocation(program_, "uSliceGain");
-    sliceToneLocation_ = glGetUniformLocation(program_, "uSliceTone");
+    out.texture = glGetUniformLocation(out.program, "uTex");
+    out.mask = glGetUniformLocation(out.program, "uMask");
+    out.maskOn = glGetUniformLocation(out.program, "uMaskOn");
+    out.rect = glGetUniformLocation(out.program, "uRect");
+    out.blend = glGetUniformLocation(out.program, "uBlend");
+    out.shape = glGetUniformLocation(out.program, "uShape");
+    out.brightness = glGetUniformLocation(out.program, "uBrightness");
+    out.pattern = glGetUniformLocation(out.program, "uPattern");
+    out.sync = glGetUniformLocation(out.program, "uSync");
+    out.gain = glGetUniformLocation(out.program, "uGain");
+    out.tone = glGetUniformLocation(out.program, "uTone");
+    out.black = glGetUniformLocation(out.program, "uBlack");
+    out.sliceGain = glGetUniformLocation(out.program, "uSliceGain");
+    out.sliceTone = glGetUniformLocation(out.program, "uSliceTone");
+    out.crop = glGetUniformLocation(out.program, "uCrop");
+    out.cropOn = glGetUniformLocation(out.program, "uCropOn");
     return true;
+}
+
+bool OutputWindow::createResources() {
+    if (!buildMeshProgram(flat_, kMeshVertex, kMeshFragment, "Output")) {
+        return false;
+    }
+    const std::string spatialFragment = spatialFragmentSource();
+    if (spatialFragment.empty() || !buildMeshProgram(spatial_, kSpatialVertex, spatialFragment, "Spatial output")) {
+        spatial_ = MeshProgram{};
+        logLine("Spatial mapping is not available on this output");
+    }
+    std::string error;
+    markerProgram_ = buildProgram(kMarkerVertex, kMarkerFragment, &error);
+    if (!markerProgram_) {
+        logLine("Marker shader failed: " + error);
+    }
+    depthBits_ = 0;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    while (glGetError() != GL_NO_ERROR) {
+    }
+    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &depthBits_);
+    if (glGetError() != GL_NO_ERROR) {
+        depthBits_ = 0;
+    }
+    if (depthBits_ <= 0) {
+        logLine("This output window has no depth buffer; spatial surfaces are drawn in list order without occlusion");
+    }
+    return true;
+}
+
+void OutputWindow::configureAttributes(SliceGpu& slice, bool spatial) {
+    glBindVertexArray(slice.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, slice.vbo);
+    const GLsizei stride = static_cast<GLsizei>(spatial ? sizeof(SpatialVertex) : sizeof(MeshVertex));
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(0));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(2 * sizeof(float)));
+    if (spatial) {
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(4 * sizeof(float)));
+    } else {
+        glDisableVertexAttribArray(2);
+    }
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slice.ebo);
+    slice.spatial = spatial;
+    slice.divisions = 0;
+    slice.indexCount = 0;
+    slice.meshValid = false;
 }
 
 bool OutputWindow::ensureSlice(SliceGpu& slice) {
@@ -251,19 +356,10 @@ bool OutputWindow::ensureSlice(SliceGpu& slice) {
     glGenVertexArrays(1, &slice.vao);
     glGenBuffers(1, &slice.vbo);
     glGenBuffers(1, &slice.ebo);
-    glBindVertexArray(slice.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, slice.vbo);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(MeshVertex), reinterpret_cast<void*>(0));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(MeshVertex), reinterpret_cast<void*>(2 * sizeof(float)));
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slice.ebo);
+    configureAttributes(slice, false);
     glBindVertexArray(0);
-    slice.divisions = 0;
-    slice.indexCount = 0;
     slice.vboBytes = 0;
     slice.eboBytes = 0;
-    slice.meshValid = false;
     return true;
 }
 
@@ -305,13 +401,52 @@ void OutputWindow::destroyResources() {
     for (SliceGpu& slice : slices_) {
         releaseSlice(slice);
     }
-    if (program_) {
-        glDeleteProgram(program_);
-        program_ = 0;
+    if (flat_.program) {
+        glDeleteProgram(flat_.program);
+    }
+    flat_ = MeshProgram{};
+    if (spatial_.program) {
+        glDeleteProgram(spatial_.program);
+    }
+    spatial_ = MeshProgram{};
+    if (markerProgram_) {
+        glDeleteProgram(markerProgram_);
+        markerProgram_ = 0;
+    }
+    if (markerVao_) {
+        glDeleteVertexArrays(1, &markerVao_);
+        markerVao_ = 0;
+    }
+    if (markerVbo_) {
+        glDeleteBuffers(1, &markerVbo_);
+        markerVbo_ = 0;
     }
 }
 
+void OutputWindow::uploadSpatialMesh(SliceGpu& slice, const OutputMapping& map) {
+    if (!slice.spatial) {
+        configureAttributes(slice, true);
+    }
+    glBindVertexArray(slice.vao);
+    if (slice.meshValid && slice.mapping == map) {
+        return;
+    }
+    const SpatialMesh mesh = buildSpatialMesh(map);
+    glBindBuffer(GL_ARRAY_BUFFER, slice.vbo);
+    slice.vboBytes = mesh.vertices.size() * sizeof(SpatialVertex);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(slice.vboBytes), mesh.vertices.data(), GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slice.ebo);
+    slice.eboBytes = mesh.indices.size() * sizeof(uint32_t);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(slice.eboBytes), mesh.indices.data(), GL_DYNAMIC_DRAW);
+    slice.indexCount = static_cast<GLsizei>(mesh.indices.size());
+    slice.mapping = map;
+    slice.meshValid = true;
+}
+
 void OutputWindow::uploadMesh(SliceGpu& slice, const OutputMapping& map) {
+    if (slice.spatial) {
+        configureAttributes(slice, false);
+    }
     const int divisions = meshDivisionsFor(map);
     if (slice.divisions != divisions) {
         const std::vector<uint32_t> indices = buildMeshIndices(divisions);
@@ -559,6 +694,94 @@ void OutputWindow::swap(bool restoreContext) {
     }
 }
 
+void OutputWindow::drawMarkers(const OutputSpec& spec, int frameWidth, int frameHeight) {
+    if (!markerProgram_ || frameWidth <= 0 || frameHeight <= 0) {
+        return;
+    }
+    std::vector<float> vertices;
+    const float fw = static_cast<float>(frameWidth);
+    const float fh = static_cast<float>(frameHeight);
+    const auto push = [&](float px, float py, const float* rgb) {
+        vertices.push_back(px / fw * 2.0f - 1.0f);
+        vertices.push_back(1.0f - py / fh * 2.0f);
+        vertices.push_back(rgb[0]);
+        vertices.push_back(rgb[1]);
+        vertices.push_back(rgb[2]);
+    };
+    const auto line = [&](float x0, float y0, float x1, float y1, float thickness, const float* rgb) {
+        const float dx = x1 - x0;
+        const float dy = y1 - y0;
+        const float length = std::sqrt(dx * dx + dy * dy);
+        if (length < 1e-3f) {
+            return;
+        }
+        const float nx = -dy / length * thickness * 0.5f;
+        const float ny = dx / length * thickness * 0.5f;
+        push(x0 + nx, y0 + ny, rgb);
+        push(x0 - nx, y0 - ny, rgb);
+        push(x1 + nx, y1 + ny, rgb);
+        push(x1 + nx, y1 + ny, rgb);
+        push(x0 - nx, y0 - ny, rgb);
+        push(x1 - nx, y1 - ny, rgb);
+    };
+    const float target[3] = {0.1f, 1.0f, 0.4f};
+    const float chosen[3] = {1.0f, 1.0f, 1.0f};
+    const float off[3] = {0.45f, 0.45f, 0.45f};
+    const float predicted[3] = {1.0f, 0.55f, 0.1f};
+    const float gap[3] = {1.0f, 0.9f, 0.1f};
+    const int count = std::min(sliceCount(spec), kMaxSlices);
+    for (int i = 0; i < count; ++i) {
+        if (i > 0 && !spec.slices[static_cast<size_t>(i - 1)].enabled) {
+            continue;
+        }
+        const OutputMapping& map = sliceMapping(spec, i);
+        if (!map.spatial.enabled) {
+            continue;
+        }
+        for (size_t k = 0; k < map.spatial.points.size(); ++k) {
+            const CalibrationPoint& point = map.spatial.points[k];
+            const float x = point.outputX * fw;
+            const float y = point.outputY * fh;
+            const float* colour = !point.enabled ? off : (static_cast<int>(k) == markerSelected_ ? chosen : target);
+            const ProjectedPoint p = projectPoint(map.spatial.projector, point.world);
+            const bool showPrediction = point.enabled && p.inFront;
+            const float px = p.x * fw;
+            const float py = p.y * fh;
+            if (showPrediction && std::fabs(px - x) + std::fabs(py - y) > 1.5f) {
+                line(x, y, px, py, 1.5f, gap);
+            }
+            line(x - 14.0f, y, x + 14.0f, y, 2.0f, colour);
+            line(x, y - 14.0f, x, y + 14.0f, 2.0f, colour);
+            if (showPrediction) {
+                line(px - 8.0f, py - 8.0f, px + 8.0f, py + 8.0f, 2.0f, predicted);
+                line(px - 8.0f, py + 8.0f, px + 8.0f, py - 8.0f, 2.0f, predicted);
+            }
+        }
+    }
+    if (vertices.empty()) {
+        return;
+    }
+    if (!markerVao_) {
+        glGenVertexArrays(1, &markerVao_);
+        glGenBuffers(1, &markerVbo_);
+        glBindVertexArray(markerVao_);
+        glBindBuffer(GL_ARRAY_BUFFER, markerVbo_);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(0));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
+    }
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glUseProgram(markerProgram_);
+    glBindVertexArray(markerVao_);
+    glBindBuffer(GL_ARRAY_BUFFER, markerVbo_);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(float)), vertices.data(), GL_STREAM_DRAW);
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size() / 5));
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
 bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, const OutputSpec& spec, bool testPattern, int syncValue, OutputCapture* capture) {
     if (!window_) {
         return false;
@@ -612,16 +835,21 @@ bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, con
         normalizeColor(color);
         const bool colorOn = !isDefaultColor(color);
 
-        glUseProgram(program_);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glUniform1i(textureLocation_, 0);
-        glUniform1i(maskLocation_, 1);
-        glUniform4f(rectLocation_, rect[0], rect[1], rect[2], rect[3]);
-        glUniform1i(patternLocation_, syncValue >= 0 ? 2 : (testPattern ? 1 : 0));
-        glUniform1i(syncLocation_, std::max(syncValue, 0));
-        glUniform4f(gainLocation_, color.red, color.green, color.blue, color.saturation);
-        glUniform4f(toneLocation_, color.contrast, 1.0f / color.gamma, color.black, colorOn ? 1.0f : 0.0f);
+        const float fullRect[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+        const MeshProgram* activeProgram = nullptr;
+        const auto useProgram = [&](const MeshProgram& program, const float* viewRect) {
+            glUseProgram(program.program);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glUniform1i(program.texture, 0);
+            glUniform1i(program.mask, 1);
+            glUniform4f(program.rect, viewRect[0], viewRect[1], viewRect[2], viewRect[3]);
+            glUniform1i(program.pattern, syncValue >= 0 ? 2 : (testPattern ? 1 : 0));
+            glUniform1i(program.sync, std::max(syncValue, 0));
+            glUniform4f(program.gain, color.red, color.green, color.blue, color.saturation);
+            glUniform4f(program.tone, color.contrast, 1.0f / color.gamma, color.black, colorOn ? 1.0f : 0.0f);
+            activeProgram = &program;
+        };
 
         const int count = std::min(sliceCount(spec), kMaxSlices);
         for (int i = 0; i < kMaxSlices; ++i) {
@@ -634,8 +862,20 @@ bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, con
                 continue;
             }
             const OutputMapping& map = sliceMapping(spec, i);
+            const bool spatialSlice = map.spatial.enabled;
+            if (spatialSlice && spatial_.program == 0) {
+                continue;
+            }
+            const MeshProgram& program = spatialSlice ? spatial_ : flat_;
+            if (activeProgram != &program) {
+                useProgram(program, spatialSlice ? fullRect : rect);
+            }
             ensureSlice(gpu);
-            uploadMesh(gpu, map);
+            if (spatialSlice) {
+                uploadSpatialMesh(gpu, map);
+            } else {
+                uploadMesh(gpu, map);
+            }
             uploadMask(gpu, map.mask);
             const bool masked = gpu.maskTexture != 0;
             if (i > 0 || masked) {
@@ -648,20 +888,38 @@ bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, con
             glBindTexture(GL_TEXTURE_2D, masked ? gpu.maskTexture : 0);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, texture);
-            glUniform1i(maskOnLocation_, masked ? 1 : 0);
-            glUniform4f(blendLocation_, map.blend.left, map.blend.right, map.blend.top, map.blend.bottom);
-            glUniform2f(shapeLocation_, map.blend.power, map.blend.gamma);
-            glUniform1f(brightnessLocation_, map.brightness);
+            glUniform1i(program.maskOn, masked ? 1 : 0);
+            glUniform4f(program.blend, map.blend.left, map.blend.right, map.blend.top, map.blend.bottom);
+            glUniform2f(program.shape, map.blend.power, map.blend.gamma);
+            glUniform1f(program.brightness, map.brightness);
             OutputColor sliceColor = map.sliceColor;
             normalizeColor(sliceColor);
             const bool sliceColorOn = !isDefaultColor(sliceColor);
-            glUniform4f(sliceGainLocation_, sliceColor.red, sliceColor.green, sliceColor.blue, sliceColor.saturation);
-            glUniform4f(sliceToneLocation_, sliceColor.contrast, 1.0f / sliceColor.gamma, sliceColor.black, sliceColorOn ? 1.0f : 0.0f);
+            glUniform4f(program.sliceGain, sliceColor.red, sliceColor.green, sliceColor.blue, sliceColor.saturation);
+            glUniform4f(program.sliceTone, sliceColor.contrast, 1.0f / sliceColor.gamma, sliceColor.black, sliceColorOn ? 1.0f : 0.0f);
             const bool lift = map.blend.blackLevel > 0.0f && hasEdgeBlend(map.blend);
-            glUniform2f(blackLocation_, map.blend.blackLevel, lift ? 1.0f : 0.0f);
+            glUniform2f(program.black, map.blend.blackLevel, lift ? 1.0f : 0.0f);
+            if (spatialSlice) {
+                const bool crop = map.spatial.source == SpatialSource::ViewerCamera;
+                glUniform1i(program.cropOn, crop ? 1 : 0);
+                glUniform4f(program.crop, map.slice[0], 1.0f - (map.slice[1] + map.slice[3]), map.slice[0] + map.slice[2], 1.0f - map.slice[1]);
+                if (depthBits_ > 0) {
+                    glEnable(GL_DEPTH_TEST);
+                    glDepthFunc(GL_LESS);
+                    glDepthMask(GL_TRUE);
+                    glClear(GL_DEPTH_BUFFER_BIT);
+                } else {
+                    glDisable(GL_DEPTH_TEST);
+                }
+            } else {
+                glDisable(GL_DEPTH_TEST);
+            }
             glBindVertexArray(gpu.vao);
-            glDrawElements(GL_TRIANGLES, gpu.indexCount, GL_UNSIGNED_INT, nullptr);
+            if (gpu.indexCount > 0) {
+                glDrawElements(GL_TRIANGLES, gpu.indexCount, GL_UNSIGNED_INT, nullptr);
+            }
         }
+        glDisable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE1);
@@ -671,6 +929,10 @@ bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, con
         glUseProgram(0);
 
         updateNdi(spec, frameWidth, frameHeight);
+
+        if (markersOn_) {
+            drawMarkers(spec, frameWidth, frameHeight);
+        }
 
         if (capture) {
             capture->width = frameWidth;

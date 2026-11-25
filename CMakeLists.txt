@@ -196,6 +196,9 @@ set(NYREXVJ_CORE_SOURCES
     src/core/composition.cpp
     src/core/modulation.cpp
     src/core/output_map.cpp
+    src/core/spatial_map.cpp
+    src/core/spatial_mesh.cpp
+    src/core/spatial_calibration.cpp
     src/core/venue_setup.cpp
     src/core/mask_images.cpp
     src/core/node_graph.cpp
@@ -399,6 +402,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/recorder.cpp
     src/render/dmx_strip.cpp
     src/app/ui_outputs.cpp
+    src/app/ui_spatial.cpp
     src/app/ui_stage.cpp
     src/app/ui_sync.cpp
 
@@ -575,6 +579,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)
     add_test(NAME nvj_venue_tests COMMAND nvj_venue_tests)
+    add_executable(nvj_spatial_tests tests/test_spatial.cpp)
+    target_link_libraries(nvj_spatial_tests PRIVATE nvj_core)
+    target_include_directories(nvj_spatial_tests PRIVATE tests)
+    add_test(NAME nvj_spatial_tests COMMAND nvj_spatial_tests)
     add_executable(nvj_show_tests tests/test_show_package.cpp)
     target_link_libraries(nvj_show_tests PRIVATE nvj_core)
     target_include_directories(nvj_show_tests PRIVATE tests)

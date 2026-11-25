@@ -76,7 +76,7 @@ Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Han
 | --- | --- |
 | Datei | Neue leere Komposition, Als Preset speichern, Datenordner öffnen, Beenden |
 | Bearbeiten | Rückgängig und Wiederherstellen |
-| Ausgabe | Ausgabefenster öffnen oder schließen, Vollbild, Ausgänge und Mapping, Aufnahme starten oder beenden, Aufnahme-Einstellungen, Per Spout an OBS senden, Über NDI senden |
+| Ausgabe | Ausgabefenster öffnen oder schließen, Vollbild, Ausgänge und Mapping, Aufnahme starten oder beenden, Aufnahme-Einstellungen, Per Spout an OBS senden, Über NDI senden, Video-Routing |
 | Audio | Audioquelle wählen: Aus, Demo-Signal, Systemaudio, Eingang, und Geräte aktualisieren |
 | Zeitleiste | Zeitleiste ausführen, Fenster der Show-Zeitleiste anzeigen, Abspielen, Pause, Stopp, Handeingriffe freigeben |
 | Einstellungen | Öffnet das Einstellungsfenster |
@@ -875,6 +875,23 @@ Spout gibt das fertige Bild unter Windows ohne Bildschirmaufnahme an OBS weiter.
 
 Spout funktioniert nur unter Windows. Das Ausgabefenster mit einer Fensteraufnahme in OBS bleibt eine Alternative, ebenso NDI. Über NDI senden im Menü Ausgabe schickt das Hauptbild über das Netzwerk an OBS mit NDI-Plugin, Resolume, vMix oder den NDI Studio Monitor.
 
+## Video-Routing {#video-routing}
+
+Ausgabe, Video-Routing öffnet ein Fenster, das zeigt, was als Quelle dienen kann und wer es benutzt. Ein Routing-Clip spielt das Bild einer anderen Ebene, mehrerer Ebenen zusammen oder des Masters in einer eigenen Ebene. Die Routing-Clips findest du in der Bibliothek unter dem Filter Routing, und du legst einen wie jeden anderen Clip in eine Zelle. Ein Routing-Clip ist eine normale Ebene: Ihre Effekte, Deckkraft, Mischmodus und Farbkorrektur wirken auf das weitergeleitete Bild.
+
+- Die Quellen sind Ebene 1 bis 4 (das Bild der Ebene nach ihren Effekten, vor ihrer Deckkraft und ihrem Mischmodus), Ebenen 1-2, 1-3 und 1-4 (die Mischung der ersten Ebenen nach ihrer Deckkraft und ihren Mischmodi) und Master (nach den Master-Effekten, vor Master-Pegel und Farbkorrektur).
+- Clips mit dem Namen Route zeigen eine Quelle desselben Bildes: Eine Ebene kann eine Ebene unter sich benutzen, und eine Ebene kann die Mischung der Ebenen unter sich benutzen. Clips mit dem Namen Feedback zeigen das vorherige Bild, können jede Quelle benutzen, sogar das eigene Bild der Ebene, und sind genau ein Bild verzögert.
+- Eine Wahl, die eine Schleife ergäbe, wird blockiert: Die Ebene zeichnet nichts, und das Fenster sagt Gesperrt, das wäre eine Schleife. Nimm einen Feedback-Clip, wenn du absichtlich eine Schleife willst.
+- Wenn die Quelle nicht läuft (leere Zelle, Bypass, Solo einer anderen Ebene), ist der Routing-Clip transparent, und das Fenster sagt es. Eine Quellebene mit Deckkraft 0 wird trotzdem gezeichnet, solange etwas sie benutzt.
+- Unter Bilder, die an andere Programme gehen, haben Spout, NDI und Aufnahme je eine Wahl: Master, eine der Ebenen oder die ersten zwei, drei oder vier Ebenen zusammen. Eine andere Quelle als Master wird als deckende Kopie in der Größe der Komposition gesendet, ohne Master-Effekte, Pegel und Farbkorrektur, und nur solange dieser Sender läuft. Läuft ihre Quelle nicht, sendet der Sender Schwarz. Die Ausgabefenster zeigen immer den Master.
+- Das Fenster zeigt jede Quelle mit einer kleinen Live-Vorschau, ihrer Größe, wie viele Ebenen oder Sender sie benutzen, und ihrem Speicher. Kopien entstehen auf der Grafikkarte, nie über den Prozessor, und werden etwa anderthalb Sekunden nach dem letzten Nutzer freigegeben. Der Speicher aller Kopien ist auf 512 MiB begrenzt.
+
+> Hinweis: Bei einem Übergang behält das ausgehende Deck seine eigenen Weiterleitungen, während es ausblendet, und Sender folgen dem eingehenden Deck.
+
+> Tipp: Um nur den Hintergrund an OBS zu schicken, wähl Ebene 1 für Spout und lass die Ausgabefenster auf dem Master.
+
+> Warnung: Video-Routing wurde nur mit einem Software-Renderer getestet. Probier eine Show, die mehrere Ebenen weiterleitet, auf deinem eigenen Rechner und deiner Grafikkarte aus, und beobachte den Grafikspeicher, bevor du dich darauf verlässt.
+
 ## Ausgabefenster {#output-windows}
 
 Einstellungen, Ausgabe hat einen Tab für jeden von bis zu vier Ausgängen. Ausgang 1 ist immer in Benutzung, die Ausgänge 2 bis 4 schaltest du mit Diesen Ausgang verwenden ein. Jeder Ausgang hat sein eigenes Display, Öffnen und Schließen, Vollbild oder Fenster und ein Testbild. `F11` schaltet den Vollbildmodus für alle offenen Ausgänge um, und `Esc` verlässt ihn. Zwei Ausgänge auf demselben Display bekommen eine Warnung, weil sie übereinander lägen.
@@ -1362,6 +1379,8 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--shader-editor [DATEI]` | Den Shader-Editor beim Start öffnen, mit einer Datei aus dem Ordner shaders, wenn du eine angibst, sonst mit einer Vorlage |
 | `--shader-editor-selftest [BILDER]` | Den Shader-Editor in der echten Engine prüfen und beenden, mit einer Bilderzahl danach für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--shader-editor-uitest` | Den Shader-Editor mit echten Tasten- und Mausereignissen bedienen, prüfen, was er enthält, und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis |
+| `--routing-selftest [BILDER]` | Das Video-Routing in der echten Engine prüfen und beenden, mit einer Bildanzahl dahinter für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
+| `--routing-demo` | Ein kleines Beispiel mit Routing-Clips aufbauen und das Fenster Video-Routing öffnen, für Screenshots |
 
 ## Tests und Messungen {#cli-tests}
 

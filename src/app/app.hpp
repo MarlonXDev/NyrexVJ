@@ -121,6 +121,7 @@ public:
     bool init(GLFWwindow* window, const StartOptions& options);
     void frame(double dt);
     void startShaderEditorTest();
+    void startRoutingDemo();
     int tickShaderEditorTest();
     std::string shaderEditorTestReport() const;
     void applyPendingFonts();
@@ -167,6 +168,9 @@ private:
     void undoEdit();
     void drawPerformancePage();
     void drawGpuDiagnostics();
+    void drawRoutingWindow();
+    void applySenderSources();
+    bool senderRunning(int kind) const;
     void drawDiagnosticsBadge();
     void drawPluginsPage();
     void drawPluginFrameSlot(int slot);
@@ -385,6 +389,7 @@ private:
     std::unique_ptr<CreatorState> creator_;
     std::unique_ptr<NodeEditorState> nodes_;
     bool nodesOpen_ = false;
+    bool routingOpen_ = false;
     bool nodesFocus_ = false;
     bool nodesHasFocus_ = false;
     bool creatorOpen_ = false;

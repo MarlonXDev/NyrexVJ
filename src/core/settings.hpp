@@ -101,6 +101,9 @@ struct Settings {
     std::string timelineLost = "hold";
     std::string timelineOverride = "segment";
     bool outputFrameLock = true;
+    std::string senderSpout = "master";
+    std::string senderNdi = "master";
+    std::string senderRecord = "master";
     std::string recordProfile = "h264";
     int recordWidth = 0;
     int recordHeight = 0;

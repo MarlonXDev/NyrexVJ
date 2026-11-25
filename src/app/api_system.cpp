@@ -50,6 +50,8 @@ const char* clipKindName(ClipKind kind) {
         return "text";
     case ClipKind::ParticleClip:
         return "particles";
+    case ClipKind::RouteSource:
+        return "route";
     }
     return "shader";
 }

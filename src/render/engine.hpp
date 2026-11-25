@@ -5,6 +5,7 @@
 #include "core/composition.hpp"
 #include "core/gpu_diag.hpp"
 #include "core/launch_quantizer.hpp"
+#include "core/routing.hpp"
 #include "core/settings.hpp"
 #include "core/shader_editor.hpp"
 #include "render/clip_library.hpp"
@@ -63,9 +64,21 @@ struct GpuMemory {
     size_t live = 0;
     size_t shaderBuffers = 0;
     size_t generators = 0;
+    size_t routing = 0;
     VideoMemory video;
 
-    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers + generators; }
+    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers + generators + routing; }
+};
+
+struct RouteSlotStatus {
+    bool captured = false;
+    bool fresh = false;
+    int width = 0;
+    int height = 0;
+    int copies = 0;
+    int references = 0;
+    size_t bytes = 0;
+    GLuint preview = 0;
 };
 
 struct MemoryPolicy {
@@ -223,6 +236,17 @@ public:
     const LiveInput* liveInput(LiveKind kind, int slot) const;
     LiveInputInfo liveInfo(LiveKind kind, int slot) const;
     void resetLiveLatency();
+    void setSenderSource(routing::SenderKind kind, const routing::Source& source);
+    routing::Source senderSource(routing::SenderKind kind) const;
+    GLuint routedTexture(routing::SenderKind kind) const;
+    bool senderSourceLive(routing::SenderKind kind) const;
+    void setRoutePreviewsWanted(bool wanted) { routePreviewsWanted_ = wanted; }
+    RouteSlotStatus routeSlot(int slot) const;
+    const routing::Plan& routePlan() const { return routePlan_; }
+    size_t routeBytes() const;
+    int routeCapturesAlive() const;
+    unsigned long long routeCaptureCount() const { return routeCaptureCount_; }
+    unsigned long long frameCounter() const { return frameId_; }
 
     Composition comp;
     bool blackout = false;
@@ -614,6 +638,32 @@ private:
     double previewClock_ = 0.0;
     double previewLastTime_ = 0.0;
     std::array<bool, kLayerCount> live_{};
+    struct RouteCapture {
+        std::array<RenderTarget, 2> target;
+        std::array<unsigned long long, 2> frame{};
+        int current = 0;
+    };
+    std::array<std::array<RouteCapture, routing::kSlotCount>, routing::kDeckPasses> routeCaptures_;
+    routing::CacheTracker routeCache_;
+    routing::Plan routePlan_;
+    std::array<routing::Source, routing::kSenderCount> senderSources_{};
+    std::array<RenderTarget, routing::kSenderCount> senderTargets_;
+    std::array<bool, routing::kSenderCount> senderLive_{};
+    bool routePreviewsWanted_ = false;
+    std::array<RenderTarget, routing::kSlotCount> routePreviews_;
+    std::array<unsigned long long, routing::kSlotCount> routePreviewFrame_{};
+    unsigned long long routeCaptureCount_ = 0;
+    bool routeBudgetLogged_ = false;
+    static constexpr size_t kRouteBudgetBytes = 512ull * 1024ull * 1024ull;
+    static constexpr int kRoutePreviewWidth = 160;
+    static constexpr int kRoutePreviewHeight = 90;
+    routing::Plan planRouting(const std::array<int, kLayerCount>& clipOf, int deck);
+    void routeCapture(int deck, int slot, const RenderTarget& source, const routing::Plan& plan);
+    void drawRouted(int sourceIndex, int instance, const RenderTarget& target);
+    void serviceRouting();
+    void releaseRouting();
+    void destroyRouteSlot(int deck, int slot);
+    void blitFiltered(const RenderTarget& source, const RenderTarget& target, bool linear);
     static constexpr int kEffectStateBase = 100000;
     static constexpr int kEffectKeyBase = 1000;
     static constexpr int kChainsPerSet = kLayerCount + 1;

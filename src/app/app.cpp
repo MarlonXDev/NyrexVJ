@@ -733,15 +733,16 @@ void App::frame(double dt) {
     stage_.configure(settings_.dmx, settings_.vrchat);
     stage_.update(dt, [this](int id) { return engine_.sourceValue(id); });
     engine_.setDmxStrip(settings_.dmx.stripEnabled, settings_.dmx.stripAtTop, stage_.vrslGrid());
+    applySenderSources();
     engine_.render();
     if (spout_.active()) {
-        spout_.send(engine_.outputTexture(), engine_.width(), engine_.height());
+        spout_.send(engine_.routedTexture(routing::SenderKind::Spout), engine_.width(), engine_.height());
     }
     if (ndi_.active()) {
-        ndi_.send(engine_.outputTexture(), engine_.width(), engine_.height());
+        ndi_.send(engine_.routedTexture(routing::SenderKind::Ndi), engine_.width(), engine_.height());
     }
     if (recorder_.recording()) {
-        recorder_.capture(engine_.outputTexture(), engine_.width(), engine_.height(), steadyNowSeconds());
+        recorder_.capture(engine_.routedTexture(routing::SenderKind::Recording), engine_.width(), engine_.height(), steadyNowSeconds());
     }
     serviceRecording();
     outputs_.setFrameLock(settings_.outputFrameLock);
@@ -800,6 +801,7 @@ void App::frame(double dt) {
     drawCommunityPackages();
     drawGeneratorStudio();
     drawShaderEditor();
+    drawRoutingWindow();
     drawChainLibrary();
     drawSettingsWindow();
     drawUpdateCard();
@@ -1002,6 +1004,9 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Outputs and mapping..."))) {
             openSettings(SettingsOutput);
+        }
+        if (ImGui::MenuItem(tr("Video routing..."), nullptr, routingOpen_)) {
+            routingOpen_ = !routingOpen_;
         }
         ImGui::Separator();
         if (recorder_.active()) {

@@ -1856,6 +1856,107 @@
           "criteria": "Proposed: finished characters arrive correctly and the clipboard works in both directions. Composing text with an input method is not expected to work yet and the result is to be written down."
         }
       ]
+    },
+    {
+      "id": "video-routing",
+      "title": "Video routing: route clips that play a layer, a group of layers or the master (same frame, or the previous frame as feedback), loops refused, GPU only copies with a memory limit and release, copies for each deck of a transition, sender sources for Spout, NDI and the recording, and the Video routing window",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/OUTPUTS.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0040-video-routing.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/routing.cpp",
+        "src/render/routing_engine.cpp",
+        "src/render/engine.cpp",
+        "src/render/clip_library.cpp",
+        "src/app/ui_routing.cpp",
+        "src/app/routing_selftest.cpp",
+        "tests/test_routing.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-VR-1",
+          "kind": "ctest",
+          "name": "nvj_routing_tests"
+        },
+        {
+          "id": "A-VR-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --routing-selftest 60 --bench-out result.json",
+          "note": "in the real engine with OpenGL, with pixel checks: a faded out layer shown through a route clip, a routed picture pixel for pixel equal to the layer and with its transparency kept, two layers using one source, a chain of routes, a group of layers (added on top it doubles), the master from the previous frame, feedback exactly one frame late and its transparent first frame, three loops refused and reported, a missing and a bypassed source, switching between a route, a feedback route and a plain clip every frame for 120 frames, a source layer stopped and started every frame, a resolution change (same frame route there at once, feedback restarts), sender sources (a layer, a group, a source that is not playing, back to the master, a feedback source refused), the small previews and their release, the memory of one picture and the release after 90 frames, a transition whose outgoing deck keeps its routes, nothing allocated without routing; the benchmark compares four shader layers, three plus a route layer, and one and two sender copies"
+        },
+        {
+          "id": "A-VR-3",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Video routing window and the Routing filter has a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-VR-4",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-welcome --audio-demo --routing-demo --frames 120 --screenshot routing.png",
+          "note": "builds a composition with route clips, opens the window in a real OpenGL context and writes a picture; a smoke test of the window, not a test of its use"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-VR-1",
+          "title": "Cost and memory on a real graphics card",
+          "needs": "A Windows or Linux computer with an NVIDIA, AMD or Intel graphics card (card and driver version are part of the result), NyrexVJ at 1920 x 1080 and at the largest composition size you use",
+          "steps": [
+            "Load a composition with four shader or video layers and note the frame time and the graphics memory on the Performance page.",
+            "Replace the fourth layer by Route: Group 1-3, then by Feedback: Layer 1, and note both numbers again for each.",
+            "Choose Layer 1 for Spout and Layers 1-3 for NDI in Output, Video routing, start both senders and note both numbers again.",
+            "Run NyrexVJ --routing-selftest 120 --bench-out result.json and keep the file."
+          ],
+          "measure": "The frame time and the graphics memory in every step, the memory per copy, and whether any check of the self test failed",
+          "criteria": "Proposed: a route layer costs about what a simple shader layer costs, a sender copy costs well under a millisecond on a card, the memory grows by one picture per routed source (two for a feedback source) and falls back about a second and a half after the last user, and no check fails. Numbers worse than that are to be written down."
+        },
+        {
+          "id": "M-VR-2",
+          "title": "A routed picture seen by OBS and by an NDI receiver",
+          "needs": "A Windows computer with OBS and the Spout2 plugin, and a second program or computer that receives NDI",
+          "steps": [
+            "Put a different clip on each layer, choose Layer 1 for Spout and Layers 1-2 for NDI, and start both senders.",
+            "Check in OBS that the Spout picture is layer 1 alone, without the master effects, and that the NDI receiver shows the mix of layers 1 and 2.",
+            "Stop the clip of layer 1 (empty the cell) and watch both receivers, then put it back.",
+            "Set both senders back to Master and check that the full picture is back and that the memory of the copies falls."
+          ],
+          "measure": "What each receiver showed in each step, whether the picture was opaque, whether a stopped source gave black, and whether the frame rate of the receivers changed",
+          "criteria": "Proposed: the receivers show exactly the chosen layer or group, an empty source sends black and says so in the window, choosing Master brings back the whole picture, and the frame rate does not change."
+        },
+        {
+          "id": "M-VR-3",
+          "title": "Recording a routed source and routing across a deck change",
+          "needs": "A computer with a graphics card, NyrexVJ, a player for the recorded file and a deck set with route clips on two decks",
+          "steps": [
+            "Choose Layer 1 for Recording in Output, Video routing, record about 30 seconds and open the file.",
+            "Play deck 1 with a route clip in layer 2 and Feedback: Layer 1 in layer 3, switch to deck 2 with a transition of 3 seconds and back, and watch the output.",
+            "Change the resolution of the composition while a feedback layer plays."
+          ],
+          "measure": "What the recorded file shows, whether the routed layers kept their picture during the transition and after it, and whether any frame was black or wrong",
+          "criteria": "Proposed: the file shows layer 1 only, the outgoing deck keeps its routes while it fades out, a feedback layer needs one frame to restart after a deck switch or a resolution change, and nothing else goes wrong."
+        },
+        {
+          "id": "M-VR-4",
+          "title": "A long show with four routed layers",
+          "needs": "A computer with a graphics card, a deck that routes all four layers (for example the Video routing demo), an output window or projector and about two hours",
+          "steps": [
+            "Start the demo composition with --routing-demo or build the same by hand and let it run with the Performance page open.",
+            "Every ten minutes change the route clips of two layers and the sender sources, and note the graphics memory estimate and, where the driver reports it, the free video memory.",
+            "After two hours note whether the memory grew and whether the frame time changed."
+          ],
+          "measure": "The memory estimate and the frame time at the start, every ten minutes and at the end, and any warning of the Performance page",
+          "criteria": "Proposed: the estimate returns to its starting value after every change, the frame time stays within the noise, and no warning stays on."
+        }
+      ]
     }
   ]
 }

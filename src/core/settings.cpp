@@ -5,6 +5,7 @@
 #include "core/output_map_json.hpp"
 #include "core/record_plan.hpp"
 #include "core/render_policy.hpp"
+#include "core/routing.hpp"
 #include "core/stage_json.hpp"
 #include "media/video_types.hpp"
 
@@ -292,6 +293,17 @@ bool loadSettings(Settings& settings) {
     result.timelineLost = choice("timelineLost", {"hold", "continue"}, "hold");
     result.timelineOverride = choice("timelineOverride", {"segment", "released"}, "segment");
     result.outputFrameLock = boolean("outputFrameLock", true);
+    const auto senderChoice = [&doc](const char* key) {
+        auto it = doc.find(key);
+        routing::Source parsed;
+        if (it != doc.end() && it->is_string() && routing::parseSenderKey(it->get<std::string>(), parsed)) {
+            return routing::senderKey(parsed);
+        }
+        return std::string("master");
+    };
+    result.senderSpout = senderChoice("senderSpout");
+    result.senderNdi = senderChoice("senderNdi");
+    result.senderRecord = senderChoice("senderRecord");
     auto recordProfile = doc.find("recordProfile");
     if (recordProfile != doc.end() && recordProfile->is_string() && findRecordProfile(recordProfile->get<std::string>()) != nullptr) {
         result.recordProfile = recordProfile->get<std::string>();
@@ -407,6 +419,15 @@ bool saveSettings(const Settings& settings) {
     doc["timelineLost"] = settings.timelineLost;
     doc["timelineOverride"] = settings.timelineOverride;
     doc["outputFrameLock"] = settings.outputFrameLock;
+    if (settings.senderSpout != "master") {
+        doc["senderSpout"] = settings.senderSpout;
+    }
+    if (settings.senderNdi != "master") {
+        doc["senderNdi"] = settings.senderNdi;
+    }
+    if (settings.senderRecord != "master") {
+        doc["senderRecord"] = settings.senderRecord;
+    }
     doc["recordProfile"] = settings.recordProfile;
     doc["recordWidth"] = settings.recordWidth;
     doc["recordHeight"] = settings.recordHeight;

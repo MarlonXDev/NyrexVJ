@@ -1,5 +1,7 @@
 #include "render/clip_library.hpp"
 
+#include "core/routing.hpp"
+
 #include "core/particles.hpp"
 #include "core/text_doc.hpp"
 
@@ -255,6 +257,19 @@ void appendLiveClips(std::vector<ClipDef>& clips) {
         def.body = "const int kSlot = " + std::to_string(slot + 1) + ";\n" + kSpoutPlaceholder;
         def.kind = ClipKind::PluginSource;
         def.sceneIndex = slot;
+        clips.push_back(std::move(def));
+    }
+}
+
+void appendRouteClips(std::vector<ClipDef>& clips) {
+    const std::vector<routing::Source>& list = routing::clipSources();
+    for (size_t i = 0; i < list.size(); ++i) {
+        ClipDef def;
+        def.name = routing::sourceName(list[i]);
+        const int number = list[i].kind == routing::SourceKind::Layer ? list[i].index + 1 : list[i].kind == routing::SourceKind::Group ? list[i].index : 1;
+        def.body = "const int kSlot = " + std::to_string(number) + ";\n" + kSpoutPlaceholder;
+        def.kind = ClipKind::RouteSource;
+        def.sceneIndex = static_cast<int>(i);
         clips.push_back(std::move(def));
     }
 }
@@ -1094,6 +1109,7 @@ void main() {
     appendExtraClips(clips);
     appendSpoutClips(clips);
     appendLiveClips(clips);
+    appendRouteClips(clips);
     appendSceneClips(clips);
     return clips;
 }

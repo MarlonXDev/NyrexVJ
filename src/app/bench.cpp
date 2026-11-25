@@ -902,7 +902,7 @@ int runShaderBenchmark(Engine& engine, int frames, const std::string& outputPath
     double referenceMs = 0.0;
     for (size_t c = 0; c < library.size(); ++c) {
         const ClipDef& clip = library[c];
-        if (clip.isScene() || clip.isMedia() || clip.isGenerator() || clip.kind == ClipKind::SpoutSource || !clip.error.empty()) {
+        if (clip.isScene() || clip.isMedia() || clip.isGenerator() || clip.kind == ClipKind::SpoutSource || clip.isRoute() || !clip.error.empty()) {
             continue;
         }
         Layer& layer = engine.comp.layers[0];
@@ -1087,7 +1087,7 @@ int runNodeBenchmark(Engine& engine, int frames, const std::string& outputPath) 
     const std::vector<ClipDef>& clips = clipLibrary();
     for (size_t c = 0; c < clips.size(); ++c) {
         const ClipDef& clip = clips[c];
-        if (clip.isScene() || clip.isMedia() || clip.isGenerator() || clip.kind == ClipKind::SpoutSource || !clip.error.empty()) {
+        if (clip.isScene() || clip.isMedia() || clip.isGenerator() || clip.kind == ClipKind::SpoutSource || clip.isRoute() || !clip.error.empty()) {
             continue;
         }
         if (clip.name == "Plasma") {

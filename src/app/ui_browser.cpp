@@ -6,6 +6,7 @@
 #include "core/log.hpp"
 #include "core/novelty.hpp"
 #include "core/preset.hpp"
+#include "core/routing.hpp"
 #include "media/media_image.hpp"
 #include "media/video_decoder.hpp"
 #include "platform/platform.hpp"
@@ -179,6 +180,8 @@ bool matchesKind(const ClipDef& clip, int kind) {
         return clip.isLive();
     case 9:
         return clip.isGenerator();
+    case 11:
+        return clip.isRoute();
     default:
         return true;
     }
@@ -548,6 +551,10 @@ void App::drawClipTile(int index, const ImVec2& size) {
         badge = tr("Text");
     } else if (clip.kind == ClipKind::ParticleClip) {
         badge = tr("Particles");
+    } else if (clip.kind == ClipKind::RouteSource) {
+        const size_t at = static_cast<size_t>(clip.sceneIndex);
+        const bool feedback = at < routing::clipSources().size() && routing::clipSources()[at].previousFrame;
+        badge = feedback ? tr("Feedback") : tr("Route");
     }
     if (badge != nullptr) {
         const char* label = badge;
@@ -757,9 +764,9 @@ void App::drawLibraryPopups() {
 
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders"), tr("Live"), tr("Generators"), tr("Favorites")};
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders"), tr("Live"), tr("Generators"), tr("Favorites"), tr("Routing")};
     const float rightEdge = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
-    for (int k = 0; k < 11; ++k) {
+    for (int k = 0; k < 12; ++k) {
         if (k > 0) {
             const float buttonWidth = ImGui::CalcTextSize(kinds[k]).x + ImGui::GetStyle().FramePadding.x * 2.0f;
             if (ImGui::GetItemRectMax().x + 4.0f + buttonWidth < rightEdge) {

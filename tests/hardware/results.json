@@ -1079,6 +1079,58 @@
       "test": "A-SE-5",
       "command": "NyrexVJ --fresh --no-welcome --audio-demo --shader-editor broken_demo.glsl --frames 150 --screenshot editor.png",
       "notes": "the window opened on a broken shader showed the errors on lines 6 and 7, the red and yellow marks, the problem list and 'There is no working version yet.'; the picture was looked at once by the AI assistant that made the change, no person has used the window yet"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.47.0 (branch feature/video-routing, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "video-routing",
+      "test": "A-VR-1",
+      "command": "ctest -R nvj_routing_tests",
+      "notes": "34,049 checks, 0 failed (sources, names and slots, every combination of layers and sources against the loop rule, inactive sources over all sixteen sets of playing layers, senders, latency, the plan, 4,000 random lists of users with an acyclic check, surface checks, sizes, the cache tracker, a 600 step switching simulation); whole suite 44 of 44 passed"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.47.0 (branch feature/video-routing, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "video-routing",
+      "test": "A-VR-2",
+      "command": "NyrexVJ --fresh --routing-selftest 200 --bench-out result.json",
+      "notes": "51 checks passed in the real engine in every run after the test itself was corrected (the first run had four wrong expectations in the test, not in the engine: a column that was triggered by mistake and two memory checks that did not wait for the 90 frames a copy is kept); benchmark, three runs of 200 frames at 960 x 540, wall clock of the whole frame: four shader layers 25.5, 24.3 and 24.8 ms, three shader layers and a route layer 24.2, 24.8 and 24.8 ms (-1.3, +0.5, 0.0 against the shader layer), one sender with Layer 1 +2.4, +5.6 and +2.8 ms, two senders with a group +7.5, +2.1 and +6.5 ms, one routed source 2,073,600 bytes; the spread from run to run is several milliseconds; software renderer, no speed claim for a graphics card"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.47.0 (branch feature/video-routing, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "video-routing",
+      "test": "A-VR-3",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "all 2422 translation keys covered, 26 of them new for video routing"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.47.0 (branch feature/video-routing, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "video-routing",
+      "test": "A-VR-4",
+      "command": "NyrexVJ --fresh --no-welcome --audio-demo --routing-demo --frames 120 --screenshot routing.png",
+      "notes": "the window opened in a real OpenGL context at 1700 x 1000 and showed the eight sources with live previews (layer 1 with two copies for the feedback layer, 15.9 MB), the status of the layer that plays Layers 1-2 (Working) and of the layer that plays Feedback: Layer 1 (Feedback, one frame late), the three sender choices (Spout set to Layer 1, not running) and 24.2 MB in 2 copies; looked at by the AI assistant in the screenshot, not by a person"
     }
   ]
 }

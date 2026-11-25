@@ -469,6 +469,7 @@ Catalogue Catalogue::fromLibraries() {
                 break;
             case ClipKind::Shader:
             case ClipKind::BuiltinScene:
+            case ClipKind::RouteSource:
                 catalogue.builtInClips.insert(clip.name);
                 break;
         }

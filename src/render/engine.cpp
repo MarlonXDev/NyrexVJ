@@ -1037,10 +1037,14 @@ void Engine::renderEditorPreviews() {
 void Engine::serviceMedia() {
     constexpr double kImageIdleSeconds = 120.0;
     constexpr double kVideoIdleSeconds = 6.0;
+    const bool trimming = memoryTrimming();
+    const std::vector<char> wanted = trimming ? activeAndNextCells(media_.size(), true) : std::vector<char>();
     for (const Layer& layer : comp.layers) {
         for (const int cell : layer.cells) {
             if (cell >= 0 && static_cast<size_t>(cell) < media_.size() && media_[static_cast<size_t>(cell)] && !media_[static_cast<size_t>(cell)]->isVideo()) {
-                ensureMedia(static_cast<size_t>(cell));
+                if (!trimming || wanted[static_cast<size_t>(cell)] || !media_[static_cast<size_t>(cell)]->thumbnailDone) {
+                    ensureMedia(static_cast<size_t>(cell));
+                }
             }
         }
     }
@@ -1069,7 +1073,7 @@ void Engine::serviceMedia() {
 }
 
 void Engine::prewarmMedia() {
-    if (!prewarmNext) {
+    if (!prewarmNext || (memoryTrimming() && !gpudiag::preparingAllowed(pressure_.level()))) {
         return;
     }
     std::array<int, kLayerCount> prepared{};
@@ -1219,9 +1223,14 @@ void Engine::renderSceneThumbnail(size_t index) {
 void Engine::serviceScenes() {
     constexpr double kUnloadAfterSeconds = 120.0;
     std::vector<char> referenced(scenes_.size(), 0);
+    const bool trimming = memoryTrimming();
+    const std::vector<char> wanted = trimming ? activeAndNextCells(scenes_.size(), true) : std::vector<char>();
     for (const Layer& layer : comp.layers) {
         for (const int cell : layer.cells) {
             if (cell >= 0 && static_cast<size_t>(cell) < scenes_.size() && scenes_[static_cast<size_t>(cell)]) {
+                if (trimming && !wanted[static_cast<size_t>(cell)]) {
+                    continue;
+                }
                 referenced[static_cast<size_t>(cell)] = 1;
                 scenes_[static_cast<size_t>(cell)]->touch();
                 ensureScene(static_cast<size_t>(cell));
@@ -1242,6 +1251,207 @@ void Engine::serviceScenes() {
         if (scenes_[i] && !referenced[i] && scenes_[i]->state() == SceneState::Ready && scenes_[i]->idleSeconds() > kUnloadAfterSeconds) {
             scenes_[i]->release();
             logLine("3D scene '" + scenes_[i]->label() + "' was unloaded because it was not used for two minutes");
+        }
+    }
+}
+
+void Engine::setMemoryPolicy(const MemoryPolicy& policy) {
+    MemoryPolicy next = policy;
+    next.budgetBytes = gpudiag::clampBudgetBytes(policy.budgetBytes);
+    const bool changed = next.budgetBytes != memoryPolicy_.budgetBytes || next.trim != memoryPolicy_.trim;
+    memoryPolicy_ = next;
+    if (changed) {
+        pressure_.reset();
+        appliedPressure_ = 0;
+        memoryCheckAt_ = -1.0e9;
+    }
+}
+
+std::vector<char> Engine::activeAndNextCells(size_t count, bool includeNext) const {
+    std::vector<char> wanted(count, 0);
+    const auto mark = [&](const std::array<Layer, kLayerCount>& layers) {
+        for (const Layer& layer : layers) {
+            if (layer.activeColumn < 0 || layer.activeColumn >= kColumnCount) {
+                continue;
+            }
+            const int active = layer.cells[static_cast<size_t>(layer.activeColumn)];
+            if (active >= 0 && static_cast<size_t>(active) < count) {
+                wanted[static_cast<size_t>(active)] = 1;
+            }
+            if (!includeNext) {
+                continue;
+            }
+            for (int step = 1; step < kColumnCount; ++step) {
+                const int clip = layer.cells[static_cast<size_t>((layer.activeColumn + step) % kColumnCount)];
+                if (clip >= 0) {
+                    if (static_cast<size_t>(clip) < count) {
+                        wanted[static_cast<size_t>(clip)] = 1;
+                    }
+                    break;
+                }
+            }
+        }
+    };
+    mark(comp.layers);
+    if (transition_.active) {
+        mark(outLayers_);
+    }
+    return wanted;
+}
+
+void Engine::sampleDriverMemory() {
+    if (driverMemoryDisabled_) {
+        return;
+    }
+    gpudiag::DriverMemory reading;
+    if (GLAD_GL_NVX_gpu_memory_info) {
+        glGetError();
+        const auto query = [](GLenum name) {
+            GLint value = -1;
+            glGetIntegerv(name, &value);
+            return static_cast<long long>(value);
+        };
+        gpudiag::NvxRaw raw;
+        raw.dedicatedKb = query(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX);
+        raw.availableKb = query(GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX);
+        raw.evictedKb = query(GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX);
+        raw.evictionCount = query(GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX);
+        reading = gpudiag::fromNvx(raw);
+    } else if (GLAD_GL_ATI_meminfo) {
+        glGetError();
+        GLint values[4] = {-1, -1, -1, -1};
+        glGetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, values);
+        reading = gpudiag::fromAti({values[0], values[1], values[2], values[3]});
+    } else {
+        driverMemoryDisabled_ = true;
+        return;
+    }
+    if (glGetError() != GL_NO_ERROR) {
+        driverMemoryDisabled_ = true;
+        driverMemory_ = gpudiag::DriverMemory{};
+        logLine("The graphics driver refused the video memory query; driver memory numbers are switched off");
+        return;
+    }
+    driverMemory_ = reading;
+}
+
+void Engine::refreshDiagnostics() {
+    const GpuMemory memory = gpuMemory();
+    const std::vector<char> activeMedia = activeAndNextCells(media_.size(), false);
+    const std::vector<char> activeScenes = activeAndNextCells(scenes_.size(), false);
+    std::uint64_t evictable = 0;
+    for (size_t i = 0; i < media_.size(); ++i) {
+        if (media_[i] && media_[i]->state() == MediaState::Ready && !activeMedia[i]) {
+            evictable += media_[i]->gpuBytes();
+        }
+    }
+    for (size_t i = 0; i < scenes_.size(); ++i) {
+        if (scenes_[i] && scenes_[i]->state() == SceneState::Ready && !activeScenes[i]) {
+            evictable += scenes_[i]->stats().gpuBytes;
+        }
+    }
+    Diagnostics& d = diagnostics_;
+    d.driver = driverMemory_;
+    d.estimateBytes = memory.total();
+    d.budgetBytes = memoryPolicy_.budgetBytes;
+    d.evictableBytes = std::min<std::uint64_t>(evictable, d.estimateBytes);
+    d.residentBytes = d.estimateBytes - d.evictableBytes;
+    d.releasedBytes = releasedBytes_;
+    d.releasedCount = releasedCount_;
+    d.pressureLevel = pressure_.level();
+    d.trimming = memoryTrimming();
+    d.uploadBytesPerSecond = traffic_.bytesPerSecond();
+    d.uploadPeakBytesPerSecond = traffic_.peakBytesPerSecond();
+    d.uploadTotalBytes = traffic_.total();
+}
+
+void Engine::trimMemory(std::uint64_t estimate, std::uint64_t target) {
+    struct Ref {
+        bool scene = false;
+        size_t index = 0;
+    };
+    const std::vector<char> activeMedia = activeAndNextCells(media_.size(), false);
+    const std::vector<char> activeScenes = activeAndNextCells(scenes_.size(), false);
+    std::vector<gpudiag::Candidate> candidates;
+    std::vector<Ref> refs;
+    for (size_t i = 0; i < media_.size(); ++i) {
+        const std::unique_ptr<MediaPlayer>& player = media_[i];
+        if (!player || player->state() != MediaState::Ready) {
+            continue;
+        }
+        gpudiag::Candidate candidate;
+        candidate.kind = player->isVideo() ? gpudiag::ResourceClass::PreparedVideo : gpudiag::ResourceClass::IdleImage;
+        candidate.bytes = player->gpuBytes();
+        candidate.idleSeconds = player->idleSeconds();
+        candidate.inUse = activeMedia[i] != 0;
+        candidates.push_back(candidate);
+        refs.push_back({false, i});
+    }
+    for (size_t i = 0; i < scenes_.size(); ++i) {
+        const std::unique_ptr<ScenePlayer>& player = scenes_[i];
+        if (!player || player->state() != SceneState::Ready) {
+            continue;
+        }
+        gpudiag::Candidate candidate;
+        candidate.kind = gpudiag::ResourceClass::Scene3d;
+        candidate.bytes = player->stats().gpuBytes;
+        candidate.idleSeconds = player->idleSeconds();
+        candidate.inUse = activeScenes[i] != 0;
+        candidates.push_back(candidate);
+        refs.push_back({true, i});
+    }
+    gpudiag::EvictionRequest request;
+    request.currentBytes = estimate;
+    request.targetBytes = target;
+    request.minIdleSeconds = gpudiag::minIdleSecondsFor(pressure_.level());
+    request.maxCount = 8;
+    for (const size_t pick : gpudiag::planEviction(candidates, request)) {
+        const Ref& ref = refs[pick];
+        const std::uint64_t bytes = candidates[pick].bytes;
+        std::string label;
+        if (ref.scene) {
+            label = scenes_[ref.index]->label();
+            scenes_[ref.index]->release();
+        } else {
+            label = media_[ref.index]->label();
+            media_[ref.index]->release();
+        }
+        releasedBytes_ += bytes;
+        ++releasedCount_;
+        logLine("Released " + std::string(gpudiag::resourceClassName(candidates[pick].kind)) + " '" + label + "' (" + std::to_string(bytes / gpudiag::kMiB) + " MB) because the graphics memory is over the budget");
+    }
+}
+
+void Engine::serviceMemory() {
+    const unsigned long long streamed = streamedUploadBytes();
+    if (streamed >= lastStreamedBytes_) {
+        traffic_.add(streamed - lastStreamedBytes_);
+    }
+    lastStreamedBytes_ = streamed;
+    traffic_.advance(clock_);
+    if (clock_ - driverSampledAt_ >= 1.0) {
+        driverSampledAt_ = clock_;
+        sampleDriverMemory();
+    }
+    if (clock_ - memoryCheckAt_ < 0.25) {
+        return;
+    }
+    const double elapsed = std::min(clock_ - memoryCheckAt_, 1.0);
+    memoryCheckAt_ = clock_;
+    refreshDiagnostics();
+    const int before = appliedPressure_;
+    const int level = pressure_.update(elapsed, diagnostics_.estimateBytes, memoryPolicy_.budgetBytes);
+    if (level != before) {
+        appliedPressure_ = level;
+        diagnostics_.pressureLevel = level;
+        logLine("Graphics memory pressure step " + std::to_string(level) + " of " + std::to_string(gpudiag::kMaxPressureLevel));
+    }
+    if (memoryTrimming() && !transition_.active) {
+        const std::uint64_t estimate = diagnostics_.estimateBytes;
+        if (estimate > memoryPolicy_.budgetBytes) {
+            trimMemory(estimate, gpudiag::lowWater(memoryPolicy_.budgetBytes));
+        } else if (level > 0 && estimate > gpudiag::recoveryWater(memoryPolicy_.budgetBytes)) {
+            trimMemory(estimate, gpudiag::recoveryWater(memoryPolicy_.budgetBytes));
         }
     }
 }
@@ -1680,6 +1890,9 @@ void Engine::updateQuality() {
     float scale = fixedQualityScale(qualityMode_);
     if (qualityMode_ == QualityAuto) {
         scale = qualityController_.update(gpuMs_, qualityBudgetMs_);
+    }
+    if (memoryPolicy_.budgetBytes > 0 && memoryPolicy_.lowerQuality) {
+        scale = std::min(scale, gpudiag::layerScaleCap(pressure_.level()));
     }
     if (!out_.fbo) {
         return;
@@ -3192,6 +3405,7 @@ void Engine::render() {
     serviceMedia();
     serviceGenerators();
     prewarmMedia();
+    serviceMemory();
     serviceSpout();
     serviceLive();
     releaseIdleShaderStates();

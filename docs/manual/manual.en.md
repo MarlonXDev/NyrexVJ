@@ -1191,11 +1191,25 @@ A live show needs a steady frame rate. NyrexVJ is light, but many layers, heavy 
 
 ## Frame rate and budget {#perf-frame}
 
-Frame rate limit caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat on the same computer. The frame budget is the time one frame may take, derived from your target frame rate. Frames above it count as too slow, and the page shows how many frames stayed within the budget, the average, the slowest five percent and the worst frame.
+Frame rate limit caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat on the same computer. The frame budget is the time one frame may take, derived from your target frame rate. Frames above it count as too slow, and the page shows how many frames stayed within the budget, the average, the slowest five percent, the slowest one percent and the worst frame.
 
 ## Render quality {#perf-quality}
 
 Layer resolution draws the layers and their effects at a lower size and scales them up when they are mixed. Full quality changes nothing, Balanced draws at 75 percent, Performance at 50 percent. Automatic lowers the resolution in small steps only while a frame takes longer than the budget and raises it again when there is room. Master effects and every output stay at full resolution.
+
+## Graphics memory and warnings {#perf-memory}
+
+Under Graphics memory and traffic the Performance page shows two kinds of numbers and keeps them apart. Measured by the graphics driver is what the driver says about the whole card, for every program together: memory in use, memory free and how often the driver had to move video memory into system memory. Only drivers with the extension GL_NVX_gpu_memory_info or GL_ATI_meminfo can say that, and software renderers give meaningless values, so on many computers the page says that nothing usable is reported. Estimated by NyrexVJ is what NyrexVJ itself allocated: render targets, thumbnails, images, videos, 3D scenes, effect buffers, text and particles. It does not see VRChat or any other program.
+
+Memory budget (0 = off) is the most graphics memory NyrexVJ should use. It is off at the start, and while it is 0 nothing changes. With a budget, clips that are not playing and were not used for five seconds are unloaded when the estimate is over it: prepared videos first, then images, then 3D scenes. A clip that plays is never unloaded, and a clip you launch after it was unloaded loads again, which can take a moment. If that is not enough, NyrexVJ steps up: first it stops preparing the next clips, then it unloads after one second, and with Also lower the layer resolution ticked it draws layers at 75 and then 50 percent. It steps back when there is room again.
+
+The page also shows:
+
+- Video and live source upload: the picture data NyrexVJ hands to the driver, per second, the highest second of the last ten and the total. Images and models load once and are not counted.
+- The slowest one percent and, from a 60 second window, P95 and P99, late frames (more than 1.5 times the budget) and dropped frames, estimated from the time between frames.
+- Warnings for slow frames, dropped frames, memory near or over the budget, little free memory on the card, driver moves and a very high upload. They appear after two seconds, go away after six and show as a coloured count in the status bar. Warning limits changes the three that depend on your show.
+
+> Warning: The estimate counts what NyrexVJ allocated, not what the card has left, and a budget cannot see VRChat. If the budget is lower than what the playing clips need, nothing can be released and the page says so. Raise the budget or lower the layer resolution.
 
 ## Text and particles {#perf-generators}
 
@@ -1209,7 +1223,7 @@ Particle limit per layer is the most particles a particle clip may have alive at
 - Live sources are closed three seconds after the last use.
 - 3D models and scenes cost graphics time by their triangle count.
 
-The page also shows the memory: an estimate of the graphics memory, the video memory and the program memory, and which clip or effect takes the time. Measured numbers and limits are in docs/PERFORMANCE.md of the project.
+The page also shows the memory: an estimate of the graphics memory, the video memory and the program memory, and which clip or effect takes the time. What the driver measures, the memory budget and the warnings are in [Graphics memory and warnings](#performance/perf-memory). Measured numbers and limits are in docs/PERFORMANCE.md of the project.
 
 > Tip: When a show runs on the same computer as VRChat, set a frame rate limit and Layer resolution to Balanced or Automatic. The headroom is worth more than a little sharper picture.
 

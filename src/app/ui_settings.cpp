@@ -696,18 +696,19 @@ void App::drawPerformancePage() {
     }
 
     ImGui::SeparatorText(tr("Measured"));
-    if (ImGui::BeginTable("##perf", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+    if (ImGui::BeginTable("##perf", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("##name", ImGuiTableColumnFlags_WidthStretch, 1.6f);
         ImGui::TableSetupColumn(tr("Average"));
         ImGui::TableSetupColumn(tr("Slowest 5%"));
+        ImGui::TableSetupColumn(tr("Slowest 1%"));
         ImGui::TableSetupColumn(tr("Worst"));
         ImGui::TableHeadersRow();
         const auto row = [&](const char* name, const FrameSummary& summary, bool available) {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::TextUnformatted(name);
-            const double values[3] = {summary.avg, summary.p95, summary.max};
-            for (int i = 0; i < 3; ++i) {
+            const double values[4] = {summary.avg, summary.p95, summary.p99, summary.max};
+            for (int i = 0; i < 4; ++i) {
                 ImGui::TableSetColumnIndex(i + 1);
                 if (!available) {
                     ImGui::TextDisabled("-");
@@ -746,6 +747,7 @@ void App::drawPerformancePage() {
         perfFrameSummary_ = FrameSummary{};
         perfCpuSummary_ = FrameSummary{};
         perfGpuSummary_ = FrameSummary{};
+        diagMonitor_->reset();
     }
 
     drawPassProfiler();
@@ -775,6 +777,8 @@ void App::drawPerformancePage() {
     ImGui::Text("%s: %.0f MB", tr("Program memory"), static_cast<double>(platform::processMemoryBytes()) / (1024.0 * 1024.0));
     ImGui::Text("%s: %d", tr("3D scenes loaded"), engine_.loadedSceneCount());
 
+    drawGpuDiagnostics();
+
     ImGui::SeparatorText(tr("Load"));
     const RenderCost cost = estimateRenderCost(engine_.comp);
     ImGui::Text("%s: %d", tr("Layers on air"), cost.layers());
@@ -796,6 +800,10 @@ void App::drawStatusBar() {
         const float fps = ImGui::GetIO().Framerate;
         ImGui::TextColored(fps >= static_cast<float>(settings_.perfBudgetFps) * 0.92f ? ImVec4(0.45f, 0.85f, 0.45f, 1.0f) : ImVec4(1.0f, 0.65f, 0.2f, 1.0f), "%.0f FPS", fps);
         ImGui::SameLine();
+        if (settings_.diagWarnings && !diagMonitor_->tracker().active().empty()) {
+            drawDiagnosticsBadge();
+            ImGui::SameLine();
+        }
         if (settings_.showTimings && perfCpuSummary_.count > 0) {
             if (engine_.gpuTimingAvailable() && perfGpuSummary_.count > 0) {
                 ImGui::TextDisabled("CPU %.1f  GPU %.1f ms", perfCpuSummary_.avg, perfGpuSummary_.avg);

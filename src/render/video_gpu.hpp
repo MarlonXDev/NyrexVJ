@@ -30,6 +30,8 @@ struct VideoMemory {
 
 enum class UploadRoute { None, CpuRgba, GpuConvert, CompressedDirect };
 
+unsigned long long streamedUploadBytes();
+
 const char* uploadRouteName(UploadRoute route);
 
 struct UploadStats {

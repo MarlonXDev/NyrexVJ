@@ -962,6 +962,58 @@
       "test": "A-GP-4",
       "command": "NyrexVJ --fresh --gpu-particles 1 --generators 1 --generator-select \"GPU Nebula\" --frames 40",
       "notes": "the window opened on the Particles tab and showed the clip on the graphics card path; a smoke test only"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.45.0 (branch feature/gpu-diagnostics, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-diagnostics",
+      "test": "A-GD-1",
+      "command": "ctest -R nvj_gpudiag_tests",
+      "notes": "363 checks (driver readouts, sliding window percentiles, frame watch, traffic, the eight warnings and their hysteresis, release planner, pressure ladder, settings round trip); whole suite 42 of 42 passed"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.45.0 (branch feature/gpu-diagnostics, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-diagnostics",
+      "test": "A-GD-2",
+      "command": "NyrexVJ --fresh --gpu-diag-selftest 5 --bench-out result.json",
+      "notes": "17 checks passed in the real engine; llvmpipe exposes GL_NVX_gpu_memory_info with values that are not those of a card, so the driver readout says nothing about real hardware; 6 of 8 images of 3584 x 3584 released over a 256 MB budget, reload 253 ms, step 4 reached and left again; frame time 53.7 ms with the budget off and 53.3 ms on, within the noise of a software renderer, no speed up claimed"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.45.0 (branch feature/gpu-diagnostics, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-diagnostics",
+      "test": "A-GD-3",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "All 2327 translation keys are covered"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.45.0 (branch feature/gpu-diagnostics, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-diagnostics",
+      "test": "A-GD-4",
+      "command": "NyrexVJ --fresh --settings 10 --audio-demo --frames 90 --screenshot page.png",
+      "notes": "the Performance page opened in a real OpenGL context and the new Graphics memory and traffic block was drawn (looked at in a scrolled screenshot); a smoke test of the window only"
     }
   ]
 }

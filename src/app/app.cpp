@@ -699,6 +699,11 @@ void App::frame(double dt) {
     engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);
     engine_.prewarmNext = settings_.prewarmNext;
     engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
+    MemoryPolicy memoryPolicy;
+    memoryPolicy.budgetBytes = static_cast<std::uint64_t>(std::max(settings_.gpuMemoryBudgetMb, 0)) * gpudiag::kMiB;
+    memoryPolicy.trim = settings_.gpuMemoryTrim;
+    memoryPolicy.lowerQuality = settings_.gpuMemoryLowerQuality;
+    engine_.setMemoryPolicy(memoryPolicy);
     engine_.update(dt);
     updatePlugins();
     engine_.configureSpout(settings_.spoutInputs, spout_.active() ? std::string(spoutName_) : std::string(), settings_.spoutInputFlip);
@@ -810,11 +815,26 @@ void App::frame(double dt) {
 
     perfCpu_.add(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - frameStart).count());
     perfFrame_.add(dt * 1000.0);
+    diagMonitor_->addFrame(dt * 1000.0);
     if (engine_.gpuTimingAvailable()) {
         perfGpu_.add(engine_.gpuFrameMs());
     }
     perfRefresh_ += dt;
     if (perfRefresh_ >= 0.25) {
+        gpudiag::Thresholds thresholds;
+        thresholds.p99Factor = static_cast<double>(settings_.diagP99Percent) / 100.0;
+        thresholds.droppedPerMinute = settings_.diagDroppedPerMinute;
+        thresholds.memoryFraction = static_cast<double>(settings_.diagMemoryPercent) / 100.0;
+        diagMonitor_->setThresholds(thresholds);
+        const Diagnostics& diagnostics = engine_.diagnostics();
+        gpudiag::Sample sample;
+        sample.budgetMs = budgetMilliseconds(settings_.perfBudgetFps);
+        sample.estimateBytes = diagnostics.estimateBytes;
+        sample.budgetBytes = diagnostics.budgetBytes;
+        sample.residentBytes = diagnostics.residentBytes;
+        sample.driver = diagnostics.driver;
+        sample.uploadBytesPerSecond = diagnostics.uploadBytesPerSecond;
+        diagMonitor_->update(perfRefresh_, sample);
         perfRefresh_ = 0.0;
         perfFrameSummary_ = perfFrame_.summary();
         perfCpuSummary_ = perfCpu_.summary();

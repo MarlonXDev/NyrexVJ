@@ -3,6 +3,7 @@
 #include "audio/audio_features.hpp"
 #include "core/beat_clock.hpp"
 #include "core/composition.hpp"
+#include "core/gpu_diag.hpp"
 #include "core/launch_quantizer.hpp"
 #include "core/settings.hpp"
 #include "render/clip_library.hpp"
@@ -38,6 +39,27 @@ struct GpuMemory {
     VideoMemory video;
 
     size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers + generators; }
+};
+
+struct MemoryPolicy {
+    std::uint64_t budgetBytes = 0;
+    bool trim = true;
+    bool lowerQuality = false;
+};
+
+struct Diagnostics {
+    gpudiag::DriverMemory driver;
+    std::uint64_t estimateBytes = 0;
+    std::uint64_t budgetBytes = 0;
+    std::uint64_t residentBytes = 0;
+    std::uint64_t evictableBytes = 0;
+    std::uint64_t releasedBytes = 0;
+    std::uint64_t releasedCount = 0;
+    int pressureLevel = 0;
+    bool trimming = false;
+    double uploadBytesPerSecond = 0.0;
+    double uploadPeakBytesPerSecond = 0.0;
+    std::uint64_t uploadTotalBytes = 0;
 };
 
 class Engine {
@@ -125,6 +147,11 @@ public:
     MediaPlayer* mediaPlayer(int clip);
     int loadedMediaCount() const;
     GpuMemory gpuMemory() const;
+    void setMemoryPolicy(const MemoryPolicy& policy);
+    const MemoryPolicy& memoryPolicy() const { return memoryPolicy_; }
+    const Diagnostics& diagnostics() const { return diagnostics_; }
+    bool memoryTrimming() const { return memoryPolicy_.budgetBytes > 0 && memoryPolicy_.trim; }
+    void refreshDiagnostics();
     std::string shaderNote(int clip) const;
     std::string shaderRuntimeError(int clip) const;
     size_t shaderBufferBytes() const;
@@ -358,6 +385,10 @@ private:
     void runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgram>& programs, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail, const ShaderValues& values, const RenderTarget* picture, float mixAmount);
     void renderShaderThumbnail(size_t clipIndex, const RenderTarget& target);
     void releaseIdleShaderStates();
+    void serviceMemory();
+    void sampleDriverMemory();
+    void trimMemory(std::uint64_t estimate, std::uint64_t target);
+    std::vector<char> activeAndNextCells(size_t count, bool includeNext) const;
     void restartShaders(bool carryOver);
     void restartShaderLayer(int layer);
     void clearShaderStates(int clipIndex);
@@ -380,6 +411,19 @@ private:
     std::array<GLuint, 4> channelSamplers_{};
     GLuint blackTexture_ = 0;
     unsigned long long shaderBudget_ = kShaderBufferBudgetBytes;
+    MemoryPolicy memoryPolicy_;
+    Diagnostics diagnostics_;
+    gpudiag::PressureLadder pressure_;
+    gpudiag::TrafficMeter traffic_;
+    gpudiag::DriverMemory driverMemory_;
+    bool driverMemoryDisabled_ = false;
+    double driverSampledAt_ = -1.0e9;
+    double memoryClock_ = 0.0;
+    double memoryCheckAt_ = -1.0e9;
+    unsigned long long lastStreamedBytes_ = 0;
+    std::uint64_t releasedBytes_ = 0;
+    std::uint64_t releasedCount_ = 0;
+    int appliedPressure_ = 0;
     std::vector<EffectProgram> effects_;
     CompositeProgram composite_;
     BlendProgram blend_;

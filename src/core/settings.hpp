@@ -28,6 +28,8 @@ struct Settings {
     bool hapDirect = true;
     bool videoGpuConvert = true;
     bool prewarmNext = true;
+    bool generatorClips = true;
+    int particleLimit = 2048;
     std::string convertMode = "ask";
     std::string convertFormat = "auto";
     int convertCacheMb = 4096;

@@ -63,6 +63,11 @@ bool loadSettings(Settings& settings) {
     result.hapDirect = boolean("hapDirect", true);
     result.videoGpuConvert = boolean("videoGpuConvert", true);
     result.prewarmNext = boolean("prewarmNext", true);
+    result.generatorClips = boolean("generatorClips", true);
+    auto particleLimit = doc.find("particleLimit");
+    if (particleLimit != doc.end() && particleLimit->is_number_integer()) {
+        result.particleLimit = std::clamp(particleLimit->get<int>(), 64, 16384);
+    }
     auto convertMode = doc.find("convertMode");
     if (convertMode != doc.end() && convertMode->is_string()) {
         const std::string value = convertMode->get<std::string>();
@@ -319,6 +324,8 @@ bool saveSettings(const Settings& settings) {
     doc["hapDirect"] = settings.hapDirect;
     doc["videoGpuConvert"] = settings.videoGpuConvert;
     doc["prewarmNext"] = settings.prewarmNext;
+    doc["generatorClips"] = settings.generatorClips;
+    doc["particleLimit"] = std::clamp(settings.particleLimit, 64, 16384);
     doc["convertMode"] = settings.convertMode;
     doc["convertFormat"] = settings.convertFormat;
     doc["convertCacheMb"] = settings.convertCacheMb;

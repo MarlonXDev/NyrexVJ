@@ -20,7 +20,9 @@ enum class ClipKind {
     ShaderFile,
     NdiSource,
     CameraSource,
-    PluginSource
+    PluginSource,
+    TextFile,
+    ParticleClip
 };
 
 struct ClipDef {
@@ -42,11 +44,14 @@ struct ClipDef {
     bool isScene() const { return kind == ClipKind::BuiltinScene || kind == ClipKind::ModelFile || kind == ClipKind::ScenePack; }
     bool isMedia() const { return kind == ClipKind::ImageFile || kind == ClipKind::VideoFile; }
     bool isLive() const { return kind == ClipKind::NdiSource || kind == ClipKind::CameraSource || kind == ClipKind::PluginSource; }
+    bool isGenerator() const { return kind == ClipKind::TextFile || kind == ClipKind::ParticleClip; }
 };
 
 constexpr size_t kMaxModelClips = 64;
 constexpr size_t kMaxPackClips = 128;
 constexpr size_t kMaxMediaClips = 128;
+constexpr size_t kMaxTextClips = 64;
+constexpr size_t kMaxParticleClips = 64;
 
 struct AssetFile {
     std::string name;
@@ -66,6 +71,11 @@ std::vector<AssetFile> listMediaAssets();
 std::string imageClipName(const std::string& stem);
 std::string videoClipName(const std::string& stem);
 std::string packClipName(const std::string& stem);
+std::string textClipName(const std::string& stem);
+std::string particleClipName(const std::string& stem);
+std::string generatorStem(const ClipDef& clip);
+void setGeneratorClipsEnabled(bool enabled);
+bool generatorClipsEnabled();
 
 const std::vector<ClipDef>& clipLibrary();
 int rescanLibrary();
@@ -76,6 +86,7 @@ struct ShaderScan {
 };
 
 ShaderScan refreshShaderClips();
+ShaderScan refreshGeneratorClips();
 std::string createExampleShader();
 int clipIndexByName(const std::string& name);
 const std::string& clipVertexSource();

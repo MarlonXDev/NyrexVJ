@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.42.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.43.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -169,6 +169,13 @@ set(NYREXVJ_CORE_SOURCES
     src/render/clips_extra.cpp
     src/core/clip_pack.cpp
     src/core/show_package.cpp
+    src/core/text_font.cpp
+    src/core/text_layout.cpp
+    src/core/generator_files.cpp
+    src/core/text_doc.cpp
+    src/core/particles.cpp
+    src/core/effect_json.cpp
+    src/core/effect_chain.cpp
     src/core/show_workflow.cpp
     src/core/pack_workflow.cpp
     src/scene3d/builtin_docs.cpp
@@ -314,7 +321,7 @@ if(NYREXVJ_VIDEO)
 endif()
 target_include_directories(nvj_core PUBLIC src plugins/include)
 target_include_directories(nvj_core SYSTEM PUBLIC third_party/json)
-target_include_directories(nvj_core SYSTEM PRIVATE third_party/stb)
+target_include_directories(nvj_core SYSTEM PRIVATE third_party/stb ${imgui_SOURCE_DIR})
 target_compile_definitions(nvj_core PUBLIC
     NYREXVJ_VERSION="${NYREXVJ_VERSION_STRING}"
     NYREXVJ_BUILD_NUMBER=${NYREXVJ_BUILD_NUMBER}
@@ -339,6 +346,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/output_selftest.cpp
     src/app/record_selftest.cpp
     src/app/shader_selftest.cpp
+    src/app/generator_selftest.cpp
     src/app/scene_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
@@ -358,10 +366,12 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_recovery.cpp
     src/app/ui_show.cpp
     src/app/ui_packs.cpp
+    src/app/ui_generators.cpp
     src/app/pack_cli.cpp
     src/render/engine.cpp
     src/render/gpu_profiler.cpp
     src/render/gl_util.cpp
+    src/render/generators.cpp
     src/render/shader_passes.cpp
     src/render/output_window.cpp
     src/render/texture_history.cpp
@@ -533,6 +543,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_pack_tests PRIVATE nvj_core)
     target_include_directories(nvj_pack_tests PRIVATE tests)
     add_test(NAME nvj_pack_tests COMMAND nvj_pack_tests)
+    add_executable(nvj_creative_tests tests/test_creative.cpp)
+    target_link_libraries(nvj_creative_tests PRIVATE nvj_core)
+    target_include_directories(nvj_creative_tests PRIVATE tests)
+    target_compile_definitions(nvj_creative_tests PRIVATE NVJ_TEST_FONT_DIR="${imgui_SOURCE_DIR}/misc/fonts")
+    add_test(NAME nvj_creative_tests COMMAND nvj_creative_tests)
     add_executable(nvj_workflow_tests tests/test_workflow.cpp)
     target_link_libraries(nvj_workflow_tests PRIVATE nvj_core)
     target_include_directories(nvj_workflow_tests PRIVATE tests)

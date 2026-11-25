@@ -10,6 +10,7 @@
 #include "render/gl_util.hpp"
 #include "render/gpu_profiler.hpp"
 #include "render/live_input.hpp"
+#include "render/generators.hpp"
 #include "render/media_player.hpp"
 #include "render/scene_player.hpp"
 #include "render/shader_passes.hpp"
@@ -33,9 +34,10 @@ struct GpuMemory {
     size_t media = 0;
     size_t live = 0;
     size_t shaderBuffers = 0;
+    size_t generators = 0;
     VideoMemory video;
 
-    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers; }
+    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers + generators; }
 };
 
 class Engine {
@@ -80,6 +82,19 @@ public:
     int prepareAll(std::string& report);
     bool thumbnailsReady() const { return nextThumb_ >= clips_.size() && deferredThumbs_.empty() && reloadThumbs_.empty(); }
     void reloadShaderClips(const std::vector<size_t>& indices);
+    void reloadGeneratorClips(const std::vector<size_t>& indices);
+    void setParticleLimit(int limit);
+    int particleLimit() const { return particleLimit_; }
+    bool isGeneratorClip(int clip) const;
+    GeneratorPlayer* generatorPlayer(int clip);
+    void requestTextPreview(const text::TextDoc& doc, double clock);
+    void requestParticlePreview(const particles::Params& params, double clock);
+    void requestChainPreview(const std::array<EffectSlot, kEffectSlots>& slots, double clock);
+    GLuint generatorPreviewTexture() const { return generatorPreviewReady_ ? generatorPreview_.texture : 0; }
+    GLuint chainPreviewTexture() const { return chainPreviewResult_ ? chainPreviewResult_->texture : 0; }
+    GeneratorGl& generatorGl() { return generatorGl_; }
+    TextPlayer* textEditorPlayer() { return textEditor_.get(); }
+    ParticlePlayer* particleEditorPlayer() { return particleEditor_.get(); }
     void syncEffects();
     void reloadNodeEffects(const std::vector<size_t>& indices);
     int checkNodeCatalogue(std::string& report);
@@ -302,6 +317,12 @@ private:
     std::unique_ptr<MediaPlayer> makeMedia(const ClipDef& def);
     void renderMediaThumbnail(size_t index);
     void serviceMedia();
+    bool ensureGenerator(size_t index);
+    std::unique_ptr<GeneratorPlayer> makeGenerator(const ClipDef& def) const;
+    void renderGeneratorThumbnail(size_t index);
+    void serviceGenerators();
+    bool drawGenerator(size_t index, int instance, const Layer& layer, float scale, double clock, const RenderTarget& target);
+    GeneratorFrame generatorFrame(const Layer& layer, float scale, double clock, int width, int height) const;
     bool drawMedia(MediaPlayer& player, float scale, bool backdrop, double clock, const ClipPlayback* playback = nullptr);
     void prewarmMedia();
     bool ensureEffect(size_t index);
@@ -368,6 +389,33 @@ private:
     bool hapDirect_ = true;
     bool gpuConversion_ = true;
     std::vector<std::unique_ptr<MediaPlayer>> media_;
+    std::vector<std::unique_ptr<GeneratorPlayer>> generators_;
+    std::vector<size_t> deferredGeneratorThumbs_;
+    GeneratorGl generatorGl_;
+    int particleLimit_ = particles::kDefaultLimit;
+    std::unique_ptr<TextPlayer> textEditor_;
+    std::unique_ptr<ParticlePlayer> particleEditor_;
+    std::string textEditorKey_;
+    std::string particleEditorKey_;
+    enum class EditorPreviewKind { None, Text, Particles };
+    EditorPreviewKind generatorPreviewKind_ = EditorPreviewKind::None;
+    text::TextDoc generatorPreviewText_;
+    particles::Params generatorPreviewParticles_;
+    double generatorPreviewClock_ = 0.0;
+    RenderTarget generatorPreview_;
+    bool generatorPreviewReady_ = false;
+    bool chainPreviewRequested_ = false;
+    std::array<EffectSlot, kEffectSlots> chainPreviewSlots_{};
+    double chainPreviewClock_ = 0.0;
+    int chainPreviewClip_ = -2;
+    RenderTarget chainPreviewA_;
+    RenderTarget chainPreviewB_;
+    std::array<RenderTarget, kEffectSlots> chainPreviewFeedback_;
+    std::array<bool, kEffectSlots> chainPreviewFeedbackUsed_{};
+    RenderTarget* chainPreviewResult_ = nullptr;
+    void renderEditorPreviews();
+    bool drawTextPreview(const text::TextDoc& doc, RenderTarget& target, double clock);
+    bool drawParticlePreview(const particles::Params& params, RenderTarget& target, double clock);
     std::vector<size_t> deferredMediaThumbs_;
     std::array<SpoutInput, kSpoutInputSlots> spoutSlots_;
     std::array<std::string, kSpoutInputSlots> spoutNames_;

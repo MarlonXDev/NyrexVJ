@@ -1019,7 +1019,7 @@
           "title": "File names with umlauts and spaces, hot reload on Windows",
           "needs": "A Windows computer",
           "steps": [
-            "Copy ISF files with names like Größe Welle.fs and with spaces into the shaders folder.",
+            "Copy ISF files with names like Gr\u00f6\u00dfe Welle.fs and with spaces into the shaders folder.",
             "Check the names in the Library and the effect list, save a change in an editor while the shader plays, and delete a file.",
             "Save a preset that uses a filter, restart and load it."
           ],
@@ -1473,6 +1473,108 @@
           ],
           "measure": "Seconds for each step, leftover temporary files, and whether the record exists for a package that was not completely installed",
           "criteria": "Proposed: a cancelled or interrupted install leaves the folders as they were and no record, and the window says so."
+        }
+      ]
+    },
+    {
+      "id": "text-particles-chains",
+      "title": "Text clips, limited particle clips and effect chains: fonts and Unicode, transparency, audio and beat modulation, particle limits, damaged files, chain save, search, preview, export and import",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/GENERATORS.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0036-text-particles-chains.md"
+      ],
+      "sources": [
+        "src/core/text_font.cpp",
+        "src/core/text_layout.cpp",
+        "src/core/text_doc.cpp",
+        "src/core/particles.cpp",
+        "src/core/effect_chain.cpp",
+        "src/core/effect_json.cpp",
+        "src/core/generator_files.cpp",
+        "src/render/generators.cpp",
+        "src/app/ui_generators.cpp",
+        "src/app/generator_selftest.cpp",
+        "tests/test_creative.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-GN-1",
+          "kind": "ctest",
+          "name": "nvj_creative_tests"
+        },
+        {
+          "id": "A-GN-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --generator-selftest 60 --bench-out result.json",
+          "note": "in the real engine with OpenGL: text and particle clips draw, the background is transparent and the layer below stays visible, audio and beat change size and particle count, the same start gives the same picture hash, the particle limit holds and is clamped, a very long text stays inside the atlas limit, damaged files and an unknown font do not stop the show, a broken shader pair does not stop the show and recovers; the benchmark times a flat layer, a text layer and four particle limits"
+        },
+        {
+          "id": "A-GN-3",
+          "kind": "cli",
+          "command": "NyrexVJ --check-shaders",
+          "note": "compiles the text and particle programs and waits for the text atlases of the built-in clips"
+        },
+        {
+          "id": "A-GN-4",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Text and particles window, the Effect chains window and the settings has a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-GN-5",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --generators 0 --frames 40",
+          "note": "opens the Text and particles window on the Text tab (1 selects the Particles tab) and runs 40 frames through a real OpenGL context; a smoke test of the window, not a test of its use"
+        },
+        {
+          "id": "A-GN-6",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --chains 0 --frames 40",
+          "note": "opens the Effect chains window for the first layer and runs 40 frames through a real OpenGL context; a smoke test of the window, not a test of its use"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-GN-1",
+          "title": "Text and particle cost on a real graphics card",
+          "needs": "A Windows or Linux computer with a graphics card, NyrexVJ, and the output resolution you use for shows",
+          "steps": [
+            "Run NyrexVJ --generator-selftest 120 --bench-out result.json and keep the file.",
+            "In a show, play a text clip with the Wave animation above a heavy 3D clip and read the GPU time in the status bar with and without the text.",
+            "Play the Confetti clip with the particle limit at 2048, 8192 and 16384 and read the GPU time and the frame rate at each setting."
+          ],
+          "measure": "Milliseconds per frame of the self test, the GPU time of the status bar with and without the clips, and the frame rate at each particle limit",
+          "criteria": "Proposed: a text layer adds under 0.5 ms and the particle limit of 2048 under 0.5 ms on a graphics card of the last five years, 16384 under 2 ms, and the frame rate holds the target in every case."
+        },
+        {
+          "id": "M-GN-2",
+          "title": "Fonts and characters on your own computer",
+          "needs": "A computer with NyrexVJ and a few fonts of your own (a script font, a heavy display font, a font with Japanese characters) in the fonts folder",
+          "steps": [
+            "Write a text with umlauts, accents, Greek, Cyrillic, a Japanese word and a music note in each font and look at the preview.",
+            "Save the text, put it on a layer above a video and switch the animations one after the other with music playing.",
+            "Remove a font file while a text that uses it is playing and save the text again."
+          ],
+          "measure": "Which characters are shown as a question mark, whether the note about missing characters appears, how long the first picture of a long text takes, and what the clip shows when the font is gone",
+          "criteria": "Proposed: characters that the font has are drawn correctly, characters it lacks are marked and the window says so, and a missing font changes to a default font without stopping the layer below."
+        },
+        {
+          "id": "M-GN-3",
+          "title": "The windows used with a mouse during a show",
+          "needs": "A computer with NyrexVJ, an audio source and a MIDI controller or mouse",
+          "steps": [
+            "Edit a text and a particle clip while the show runs and save both, then look at the clips on the layers.",
+            "Save a chain from the master, apply it to a layer, undo it, search for it by an effect name, preview it and export it to a USB stick.",
+            "Import the file again on a second installation, including one with an effect that does not exist there."
+          ],
+          "measure": "Whether anything stutters while a window is open, whether Undo restores the old effects, and what the import window says about the missing effect",
+          "criteria": "Proposed: no dropped frames while the windows are open, one Undo step restores the effects, and the missing effect is named while the other effects are kept."
         }
       ]
     }

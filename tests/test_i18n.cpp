@@ -301,7 +301,7 @@ void testLibraries() {
     for (const nvj::ClipDef& clip : nvj::clipLibrary()) {
         CHECK(!clip.name.empty());
         CHECK(names.insert(clip.name).second);
-        CHECK(clip.isScene() || clip.isMedia() || clip.body.find("void main()") != std::string::npos);
+        CHECK(clip.isScene() || clip.isMedia() || clip.isGenerator() || clip.body.find("void main()") != std::string::npos);
         CHECK(nvj::clipIndexByName(clip.name) >= 0);
     }
     CHECK(nvj::clipLibrary().size() >= 30);

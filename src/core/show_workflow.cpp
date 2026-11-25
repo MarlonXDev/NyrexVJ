@@ -459,6 +459,14 @@ Catalogue Catalogue::fromLibraries() {
             case ClipKind::PluginSource:
                 catalogue.pluginClips[clip.name] = clip.name;
                 break;
+            case ClipKind::TextFile:
+            case ClipKind::ParticleClip:
+                if (clip.path.empty()) {
+                    catalogue.builtInClips.insert(clip.name);
+                } else {
+                    catalogue.liveClips[clip.name] = "Generator";
+                }
+                break;
             case ClipKind::Shader:
             case ClipKind::BuiltinScene:
                 catalogue.builtInClips.insert(clip.name);

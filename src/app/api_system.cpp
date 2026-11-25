@@ -46,6 +46,10 @@ const char* clipKindName(ClipKind kind) {
         return "camera";
     case ClipKind::PluginSource:
         return "plugin";
+    case ClipKind::TextFile:
+        return "text";
+    case ClipKind::ParticleClip:
+        return "particles";
     }
     return "shader";
 }

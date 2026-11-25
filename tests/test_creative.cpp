@@ -232,7 +232,7 @@ void testLayout() {
     Layout capped = lay(many);
     CHECK(capped.lines <= kMaxLines && capped.truncatedLines);
 
-    Layout unknown = lay(U"A§");
+    Layout unknown = lay(U"A\u00a7");
     CHECK(unknown.glyphs.size() == 2);
     CHECK(lay(U"   ").glyphs.empty());
     Layout spacesOnly = lay(U"A B");
@@ -357,8 +357,8 @@ void testFont() {
         return;
     }
     CHECK(face.loaded());
-    CHECK(face.hasGlyph(U'A') && face.hasGlyph(U'ä') && face.hasGlyph(U'ß'));
-    CHECK(!face.hasGlyph(U'日'));
+    CHECK(face.hasGlyph(U'A') && face.hasGlyph(U'\u00e4') && face.hasGlyph(U'\u00df'));
+    CHECK(!face.hasGlyph(U'\u65e5'));
     float ascent = 0;
     float descent = 0;
     float gap = 0;
@@ -366,7 +366,7 @@ void testFont() {
     CHECK(ascent > 30.0f && descent < 0.0f && gap >= 0.0f);
 
     BakeRequest request;
-    request.text = U"Hello Wörld ÄÖÜ ß é 日";
+    request.text = U"Hello W\u00f6rld \u00c4\u00d6\u00dc \u00df \u00e9 \u65e5";
     request.pixelHeight = 64.0f;
     request.faces = {&face};
     Atlas atlas;
@@ -374,10 +374,10 @@ void testFont() {
     CHECK(atlas.width > 0 && atlas.width <= kMaxAtlasSide && atlas.width == atlas.height);
     CHECK(atlas.pixels.size() == static_cast<size_t>(atlas.width) * static_cast<size_t>(atlas.height));
     CHECK(std::any_of(atlas.pixels.begin(), atlas.pixels.end(), [](unsigned char v) { return v > 200; }));
-    CHECK(atlas.find(U'H') != nullptr && atlas.find(U'ö') != nullptr && atlas.find(U' ') != nullptr);
+    CHECK(atlas.find(U'H') != nullptr && atlas.find(U'\u00f6') != nullptr && atlas.find(U' ') != nullptr);
     CHECK(atlas.find(U'Z') == nullptr);
-    CHECK(std::find(atlas.missing.begin(), atlas.missing.end(), U'日') != atlas.missing.end());
-    CHECK(atlas.find(U'日') == nullptr);
+    CHECK(std::find(atlas.missing.begin(), atlas.missing.end(), U'\u65e5') != atlas.missing.end());
+    CHECK(atlas.find(U'\u65e5') == nullptr);
     bool uvOk = true;
     bool sorted = true;
     for (size_t i = 0; i < atlas.glyphs.size(); ++i) {
@@ -398,7 +398,7 @@ void testFont() {
     CHECK(layout.glyphs.size() > 10 && layout.lines == 1);
 
     BakeRequest nothing;
-    nothing.text = U"日本";
+    nothing.text = U"\u65e5\u672c";
     nothing.faces = {&face};
     Atlas none;
     CHECK(bakeAtlas(nothing, none, error));

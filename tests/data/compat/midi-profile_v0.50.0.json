@@ -1,0 +1,23 @@
+{
+  "bindings": [
+    {
+      "channel": 1,
+      "high": 1.0,
+      "low": 0.0,
+      "number": 7,
+      "target": "master/level",
+      "type": "cc"
+    },
+    {
+      "channel": 2,
+      "high": 1.0,
+      "low": 0.0,
+      "number": 36,
+      "target": "deck/next",
+      "type": "note"
+    }
+  ],
+  "format": "nyrexvj-midi-profile",
+  "name": "Fixture Controller",
+  "version": 1
+}

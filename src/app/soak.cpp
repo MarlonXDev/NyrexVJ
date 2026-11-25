@@ -6,15 +6,22 @@
 #include "core/growth_check.hpp"
 #include "core/log.hpp"
 #include "core/preset.hpp"
+#include "core/run_conditions.hpp"
 #include "core/soak_plan.hpp"
 #include "platform/platform.hpp"
+#include "render/asset_import.hpp"
+#include "render/clip_library.hpp"
+#include "render/effect_library.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -63,6 +70,27 @@ json growthJson(const GrowthResult& result, const std::string& unit, bool judge)
     return item;
 }
 
+void noteUsage(const Composition& comp, std::set<std::string>& clips, std::set<std::string>& effects) {
+    const std::vector<ClipDef>& library = clipLibrary();
+    const std::vector<EffectDef>& fx = effectLibrary();
+    const auto noteEffects = [&](const auto& slots) {
+        for (const EffectSlot& slot : slots) {
+            if (slot.effect >= 0 && static_cast<size_t>(slot.effect) < fx.size()) {
+                effects.insert(fx[static_cast<size_t>(slot.effect)].name);
+            }
+        }
+    };
+    for (const Layer& layer : comp.layers) {
+        for (const int cell : layer.cells) {
+            if (cell >= 0 && static_cast<size_t>(cell) < library.size()) {
+                clips.insert(library[static_cast<size_t>(cell)].name);
+            }
+        }
+        noteEffects(layer.fx);
+    }
+    noteEffects(comp.master.fx);
+}
+
 void writeReport(const json& report, const std::string& outputPath) {
     if (outputPath.empty()) {
         return;
@@ -73,7 +101,7 @@ void writeReport(const json& report, const std::string& outputPath) {
 
 }
 
-int runSoakTest(Engine& engine, const std::string& spec, const std::string& outputPath) {
+int runSoakTest(Engine& engine, const std::string& spec, const std::string& outputPath, const std::string& mediaDirectory) {
     SoakPlan plan;
     std::string error;
     if (!parseSoakSpec(spec, plan, error)) {
@@ -86,6 +114,59 @@ int runSoakTest(Engine& engine, const std::string& spec, const std::string& outp
         return 1;
     }
     engine.setGpuTiming(false);
+    plan.media = !mediaDirectory.empty();
+    if (plan.media) {
+        const char* dataOverride = std::getenv("NYREXVJ_DATA_DIR");
+        if (dataOverride == nullptr || *dataOverride == '\0') {
+            logLine("Soak test: --soak-media copies the files of the folder into the media and model folders of the data folder, so it needs NYREXVJ_DATA_DIR to point at a scratch folder and refuses to touch the real data folder");
+            return 1;
+        }
+        logLine(std::string("Soak test: the files of '") + mediaDirectory + "' are copied into the data folder '" + dataOverride + "'");
+    }
+
+    std::vector<int> mediaClips;
+    json mediaReport;
+    if (plan.media) {
+        namespace fs = std::filesystem;
+        std::set<std::string> importedNames;
+        int skipped = 0;
+        std::vector<fs::path> files;
+        std::error_code listError;
+        for (const auto& entry : fs::directory_iterator(fs::path(std::u8string(mediaDirectory.begin(), mediaDirectory.end())), listError)) {
+            if (entry.is_regular_file()) {
+                files.push_back(entry.path());
+            }
+        }
+        std::sort(files.begin(), files.end());
+        for (const fs::path& file : files) {
+            const std::u8string text = file.u8string();
+            const ImportResult result = importAsset(std::string(text.begin(), text.end()));
+            if (result.kind == ImportKind::Media || result.kind == ImportKind::Model) {
+                importedNames.insert(result.name);
+            } else {
+                ++skipped;
+            }
+        }
+        rescanLibrary();
+        engine.syncLibrary();
+        const std::vector<ClipDef>& library = clipLibrary();
+        for (size_t i = 0; i < library.size(); ++i) {
+            const ClipDef& clip = library[i];
+            if ((clip.kind == ClipKind::ImageFile || clip.kind == ClipKind::VideoFile || clip.kind == ClipKind::ModelFile) && !clip.path.empty()) {
+                const std::u8string name = fs::path(std::u8string(clip.path.begin(), clip.path.end())).filename().u8string();
+                if (importedNames.count(std::string(name.begin(), name.end())) > 0) {
+                    mediaClips.push_back(static_cast<int>(i));
+                }
+            }
+        }
+        if (mediaClips.size() < 2) {
+            logLine("Soak test: the media folder '" + mediaDirectory + "' gave " + std::to_string(mediaClips.size()) + " usable clips, at least two are needed");
+            return 1;
+        }
+        mediaReport["directory"] = mediaDirectory;
+        mediaReport["filesSkipped"] = skipped;
+        mediaReport["clipCount"] = mediaClips.size();
+    }
 
     FramePacer pacer;
     pacer.setTargetFps(plan.fps);
@@ -93,7 +174,23 @@ int runSoakTest(Engine& engine, const std::string& spec, const std::string& outp
     const double periodMs = period * 1000.0;
 
     json report;
-    report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    const auto glText = [](GLenum name) {
+        const GLubyte* value = glGetString(name);
+        return value != nullptr ? std::string(reinterpret_cast<const char*>(value)) : std::string();
+    };
+    RunContext context;
+    context.graphics = GraphicsInfo{glText(GL_VENDOR), glText(GL_RENDERER), glText(GL_VERSION), glText(GL_SHADING_LANGUAGE_VERSION)};
+    context.width = engine.width();
+    context.height = engine.height();
+    context.quality = "cycled: automatic, high, low";
+    context.targetFps = pacer.targetFps();
+    context.scenario = plan.media ? "media churn: a clip launch every " + std::to_string(plan.mediaEvery) + " s on a rotating layer, a layer cleared every " + std::to_string(plan.clearEvery) + " s, deck switch every " + std::to_string(plan.deckEvery) + " s, quality change every " + std::to_string(plan.qualityEvery) + " s" : "factory looks: a look change every " + std::to_string(plan.lookEvery) + " s, deck switch every " + std::to_string(plan.deckEvery) + " s, quality change every " + std::to_string(plan.qualityEvery) + " s";
+    context.durationSeconds = plan.seconds;
+    report["schema"] = kRunReportSchema;
+    report["schemaVersion"] = kRunReportSchemaVersion;
+    report["kind"] = plan.media ? "soak-media" : "soak";
+    report["conditions"] = runConditionsJson(context);
+    report["renderer"] = context.graphics.renderer;
     report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
     report["plannedSeconds"] = plan.seconds;
     report["targetFps"] = pacer.targetFps();
@@ -107,11 +204,22 @@ int runSoakTest(Engine& engine, const std::string& spec, const std::string& outp
     int qualityChanges = 0;
     int qualityMode = 0;
 
+    std::set<std::string> usedClips;
+    std::set<std::string> usedEffects;
+    long long mediaLaunches = 0;
+    long long mediaClears = 0;
+    size_t mediaCursor = 0;
+    size_t clearCursor = 0;
+    int faultsMax = 0;
+
     const auto prepareLook = [&]() {
-        engine.applyComposition(looks[lookIndex % looks.size()]);
+        Composition emptyLook;
+        emptyLook.name = "Empty";
+        engine.applyComposition(plan.media ? emptyLook : looks[lookIndex % looks.size()]);
         engine.duplicateActiveDeckTo(1);
         engine.comp.deckSettings.syncBeats = false;
         engine.comp.deckSettings.seconds = 0.5f;
+        noteUsage(engine.comp, usedClips, usedEffects);
         ++lookIndex;
     };
     prepareLook();
@@ -155,6 +263,20 @@ int runSoakTest(Engine& engine, const std::string& spec, const std::string& outp
             if (events.look) {
                 prepareLook();
                 ++lookChanges;
+            }
+            if (events.media) {
+                const int layer = static_cast<int>(mediaCursor % static_cast<size_t>(kLayerCount));
+                const int clip = mediaClips[mediaCursor % mediaClips.size()];
+                engine.comp.layers[static_cast<size_t>(layer)].setCell(0, clip);
+                engine.trigger(layer, 0);
+                noteUsage(engine.comp, usedClips, usedEffects);
+                ++mediaCursor;
+                ++mediaLaunches;
+            }
+            if (events.clear) {
+                engine.clearLayer(static_cast<int>(clearCursor % static_cast<size_t>(kLayerCount)));
+                ++clearCursor;
+                ++mediaClears;
             }
             if (events.deck) {
                 engine.switchDeck(engine.comp.activeDeck == 0 ? 1 : 0);
@@ -220,7 +342,10 @@ int runSoakTest(Engine& engine, const std::string& spec, const std::string& outp
             sample["gpuEstimateBytes"] = gpu;
             sample["threads"] = threads;
             sample["handles"] = handles;
-            sample["look"] = looks[(lookIndex + looks.size() - 1) % looks.size()].name;
+            const int faults = engine.playingFaults();
+            faultsMax = std::max(faultsMax, faults);
+            sample["playingFaults"] = faults;
+            sample["look"] = plan.media ? std::string("media churn") : looks[(lookIndex + looks.size() - 1) % looks.size()].name;
             samples.push_back(sample);
             series.rss.push_back(static_cast<double>(rss) / kMegabyte);
             series.gpu.push_back(static_cast<double>(gpu) / kMegabyte);
@@ -253,6 +378,16 @@ int runSoakTest(Engine& engine, const std::string& spec, const std::string& outp
     report["estimatedDroppedFrames"] = droppedFrames;
     report["worstIntervalMs"] = worstIntervalMs;
     report["events"] = {{"lookChanges", lookChanges}, {"deckSwitches", deckSwitches}, {"qualityChanges", qualityChanges}};
+    report["playingFaultsMax"] = faultsMax;
+    if (plan.media) {
+        mediaReport["launches"] = mediaLaunches;
+        mediaReport["clears"] = mediaClears;
+        report["media"] = std::move(mediaReport);
+    }
+    context.durationSeconds = wall;
+    context.clips.assign(usedClips.begin(), usedClips.end());
+    context.effects.assign(usedEffects.begin(), usedEffects.end());
+    report["conditions"] = runConditionsJson(context);
     report["cpuSecondsTotal"] = cpuTotal;
     report["samples"] = samples;
 
@@ -282,7 +417,7 @@ int runSoakTest(Engine& engine, const std::string& spec, const std::string& outp
 
     const bool leak = judge && (rss.leak || gpu.leak || threads.leak || handles.leak);
     report["leak"] = leak;
-    report["passed"] = !leak && glErrors == 0 && frames > 0;
+    report["passed"] = !leak && glErrors == 0 && frames > 0 && (!plan.media || faultsMax == 0);
     report["finished"] = true;
     logLine("Soak test: " + std::to_string(frames) + " frames in " + std::to_string(wall) + " s, " + std::to_string(overBudget) + " over budget, " + (judge ? (leak ? "growth detected" : "no growth detected") : "too short to judge growth"));
     writeReport(report, outputPath);

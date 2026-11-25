@@ -1,0 +1,81 @@
+name: soak
+
+on:
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Length of the run in seconds (600 or more gives a growth verdict)
+        required: true
+        default: "900"
+
+permissions:
+  contents: read
+
+jobs:
+  soak:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    env:
+      DISPLAY: ":99"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the length
+        env:
+          SECONDS_INPUT: ${{ inputs.seconds }}
+        run: |
+          case "$SECONDS_INPUT" in
+            ''|*[!0-9]*) echo "The length must be a whole number of seconds"; exit 1 ;;
+          esac
+          if [ "$SECONDS_INPUT" -lt 60 ] || [ "$SECONDS_INPUT" -gt 7200 ]; then
+            echo "The length must be between 60 and 7200 seconds"
+            exit 1
+          fi
+
+      - name: Install build and test packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DNYREXVJ_VIDEO=OFF -DGLFW_BUILD_WAYLAND=OFF -DNYREXVJ_BUILD_NUMBER=${{ github.run_number }}
+
+      - name: Build
+        run: cmake --build build --parallel --target NyrexVJ
+
+      - name: Start the virtual display
+        run: |
+          Xvfb :99 -screen 0 1280x720x24 &
+          sleep 2
+
+      - name: Run the soak with changing media
+        env:
+          SECONDS_INPUT: ${{ inputs.seconds }}
+        run: |
+          gates="$RUNNER_TEMP/gates"
+          media="$RUNNER_TEMP/soak-media"
+          mkdir -p "$gates" "$media"
+          cp tests/data/models/morph_cube.glb tests/data/models/skin_arm.glb tests/data/test_alpha.png "$media/"
+          {
+            echo "## Long soak on software OpenGL"
+            echo
+            echo "Mesa llvmpipe on a virtual display, built without video. The run checks crash freedom, growth of memory, threads and handles, and OpenGL errors while images and 3D models are launched and cleared. It says nothing about a real graphics card, a projector, video decoding or VRChat. Frame times of a software renderer are not judged."
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          set +e
+          NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-soak" build/NyrexVJ --fresh --no-update-check --no-welcome --soak "$SECONDS_INPUT" --soak-media "$media" --bench-out "$gates/soak.json"
+          code=$?
+          set -e
+          test -s "$gates/soak.json"
+          profile=smoke
+          if [ "$SECONDS_INPUT" -ge 600 ]; then profile=soak; fi
+          python3 scripts/release_gate.py "$gates/soak.json" --profile "$profile" --exit-code "$code" --json "$gates/gate.json" --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-software-gl-long
+          path: ${{ runner.temp }}/gates
+          if-no-files-found: ignore

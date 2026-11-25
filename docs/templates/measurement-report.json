@@ -1,0 +1,80 @@
+{
+  "schema": "nyrexvj-hardware-measurement",
+  "schemaVersion": 1,
+  "tester": "",
+  "date": "",
+  "testIds": [],
+  "build": {
+    "version": "",
+    "buildNumber": "",
+    "configuration": "Release",
+    "file": "",
+    "sha256": ""
+  },
+  "system": {
+    "os": "",
+    "osVersion": "",
+    "cpu": "",
+    "memoryGiB": null,
+    "gpu": "",
+    "gpuMemoryMiB": null,
+    "driver": "",
+    "powerPlan": "",
+    "displays": [
+      {
+        "model": "",
+        "connection": "",
+        "resolution": "",
+        "refreshHz": null
+      }
+    ],
+    "otherSoftwareRunning": []
+  },
+  "conditions": {
+    "resolution": "",
+    "targetFps": null,
+    "quality": "",
+    "clips": [],
+    "effects": [],
+    "outputs": [],
+    "durationSeconds": null,
+    "scenario": ""
+  },
+  "runs": [
+    {
+      "command": "",
+      "exitCode": null,
+      "reportFile": "",
+      "gateProfile": "",
+      "gateResult": ""
+    }
+  ],
+  "measurements": {
+    "workMs": {
+      "p50": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    },
+    "overBudgetPercent": null,
+    "missedFrames": null,
+    "rssMiB": {
+      "first": null,
+      "last": null
+    },
+    "vramMiB": {
+      "first": null,
+      "last": null
+    },
+    "threads": {
+      "first": null,
+      "last": null
+    },
+    "handles": {
+      "first": null,
+      "last": null
+    }
+  },
+  "observations": "",
+  "evidence": []
+}

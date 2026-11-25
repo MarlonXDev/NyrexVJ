@@ -66,7 +66,9 @@ SoakEvents soakEventsAt(const SoakPlan& plan, int second) {
     if (second <= 0) {
         return events;
     }
-    events.look = plan.lookEvery > 0 && second % plan.lookEvery == 0;
+    events.look = !plan.media && plan.lookEvery > 0 && second % plan.lookEvery == 0;
+    events.media = plan.media && plan.mediaEvery > 0 && second % plan.mediaEvery == 0;
+    events.clear = plan.media && plan.clearEvery > 0 && second % plan.clearEvery == 0;
     events.deck = plan.deckEvery > 0 && second % plan.deckEvery == 0;
     events.quality = plan.qualityEvery > 0 && second % plan.qualityEvery == 0;
     return events;

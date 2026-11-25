@@ -9,6 +9,10 @@ RESULTS = os.path.join(ROOT, "tests", "hardware", "results.json")
 DOC = os.path.join(ROOT, "docs", "TESTING.md")
 START = "<!-- matrix:start -->"
 END = "<!-- matrix:end -->"
+VENDOR_DOC = os.path.join(ROOT, "docs", "COMPATIBILITY.md")
+VENDOR_START = "<!-- vendors:start -->"
+VENDOR_END = "<!-- vendors:end -->"
+CONDITION_KEYS = ["system", "driver", "resolution", "clips", "effects"]
 SOFTWARE_MARKERS = re.compile(r"llvmpipe|softpipe|swrast|lavapipe|warp|software|virtual|xvfb|basic render", re.IGNORECASE)
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 RANK = {"n/a": 0, "implemented": 1, "automated": 2, "hardware": 3}
@@ -142,6 +146,19 @@ def check_results(matrix, results):
             for key in ("tester", "evidence"):
                 if not str(item.get(key, "")).strip():
                     problems.append(label + ": a hardware result needs " + key)
+            conditions = item.get("conditions")
+            if not isinstance(conditions, dict):
+                problems.append(label + ": a hardware result needs conditions with " + ", ".join(CONDITION_KEYS) + " and durationSeconds")
+            else:
+                for key in CONDITION_KEYS:
+                    if not str(conditions.get(key, "")).strip():
+                        problems.append(label + ": conditions has no " + key)
+                seconds = conditions.get("durationSeconds")
+                if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or seconds <= 0:
+                    problems.append(label + ": conditions.durationSeconds must be a number above zero")
+                for key in ("system", "driver"):
+                    if SOFTWARE_MARKERS.search(str(conditions.get(key, ""))):
+                        problems.append(label + ": conditions." + key + " names a software renderer or virtual machine, so this is not a hardware result")
         else:
             if not str(item.get("command", "")).strip():
                 problems.append(label + ": an automated result needs the command")
@@ -186,24 +203,65 @@ def table(matrix, results):
     return "\n".join(lines)
 
 
+def vendor_cell(matrix, results, gpu, platform):
+    items = [r for r in results.get("results", []) if r.get("gpu") == gpu and r.get("platform") == platform]
+    manual = sum(len(a["manual"]) for a in matrix["areas"] if a["platforms"].get(platform))
+    automated = sum(len(a["automated"]) for a in matrix["areas"] if a["platforms"].get(platform))
+    if gpu == "software":
+        done = {r["test"] for r in items if r.get("outcome") == "passed" and r.get("state") == "automated"}
+        text = "software OpenGL, automated %d of %d checks, not hardware" % (len(done), automated)
+    else:
+        done = {r["test"] for r in items if r.get("outcome") == "passed" and r.get("state") == "hardware"}
+        text = "hardware %d of %d manual tests" % (len(done), manual) if done else "no hardware run recorded"
+    if any(r.get("outcome") == "failed" for r in items):
+        text += ", failures recorded"
+    return text
+
+
+def vendor_table(matrix, results):
+    lines = ["| Graphics card | Windows | Linux |", "| --- | --- | --- |"]
+    for gpu in matrix["gpus"]:
+        label = {"nvidia": "NVIDIA", "amd": "AMD", "intel": "Intel", "software": "Software OpenGL (CI, containers, virtual machines)"}.get(gpu, gpu)
+        lines.append("| %s | %s | %s |" % (label, vendor_cell(matrix, results, gpu, "windows"), vendor_cell(matrix, results, gpu, "linux")))
+    return "\n".join(lines)
+
+
+def documents(matrix, results):
+    return [
+        (DOC, "docs/TESTING.md", START, END, table(matrix, results)),
+        (VENDOR_DOC, "docs/COMPATIBILITY.md", VENDOR_START, VENDOR_END, vendor_table(matrix, results)),
+    ]
+
+
 def check_doc(matrix, results):
-    with open(DOC, encoding="utf-8") as handle:
-        text = handle.read()
-    if START not in text or END not in text:
-        return ["docs/TESTING.md has no matrix markers"]
-    inside = text.split(START, 1)[1].split(END, 1)[0].strip("\n")
-    if inside != table(matrix, results):
-        return ["the table in docs/TESTING.md is out of date; run python3 scripts/check_test_matrix.py --write"]
-    return []
+    problems = []
+    for path, label, start, end, content in documents(matrix, results):
+        if not os.path.exists(path):
+            problems.append(label + " does not exist")
+            continue
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        if start not in text or end not in text:
+            problems.append(label + " has no matrix markers")
+            continue
+        inside = text.split(start, 1)[1].split(end, 1)[0].strip("\n")
+        if inside != content:
+            problems.append("the table in " + label + " is out of date; run python3 scripts/check_test_matrix.py --write")
+    return problems
 
 
 def write_doc(matrix, results):
-    with open(DOC, encoding="utf-8") as handle:
-        text = handle.read()
-    head, rest = text.split(START, 1)
-    tail = rest.split(END, 1)[1]
-    with open(DOC, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(head + START + "\n" + table(matrix, results) + "\n" + END + tail)
+    for path, _, start, end, content in documents(matrix, results):
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        if start not in text or end not in text:
+            continue
+        head, rest = text.split(start, 1)
+        tail = rest.split(end, 1)[1]
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(head + start + "\n" + content + "\n" + end + tail)
 
 
 def main():

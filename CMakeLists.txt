@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.49.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.50.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -214,6 +214,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/show_timeline.cpp
     src/core/beat_clock.cpp
     src/core/failover.cpp
+    src/core/run_conditions.cpp
     src/core/netsync.cpp src/control/netsync_key.cpp src/control/netsync_show.cpp src/control/netsync_transport.cpp
     src/core/ndi_runtime.cpp
     src/core/ndi_receiver.cpp
@@ -334,7 +335,7 @@ target_compile_definitions(nvj_core PUBLIC
 )
 
 if(WIN32)
-    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32 ws2_32 winmm psapi bcrypt)
+    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32 ws2_32 winmm psapi bcrypt advapi32)
 else()
     find_package(Threads REQUIRED)
     target_link_libraries(nvj_core PUBLIC Threads::Threads)
@@ -504,6 +505,15 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_netsync_tests PRIVATE nvj_core)
     target_include_directories(nvj_netsync_tests PRIVATE tests)
     add_test(NAME nvj_netsync_tests COMMAND nvj_netsync_tests)
+    add_executable(nvj_release_tests tests/test_release.cpp)
+    target_link_libraries(nvj_release_tests PRIVATE nvj_core)
+    target_include_directories(nvj_release_tests PRIVATE tests)
+    add_test(NAME nvj_release_tests COMMAND nvj_release_tests)
+    add_executable(nvj_compat_tests tests/test_compat.cpp)
+    target_link_libraries(nvj_compat_tests PRIVATE nvj_core)
+    target_include_directories(nvj_compat_tests PRIVATE tests)
+    target_compile_definitions(nvj_compat_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
+    add_test(NAME nvj_compat_tests COMMAND nvj_compat_tests)
     add_executable(nvj_failover_tests tests/test_failover.cpp)
     target_link_libraries(nvj_failover_tests PRIVATE nvj_core)
     target_include_directories(nvj_failover_tests PRIVATE tests)

@@ -14,7 +14,7 @@ int runPluginSelfTest(Engine& engine, const std::string& folder, const std::stri
 int runLiveBenchmark(Engine& engine, const std::string& spec, const std::string& outputPath);
 int runSwitchBenchmark(Engine& engine, const std::string& spec, const std::string& outputPath);
 int runMemoryBenchmark(Engine& engine, const std::string& outputPath);
-int runSoakTest(Engine& engine, const std::string& spec, const std::string& outputPath);
+int runSoakTest(Engine& engine, const std::string& spec, const std::string& outputPath, const std::string& mediaDirectory = std::string());
 int runShaderBenchmark(Engine& engine, int frames, const std::string& outputPath);
 int runNodeBenchmark(Engine& engine, int frames, const std::string& outputPath);
 int runCompositionBenchmark(Engine& engine, int frames, double budgetMs, bool allLooks, const std::string& outputPath);

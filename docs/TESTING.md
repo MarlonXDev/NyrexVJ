@@ -53,6 +53,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Video routing: route clips that play a layer, a group of layers or the master (same frame, or the previous frame as feedback), loops refused, GPU only copies with a memory limit and release, copies for each deck of a transition, sender sources for Spout, NDI and the recording, and the Video routing window | implemented | automated 4/4 | 4 | M-VR-1 open; M-VR-2 open; M-VR-3 open; M-VR-4 open |
 | Network sync: one master and followers over UDP with a signed protocol, a state snapshot with incremental updates, sequence numbers, packet loss and reconnect, a clock estimate for the beat and the timecode, missing media shown instead of sent, version negotiation, and the Network sync block on the Sync page | implemented | automated 6/6 | 6 | M-MS-1 open; M-MS-2 open; M-MS-3 open; M-MS-4 open; M-MS-5 open |
 | Hot standby: a primary and a standby PC with readiness checks, health reports, a takeover by hand or automatic, a leader epoch against two leaders, a held output on the standby, and the Hot standby window | implemented | automated 6/6 | 6 | M-HS-1 open; M-HS-2 open; M-HS-3 open; M-HS-4 open |
+| Release quality: gates for crash freedom, growth and frame times, the compatibility matrix, old and new file formats, and the release checklist | implemented | automated 8/8 | 8 | M-RQ-1 open; M-RQ-2 open; M-RQ-3 open; M-RQ-4 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.
@@ -71,15 +72,25 @@ Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual te
   "state": "hardware",
   "outcome": "passed",
   "date": "2026-12-01",
-  "build": "0.34.0",
+  "build": "0.50.0",
   "environment": "Windows 11, GeForce RTX 3060, driver 560.94, two 1080p displays",
+  "conditions": {
+    "system": "Windows 11 23H2, Ryzen 7 5800X, 32 GB",
+    "driver": "NVIDIA 560.94",
+    "resolution": "1920x1080",
+    "clips": ["Plasma", "Tunnel", "Video: show-intro"],
+    "effects": ["Glow", "RGB Split"],
+    "durationSeconds": 1800
+  },
   "tester": "name",
   "evidence": "link or path to the measurement files",
   "notes": "what was seen, including problems"
 }
 ```
 
-3. Run `python3 scripts/check_test_matrix.py --write` and commit the file and `docs/TESTING.md`.
+3. Run `python3 scripts/check_test_matrix.py --write` and commit the file, `docs/TESTING.md` and `docs/COMPATIBILITY.md`.
+
+A hardware result needs the `conditions` block: system, driver, resolution, clips, effects and a duration above zero (since 0.50.0). The values in the example above are made up to show the shape; they are not a result. The templates `docs/templates/measurement-report.json` and `docs/templates/test-log.md` hold the numbers and the log that belong to such an entry. The checker refuses a block whose system or driver names a software renderer or a virtual machine.
 
 A failed run is recorded with `"outcome": "failed"`. A failure stays visible in the table.
 
@@ -95,7 +106,18 @@ What a sample holds: the render time of the frames of that window (average, 50th
 
 At the end it writes the totals (frames, frames over the budget of one period, frames longer than two periods, missed frames, which are gaps of more than one and a half periods between two frame starts, an estimate of the frames dropped in them, and the render time and frame interval statistics of the whole run) and a **growth verdict** for the memory, graphics estimate, thread and handle series. The first quarter of the run is ignored (loading, caches). The median of the first third of the rest is compared with the median of the last third. It counts as growth when the difference is larger than 64 MiB and 10 percent (memory), 16 MiB and 5 percent (graphics estimate), 2 (threads) or 16 (handles). The medians make a single spike harmless and a steady climb visible. The verdict is only given for runs of at least 60 seconds; a shorter run reports the numbers and "too short to judge". The exit code is 0 when no growth and no OpenGL error was found, 2 otherwise, 1 when the arguments are wrong. The report is rewritten after every sample, so a run that crashes leaves its last samples behind.
 
-The limits are proposals for catching steady leaks, not performance targets. The run does not fail because frames were slow: whether 16.7 ms is achieved depends on the machine, and a gate on that is a separate task (release checks), not part of this one.
+The limits are proposals for catching steady leaks, not performance targets. The run does not fail because frames were slow: whether 16.7 ms is achieved depends on the machine. Since 0.50.0 the judgement lives outside the program, in `scripts/release_gate.py` and `tests/hardware/gates.json` (see [RELEASE.md](RELEASE.md)), and frame times are judged only for a run on a real graphics card.
+
+Since 0.50.0 the report names where it came from (`conditions`: system, build, graphics card, driver, resolution, clips, effects, duration) and which kind of renderer produced it (`software-gl`, `virtual-gpu` or `gpu-reported`).
+
+`--soak-media FOLDER` replaces the look changes by a media churn: it imports the files of FOLDER, launches a clip on a layer every second second, clears a layer every ninth, and fails the run when a clip that should be playing has failed. Because the import copies the files into the data folder, it refuses to run unless `NYREXVJ_DATA_DIR` points at a scratch folder.
+
+```
+NYREXVJ_DATA_DIR=/tmp/soak-data NyrexVJ --fresh --no-update-check --no-welcome --soak 1800 --soak-media /path/to/clips --bench-out soak.json
+python3 scripts/release_gate.py soak.json --profile hardware-release --exit-code 0
+```
+
+The continuous build runs a 6 s soak and a 20 s media soak through the `smoke` gate and writes the verdicts into the summary of the run, under a line that says the run used a software renderer and says nothing about a graphics card, a projector or a driver. The manual workflow `soak` runs a longer one by hand. Device loss, a driver reset, video memory almost full and a monitor that goes away have no automatic test; they are the manual tests `M-RQ-3`, `M-RQ-4` and `M-DISP-1` and the entries KI-2 and KI-3 of [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 ## Measuring the machine: `scripts/measure_live.py`
 

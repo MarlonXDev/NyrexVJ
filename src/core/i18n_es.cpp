@@ -1754,6 +1754,19 @@ const Translation kSpanish[] = {
     {"Writes", "Escrituras"},
     {"You moved these controls by hand, so the timeline lets go of them. Release hands them back.", "Moviste estos controles a mano, así que la línea de tiempo los suelta. Liberar se los devuelve."},
     {"Zooms so that all keyframes and cues are visible.", "Ajusta el zoom para ver todos los fotogramas clave y cues."},
+    {"Back", "Atrás"},
+    {"Contents", "Contenido"},
+    {"F1  open or close the manual", "F1  abrir o cerrar el manual"},
+    {"Next chapter", "Capítulo siguiente"},
+    {"No chapter matches your search.", "Ningún capítulo coincide con tu búsqueda."},
+    {"Note", "Nota"},
+    {"Press F1 any time to open the manual.", "Pulsa F1 en cualquier momento para abrir el manual."},
+    {"Previous chapter", "Capítulo anterior"},
+    {"Search the manual", "Buscar en el manual"},
+    {"The manual is written in English and German. You see the English version.", "El manual está escrito en inglés y alemán. Estás viendo la versión en inglés."},
+    {"Tip", "Consejo"},
+    {"User manual", "Manual de usuario"},
+    {"Warning", "Advertencia"},
 };
 
 }

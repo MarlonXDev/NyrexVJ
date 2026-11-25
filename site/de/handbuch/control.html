@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steuerung: MIDI, OSC und die Webseite - NyrexVJ-Handbuch</title>
+<meta name="description" content="Alles steht unter Einstellungen, Steuerung. Die Zuordnungen und Adressen beziehen sich auf das Arbeits-Deck, also das, das du im Clip-Raster siehst.">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/control.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/control.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html" aria-current="page">Steuerung: MIDI, OSC und die Webseite</a>
+<ul><li><a href="#control-where">Wo es liegt</a></li><li><a href="#midi">MIDI</a></li><li><a href="#osc">OSC-Eingang</a></li><li><a href="#osc-out">OSC-Ausgang</a></li><li><a href="#web">Die Web-Oberfläche</a></li></ul>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="alle.html">Das ganze Handbuch auf einer Seite lesen</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html" aria-current="page">Steuerung: MIDI, OSC und die Webseite</a>
+<ul><li><a href="#control-where">Wo es liegt</a></li><li><a href="#midi">MIDI</a></li><li><a href="#osc">OSC-Eingang</a></li><li><a href="#osc-out">OSC-Ausgang</a></li><li><a href="#web">Die Web-Oberfläche</a></li></ul>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Handbuch</a> / Live-Steuerung und Shows</p>
+<h1>Steuerung: MIDI, OSC und die Webseite</h1>
+<p class="meta">Kapitel 23 von 35 &middot; 3 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#control-where">Wo es liegt</a><a href="#midi">MIDI</a><a href="#osc">OSC-Eingang</a><a href="#osc-out">OSC-Ausgang</a><a href="#web">Die Web-Oberfläche</a></nav>
+<h2 id="control-where"><a class="anchor" href="#control-where" aria-label="Link">#</a>Wo es liegt</h2>
+<p>Alles steht unter Einstellungen, Steuerung. Die Zuordnungen und Adressen beziehen sich auf das Arbeits-Deck, also das, das du im Clip-Raster siehst.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-control.webp"><img src="../../assets/manual/de/settings-control.webp" width="874" height="584" loading="lazy" alt="Die Seite Steuerung in den Einstellungen"></a><figcaption>Die Seite Steuerung in den Einstellungen</figcaption></figure>
+<h2 id="midi"><a class="anchor" href="#midi" aria-label="Link">#</a>MIDI</h2>
+<p>MIDI funktioniert unter Windows und unter Linux. Unter Linux muss der Controller als ALSA-Sequencer-Port auftauchen, <code>aconnect -l</code> listet sie auf. Wähl deinen Controller unter Gerät, drück Zuordnung hinzufügen, such aus, was er steuern soll, und dreh dann an einem Regler oder drück eine Taste am Controller. Die beiden sind ab diesem Moment verbunden.</p>
+<p>Regler und Fader (CC) setzen Werte. Tasten (Noten) lösen Trigger aus oder schalten etwas ein, solange sie gehalten werden. Hak Invertieren an, um einen Fader umzudrehen, drück Lernen, um einer Zeile einen neuen Regler zu geben, und Entfernen, um sie zu löschen. Die Zuordnungen werden in <code>controls.json</code> im Datenordner gespeichert. Ein Controller, den ein anderes Programm exklusiv geöffnet hat, lässt sich nicht von zwei Programmen gleichzeitig nutzen.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Leg den Blackout-Schalter zuerst auf ein großes Pad. Er ist der Regler, den du am meisten willst, wenn etwas schiefgeht.</p></aside>
+<h2 id="osc"><a class="anchor" href="#osc" aria-label="Link">#</a>OSC-Eingang</h2>
+<p>Hak OSC-Nachrichten empfangen an. OSC ist standardmäßig aus und hört auf Port 9010, weil VRChat 9000 nutzt und die beiden sich nicht in die Quere kommen sollen. Nur dieser Computer darf senden, außer du hakst Nachrichten von anderen Computern annehmen an, dann kann jeder in deinem Netzwerk NyrexVJ steuern.</p>
+<p>Schick eine Zahl an eine Adresse. Fließkommazahlen, ganze Zahlen und wahr oder falsch werden akzeptiert und als 0 bis 1 gelesen. Eine Nachricht ohne Wert löst einen Trigger aus oder kippt einen Schalter. Die Einstellungsseite listet jede Adresse, und ein Klick darauf kopiert sie.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Adresse</th><th scope="col">Bedeutung</th></tr></thead><tbody><tr><td><code>/nyrex/master/level</code></td><td>Master-Pegel, 0 bis 1</td></tr><tr><td><code>/nyrex/master/blackout</code></td><td>Blackout, an ab 0,5</td></tr><tr><td><code>/nyrex/master/bpm</code></td><td>Tempo, 0 bis 1 entspricht 40 bis 240 BPM</td></tr><tr><td><code>/nyrex/master/tap</code></td><td>Tap-Tempo</td></tr><tr><td><code>/nyrex/master/resync</code></td><td>Den Beat neu starten</td></tr><tr><td><code>/nyrex/deck/1</code> bis <code>/nyrex/deck/16</code></td><td>Zu diesem Deck wechseln</td></tr><tr><td><code>/nyrex/deck/next</code></td><td>Nächstes benutztes Deck</td></tr><tr><td><code>/nyrex/column/1</code> bis <code>/nyrex/column/8</code></td><td>Eine Spalte starten</td></tr><tr><td><code>/nyrex/layer/L/clip/C</code></td><td>Den Clip von Layer L in Spalte C starten</td></tr><tr><td><code>/nyrex/layer/L/opacity</code></td><td>Deckkraft eines Layers</td></tr><tr><td><code>/nyrex/layer/L/bypass</code></td><td>Einen Layer auf Bypass schalten</td></tr><tr><td><code>/nyrex/layer/L/clear</code></td><td>Den Layer stoppen</td></tr><tr><td><code>/nyrex/layer/L/fx/S/enable</code></td><td>Effekt-Slot S ein- oder ausschalten</td></tr><tr><td><code>/nyrex/layer/L/fx/S/param/P</code></td><td>Parameter P des Effekts in Slot S</td></tr><tr><td><code>/nyrex/macro/1</code> bis <code>/nyrex/macro/8</code></td><td>Die acht Makro-Regler</td></tr></tbody></table></div>
+<p>Layer gehen von 1 bis 4, Effekt-Slots von 1 bis 4 und Parameter von 1 bis 4. Der Master hat dieselben Effekt-Adressen unter <code>/nyrex/master/fx/S/</code>. Es gibt weitere Adressen für Farbe, Geschwindigkeit, Skalierung und Solo, die Einstellungsseite hat die vollständige Liste.</p>
+<h2 id="osc-out"><a class="anchor" href="#osc-out" aria-label="Link">#</a>OSC-Ausgang</h2>
+<p>Hak unter OSC-Ausgang OSC-Daten senden an. NyrexVJ sendet dann an <code>127.0.0.1</code> auf Port 9011, 60 Mal pro Sekunde. Adresse, Port und Rate lassen sich ändern, nur IPv4-Adressen und <code>localhost</code> werden akzeptiert. Alle Nachrichten beginnen mit <code>/nyrex/out/</code>. Du bekommst die Audio-Pegel, das Spektrum in 32 Bändern, die Clock mit Tempo und Beat-Position, Beat- und Onset-Ereignisse und bis zu 16 eigene Werte, die jeweils einem Regler folgen, zum Beispiel der Deckkraft eines Layers. Programme wie Unreal Engine, TouchDesigner oder Max können damit auf die Show reagieren. Die vollständige Tabelle steht in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/UNREAL.md" target="_blank" rel="noopener noreferrer">docs/UNREAL.md</a> des Projekts.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Die Daten werden an die Adresse gesendet, die du eingibst. Nutze nur Adressen in einem Netzwerk, dem du vertraust.</p></aside>
+<h2 id="web"><a class="anchor" href="#web" aria-label="Link">#</a>Die Web-Oberfläche</h2>
+<p>Hak unter Einstellungen, Steuerung, Web-Oberfläche die Option Web-Oberfläche einschalten an und klick Web-Oberfläche öffnen. NyrexVJ startet einen kleinen Webserver auf <code>127.0.0.1</code> Port 9020 und öffnet eine Seite in deinem Browser. Die Seite zeigt den Status und steuert den Master-Pegel, Blackout, Tap-Tempo, die 16 Decks, die Spalten-Trigger, das Clip-Raster aller vier Layer mit Deckkraft, Bypass, Solo und Leeren, die Werks-Looks und deine eigenen Looks sowie die Ausgänge.</p>
+<p>Sie ist aus, bis du sie einschaltest, und nur dieser Computer kommt heran. Hakst du Andere Geräte im Netzwerk erlauben an, kann jedes Gerät, das das Token kennt, NyrexVJ steuern, über eine Verbindung, die nicht verschlüsselt ist, tu das also nur in einem Netzwerk, dem du vertraust. So nutzt du ein Handy als Fernbedienung.</p>
+<p>Jede Anfrage braucht das Token. Es steht auf der Einstellungsseite und liegt in einer eigenen Datei. Token kopieren kopiert es, und Neues Token ersetzt es und meldet jede offene Seite ab. Zeig das Token nicht in einem Stream. Derselbe Server bietet eine dokumentierte REST-API unter <code>/api/v1/</code> für Skripte, beschrieben in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/API.md" target="_blank" rel="noopener noreferrer">docs/API.md</a> des Projekts.</p>
+<nav class="pager" aria-label="Pager"><a class="prev" href="recording.html"><small>Zurück</small><span>Aufnahme</span></a><a class="next" href="sync.html"><small>Weiter</small><span>Show-Sync und Timecode</span></a></nav>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your own shaders - NyrexVJ Manual</title>
+<meta name="description" content="Any fragment shader can become a clip. Put a .glsl, .frag or .fs file into the shaders folder, or drag the file onto the window. It shows up in the Library as Shader...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/shaders.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/shaders.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html" aria-current="page">Your own shaders</a>
+<ul><li><a href="#shader-clip">Making a shader clip</a></li><li><a href="#shader-styles">Two styles</a></li><li><a href="#shader-passes">Transparency and several passes</a></li><li><a href="#isf">ISF files</a></li><li><a href="#shader-controls">Controls for your shader</a></li></ul>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html" aria-current="page">Your own shaders</a>
+<ul><li><a href="#shader-clip">Making a shader clip</a></li><li><a href="#shader-styles">Two styles</a></li><li><a href="#shader-passes">Transparency and several passes</a></li><li><a href="#isf">ISF files</a></li><li><a href="#shader-controls">Controls for your shader</a></li></ul>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Your own content</p>
+<h1>Your own shaders</h1>
+<p class="meta">Chapter 16 of 35 &middot; 2 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#shader-clip">Making a shader clip</a><a href="#shader-styles">Two styles</a><a href="#shader-passes">Transparency and several passes</a><a href="#isf">ISF files</a><a href="#shader-controls">Controls for your shader</a></nav>
+<h2 id="shader-clip"><a class="anchor" href="#shader-clip" aria-label="Link">#</a>Making a shader clip</h2>
+<p>Any fragment shader can become a clip. Put a <code>.glsl</code>, <code>.frag</code> or <code>.fs</code> file into the shaders folder, or drag the file onto the window. It shows up in the Library as Shader: file name, under the filter Shaders. It works like every other clip: Speed, Scale, colours, effects, audio, LFOs and macros all apply.</p>
+<p>NyrexVJ looks at the folder once a second. A saved change reloads the shader while it plays, so you can edit the file in any text editor. If the shader does not compile, the Clip window shows the message with the line number of your file and the last working version keeps running. Library, Create example shader writes a small shader to start from.</p>
+<h2 id="shader-styles"><a class="anchor" href="#shader-styles" aria-label="Link">#</a>Two styles</h2>
+<p>A file with a <code>void main()</code> is a NyrexVJ style shader, a file with a <code>mainImage</code> function and no <code>void main()</code> is a Shadertoy style shader. NyrexVJ finds out by itself. In the NyrexVJ style these names are ready to use: <code>vUv</code>, <code>uRes</code>, <code>uTime</code>, <code>uBeat</code>, <code>uBpm</code>, <code>uColorA</code>, <code>uColorB</code>, <code>uAudio</code> with bass, mid, high and level, <code>uKick</code>, and the helpers <code>spec(x)</code> and <code>wave(x)</code> for the spectrum and the waveform. In the Shadertoy style <code>iResolution</code>, <code>iTime</code> and <code>iChannel0</code> for the audio are available.</p>
+<p>The full list of names, helpers and limits is in the document <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SHADERS.md" target="_blank" rel="noopener noreferrer">docs/SHADERS.md</a> of the project.</p>
+<h2 id="shader-passes"><a class="anchor" href="#shader-passes" aria-label="Link">#</a>Transparency and several passes</h2>
+<p>A line <code>#pragma nyrexvj alpha</code> makes the clip transparent. Sections called <code>buffer a</code> to <code>buffer d</code>, <code>image</code> and <code>channel</code> turn the file into a multipass shader with feedback, like Shadertoy. Images and videos from the Library can be used as inputs. A file without such a line behaves exactly as it always did.</p>
+<h2 id="isf"><a class="anchor" href="#isf" aria-label="Link">#</a>ISF files</h2>
+<p>ISF files, the format of VDMX and others with a header between <code>/*{</code> and <code>}*/</code>, are read from the same folder. A file with an <code>inputImage</code> input becomes an effect named ISF: file name. Any other ISF file becomes a clip. The inputs of the file show as controls in the Clip window, or as the four controls of the effect. What an ISF file cannot do, like vertex shaders, transitions and audio inputs, is listed in the Clip window.</p>
+<h2 id="shader-controls"><a class="anchor" href="#shader-controls" aria-label="Link">#</a>Controls for your shader</h2>
+<p>A shader can declare its own sliders and switches with <code>#pragma nyrexvj param</code>. They appear in the Clip window under Shader controls. A right click resets a control to the default of the file, and Reset controls resets all of them.</p>
+<aside class="note note"><strong class="note-label">Note</strong><p>Shader files are programs for your graphics card. A broken shader can slow the picture down. NyrexVJ limits the time a shader may take and switches off one that is too slow.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="video.html"><small>Previous</small><span>Video and image clips</span></a><a class="next" href="models.html"><small>Next</small><span>3D models</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

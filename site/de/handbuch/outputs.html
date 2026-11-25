@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ausgänge, Mapping und OBS - NyrexVJ-Handbuch</title>
+<meta name="description" content="Spout gibt das fertige Bild unter Windows ohne Bildschirmaufnahme an OBS weiter. Du richtest es einmal in diesen Schritten ein.">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/outputs.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/outputs.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html" aria-current="page">Ausgänge, Mapping und OBS</a>
+<ul><li><a href="#obs">Das Bild an OBS schicken</a></li><li><a href="#output-windows">Ausgabefenster</a></li><li><a href="#slices">Slices und Bildausschnitt</a></li><li><a href="#warp-masks">Ecken, Verzerrung und Masken</a></li><li><a href="#blending">Kantenüberblendung und Farbe</a></li><li><a href="#arrange">Mehrere Projektoren auf einmal</a></li><li><a href="#venues">Venue-Setups</a></li><li><a href="#ndi-output">NDI pro Ausgang</a></li><li><a href="#frame-lock">Frame-Lock und Verzögerung</a></li></ul>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="alle.html">Das ganze Handbuch auf einer Seite lesen</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html" aria-current="page">Ausgänge, Mapping und OBS</a>
+<ul><li><a href="#obs">Das Bild an OBS schicken</a></li><li><a href="#output-windows">Ausgabefenster</a></li><li><a href="#slices">Slices und Bildausschnitt</a></li><li><a href="#warp-masks">Ecken, Verzerrung und Masken</a></li><li><a href="#blending">Kantenüberblendung und Farbe</a></li><li><a href="#arrange">Mehrere Projektoren auf einmal</a></li><li><a href="#venues">Venue-Setups</a></li><li><a href="#ndi-output">NDI pro Ausgang</a></li><li><a href="#frame-lock">Frame-Lock und Verzögerung</a></li></ul>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Handbuch</a> / Ausgabe und Aufnahme</p>
+<h1>Ausgänge, Mapping und OBS</h1>
+<p class="meta">Kapitel 21 von 35 &middot; 4 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#obs">Das Bild an OBS schicken</a><a href="#output-windows">Ausgabefenster</a><a href="#slices">Slices und Bildausschnitt</a><a href="#warp-masks">Ecken, Verzerrung und Masken</a><a href="#blending">Kantenüberblendung und Farbe</a><a href="#arrange">Mehrere Projektoren auf einmal</a><a href="#venues">Venue-Setups</a><a href="#ndi-output">NDI pro Ausgang</a><a href="#frame-lock">Frame-Lock und Verzögerung</a></nav>
+<h2 id="obs"><a class="anchor" href="#obs" aria-label="Link">#</a>Das Bild an OBS schicken</h2>
+<p>Spout gibt das fertige Bild unter Windows ohne Bildschirmaufnahme an OBS weiter. Du richtest es einmal in diesen Schritten ein.</p>
+<ol><li>Hak in NyrexVJ im Menü Ausgabe oder unter Einstellungen, Ausgabe Per Spout an OBS senden an und wähl einen Sendernamen.</li><li>Installiere in OBS einmalig das obs-spout2-plugin.</li><li>Füge eine Quelle namens Spout2 Capture hinzu und wähl den Sender aus der Liste.</li></ol>
+<p>Spout funktioniert nur unter Windows. Das Ausgabefenster mit einer Fensteraufnahme in OBS bleibt eine Alternative, ebenso NDI. Über NDI senden im Menü Ausgabe schickt das Hauptbild über das Netzwerk an OBS mit NDI-Plugin, Resolume, vMix oder den NDI Studio Monitor.</p>
+<h2 id="output-windows"><a class="anchor" href="#output-windows" aria-label="Link">#</a>Ausgabefenster</h2>
+<p>Einstellungen, Ausgabe hat einen Tab für jeden von bis zu vier Ausgängen. Ausgang 1 ist immer in Benutzung, die Ausgänge 2 bis 4 schaltest du mit Diesen Ausgang verwenden ein. Jeder Ausgang hat sein eigenes Display, Öffnen und Schließen, Vollbild oder Fenster und ein Testbild. <code>F11</code> schaltet den Vollbildmodus für alle offenen Ausgänge um, und <code>Esc</code> verlässt ihn. Zwei Ausgänge auf demselben Display bekommen eine Warnung, weil sie übereinander lägen.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-output.webp"><img src="../../assets/manual/de/settings-output.webp" width="874" height="584" loading="lazy" alt="Die Seite Ausgabe in den Einstellungen"></a><figcaption>Die Seite Ausgabe in den Einstellungen</figcaption></figure>
+<h2 id="slices"><a class="anchor" href="#slices" aria-label="Link">#</a>Slices und Bildausschnitt</h2>
+<p>Ein Ausgang enthält bis zu acht Slices. Ein Slice zeigt einen Teil des Bildes in einem Teil des Ausgangs. Slice hinzufügen, Duplizieren und Entfernen verwalten sie. Der Bildausschnitt legt fest, welchen Teil der Komposition ein Slice zeigt, als Links, Oben, Breite und Höhe in Prozent oder mit den Schaltflächen Ganzes Bild und den vier Hälften. So verteilst du ein Bild auf mehrere Projektoren. Ganzes Fenster füllen streckt es, Horizontal spiegeln und Vertikal spiegeln drehen es für Rückprojektion.</p>
+<h2 id="warp-masks"><a class="anchor" href="#warp-masks" aria-label="Link">#</a>Ecken, Verzerrung und Masken</h2>
+<p>Die Zeichenfläche zeigt den Ausgang so, wie ihn der Projektor zeichnet. Zieh an den orangen Quadraten, um die vier Ecken zu verschieben, damit ein Projektor, der schräg steht, auf eine Wand passt. Zieh an den runden Punkten, um das Bild zu biegen. Verzerrungspunkte stellt das Raster von 2 x 2 bis 17 x 17 ein. Ecken zurücksetzen und Verzerrung zurücksetzen gehen zurück zum einfachen Rechteck.</p>
+<p>Eine Maske schneidet einen Slice auf eine Form zu, zum Beispiel um einen Pfeiler oder ein Bühnenbild. Sie ist ein Polygon mit 3 bis 32 Punkten, das gekrümmte Kanten haben kann, eine Form, die du frei mit der Maus zeichnest, oder ein Bild wie eine PNG-Datei. Weiche Kante verwischt den Rand, und Invertieren versteckt das Innere statt des Äußeren.</p>
+<h2 id="blending"><a class="anchor" href="#blending" aria-label="Link">#</a>Kantenüberblendung und Farbe</h2>
+<p>Stell bei Projektoren, die sich überlappen, die Überblendbreite der gemeinsamen Kanten in Prozent des Ausgangs ein. Verlauf und Gamma formen die Blende, sodass die beiden Blenden in der Überlappung die ursprüngliche Helligkeit ergeben. Schwarzwert hebt das Schwarz des Bildes außerhalb der Überblendzonen an, denn zwei überlappende Projektoren addieren ihr Grau, die Überlappung sieht also heller aus als der Rest. Helligkeit dimmt einen Projektor, der heller ist als sein Nachbar.</p>
+<p>Jeder Slice hat seine eigene Farbkorrektur, und das ganze Ausgangsbild auch: Verstärkung für Rot, Grün und Blau, Sättigung, Kontrast, Gamma und Schwarzanhebung. Damit gleichst du Projektoren unterschiedlichen Alters an.</p>
+<h2 id="arrange"><a class="anchor" href="#arrange" aria-label="Link">#</a>Mehrere Projektoren auf einmal</h2>
+<p>Ausgänge anordnen richtet ein Raster aus überlappenden Projektoren mit einem Klick ein. Gib die Zahl der Spalten und Zeilen und die Überlappung in Prozent des ganzen Bildes ein. NyrexVJ richtet dann die Bildausschnitte und die Kantenüberblendung für dieses Raster ein. Feinjustiere danach.</p>
+<h2 id="venues"><a class="anchor" href="#venues" aria-label="Link">#</a>Venue-Setups</h2>
+<p>Ein Venue-Setup speichert alle Ausgänge eines Raums als kleine Datei, mit den Displays, Slices, Verzerrung, Masken, Überblendung und Farbe. Speichern unter, Laden, Duplizieren, Exportieren und Importieren verwalten sie, und du kannst eine Setup-Datei auf das Fenster ziehen. <code>--venue NAME</code> lädt eins beim Start. So baust du das Mapping einmal in einem Club auf und lädst es beim nächsten Mal mit einem Klick.</p>
+<h2 id="ndi-output"><a class="anchor" href="#ndi-output" aria-label="Link">#</a>NDI pro Ausgang</h2>
+<p>Jeder Ausgang kann seine eigene NDI-Quelle senden, die den Ausgang genau so trägt, wie ihn das Fenster zeigt, mit Masken, Verzerrung und Farbe. Die NDI-Bibliothek wird nicht mit NyrexVJ geliefert, installiere die kostenlosen NDI Tools. Ein Speicherbudget von 384 MiB wird für Masken, Verzögerung und NDI-Auslesen mitgezählt, und die Einstellungen zeigen, wie viel das aktuelle Setup braucht.</p>
+<h2 id="frame-lock"><a class="anchor" href="#frame-lock" aria-label="Link">#</a>Frame-Lock und Verzögerung</h2>
+<p>Frame-Lock zeichnet zuerst alle Ausgabefenster und tauscht sie dann direkt nacheinander, damit mehrere Bildschirme dasselbe Bild zeigen. Jeder Ausgang lässt sich um 0 bis 8 Bilder verzögern, um Bildschirme mit unterschiedlicher Verarbeitungszeit auszurichten. Die Einstellungen zeigen die gemessene Tausch-Abweichung, und das Testbild Sync-Balken hilft dir, mehrere Bildschirme zum Vergleich zu filmen. Es ist kein Hardware-Genlock.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Die Mapping-Funktionen wurden mit Testbildern und einem Software-Renderer gebaut und getestet. Einen Test mit echtem Projektor oder mehreren Monitoren gab es noch nicht. Probiere deinen Aufbau im Veranstaltungsort aus, bevor die Show beginnt.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="live-sources.html"><small>Zurück</small><span>Live-Quellen: Spout, NDI und Kameras</span></a><a class="next" href="recording.html"><small>Weiter</small><span>Aufnahme</span></a></nav>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

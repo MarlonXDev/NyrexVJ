@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Macros, LFOs and the beat grid - NyrexVJ Manual</title>
+<meta name="description" content="Every place that can follow Bass, Mid, High, Level or Kick, which are the two slots of a layer, the master and every effect slot, can follow three more kinds of source.">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/modulation.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/modulation.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html" aria-current="page">Macros, LFOs and the beat grid</a>
+<ul><li><a href="#more-sources">Sources besides the music</a></li><li><a href="#macros">Macros</a></li><li><a href="#lfos">LFOs</a></li><li><a href="#tempo">Tempo and the beat clock</a></li><li><a href="#beat-grid">The beat grid</a></li></ul>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html" aria-current="page">Macros, LFOs and the beat grid</a>
+<ul><li><a href="#more-sources">Sources besides the music</a></li><li><a href="#macros">Macros</a></li><li><a href="#lfos">LFOs</a></li><li><a href="#tempo">Tempo and the beat clock</a></li><li><a href="#beat-grid">The beat grid</a></li></ul>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Music and motion</p>
+<h1>Macros, LFOs and the beat grid</h1>
+<p class="meta">Chapter 14 of 35 &middot; 2 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#more-sources">Sources besides the music</a><a href="#macros">Macros</a><a href="#lfos">LFOs</a><a href="#tempo">Tempo and the beat clock</a><a href="#beat-grid">The beat grid</a></nav>
+<h2 id="more-sources"><a class="anchor" href="#more-sources" aria-label="Link">#</a>Sources besides the music</h2>
+<p>Every place that can follow Bass, Mid, High, Level or Kick, which are the two slots of a layer, the master and every effect slot, can follow three more kinds of source.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Source</th><th scope="col">Value</th></tr></thead><tbody><tr><td>Macro 1 to 8</td><td>The position of a knob that you turn by hand</td></tr><tr><td>LFO 1 to 4</td><td>A tempo synced oscillator</td></tr><tr><td>Beat</td><td>A ramp from 0 to 1 over one beat</td></tr><tr><td>Bar</td><td>A ramp from 0 to 1 over one bar</td></tr></tbody></table></div>
+<h2 id="macros"><a class="anchor" href="#macros" aria-label="Link">#</a>Macros</h2>
+<p>The Master window has a section Macros and LFOs with eight macro knobs. One macro can drive many values at once: choose Macro 1 as the source in several places, then one knob moves them all. Each macro can be mapped to a MIDI controller in Settings, Control, or set over OSC at <code>/nyrex/macro/1</code> to <code>/nyrex/macro/8</code>. Reset macros sets all knobs back.</p>
+<h2 id="lfos"><a class="anchor" href="#lfos" aria-label="Link">#</a>LFOs</h2>
+<p>An LFO is a repeating movement. NyrexVJ has four, with the shapes Sine, Triangle, Saw, Square, Random and Smooth random. The cycle runs from a quarter beat to 32 beats, and the phase sets where in its cycle the LFO starts. Because an LFO counts beats, Tap, Resync, Pause and the tempo move it along and a sweep never drifts off the beat.</p>
+<h2 id="tempo"><a class="anchor" href="#tempo" aria-label="Link">#</a>Tempo and the beat clock</h2>
+<p>Below the clip grid is the tempo row: the BPM field with the buttons minus, plus, /2 and x2, then Tap and Resync, then Pause. Tap sets the tempo from your taps, also with the <code>Space</code> key. Resync restarts the beat count at 1, which is useful when the picture is off by a beat. Pause freezes the tempo clock and all clip motion. The tempo can also come from the audio, from MIDI clock, from timecode or from Pro DJ Link, see <a href="sync.html">Show sync and timecode</a>.</p>
+<h2 id="beat-grid"><a class="anchor" href="#beat-grid" aria-label="Link">#</a>The beat grid</h2>
+<p>Click the beat display next to the tempo controls to open the beat grid.</p>
+<ul><li>Beats per bar, from 2 to 8, sets how long a bar is.</li><li>The buttons for earlier and later move the grid by a sixteenth of a beat. Use them when your beat is slightly off the music.</li><li>Snap to beat aligns the grid to the nearest beat without changing the count.</li><li>Bar start here makes the nearest beat the first beat of a bar.</li></ul>
+<aside class="note tip"><strong class="note-label">Tip</strong><p>When the visuals hit in the wrong place of the bar, press Bar start here exactly on the downbeat of your music.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="audio.html"><small>Previous</small><span>Audio and music</span></a><a class="next" href="video.html"><small>Next</small><span>Video and image clips</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

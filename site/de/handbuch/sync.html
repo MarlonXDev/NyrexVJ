@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Show-Sync und Timecode - NyrexVJ-Handbuch</title>
+<meta name="description" content="Eine Beat-Clock treibt alles an, was dem Beat folgt. Einstellungen, Sync wählt ihre Quelle. Automatisch nimmt die beste vorhandene Quelle in dieser Reihenfolge: Pro DJ...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/sync.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/sync.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html" aria-current="page">Show-Sync und Timecode</a>
+<ul><li><a href="#sync-clock">Eine Beat-Clock</a></li><li><a href="#timecode">Timecode</a></li><li><a href="#midi-clock">MIDI-Clock</a></li><li><a href="#prodjlink">Pro DJ Link</a></li><li><a href="#cues">Die Cue-Liste</a></li></ul>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="alle.html">Das ganze Handbuch auf einer Seite lesen</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html" aria-current="page">Show-Sync und Timecode</a>
+<ul><li><a href="#sync-clock">Eine Beat-Clock</a></li><li><a href="#timecode">Timecode</a></li><li><a href="#midi-clock">MIDI-Clock</a></li><li><a href="#prodjlink">Pro DJ Link</a></li><li><a href="#cues">Die Cue-Liste</a></li></ul>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Handbuch</a> / Live-Steuerung und Shows</p>
+<h1>Show-Sync und Timecode</h1>
+<p class="meta">Kapitel 24 von 35 &middot; 2 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#sync-clock">Eine Beat-Clock</a><a href="#timecode">Timecode</a><a href="#midi-clock">MIDI-Clock</a><a href="#prodjlink">Pro DJ Link</a><a href="#cues">Die Cue-Liste</a></nav>
+<h2 id="sync-clock"><a class="anchor" href="#sync-clock" aria-label="Link">#</a>Eine Beat-Clock</h2>
+<p>Eine Beat-Clock treibt alles an, was dem Beat folgt. Einstellungen, Sync wählt ihre Quelle. Automatisch nimmt die beste vorhandene Quelle in dieser Reihenfolge: Pro DJ Link, Timecode, MIDI-Clock, Audio, manuell. Oder du legst eine Quelle fest. Die Clock korrigiert einen Phasenfehler schrittweise, ein Bild auf dem Beat ruckelt also nicht.</p>
+<p>Die Seite zeigt die aktive Quelle, einen Zustand (Freilaufend, Suche, Erfasse, Eingerastet oder Verloren), den Phasenfehler in Millisekunden und einen Latenz-Ausgleich von minus 500 bis plus 500 ms, den du setzen kannst, wenn das Bild gegen den Ton etwas zu früh oder zu spät ist.</p>
+<figure class="shot"><a href="../../assets/manual/de/settings-sync.webp"><img src="../../assets/manual/de/settings-sync.webp" width="874" height="584" loading="lazy" alt="Die Seite Sync in den Einstellungen"></a><figcaption>Die Seite Sync in den Einstellungen</figcaption></figure>
+<h2 id="timecode"><a class="anchor" href="#timecode" aria-label="Link">#</a>Timecode</h2>
+<p>Timecode kann als LTC von einem eigenen Audioeingang kommen, mit 24, 25, 29,97 Drop Frame oder 30 Bildern pro Sekunde, oder als MTC über MIDI. Nimm für LTC einen Line-Eingang, der nur das Timecode-Signal trägt. Laufen LTC und MTC beide, wird LTC benutzt. Timecode steuert die Clock-Position, zwei Modulationsquellen (Timecode-Sekunde und -Minute) und die Cue-Liste.</p>
+<h2 id="midi-clock"><a class="anchor" href="#midi-clock" aria-label="Link">#</a>MIDI-Clock</h2>
+<p>MIDI-Clock, Start, Stopp und Song-Position werden verfolgt. Das MIDI-Gerät wählst du auf der Seite Steuerung, und die Seite Sync zeigt, ob eine Clock ankommt, ob der Transport läuft und die Position.</p>
+<h2 id="prodjlink"><a class="anchor" href="#prodjlink" aria-label="Link">#</a>Pro DJ Link</h2>
+<p>Hak Auf Pro-DJ-Link-Beats hören an, um den Beat-Paketen von DJ-Playern zu folgen, die Pro DJ Link nutzen, in deinem lokalen Netzwerk. NyrexVJ öffnet dazu einen UDP-Listener auf Port 50001. Es meldet sich nie als Player an und sendet nichts, es gibt also keinen Wiedergabe-Zustand und kein Master-Flag, nur die Beats. Wähl, welchem Player gefolgt wird.</p>
+<h2 id="cues"><a class="anchor" href="#cues" aria-label="Link">#</a>Die Cue-Liste</h2>
+<p>Die Cue-Liste löst zu einer Zeit des Timecodes ein beliebiges Steuerziel aus: einen Clip, eine Spalte, ein Deck oder einen Wert. Cue hinzufügen legt einen Cue beim aktuellen Timecode an, oder hinter dem letzten, wenn es keinen Timecode gibt. Jeder Cue hat eine Zeit, eine Aktion und bei Werten einen Wert. Test löst ihn sofort aus. Cues ausführen schaltet die Liste ein, und jeder Cue löst einmal aus, wenn der Timecode seine Zeit passiert. Nach großen Sprüngen lösen Cues nicht aus, ein Springen durch den Timecode löst also nicht alles dazwischen aus.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Pro DJ Link, LTC und MTC wurden mit erzeugten Signalen getestet und nicht mit echten Playern, Mischpulten oder Timecode-Generatoren. Teste deine Kette am Veranstaltungsort.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="control.html"><small>Zurück</small><span>Steuerung: MIDI, OSC und die Webseite</span></a><a class="next" href="timeline.html"><small>Weiter</small><span>Die Show-Zeitleiste</span></a></nav>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

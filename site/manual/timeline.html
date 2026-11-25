@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The show timeline - NyrexVJ Manual</title>
+<meta name="description" content="The show timeline is an optional window that automates sliders and switches along a time line. You fade a layer or the master level over a song without touching a...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/timeline.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/timeline.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html" aria-current="page">The show timeline</a>
+<ul><li><a href="#timeline-what">What it is for</a></li><li><a href="#timeline-on">Turning it on</a></li><li><a href="#timeline-lanes">Lanes and keyframes</a></li><li><a href="#timeline-position">Position, loop and hand moves</a></li><li><a href="#timeline-save">Saving</a></li></ul>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html" aria-current="page">The show timeline</a>
+<ul><li><a href="#timeline-what">What it is for</a></li><li><a href="#timeline-on">Turning it on</a></li><li><a href="#timeline-lanes">Lanes and keyframes</a></li><li><a href="#timeline-position">Position, loop and hand moves</a></li><li><a href="#timeline-save">Saving</a></li></ul>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Live control and shows</p>
+<h1>The show timeline</h1>
+<p class="meta">Chapter 25 of 35 &middot; 2 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#timeline-what">What it is for</a><a href="#timeline-on">Turning it on</a><a href="#timeline-lanes">Lanes and keyframes</a><a href="#timeline-position">Position, loop and hand moves</a><a href="#timeline-save">Saving</a></nav>
+<h2 id="timeline-what"><a class="anchor" href="#timeline-what" aria-label="Link">#</a>What it is for</h2>
+<p>The show timeline is an optional window that automates sliders and switches along a time line. You fade a layer or the master level over a song without touching a slider, or you run a prepared show against a timecode. It shows the cue list of Settings, Sync on the same ruler. It is off by default.</p>
+<h2 id="timeline-on"><a class="anchor" href="#timeline-on" aria-label="Link">#</a>Turning it on</h2>
+<p>The menu Timeline has Run the timeline, which turns the timeline on, and Show timeline window, which opens it. Until it is on, nothing is written and no cue is fired by the timeline, but you can open the window and prepare lanes. The menu also has Play or Pause, Stop and Release hand moves.</p>
+<h2 id="timeline-lanes"><a class="anchor" href="#timeline-lanes" aria-label="Link">#</a>Lanes and keyframes</h2>
+<p>Add a lane for any slider or switch with Add lane. Double click a lane to add a keyframe, drag it to move it in time and value, and right click it to choose Hold, Linear or Smooth. A square handle is a hold, a circle is smooth and a diamond is linear. Shift while dragging keeps the value and Ctrl keeps the time. The tick on a lane mutes it and the X removes it.</p>
+<p>Clips, columns and decks are triggers and belong on the cue lane, not on a lane with a curve. The controls of shader clips cannot be automated yet.</p>
+<figure class="shot"><a href="../assets/manual/en/timeline.webp"><img src="../assets/manual/en/timeline.webp" width="1184" height="562" loading="lazy" alt="The show timeline with three lanes, keyframes and cues"></a><figcaption>The show timeline with three lanes, keyframes and cues</figcaption></figure>
+<h2 id="timeline-position"><a class="anchor" href="#timeline-position" aria-label="Link">#</a>Position, loop and hand moves</h2>
+<p>The position follows a timecode when there is one, and otherwise runs on the Play, Pause and Stop buttons of the window. Click or drag on the ruler to move the playhead, and Shift and drag on the ruler marks a loop. If you move a controlled slider by hand, the timeline lets go of it until the next keyframe segment or until you release it. Release hand moves gives all controls back to the timeline.</p>
+<p>Ctrl and the mouse wheel zoom around the pointer, Shift and the wheel scroll. Fit zooms so that every keyframe and cue is visible. Undo and Redo work for the timeline while it has the focus.</p>
+<h2 id="timeline-save"><a class="anchor" href="#timeline-save" aria-label="Link">#</a>Saving</h2>
+<p>Lanes are saved in <code>timeline.json</code> in the data folder, separate from presets and from <code>cues.json</code>. Settings of the window, such as what happens when the timecode is lost, are in its Settings popup. Details, limits and what was not tested are in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/TIMELINE.md" target="_blank" rel="noopener noreferrer">docs/TIMELINE.md</a> of the project.</p>
+<nav class="pager" aria-label="Pager"><a class="prev" href="sync.html"><small>Previous</small><span>Show sync and timecode</span></a><a class="next" href="stage.html"><small>Next</small><span>Stage: DMX, VRSL and VRChat</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

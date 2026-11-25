@@ -1754,6 +1754,19 @@ const Translation kFrench[] = {
     {"Writes", "Écritures"},
     {"You moved these controls by hand, so the timeline lets go of them. Release hands them back.", "Vous avez déplacé ces réglages à la main, la timeline les lâche donc. Libérer les lui rend."},
     {"Zooms so that all keyframes and cues are visible.", "Zoome pour afficher toutes les images clés et tous les cues."},
+    {"Back", "Retour"},
+    {"Contents", "Sommaire"},
+    {"F1  open or close the manual", "F1  ouvrir ou fermer le manuel"},
+    {"Next chapter", "Chapitre suivant"},
+    {"No chapter matches your search.", "Aucun chapitre ne correspond à votre recherche."},
+    {"Note", "Remarque"},
+    {"Press F1 any time to open the manual.", "Appuyez sur F1 à tout moment pour ouvrir le manuel."},
+    {"Previous chapter", "Chapitre précédent"},
+    {"Search the manual", "Rechercher dans le manuel"},
+    {"The manual is written in English and German. You see the English version.", "Le manuel est rédigé en anglais et en allemand. Vous voyez la version anglaise."},
+    {"Tip", "Astuce"},
+    {"User manual", "Manuel d'utilisation"},
+    {"Warning", "Attention"},
 };
 
 }

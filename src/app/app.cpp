@@ -306,6 +306,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         timelineOpen_ = true;
         timelineFocus_ = true;
     }
+    if (options.openManual) {
+        openManual(options.manualChapter);
+    }
     if (options.openCreator) {
         if (options.creator.empty()) {
             openCreator();
@@ -748,6 +751,7 @@ void App::frame(double dt) {
     drawCreator();
     drawNodeEditor();
     drawTimeline();
+    drawManual();
     drawSettingsWindow();
     drawUpdateCard();
     drawConversionCards();
@@ -851,6 +855,13 @@ void App::handleShortcuts() {
     }
     if (ImGui::IsKeyPressed(ImGuiKey_F11, false)) {
         outputs_.toggleFullscreen(window_);
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_F1, false)) {
+        if (manualOpen_) {
+            manualOpen_ = false;
+        } else {
+            openManual(std::string());
+        }
     }
 }
 
@@ -1024,6 +1035,14 @@ void App::drawMenuBar() {
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(trId("Help", "menuHelp"))) {
+        if (ImGui::MenuItem(tr("User manual"), "F1", manualOpen_)) {
+            if (manualOpen_) {
+                manualOpen_ = false;
+            } else {
+                openManual(std::string());
+            }
+        }
+        ImGui::Separator();
         if (ImGui::MenuItem(tr("What's new"))) {
             openWelcome(false);
         }

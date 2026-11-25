@@ -1754,6 +1754,19 @@ const Translation kItalian[] = {
     {"Writes", "Scritture"},
     {"You moved these controls by hand, so the timeline lets go of them. Release hands them back.", "Hai mosso questi controlli a mano, quindi la timeline li lascia. Rilascia glieli restituisce."},
     {"Zooms so that all keyframes and cues are visible.", "Ingrandisce in modo da mostrare tutti i keyframe e i cue."},
+    {"Back", "Indietro"},
+    {"Contents", "Indice"},
+    {"F1  open or close the manual", "F1  aprire o chiudere il manuale"},
+    {"Next chapter", "Capitolo successivo"},
+    {"No chapter matches your search.", "Nessun capitolo corrisponde alla tua ricerca."},
+    {"Note", "Nota"},
+    {"Press F1 any time to open the manual.", "Premi F1 in qualsiasi momento per aprire il manuale."},
+    {"Previous chapter", "Capitolo precedente"},
+    {"Search the manual", "Cerca nel manuale"},
+    {"The manual is written in English and German. You see the English version.", "Il manuale è scritto in inglese e tedesco. Stai vedendo la versione inglese."},
+    {"Tip", "Suggerimento"},
+    {"User manual", "Manuale d'uso"},
+    {"Warning", "Attenzione"},
 };
 
 }

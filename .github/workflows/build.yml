@@ -41,10 +41,11 @@ jobs:
         shell: pwsh
         run: python scripts/check_i18n.py
 
-      - name: Check the test matrix and the measuring script
+      - name: Check the test matrix, the website and the measuring script
         shell: pwsh
         run: |
           python scripts/check_test_matrix.py
+          python scripts/build_manual_site.py --check
           python scripts/test_measure_live.py
 
       - name: Get the FFmpeg headers and libraries
@@ -130,9 +131,10 @@ jobs:
       - name: Check translations
         run: python3 scripts/check_i18n.py
 
-      - name: Check the test matrix and the measuring script
+      - name: Check the test matrix, the website and the measuring script
         run: |
           python3 scripts/check_test_matrix.py
+          python3 scripts/build_manual_site.py --check
           python3 scripts/test_measure_live.py
 
       - name: Install build and test packages

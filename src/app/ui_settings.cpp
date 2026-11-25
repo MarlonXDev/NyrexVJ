@@ -377,6 +377,7 @@ void App::drawSettingsPage(int page) {
         ImGui::BulletText("%s", tr("Ctrl + Shift + 1 - 8  deck 9 - 16"));
         ImGui::SeparatorText(tr("Window"));
         ImGui::BulletText("%s", tr("F11  output window fullscreen"));
+        ImGui::BulletText("%s", tr("F1  open or close the manual"));
         ImGui::BulletText("%s", tr("Ctrl + ,  open settings"));
         ImGui::BulletText("%s", tr("Ctrl + Shift + R  start or stop recording"));
         ImGui::BulletText("%s", tr("Right click a slider  reset effect value"));

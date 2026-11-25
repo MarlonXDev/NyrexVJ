@@ -15,7 +15,7 @@
 
 NyrexVJ plays generative clips on layers, stacks effects on top, follows your music and sends the picture to OBS with Spout or to a fullscreen output window. It is built in the spirit of Resolume Arena, small enough to start in a second.
 
-> Status: v0.26.0. Windows and Linux builds, clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, NDI input and cameras or capture cards with automatic reconnecting (see [docs/LIVE.md](docs/LIVE.md)), up to four output windows with up to eight slices each, polygon masks, colour correction, projection mapping, warping, edge blending with black level and saved venue setups (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), one beat clock that follows tapping, audio, MIDI clock, LTC, MTC or Pro DJ Link beats, timecode cues and an output frame lock with delay and sync bars (see [docs/SYNC.md](docs/SYNC.md)), a node editor that builds your own effects from 68 nodes and shares them as files (see [docs/NODES.md](docs/NODES.md)), plugins that add modulation sources and image sources from your own libraries, off until you enable them (see [docs/PLUGINS.md](docs/PLUGINS.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)) with reverse playback, scrubbing, in and out points, loop modes, clip speed, a clip length in beats and next clips prepared in the background, a render pass profiler, hidden layers that cost nothing and an optional reduced layer resolution (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
+> Status: v0.39.0. The list that follows was written at v0.26.0 and does not name everything added since; the [changelog](CHANGELOG.md) does. Windows and Linux builds, clips, effects, 16 decks with smooth transitions, presets, audio reactivity, Spout and NDI output, Spout input, NDI input and cameras or capture cards with automatic reconnecting (see [docs/LIVE.md](docs/LIVE.md)), up to four output windows with up to eight slices each, polygon masks, colour correction, projection mapping, warping, edge blending with black level and saved venue setups (see [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX over Art-Net, a VRSL strip in the video and VRChat OSC parameters (see [docs/DMX.md](docs/DMX.md)), one beat clock that follows tapping, audio, MIDI clock, LTC, MTC or Pro DJ Link beats, timecode cues and an output frame lock with delay and sync bars (see [docs/SYNC.md](docs/SYNC.md)), a node editor that builds your own effects from 68 nodes and shares them as files (see [docs/NODES.md](docs/NODES.md)), plugins that add modulation sources and image sources from your own libraries, off until you enable them (see [docs/PLUGINS.md](docs/PLUGINS.md)), a settings window, OSC control and OSC output, MIDI control, a 3D model player (glTF/GLB) with realistic lighting, the Clip Creator for your own 3D scenes, image clips with transparency, video clips (H.264, HEVC, AV1, HAP, with hardware decoding, GPU colour conversion, a frame rate limit and a video monitor, needs the FFmpeg libraries, see [docs/MEDIA.md](docs/MEDIA.md)) with reverse playback, scrubbing, in and out points, loop modes, clip speed, a clip length in beats and next clips prepared in the background, a render pass profiler, hidden layers that cost nothing and an optional reduced layer resolution (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)), your own shader clips from files, English, German, Spanish, French and your own languages an experimental Unreal Engine plugin (source only, not yet compiled with Unreal) and the auto-updater work.
 
 ## Download
 
@@ -58,6 +58,12 @@ The release also contains `NyrexVJ-windows-x64.zip` (exe, changelogs, readmes) a
 <p align="center">
   <img src="docs/screenshot-audio.png" alt="Audio reactivity" width="100%">
 </p>
+
+## User manual
+
+NyrexVJ has a complete user manual: 35 chapters on how everything works and where to find it, from the first start to shows, outputs and troubleshooting. It is part of the program: **Help, User manual** or `F1` opens a window with contents, search, links between chapters and a Back button, and it works offline. The same text, with pictures, is on the website (`site/manual/`, in German `site/de/handbuch/`).
+
+The manual is written in English and German. With the interface in German you see the German manual, with every other language the English one. The source is `docs/manual/`, how it is built and checked is in [docs/MANUAL.md](docs/MANUAL.md) and the website in [docs/WEBSITE.md](docs/WEBSITE.md).
 
 ## Decks
 
@@ -281,11 +287,12 @@ NyrexVJ/
 │   ├── platform/   Windows code, Linux updater, fallback platform code (everything that depends on the operating system lives in `*_win.cpp`, `*_linux.cpp` and `*_other.cpp` files)
 │   └── main.cpp
 ├── tests/          Unit tests for core, audio, control, i18n and update logic
-├── scripts/        Repository checks (translation coverage), video and render benchmark helpers
+├── scripts/        Repository checks (translation coverage, test matrix, website), video and render benchmark helpers, the generators for the website pages and the manual pictures
 ├── integrations/   Experimental Unreal Engine plugin (source only)
 ├── plugins/        Plugin header (`include/nyrexvj_plugin.h`) and the example plugin
 ├── resources/      Windows icon and resource template
-├── docs/           Guides, decisions (ADRs), the interface list and images used by this readme
+├── docs/           Guides, the manual sources (`docs/manual/`), decisions (ADRs), the interface list and images used by this readme
+├── site/           The website for GitHub Pages, with the manual as web pages (mostly generated)
 ├── third_party/    Vendored glad and nlohmann/json
 └── .github/        CI, issue templates
 ```
@@ -317,10 +324,11 @@ GLFW, Dear ImGui and Spout2 (Windows) are downloaded by CMake during configurati
 ```
 ctest --test-dir build
 python scripts/check_i18n.py
+python scripts/build_manual_site.py --check
 NyrexVJ --check-shaders
 ```
 
-`check_i18n.py` makes sure every UI string has a German translation and that the Spanish and French tables match the German one. `--check-shaders` compiles every clip and effect (and 129 node graphs) and exits with code 1 on any failure. `--plugin-selftest build/plugins/nyrexvj-example` loads the example plugin. CI runs all of it on Windows and on Linux (Ubuntu 22.04, with a short start of the program on a virtual display) for every push and pull request.
+`build_manual_site.py --check` checks that the website pages made from the manual are up to date and that the manual and the website keep their rules (see [docs/MANUAL.md](docs/MANUAL.md)). `check_i18n.py` makes sure every UI string has a German translation and that the Spanish and French tables match the German one. `--check-shaders` compiles every clip and effect (and 129 node graphs) and exits with code 1 on any failure. `--plugin-selftest build/plugins/nyrexvj-example` loads the example plugin. CI runs all of it on Windows and on Linux (Ubuntu 22.04, with a short start of the program on a virtual display) for every push and pull request.
 
 ## Releasing
 
@@ -341,7 +349,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--select-layer N` | Select layer N (1-based) |
 | `--resolution IDX` | Output resolution index |
 | `--tab IDX` | Browser tab to show (0 Presets, 1 Library, 2 Audio) |
-| `--settings IDX` | Open the settings window on page IDX (0 to 9, 4 is Control, 5 is Stage) |
+| `--settings IDX` | Open the settings window on page IDX (0 to 12 in the order of the list on the left: 0 General, 5 Control, 6 Stage, 7 Sync, 10 Performance, 12 About) |
 | `--osc-port N` | Listen for OSC on port N even if it is switched off in the settings |
 | `--spout-test-pattern` | Offer a fake Spout sender called Test Pattern (for trying the Spout input without Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | With `--frames`, feed a MIDI message to the mappings at that frame |
@@ -384,6 +392,7 @@ Every push to `main` also refreshes the `nightly` pre-release that the default u
 | `--live-selftest` | Play a test source through the live path (conversion on the graphics card, colour, release after the idle time) and exit with code 1 on an error |
 | `--node-editor [NAME]` | Open the node effect editor at start, with the effect NAME if given |
 | `--timeline` | Open the show timeline window at start |
+| `--manual [ID]` | Open the user manual at start, at the chapter ID (or `ID/section-id`) if you give one |
 | `--bench-nodes FRAMES` | Compare four node graphs with hand written effects (compile time, effect time, pixels, macro check) over FRAMES frames and exit with code 1 on an error (`--bench-out` writes JSON) |
 | `--plugin-selftest FOLDER` | Load the plugin in FOLDER through the real engine, check a modulation source and an image source and exit with code 1 on an error (`--bench-out` writes JSON) |
 | `--shader-selftest [FRAMES]` | Draw the Shader 2.0 and ISF test shaders (alpha, buffers, inputs, controls, filters, errors, budget, deck switch) through the real engine and exit with code 1 on an error; with FRAMES also time a plain, an alpha, a two buffer and a four buffer shader, three ISF generators and three ISF filters (`--bench-out` writes JSON) |

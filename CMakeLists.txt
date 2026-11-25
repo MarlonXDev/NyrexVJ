@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.38.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.39.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -141,10 +141,15 @@ set(NYREXVJ_GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${NYREXVJ_GENERATED_DIR})
 nyrexvj_embed_text(nvjChangelogEn ${CMAKE_SOURCE_DIR}/CHANGELOG.md ${NYREXVJ_GENERATED_DIR}/changelog_en.cpp)
 nyrexvj_embed_text(nvjChangelogDe ${CMAKE_SOURCE_DIR}/CHANGELOG.de.md ${NYREXVJ_GENERATED_DIR}/changelog_de.cpp)
+nyrexvj_embed_text(nvjManualEn ${CMAKE_SOURCE_DIR}/docs/manual/manual.en.md ${NYREXVJ_GENERATED_DIR}/manual_en.cpp)
+nyrexvj_embed_text(nvjManualDe ${CMAKE_SOURCE_DIR}/docs/manual/manual.de.md ${NYREXVJ_GENERATED_DIR}/manual_de.cpp)
 
 set(NYREXVJ_CORE_SOURCES
     ${NYREXVJ_GENERATED_DIR}/changelog_en.cpp
     ${NYREXVJ_GENERATED_DIR}/changelog_de.cpp
+    ${NYREXVJ_GENERATED_DIR}/manual_en.cpp
+    ${NYREXVJ_GENERATED_DIR}/manual_de.cpp
+    src/core/manual.cpp
     src/update/changelog.cpp
     src/core/i18n.cpp
     src/core/i18n_de.cpp
@@ -360,6 +365,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_sync.cpp
 
     src/app/ui_timeline.cpp
+    src/app/ui_manual.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
     src/render/video_gpu.cpp
@@ -496,6 +502,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_timeline_tests PRIVATE nvj_core)
     target_include_directories(nvj_timeline_tests PRIVATE tests)
     add_test(NAME nvj_timeline_tests COMMAND nvj_timeline_tests)
+    add_executable(nvj_manual_tests tests/test_manual.cpp)
+    target_link_libraries(nvj_manual_tests PRIVATE nvj_core)
+    target_include_directories(nvj_manual_tests PRIVATE tests)
+    target_compile_definitions(nvj_manual_tests PRIVATE "NVJ_MANUAL_FIXTURES=\"${CMAKE_SOURCE_DIR}/tests/data\"")
+    add_test(NAME nvj_manual_tests COMMAND nvj_manual_tests)
     add_executable(nvj_venue_tests tests/test_venues.cpp)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)

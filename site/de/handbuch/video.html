@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video- und Bild-Clips - NyrexVJ-Handbuch</title>
+<meta name="description" content="Leg Bilder und Videos in den Ordner media oder zieh sie auf das NyrexVJ-Fenster. Gezogene Dateien werden im Hintergrund in den Ordner kopiert, bis zu 256 MiB je Datei...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/video.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/video.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html" aria-current="page">Video- und Bild-Clips</a>
+<ul><li><a href="#add-media">Dateien hinzufügen</a></li><li><a href="#ffmpeg">FFmpeg</a></li><li><a href="#playback">Wiedergabe-Regler</a></li><li><a href="#prewarm">Saubere Clip-Wechsel</a></li><li><a href="#dxv">DXV-Videos</a></li><li><a href="#decoder">Den Video-Decoder wählen</a></li></ul>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="alle.html">Das ganze Handbuch auf einer Seite lesen</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html" aria-current="page">Video- und Bild-Clips</a>
+<ul><li><a href="#add-media">Dateien hinzufügen</a></li><li><a href="#ffmpeg">FFmpeg</a></li><li><a href="#playback">Wiedergabe-Regler</a></li><li><a href="#prewarm">Saubere Clip-Wechsel</a></li><li><a href="#dxv">DXV-Videos</a></li><li><a href="#decoder">Den Video-Decoder wählen</a></li></ul>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Handbuch</a> / Eigene Inhalte</p>
+<h1>Video- und Bild-Clips</h1>
+<p class="meta">Kapitel 15 von 35 &middot; 2 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#add-media">Dateien hinzufügen</a><a href="#ffmpeg">FFmpeg</a><a href="#playback">Wiedergabe-Regler</a><a href="#prewarm">Saubere Clip-Wechsel</a><a href="#dxv">DXV-Videos</a><a href="#decoder">Den Video-Decoder wählen</a></nav>
+<h2 id="add-media"><a class="anchor" href="#add-media" aria-label="Link">#</a>Dateien hinzufügen</h2>
+<p>Leg Bilder und Videos in den Ordner media oder zieh sie auf das NyrexVJ-Fenster. Gezogene Dateien werden im Hintergrund in den Ordner kopiert, bis zu 256 MiB je Datei, und erscheinen in der Bibliothek unter Medien. Bilder sind PNG, JPG, JPEG, BMP, TGA und GIF (erstes Bild). Videos sind MP4, MOV, M4V, MKV, AVI und WEBM. Es werden höchstens 128 Medien-Clips aufgelistet.</p>
+<p>Bilder mit Transparenz behalten sie, ein Logo mit weichen Kanten liegt also ohne Rand über den Layern darunter. Das Bild wird mit seinen eigenen Proportionen in den Layer eingepasst, nichts wird gestreckt. Der Regler Skalierung zoomt es. Ton in Videos wird ignoriert.</p>
+<h2 id="ffmpeg"><a class="anchor" href="#ffmpeg" aria-label="Link">#</a>FFmpeg</h2>
+<p>Videoclips brauchen die FFmpeg-Bibliotheken. Fehlen sie, zeigt das Clip-Fenster FFmpeg einrichten. Unter Einstellungen, Leistung lädt die Schaltfläche FFmpeg herunterladen und einrichten ein fertiges LGPL-Build in den NyrexVJ-Ordner, prüft Prüfsumme und Lizenz und fasst ein bereits installiertes FFmpeg nie an. Ohne Druck auf die Schaltfläche wird nichts heruntergeladen. Du kannst die Bibliotheksdateien auch von Hand in den Ordner kopieren. HAP, H.264, HEVC und andere Codecs laufen dann.</p>
+<h2 id="playback"><a class="anchor" href="#playback" aria-label="Link">#</a>Wiedergabe-Regler</h2>
+<p>Jede Video-Zelle hat ihren eigenen Abspielkopf. Im Clip-Fenster findest du diese Regler:</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Regler</th><th scope="col">Was er macht</th></tr></thead><tbody><tr><td>Abspielen und Pause</td><td>Startet und stoppt das Video</td></tr><tr><td>Ein Bild zurück und vor</td><td>Springt um ein Bild</td></tr><tr><td>Der Positionsregler</td><td>Springt an jede beliebige Stelle</td></tr><tr><td>Startpunkt und Endpunkt</td><td>Begrenzen den Teil des Videos, der spielt</td></tr><tr><td>Schleifenmodus</td><td>Schleife, Ping-Pong, Einmal mit letztem Bild halten oder Einmal und dann verschwinden</td></tr><tr><td>Clip-Tempo</td><td>Von minus 4 bis plus 4, negative Werte spielen rückwärts</td></tr><tr><td>Clip-Länge in Beats</td><td>Spielt den Bereich von Start bis Ende in genau dieser Zahl Beats ab und folgt dem Tempo</td></tr><tr><td>Wiedergabe zurücksetzen</td><td>Zurück zu den Standardwerten für diese Zelle</td></tr></tbody></table></div>
+<p>Rückwärtswiedergabe dekodiert kurze Stücke im Voraus. Videos mit langen Keyframe-Abständen brauchen dafür mehr Prozessorzeit und Speicher. Ein Video, das in mehreren Layern läuft, teilt sich einen Decoder.</p>
+<h2 id="prewarm"><a class="anchor" href="#prewarm" aria-label="Link">#</a>Saubere Clip-Wechsel</h2>
+<p>Der nächste Clip jedes Layers wird im Hintergrund vorbereitet, ein Clip-Wechsel zeigt also kein leeres Bild. Ein Video, das einige Sekunden auf keinem Layer liegt, wird freigegeben und bei Bedarf wieder geladen.</p>
+<h2 id="dxv"><a class="anchor" href="#dxv" aria-label="Link">#</a>DXV-Videos</h2>
+<p>DXV-Videos aus Resolume brauchen viel Prozessorzeit. NyrexVJ kann im Hintergrund HAP-Kopien davon erstellen und spielt die Kopie über den komprimierten HAP-Weg ab, der fast keine Prozessorzeit und nur einen Bruchteil des Videospeichers braucht. Unter Einstellungen, Leistung, DXV-Videos in HAP umwandeln findest du den Importmodus Aus, Nachfragen (der Standard) oder Automatisch, das HAP-Format und ein Größenlimit für den Zwischenspeicher. Die Originaldateien bleiben unberührt, und das Video läuft so weiter, wie es ist, bis die Kopie fertig ist. HAP Q mit Transparenz wird nicht unterstützt.</p>
+<h2 id="decoder"><a class="anchor" href="#decoder" aria-label="Link">#</a>Den Video-Decoder wählen</h2>
+<p>Unter Einstellungen, Leistung, Videowiedergabe wählst du den Decoder: Automatisch, Hardware bevorzugen oder Software erzwingen. Eine Schaltfläche testet die Hardware-Dekodierung auf deinem Computer. Der Video-Monitor listet jedes laufende Video mit Codec, Decode- und Upload-Zeiten, verworfenen und späten Bildern und seinem Speicher. Sieht ein Video flau aus, weil es HDR ist, sagt der Monitor das: HDR wird ohne Tone Mapping gezeigt.</p>
+<nav class="pager" aria-label="Pager"><a class="prev" href="modulation.html"><small>Zurück</small><span>Makros, LFOs und das Beat-Raster</span></a><a class="next" href="shaders.html"><small>Weiter</small><span>Deine eigenen Shader</span></a></nav>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

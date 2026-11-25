@@ -254,6 +254,11 @@ Options parseOptions(int argc, char** argv) {
             }
         } else if (arg == "--timeline") {
             options.start.openTimeline = true;
+        } else if (arg == "--manual") {
+            options.start.openManual = true;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.start.manualChapter = argv[++i];
+            }
         } else if (arg == "--spout-test-pattern") {
             nvj::SpoutInput::setTestPattern(true);
         } else if (arg == "--welcome") {

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance - NyrexVJ Manual</title>
+<meta name="description" content="A live show needs a steady frame rate. NyrexVJ is light, but many layers, heavy effects, large videos and 3D models add up. Settings, Performance shows what takes the...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/performance.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/performance.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html" aria-current="page">Performance</a>
+<ul><li><a href="#perf-why">Why it matters</a></li><li><a href="#perf-frame">Frame rate and budget</a></li><li><a href="#perf-quality">Render quality</a></li><li><a href="#perf-cost">What costs time</a></li></ul>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html" aria-current="page">Performance</a>
+<ul><li><a href="#perf-why">Why it matters</a></li><li><a href="#perf-frame">Frame rate and budget</a></li><li><a href="#perf-quality">Render quality</a></li><li><a href="#perf-cost">What costs time</a></li></ul>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Reference and help</p>
+<h1>Performance</h1>
+<p class="meta">Chapter 30 of 35 &middot; 2 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#perf-why">Why it matters</a><a href="#perf-frame">Frame rate and budget</a><a href="#perf-quality">Render quality</a><a href="#perf-cost">What costs time</a></nav>
+<h2 id="perf-why"><a class="anchor" href="#perf-why" aria-label="Link">#</a>Why it matters</h2>
+<p>A live show needs a steady frame rate. NyrexVJ is light, but many layers, heavy effects, large videos and 3D models add up. Settings, Performance shows what takes the time, and the status bar can show the timings if you tick Show timings in the status bar.</p>
+<figure class="shot"><a href="../assets/manual/en/settings-performance.webp"><img src="../assets/manual/en/settings-performance.webp" width="874" height="584" loading="lazy" alt="The Performance page of the settings"></a><figcaption>The Performance page of the settings</figcaption></figure>
+<h2 id="perf-frame"><a class="anchor" href="#perf-frame" aria-label="Link">#</a>Frame rate and budget</h2>
+<p>Frame rate limit caps how often the program draws a frame, with or without VSync. A lower limit leaves more graphics and processor time for VRChat on the same computer. The frame budget is the time one frame may take, derived from your target frame rate. Frames above it count as too slow, and the page shows how many frames stayed within the budget, the average, the slowest five percent and the worst frame.</p>
+<h2 id="perf-quality"><a class="anchor" href="#perf-quality" aria-label="Link">#</a>Render quality</h2>
+<p>Layer resolution draws the layers and their effects at a lower size and scales them up when they are mixed. Full quality changes nothing, Balanced draws at 75 percent, Performance at 50 percent. Automatic lowers the resolution in small steps only while a frame takes longer than the budget and raises it again when there is room. Master effects and every output stay at full resolution.</p>
+<h2 id="perf-cost"><a class="anchor" href="#perf-cost" aria-label="Link">#</a>What costs time</h2>
+<ul><li>A layer faded to zero opacity is not drawn, so hidden layers cost nothing.</li><li>Every effect is one more pass over the picture. Replace a stack of effects with one node effect if you can.</li><li>Large videos cost decoding time. HAP videos cost almost nothing on the processor, see <a href="video.html">Video and image clips</a>.</li><li>Live sources are closed three seconds after the last use.</li><li>3D models and scenes cost graphics time by their triangle count.</li></ul>
+<p>The page also shows the memory: an estimate of the graphics memory, the video memory and the program memory, and which clip or effect takes the time. Measured numbers and limits are in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PERFORMANCE.md" target="_blank" rel="noopener noreferrer">docs/PERFORMANCE.md</a> of the project.</p>
+<aside class="note tip"><strong class="note-label">Tip</strong><p>When a show runs on the same computer as VRChat, set a frame rate limit and Layer resolution to Balanced or Automatic. The headroom is worth more than a little sharper picture.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="shortcuts.html"><small>Previous</small><span>Keyboard shortcuts and mouse</span></a><a class="next" href="files.html"><small>Next</small><span>Files and the data folder</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

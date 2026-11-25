@@ -637,6 +637,58 @@
       "test": "A-TL-4",
       "command": "NyrexVJ --timeline --frames 60",
       "notes": "60 frames with the window open on llvmpipe, exit code 0; also driven with scripted mouse and key input through a temporary patch that is not part of the program (play, pause, stop, drag, undo, add lane, loop, zoom, menus)"
+    },
+    {
+      "area": "user-manual",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.39.0 (branch feature/manual-and-website, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-MN-1",
+      "command": "ctest -R nvj_manual_tests",
+      "notes": "24,177 checks, 0 failed; whole suite 35 of 35 passed"
+    },
+    {
+      "area": "user-manual",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.39.0 (branch feature/manual-and-website, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-MN-2",
+      "command": "python3 scripts/build_manual_site.py --check",
+      "notes": "82 pages, 35 chapters, about 13,700 English and 12,700 German words, 38 pictures; no problem found"
+    },
+    {
+      "area": "user-manual",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.39.0 (branch feature/manual-and-website, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-MN-3",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --manual --frames 60",
+      "notes": "60 frames with the manual window open on llvmpipe, exit code 0; the window was also looked at in a screenshot in English and German"
+    },
+    {
+      "area": "user-manual",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.39.0 (branch feature/manual-and-website, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-MN-4",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --manual outputs --lang de --frames 60",
+      "notes": "exit code 0; a separate screenshot run with --manual outputs/slices --lang de showed the German chapter Ausgänge, Mapping und OBS opened at the section Slices und Bildausschnitt"
     }
   ]
 }

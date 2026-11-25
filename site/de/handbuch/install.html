@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation und erster Start - NyrexVJ-Handbuch</title>
+<meta name="description" content="Lade NyrexVJ.exe von der Releases-Seite des Projekts auf GitHub herunter. Es ist eine einzelne Datei und braucht keinen Installer: Leg sie in einen beliebigen Ordner und...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/install.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/install.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html" aria-current="page">Installation und erster Start</a>
+<ul><li><a href="#windows">Windows</a></li><li><a href="#linux">Linux</a></li><li><a href="#first-start">Der erste Start</a></li><li><a href="#updates-intro">Updates</a></li></ul>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="alle.html">Das ganze Handbuch auf einer Seite lesen</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html" aria-current="page">Installation und erster Start</a>
+<ul><li><a href="#windows">Windows</a></li><li><a href="#linux">Linux</a></li><li><a href="#first-start">Der erste Start</a></li><li><a href="#updates-intro">Updates</a></li></ul>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Handbuch</a> / Erste Schritte</p>
+<h1>Installation und erster Start</h1>
+<p class="meta">Kapitel 2 von 35 &middot; 2 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#windows">Windows</a><a href="#linux">Linux</a><a href="#first-start">Der erste Start</a><a href="#updates-intro">Updates</a></nav>
+<h2 id="windows"><a class="anchor" href="#windows" aria-label="Link">#</a>Windows</h2>
+<p>Lade <code>NyrexVJ.exe</code> von der Releases-Seite des Projekts auf GitHub herunter. Es ist eine einzelne Datei und braucht keinen Installer: Leg sie in einen beliebigen Ordner und starte sie. Windows SmartScreen warnt eventuell, weil das Programm nicht signiert ist. Wähle Weitere Informationen und dann Trotzdem ausführen.</p>
+<p>Das Release enthält außerdem <code>NyrexVJ-windows-x64.zip</code> mit dem Programm, den Changelogs und den Readmes sowie <code>SHA256SUMS.txt</code>. Vergleiche die Prüfsumme deines Downloads mit der Zeile in dieser Datei, wenn du sicher sein willst, dass die Datei vollständig und unverändert ist.</p>
+<h2 id="linux"><a class="anchor" href="#linux" aria-label="Link">#</a>Linux</h2>
+<p>Lade <code>NyrexVJ-linux-x64</code> herunter und mach die Datei mit <code>chmod +x NyrexVJ-linux-x64</code> ausführbar, oder nimm <code>NyrexVJ-linux-x64.tar.gz</code>, das das Programm mit den Lizenzen, den Changelogs und einer Liste seiner Bibliotheken enthält. Du brauchst glibc 2.35 oder neuer (Ubuntu 22.04 oder neuer, Debian 12 oder neuer, Fedora oder Arch), eine X11- oder XWayland-Sitzung und einen Grafiktreiber mit OpenGL 3.3.</p>
+<p>Audioaufnahme läuft über PulseAudio oder PipeWire, MIDI über ALSA, und Videoclips brauchen die FFmpeg-Bibliotheken. Zum Starten des Programms selbst muss nichts installiert werden.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Spout, der Weg, das Bild ohne Fensteraufnahme an OBS zu schicken, gibt es nur unter Windows. Nutze unter Linux das Ausgabefenster oder NDI.</p></aside>
+<h2 id="first-start"><a class="anchor" href="#first-start" aria-label="Link">#</a>Der erste Start</h2>
+<p>Beim ersten Start zeigt NyrexVJ das Willkommensfenster mit einem kurzen Schnellstart und der Liste dessen, was neu ist. Dort kannst du die Sprache ändern. Nach jedem Update erscheint das Willkommensfenster wieder mit den Änderungen der neuen Version. Später öffnest du es über Hilfe, Was ist neu.</p>
+<p>NyrexVJ legt beim ersten Start seinen Datenordner an. Darin liegen deine Einstellungen, Presets, deine eigenen Shader und Modelle, Aufnahmen und das Log. <a href="files.html">Dateien und der Datenordner</a> listet alles auf.</p>
+<p>Wurde das Programm nicht sauber beendet, lädt der nächste Start die alte Sitzung nicht von selbst. Er fragt, von welchem Autosave du weitermachen willst, bietet eine ungespeicherte Creator-Szene an und zeigt einen Absturzbericht mit dem Ende des Logs, den du einem Fehlerbericht anhängen kannst.</p>
+<h2 id="updates-intro"><a class="anchor" href="#updates-intro" aria-label="Link">#</a>Updates</h2>
+<p>NyrexVJ prüft beim Start GitHub. Gibt es eine neuere Version, wird sie im Hintergrund geladen und vorbereitet, und oben rechts erscheint eine Karte mit Jetzt neu starten und Später. Später verkleinert die Karte zu einem kleinen Abzeichen, das bis zum Neustart bleibt. Der Download wird nur installiert, wenn seine SHA-256-Summe zu der veröffentlichten passt.</p>
+<p>Unter Einstellungen, Updates wählst du den Kanal. Neuester Build folgt jedem Commit auf dem Hauptzweig und Stabile Releases folgt den veröffentlichten Releases. Du kannst auch den automatischen Download abschalten, dann bietet die Karte eine Schaltfläche zum Installieren an. Nach Updates suchen im Hilfe-Menü startet sofort eine Prüfung.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Starte für ein Update nicht mitten in einer Show neu. Die Karte wartet auf dich, und Später gibt es nicht ohne Grund.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="welcome.html"><small>Zurück</small><span>Willkommen bei NyrexVJ</span></a><a class="next" href="tour.html"><small>Weiter</small><span>Das Fenster im Überblick</span></a></nav>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

@@ -1754,6 +1754,19 @@ const Translation kGerman[] = {
     {"Writes", "Schreibvorgänge"},
     {"You moved these controls by hand, so the timeline lets go of them. Release hands them back.", "Du hast diese Regler von Hand bewegt, deshalb lässt die Zeitleiste sie los. Mit Freigeben übernimmt sie wieder."},
     {"Zooms so that all keyframes and cues are visible.", "Zoomt so, dass alle Keyframes und Cues sichtbar sind."},
+    {"Back", "Zurück"},
+    {"Contents", "Inhalt"},
+    {"F1  open or close the manual", "F1  Handbuch öffnen oder schließen"},
+    {"Next chapter", "Nächstes Kapitel"},
+    {"No chapter matches your search.", "Kein Kapitel passt zu deiner Suche."},
+    {"Note", "Hinweis"},
+    {"Press F1 any time to open the manual.", "Mit F1 öffnest du jederzeit das Handbuch."},
+    {"Previous chapter", "Vorheriges Kapitel"},
+    {"Search the manual", "Handbuch durchsuchen"},
+    {"The manual is written in English and German. You see the English version.", "Das Handbuch gibt es auf Englisch und Deutsch. Du siehst die englische Fassung."},
+    {"Tip", "Tipp"},
+    {"User manual", "Handbuch"},
+    {"Warning", "Warnung"},
 };
 
 }

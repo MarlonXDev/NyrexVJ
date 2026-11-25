@@ -1754,6 +1754,19 @@ const Translation kDutch[] = {
     {"Writes", "Schrijfacties"},
     {"You moved these controls by hand, so the timeline lets go of them. Release hands them back.", "Je hebt deze regelaars met de hand verplaatst, dus de tijdlijn laat ze los. Met vrijgeven krijgt ze ze terug."},
     {"Zooms so that all keyframes and cues are visible.", "Zoomt zodat alle keyframes en cues zichtbaar zijn."},
+    {"Back", "Terug"},
+    {"Contents", "Inhoud"},
+    {"F1  open or close the manual", "F1  handleiding openen of sluiten"},
+    {"Next chapter", "Volgend hoofdstuk"},
+    {"No chapter matches your search.", "Geen hoofdstuk komt overeen met je zoekopdracht."},
+    {"Note", "Opmerking"},
+    {"Press F1 any time to open the manual.", "Druk op F1 om op elk moment de handleiding te openen."},
+    {"Previous chapter", "Vorig hoofdstuk"},
+    {"Search the manual", "Handleiding doorzoeken"},
+    {"The manual is written in English and German. You see the English version.", "De handleiding is geschreven in het Engels en Duits. Je ziet de Engelse versie."},
+    {"Tip", "Tip"},
+    {"User manual", "Handleiding"},
+    {"Warning", "Waarschuwing"},
 };
 
 }

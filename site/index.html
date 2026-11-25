@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NyrexVJ - live visuals for VRChat events and parties</title>
-<meta name="description" content="NyrexVJ is a free, open source VJ program for live visuals. Native C++ and OpenGL, one program file for Windows and one for Linux.">
+<meta name="description" content="NyrexVJ is a free, open source VJ program for live visuals. Native C++ and OpenGL, one program file for Windows and one for Linux, with a full manual built in.">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#111214">
@@ -19,6 +19,7 @@
 <a class="brand" href="index.html" aria-label="NyrexVJ"><img src="assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
 <nav class="nav" aria-label="Navigation">
 <a href="index.html" aria-current="page">Overview</a>
+<a href="manual/index.html">Manual</a>
 <a href="download.html">Download</a>
 <a href="docs.html">Docs</a>
 <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
@@ -28,39 +29,119 @@
 </div>
 </header>
 <main id="main">
-<section class="sec">
+<section class="hero">
 <div class="wrap">
-<h1>Live visuals for VRChat events and parties</h1>
-<p class="lead">NyrexVJ is a free VJ program in the spirit of Resolume Arena. It plays generative clips and videos on layers, stacks effects on top, follows your music and sends the picture to OBS or to a fullscreen output window. Native C++ and OpenGL, no game engine, one program file for Windows and one for Linux.</p>
+<span class="eyebrow">Free and open source &middot; Windows and Linux</span>
+<h1>Live visuals for <span class="grad">VRChat events</span> and parties</h1>
+<p class="lead">NyrexVJ is a free VJ program in the spirit of Resolume Arena. It plays generative clips, videos and 3D scenes on layers, stacks effects on top, follows your music and sends the picture to OBS or to a fullscreen output window. Native C++ and OpenGL, no game engine, one program file for Windows and one for Linux.</p>
 <div class="actions">
-<a class="btn" href="download.html">Download</a>
-<a class="btn alt" href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">Source code on GitHub &rarr;</a>
+<a class="btn big" href="download.html">Download</a>
+<a class="btn big alt" href="manual/index.html">Read the manual</a>
+<a class="btn big alt" href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">Source code on GitHub &rarr;</a>
 </div>
-<p class="small">Open source (MIT licence), free of charge, no account, no ads. Development builds are published as the Nightly release, so expect rough edges.</p>
-<div class="frame"><img src="assets/shot-main.webp" width="1280" height="720" alt="The NyrexVJ main window with the clip grid, decks, preview and effects"></div>
+<p class="small">MIT licence, free of charge, no account, no ads. Development builds are published as the Nightly release, so expect rough edges.</p>
+<div class="frame"><img src="assets/manual/en/main-window.webp" width="1600" height="900" alt="The NyrexVJ main window with the clip grid, the deck buttons, the preview, the master and clip windows and the browser"></div>
 </div>
 </section>
 <section class="sec s2">
+<div class="wrap">
+<ul class="stats">
+<li><b>50+</b><span>generative clips</span></li>
+<li><b>70+</b><span>effects</span></li>
+<li><b>16</b><span>decks with transitions</span></li>
+<li><b>68</b><span>nodes for your own effects</span></li>
+<li><b>8</b><span>interface languages</span></li>
+</ul>
+</div>
+</section>
+<section class="sec s2">
+<div class="wrap">
+<h2>How it works</h2>
+<p class="lead">Three steps from the first start to a picture on the big screen. The manual walks you through it in five minutes.</p>
+<ol class="steps">
+<li><h3>Play clips</h3><p>Click a cell in the clip grid or press the keys 1 to 8 to start a whole column. Every deck has four layers, and you can glide between 16 decks.</p></li>
+<li><h3>Add effects and music</h3><p>Click an effect in the Library, pick an audio source and let Bass, Mid, High and Kick move any slider. Tap the tempo with the space bar.</p></li>
+<li><h3>Send it out</h3><p>Hand the picture to OBS with Spout on Windows, send it over NDI, or open fullscreen output windows for projectors.</p></li>
+</ol>
+<div class="actions"><a class="btn alt" href="manual/first-show.html">Your first show in five minutes &rarr;</a></div>
+</div>
+</section>
+<section class="sec s2 alt-bg">
 <div class="wrap">
 <h2>What it does</h2>
-<p class="lead">A short tour. The full list is in the README and the docs, which are written in English.</p>
+<p class="lead">A short tour. Every card links to the chapter of the manual that explains it.</p>
 <div class="cards">
-<article class="card"><img src="assets/card-clips.webp" width="640" height="360" loading="lazy" alt="A grid of generative clips"><h3>Clips and effects</h3><p>More than 50 clips (fractals, raymarched 3D scenes, neon geometry, lasers, spectrum visuals) and more than 70 effects. Drop in your own shader files, also from Shadertoy.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SHADERS.md" target="_blank" rel="noopener noreferrer">Your own shader clips &rarr;</a></article>
-<article class="card"><img src="assets/card-3d.webp" width="640" height="360" loading="lazy" alt="Generative 3D clips"><h3>3D models and scenes</h3><p>Play .glb and .gltf models like any clip, or build scenes from shapes, models and lights in the Clip Creator and save them as portable .nyxclip files.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SCENE3D.md" target="_blank" rel="noopener noreferrer">3D scenes &rarr;</a></article>
-<article class="card"><img src="assets/card-nodes.webp" width="640" height="360" loading="lazy" alt="The same clip with many effects"><h3>Effects from nodes<span class="badge">New!</span></h3><p>Build your own effects in a node editor. A graph of 68 nodes (picture, audio, beat, maths, colour, distortion, noise, shapes) becomes one shader, and effects are small files you can share.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/NODES.md" target="_blank" rel="noopener noreferrer">Node effect editor &rarr;</a></article>
-<article class="card"><img src="assets/card-audio.webp" width="640" height="360" loading="lazy" alt="NyrexVJ with the audio settings"><h3>Music and live control</h3><p>Layers and effects follow system audio, a microphone or a line-in. Control it from a MIDI controller or over OSC, use one beat clock with timecode and MIDI clock, and send the picture to OBS with Spout or to other programs with NDI.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SYNC.md" target="_blank" rel="noopener noreferrer">Show sync &rarr;</a></article>
-<article class="card"><img src="assets/card-video.webp" width="640" height="360" loading="lazy" alt="NyrexVJ in the Resolume-style layout"><h3>Video that stays light</h3><p>HAP clips go to the graphics card compressed, other videos can use hardware decoding, and the monitor shows what every clip costs. Built to run next to VRChat.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/MEDIA.md" target="_blank" rel="noopener noreferrer">Image and video clips &rarr;</a></article>
-<article class="card"><img src="assets/card-plugins.webp" width="640" height="360" loading="lazy" alt="The NyrexVJ settings window"><h3>Plugins<span class="badge">New!</span></h3><p>Add modulation sources and image sources with a small C interface. Plugins are native code and are off until you switch them on.</p><a class="more" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Plugins &rarr;</a></article>
+<article class="card"><img src="assets/manual/en/card-clips.webp" width="640" height="360" loading="lazy" alt="The clip grid with generative clips"><div class="body"><h3>Clips and effects</h3><p>More than 50 clips (fractals, raymarched 3D scenes, neon geometry, lasers, spectrum visuals) and more than 70 effects. Drop in your own shader files, also from Shadertoy.</p><a class="more" href="manual/shaders.html">Your own shaders &rarr;</a></div></article>
+<article class="card"><img src="assets/manual/en/card-creator.webp" width="640" height="360" loading="lazy" alt="The Clip Creator with a glowing sphere"><div class="body"><h3>3D models and scenes</h3><p>Play .glb and .gltf models like any clip, or build scenes from shapes, models and lights in the Clip Creator and save them as portable .nyxclip files.</p><a class="more" href="manual/creator.html">The Clip Creator &rarr;</a></div></article>
+<article class="card"><img src="assets/manual/en/card-nodes.webp" width="640" height="360" loading="lazy" alt="The node effect editor with a graph of connected nodes"><div class="body"><h3>Effects from nodes</h3><p>Build your own effects in a node editor. A graph of 68 nodes (picture, audio, beat, maths, colour, distortion, noise, shapes) becomes one shader, and effects are small files you can share.</p><a class="more" href="manual/nodes.html">The node effect editor &rarr;</a></div></article>
+<article class="card"><img src="assets/manual/en/card-audio.webp" width="640" height="360" loading="lazy" alt="The audio tab with spectrum and level meters"><div class="body"><h3>Music and live control</h3><p>Layers and effects follow system audio, a microphone or a line-in. Control the show from a MIDI controller, over OSC or from a web page on your phone.</p><a class="more" href="manual/audio.html">Audio and music &rarr;</a></div></article>
+<article class="card"><img src="assets/manual/en/card-output.webp" width="640" height="360" loading="lazy" alt="The output settings with slices and NDI"><div class="body"><h3>Outputs and projectors</h3><p>Up to four output windows with slices, polygon masks, colour correction, projection mapping, warping and edge blending. Spout, NDI and recording are built in.</p><a class="more" href="manual/outputs.html">Outputs, mapping and OBS &rarr;</a></div></article>
+<article class="card"><img src="assets/manual/en/card-timeline.webp" width="640" height="360" loading="lazy" alt="The show timeline with lanes and keyframes"><div class="body"><h3>Show timeline<span class="badge">New</span></h3><p>Automate sliders and switches with keyframes, follow LTC or MTC timecode and fire cues. It is optional and off until you switch it on.</p><a class="more" href="manual/timeline.html">The show timeline &rarr;</a></div></article>
+</div>
+</div>
+</section>
+<section class="sec s2">
+<div class="wrap split">
+<div>
+<h2>Made to run next to VRChat</h2>
+<p>A VJ program that eats the whole graphics card is no use on a party computer. NyrexVJ is built to stay light, and it shows you where the time goes.</p>
+<ul class="checks">
+<li>Layers faded to zero are not drawn, and an optional layer resolution trades pixels for frame time.</li>
+<li>HAP videos go to the graphics card compressed, other videos can use hardware decoding.</li>
+<li>The Performance page shows which clip or effect takes the time.</li>
+<li>Art-Net, a DMX strip for VRSL and VRChat avatar parameters over OSC are included. They are new and not yet tested with real hardware or worlds.</li>
+</ul>
+<a class="btn alt" href="manual/performance.html">Performance in the manual &rarr;</a>
+</div>
+<img src="assets/manual/en/settings-performance.webp" width="874" height="584" loading="lazy" alt="The performance page of the settings with frame times and memory">
+</div>
+</section>
+<section class="sec s2 alt-bg">
+<div class="wrap split">
+<img src="assets/manual/en/manual-window.webp" width="1042" height="704" loading="lazy" alt="The user manual window inside NyrexVJ with the contents on the left and the chapter on the right">
+<div>
+<h2>A manual that is part of the program<span class="badge">New</span></h2>
+<p>Press F1 in NyrexVJ and the manual opens in its own window, with a contents list, search and links between chapters. It explains how to install and start, where every window and setting is, how to play a show and what to do when something does not work.</p>
+<p>The same text is on this website, in English and in German, so you can read it before you download anything.</p>
+<div class="actions"><a class="btn" href="manual/index.html">Open the manual</a><a class="btn alt" href="manual/all.html">Everything on one page</a></div>
 </div>
 </div>
 </section>
 <section class="sec s2">
 <div class="wrap">
-<h2>Free and open source</h2>
-<p class="lead">NyrexVJ is licensed under the MIT licence. The code, the roadmap and the decisions behind it are on GitHub, and issues and pull requests are welcome. The interface is available in English, German, Spanish, French, Italian, Portuguese, Dutch and Japanese.</p>
-<div class="actions">
-<a class="btn alt" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing &rarr;</a>
-<a class="btn alt" href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap &rarr;</a>
+<h2>And a lot more</h2>
+<div class="feat">
+<div><h3>MIDI, OSC and a web page</h3><p>Learn a knob with one click, remote control over OSC, a browser page for your phone and a REST API for scripts.</p></div>
+<div><h3>One beat clock</h3><p>Follow the audio, LTC or MTC timecode, MIDI clock or Pro DJ Link, with a cue list that fires at the right time.</p></div>
+<div><h3>Recording</h3><p>Record the final picture to H.264, HEVC, ProRes, HAP and more, up to 4K, with sound from your audio input.</p></div>
+<div><h3>Live sources</h3><p>Show the picture of Unreal Engine, TouchDesigner or a game through Spout, and NDI streams, webcams or capture cards.</p></div>
+<div><h3>Plugins</h3><p>Add modulation sources and image sources with a small C interface. Plugins are native code and off until you enable them.</p></div>
+<div><h3>Presets and sessions</h3><p>Factory looks to start from, your own presets, and a session that is saved automatically and comes back after a crash.</p></div>
+<div><h3>Eight languages</h3><p>English, German, Spanish, French, Italian, Portuguese, Dutch and Japanese, plus your own language as a small .json file.</p></div>
+<div><h3>Ten colour themes</h3><p>Switch the whole interface between Studio, Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono.</p></div>
+<div><h3>Open source</h3><p>MIT licence. The code, the roadmap and the decisions behind it are on GitHub, and issues and pull requests are welcome.</p></div>
+</div>
+</div>
+</section>
+<section class="sec s2">
+<div class="wrap">
+<h2>Questions</h2>
+<div class="faq">
+<details><summary>Is NyrexVJ really free?</summary><p>Yes. It is open source under the MIT licence, with no account, no ads and no tracking.</p></details>
+<details><summary>Which systems does it run on?</summary><p>On Windows as a single .exe file, and on Linux (x64) as a single file or an archive. Linux needs glibc 2.35 or newer, an X11 or XWayland session and a graphics driver with OpenGL 3.3. There are no builds for macOS.</p></details>
+<details><summary>Does it work with VRChat?</summary><p>Yes. Send the picture to OBS or record the output window, and use the VRChat parameters on the Stage page if you like.</p></details>
+<details><summary>Do I need the internet?</summary><p>Only to check for updates and, if you press the button, to download the FFmpeg libraries for video. Everything else works offline.</p></details>
+<details><summary>Windows shows a SmartScreen warning. Is that normal?</summary><p>Yes, because the program is not code-signed. Choose More info, then Run anyway. Every build has a SHA-256 list, and the program checks it itself when it updates.</p></details>
+<details><summary>Where do I get help?</summary><p>Start with the <a href="manual/troubleshooting.html">troubleshooting chapter</a> of the manual. For bugs and ideas open an issue on <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">GitHub</a>.</p></details>
+</div>
+</div>
+</section>
+<section class="sec s2">
+<div class="wrap">
+<div class="cta">
+<h2>Try it tonight</h2>
+<p class="lead center">One file, no installer, no account. Download it, press F1 and you are playing in five minutes.</p>
+<div class="actions center"><a class="btn big" href="download.html">Download NyrexVJ</a><a class="btn big alt" href="manual/first-show.html">Your first show</a></div>
 </div>
 </div>
 </section>
@@ -68,10 +149,10 @@
 <footer class="footer">
 <div class="wrap">
 <div class="fcols">
-<div><h4>Software</h4><ul><li><a href="index.html">Overview</a></li><li><a href="download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li></ul></div>
-<div><h4>Docs</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/MEDIA.md" target="_blank" rel="noopener noreferrer">Image and video clips</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SHADERS.md" target="_blank" rel="noopener noreferrer">Shader clips</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/NODES.md" target="_blank" rel="noopener noreferrer">Node effect editor</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PLUGINS.md" target="_blank" rel="noopener noreferrer">Plugins</a></li></ul></div>
-<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li></ul></div>
-<div><h4>About</h4><ul><li><a href="privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>Software</h4><ul><li><a href="index.html">Overview</a></li><li><a href="download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="manual/index.html">Manual</a></li><li><a href="manual/first-show.html">Your first show</a></li><li><a href="manual/troubleshooting.html">Troubleshooting</a></li><li><a href="manual/shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="docs.html">All documents</a></li></ul></div>
 </div>
 <p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
 </div>

@@ -15,7 +15,7 @@
 
 NyrexVJ spielt generative Clips auf Ebenen ab, legt Effekte darüber, folgt deiner Musik und schickt das Bild per Spout an OBS oder in ein Vollbild-Ausgabefenster. Das Programm orientiert sich an Resolume Arena und startet trotzdem in einer Sekunde.
 
-> Stand: v0.26.0. Windows- und Linux-Builds, Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, NDI-Eingang und Kameras oder Capture-Karten mit automatischem Wiederverbinden (siehe [docs/LIVE.md](docs/LIVE.md), englisch), bis zu vier Ausgabefenster mit je bis zu acht Ausschnitten, Polygon-Masken, Farbkorrektur, Projection Mapping, Verzerrung, Kantenüberblendung mit Schwarzwert und speicherbare Venue-Setups (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), eine Beat-Clock, die Tippen, Audio, MIDI-Clock, LTC, MTC oder Pro-DJ-Link-Beats folgt, Timecode-Cues und ein Frame-Lock für die Ausgänge mit Verzögerung und Sync-Balken (siehe [docs/SYNC.md](docs/SYNC.md), englisch), ein Node-Editor, der eigene Effekte aus 68 Nodes baut und als Dateien teilbar macht (siehe [docs/NODES.md](docs/NODES.md), englisch), Plugins, die Modulationsquellen und Bildquellen aus eigenen Bibliotheken hinzufügen und bis zum Einschalten aus bleiben (siehe [docs/PLUGINS.md](docs/PLUGINS.md), englisch), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264, HEVC, AV1, HAP, mit Hardware-Decodierung, Farbumrechnung auf der Grafikkarte, Bildratenbegrenzung und Video-Monitor, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)) mit Rückwärtswiedergabe, Scrubbing, Start- und Endpunkten, Schleifenmodi, Clip-Tempo, Clip-Länge in Beats und im Hintergrund vorbereiteten nächsten Clips, ein Profiler für Render-Durchläufe, versteckte Ebenen, die nichts kosten, und eine optionale verkleinerte Ebenen-Auflösung (siehe [docs/PERFORMANCE.md](docs/PERFORMANCE.md), englisch), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
+> Stand: v0.39.0. Die folgende Liste wurde bei v0.26.0 geschrieben und nennt nicht alles, was seitdem dazugekommen ist; das [Änderungsprotokoll](CHANGELOG.de.md) tut das. Windows- und Linux-Builds, Clips, Effekte, 16 Decks mit weichen Übergängen, Presets, Audio-Reaktivität, Spout- und NDI-Ausgabe, Spout-Eingang, NDI-Eingang und Kameras oder Capture-Karten mit automatischem Wiederverbinden (siehe [docs/LIVE.md](docs/LIVE.md), englisch), bis zu vier Ausgabefenster mit je bis zu acht Ausschnitten, Polygon-Masken, Farbkorrektur, Projection Mapping, Verzerrung, Kantenüberblendung mit Schwarzwert und speicherbare Venue-Setups (siehe [docs/OUTPUTS.md](docs/OUTPUTS.md)), DMX über Art-Net, ein VRSL-Streifen im Video und VRChat-OSC-Parameter (siehe [docs/DMX.md](docs/DMX.md)), eine Beat-Clock, die Tippen, Audio, MIDI-Clock, LTC, MTC oder Pro-DJ-Link-Beats folgt, Timecode-Cues und ein Frame-Lock für die Ausgänge mit Verzögerung und Sync-Balken (siehe [docs/SYNC.md](docs/SYNC.md), englisch), ein Node-Editor, der eigene Effekte aus 68 Nodes baut und als Dateien teilbar macht (siehe [docs/NODES.md](docs/NODES.md), englisch), Plugins, die Modulationsquellen und Bildquellen aus eigenen Bibliotheken hinzufügen und bis zum Einschalten aus bleiben (siehe [docs/PLUGINS.md](docs/PLUGINS.md), englisch), Einstellungsfenster, OSC-Steuerung und OSC-Ausgabe, MIDI-Steuerung, ein 3D-Modell-Player (glTF/GLB) mit realistischer Beleuchtung, der Clip Creator für eigene 3D-Szenen, Bild-Clips mit Transparenz, Video-Clips (H.264, HEVC, AV1, HAP, mit Hardware-Decodierung, Farbumrechnung auf der Grafikkarte, Bildratenbegrenzung und Video-Monitor, braucht die FFmpeg-Bibliotheken, siehe [docs/MEDIA.md](docs/MEDIA.md)) mit Rückwärtswiedergabe, Scrubbing, Start- und Endpunkten, Schleifenmodi, Clip-Tempo, Clip-Länge in Beats und im Hintergrund vorbereiteten nächsten Clips, ein Profiler für Render-Durchläufe, versteckte Ebenen, die nichts kosten, und eine optionale verkleinerte Ebenen-Auflösung (siehe [docs/PERFORMANCE.md](docs/PERFORMANCE.md), englisch), eigene Shader-Clips aus Dateien, Englisch, Deutsch, Spanisch, Französisch und eigene Sprachen ein experimentelles Unreal-Engine-Plugin (nur Quellcode, noch nicht mit Unreal übersetzt) sowie der Auto-Updater funktionieren.
 
 ## Download
 
@@ -58,6 +58,12 @@ Im Release liegen außerdem `NyrexVJ-windows-x64.zip` (Exe, Changelogs, Readmes)
 <p align="center">
   <img src="docs/screenshot-audio.png" alt="Audio-Reaktivität" width="100%">
 </p>
+
+## Handbuch
+
+NyrexVJ hat ein vollständiges Handbuch: 35 Kapitel dazu, wie alles funktioniert und wo man es findet, vom ersten Start bis zu Shows, Ausgängen und Fehlersuche. Es ist Teil des Programms: **Hilfe, Handbuch** oder `F1` öffnet ein Fenster mit Inhaltsverzeichnis, Suche, Links zwischen den Kapiteln und einer Zurück-Taste, auch ohne Internet. Derselbe Text mit Bildern steht auf der Webseite (`site/de/handbuch/`, englisch `site/manual/`).
+
+Das Handbuch gibt es auf Englisch und Deutsch. Steht die Oberfläche auf Deutsch, siehst du das deutsche Handbuch, bei jeder anderen Sprache das englische. Die Quelle ist `docs/manual/`, wie es gebaut und geprüft wird steht in [docs/MANUAL.md](docs/MANUAL.md) und die Webseite in [docs/WEBSITE.md](docs/WEBSITE.md).
 
 ## Decks
 
@@ -281,11 +287,12 @@ NyrexVJ/
 │   ├── platform/   Windows-Code, Linux-Updater, Ersatz-Plattformcode (alles, was vom Betriebssystem abhängt, liegt in `*_win.cpp`, `*_linux.cpp` und `*_other.cpp`)
 │   └── main.cpp
 ├── tests/          Unit-Tests für Core, Audio, Steuerung, i18n und Update-Logik
-├── scripts/        Repository-Prüfungen (Übersetzungsabdeckung), Hilfen für Video- und Render-Benchmarks
+├── scripts/        Repository-Prüfungen (Übersetzungsabdeckung, Test-Matrix, Webseite), Hilfen für Video- und Render-Benchmarks, die Generatoren für die Webseiten und die Handbuchbilder
 ├── integrations/   Experimentelles Unreal-Engine-Plugin (nur Quellcode)
 ├── plugins/        Plugin-Header (`include/nyrexvj_plugin.h`) und das Beispiel-Plugin
 ├── resources/      Windows-Icon und Ressourcenvorlage
-├── docs/           Anleitungen, Entscheidungen (ADRs), die Schnittstellenliste und Bilder für die Readme
+├── docs/           Anleitungen, die Handbuch-Quellen (`docs/manual/`), Entscheidungen (ADRs), die Schnittstellenliste und Bilder für die Readme
+├── site/           Die Webseite für GitHub Pages mit dem Handbuch als Webseiten (größtenteils erzeugt)
 ├── third_party/    Mitgelieferte Bibliotheken glad und nlohmann/json
 └── .github/        CI, Issue-Vorlagen
 ```
@@ -317,10 +324,11 @@ GLFW, Dear ImGui und Spout2 (Windows) lädt CMake beim Konfigurieren herunter. S
 ```
 ctest --test-dir build
 python scripts/check_i18n.py
+python scripts/build_manual_site.py --check
 NyrexVJ --check-shaders
 ```
 
-`check_i18n.py` stellt sicher, dass jeder Oberflächentext eine deutsche Übersetzung hat und dass die spanische und die französische Tabelle zur deutschen passen. `--check-shaders` kompiliert jeden Clip und Effekt (und 129 Node-Graphen) und beendet sich bei einem Fehler mit Code 1. `--plugin-selftest build/plugins/nyrexvj-example` lädt das Beispiel-Plugin. Die CI führt alles bei jedem Push und jedem Pull Request unter Windows und unter Linux (Ubuntu 22.04, mit einem kurzen Programmstart auf einem virtuellen Display) aus.
+`build_manual_site.py --check` prüft, dass die aus dem Handbuch erzeugten Webseiten aktuell sind und dass Handbuch und Webseite ihre Regeln einhalten (siehe [docs/MANUAL.md](docs/MANUAL.md)). `check_i18n.py` stellt sicher, dass jeder Oberflächentext eine deutsche Übersetzung hat und dass die spanische und die französische Tabelle zur deutschen passen. `--check-shaders` kompiliert jeden Clip und Effekt (und 129 Node-Graphen) und beendet sich bei einem Fehler mit Code 1. `--plugin-selftest build/plugins/nyrexvj-example` lädt das Beispiel-Plugin. Die CI führt alles bei jedem Push und jedem Pull Request unter Windows und unter Linux (Ubuntu 22.04, mit einem kurzen Programmstart auf einem virtuellen Display) aus.
 
 ## Release veröffentlichen
 
@@ -341,7 +349,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--select-layer N` | Ebene N (ab 1) auswählen |
 | `--resolution IDX` | Index der Ausgabeauflösung |
 | `--tab IDX` | Anzuzeigender Browser-Tab (0 Presets, 1 Bibliothek, 2 Audio) |
-| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 9, 4 ist Steuerung, 5 ist Stage) |
+| `--settings IDX` | Einstellungsfenster auf Seite IDX öffnen (0 bis 12 in der Reihenfolge der Liste links: 0 Allgemein, 5 Steuerung, 6 Bühne, 7 Sync, 10 Leistung, 12 Info) |
 | `--osc-port N` | OSC auf Port N empfangen, auch wenn es in den Einstellungen aus ist |
 | `--spout-test-pattern` | Einen falschen Spout-Sender namens Test Pattern anbieten (zum Ausprobieren des Spout-Eingangs ohne Windows) |
 | `--midi-inject FRAME:STATUS:D1:D2` | Mit `--frames` in diesem Frame eine MIDI-Nachricht an die Zuordnungen schicken |
@@ -384,6 +392,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--live-selftest` | Eine Testquelle durch den Live-Weg schicken (Umrechnung auf der Grafikkarte, Farbe, Freigabe nach der Leerlaufzeit) und bei einem Fehler mit Code 1 beenden |
 | `--node-editor [NAME]` | Den Node-Effekt-Editor beim Start öffnen, mit dem Effekt NAME, falls angegeben |
 | `--timeline` | Das Fenster der Show-Zeitleiste beim Start öffnen |
+| `--manual [ID]` | Das Handbuch beim Start öffnen, bei Kapitel ID (oder `ID/abschnitts-id`), wenn du eines angibst |
 | `--bench-nodes BILDER` | Vier Node-Graphen mit handgeschriebenen Effekten vergleichen (Kompilierzeit, Effektzeit, Pixel, Makro-Prüfung) über BILDER Bilder und bei einem Fehler mit Code 1 beenden (`--bench-out` schreibt JSON) |
 | `--plugin-selftest ORDNER` | Das Plugin in ORDNER durch die echte Engine laden, eine Modulationsquelle und eine Bildquelle prüfen und bei einem Fehler mit Code 1 beenden (`--bench-out` schreibt JSON) |
 | `--shader-selftest [BILDER]` | Die Shader-2.0- und ISF-Testshader (Alpha, Puffer, Eingänge, Regler, Filter, Fehler, Speicherbudget, Deckwechsel) durch die echte Engine zeichnen und bei einem Fehler mit Code 1 beenden; mit BILDER auch einen einfachen, einen Alpha-, einen Zwei-Puffer- und einen Vier-Puffer-Shader, drei ISF-Generatoren und drei ISF-Filter zeitlich messen (`--bench-out` schreibt JSON) |

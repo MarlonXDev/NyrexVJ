@@ -313,6 +313,12 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.showPackageTab >= 0) {
         openShowPackages(options.showPackageTab);
     }
+    if (options.packageTab >= 0) {
+        openCommunityPackages(options.packageTab);
+        if (!options.packageFile.empty()) {
+            importCommunityPackage(options.packageFile);
+        }
+    }
     if (options.openCreator) {
         if (options.creator.empty()) {
             openCreator();
@@ -447,6 +453,8 @@ void App::queueDroppedFiles(const std::vector<std::string>& paths) {
         std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         if (extension == ".nyxshow") {
             importShowPackage(path);
+        } else if (extension == ".nyxpack") {
+            importCommunityPackage(path);
         } else if (extension == ".json") {
             importDroppedVenue(path);
         } else if (extension == ".nyxfx") {
@@ -762,6 +770,7 @@ void App::frame(double dt) {
     drawTimeline();
     drawManual();
     drawShowPackages();
+    drawCommunityPackages();
     drawSettingsWindow();
     drawUpdateCard();
     drawConversionCards();
@@ -908,6 +917,13 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Import show package..."))) {
             openShowPackages(1);
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem(tr("Install community package..."))) {
+            openCommunityPackages(1);
+        }
+        if (ImGui::MenuItem(tr("Community packages..."))) {
+            openCommunityPackages(0);
         }
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Open data folder"))) {

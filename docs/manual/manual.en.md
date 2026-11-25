@@ -398,6 +398,50 @@ When the import is done you see how many files were added, renamed, replaced and
 
 ![The Show package window](show-packages.webp)
 
+## Community packages {#community-packages}
+
+A community package is one file that ends in `.nyxpack`. Somebody made presets, shaders, node effects, masks, venue setups or a plugin and put them into it so you can install them in one step, update them later and remove them again. It is not the same as a show package: a show package moves your own show to another computer, a community package is something you install from somebody else.
+
+**Installing a package.** File, Install community package opens the Community packages window on the Install tab. You can also drop a `.nyxpack` file on the NyrexVJ window.
+
+1. Type or paste the path of the file and press Check package.
+2. Read the top of the page: the name and version, the picture the author added, who made it, the licence, which NyrexVJ versions it was made for, and the fingerprint of the file. If the author published a fingerprint, compare it. A different value means the file is not the one the author made.
+3. Open Licence text to read the licence the author wrote down.
+4. Under What will happen you see every file and what would be done with it: will be added, will be updated, already installed and unchanged, you already have this file, or a different file with the same name. Nothing is changed yet.
+5. Read the hints above the table. Red hints stop the installation and say what to do. Yellow hints need your consent or are good to know.
+6. Press Install package. A progress bar shows the work and Cancel stops it.
+
+**What can stop an installation.** A package that was made for other versions of NyrexVJ, a package that needs another package you have not installed, a package that needs a newer version of another package than you have, a package that would break a package you already have, a file that another package owns and a folder that sits where a file should go. Each of these is explained in plain words in the window and nothing is installed until it is solved.
+
+**Files that differ.** If you already have a file with the same name but other content, the installation does not go on until you choose. Keep my files leaves yours alone and does not install the package's copy. Replace my files, mine are saved first moves yours to the `package_backups` folder and then puts the new one in place. A file that is exactly the same is left alone.
+
+**Older versions and updates.** If a newer version of the package is already installed, the window says so and asks you to tick Install the older version anyway. If you install a newer version, it is an update: the old files of the package that the new version no longer has are moved to the backup, and files you changed yourself stay where they are. If something goes wrong halfway, everything is put back as it was and the window says so.
+
+**Shaders.** A shader is a small program that runs on your graphics card. A faulty one can make the picture stutter or freeze. The window tells you how many shader files a package has. Only install shaders from authors you trust.
+
+**Plugins.** A package can hold a plugin. A plugin is a program that runs inside NyrexVJ with the same rights as NyrexVJ, so the window asks you to tick I trust the author and want to install this plugin, and does not go on without it. Even then the plugin is only copied. It stays switched off until you switch it on yourself in Settings, Plugins, where the usual safety rules apply: the time budget, the crash marker and safe mode. A package can never switch a plugin on, and a plugin that was stopped for crashing stays stopped. A plugin has to be switched off before you update or remove it. `--no-plugins` still switches all plugins off for a run.
+
+**Seeing and removing what is installed.** The Installed tab lists the packages with their version, author and licence and the files that belong to each. Remove... moves the files of a package to the `package_backups` folder instead of deleting them. A file you changed after installing it stays. A package that another package needs cannot be removed. Open backup folder shows what was moved.
+
+**Making a package.** The Create tab packs a folder. The folder needs a `pack.json` with the id, name, version and licence, and can have the folders `presets`, `shaders`, `nodes`, `masks`, `venues` and `plugin`, a `preview.png` and a `LICENSE.txt`. The id uses lower case letters, digits and `-`, `_` or `.`, and the version has up to four numbers such as `1.2`. Dependencies list the ids and the oldest version of other packages the package needs. Type the folder and where the package should be saved, tick Replace the file if it exists when a package of that name is already there, and press Create package. Problems in the folder are listed and nothing is written until they are fixed. Videos, models and scene packs do not go into a community package, use a show package for them.
+
+```json
+{
+  "id": "neon-starter",
+  "version": "1.2",
+  "name": "Neon Starter Pack",
+  "author": "Your name",
+  "description": "A few presets and a glow shader.",
+  "license": "MIT",
+  "nyrexvj": { "min": "0.40", "max": "" },
+  "dependencies": []
+}
+```
+
+**Safety.** A package is only data. Every file has a checksum that is checked before anything is moved into place. File names must be plain names without folders and the folder is chosen by the kind of file, so a package cannot write outside the data folder. Files are stored without compression and every kind has a size limit, so a small package cannot unpack into something huge. A package that is cut off, changed, too large, in a newer format or in the wrong format is refused and nothing on your computer is changed. Packages are not signed: the fingerprint shows that a file is the one somebody published, not that its content is safe. There is no online catalogue, you get a package from somebody and install it yourself.
+
+![The Community packages window](community-packages.webp)
+
 ## Undo and redo {#undo}
 
 Edit, Undo and Redo, or `Ctrl+Z` and `Ctrl+Y` (`Ctrl+Shift+Z` also redoes), step through your changes to sliders, clips, effects and decks. Playing a clip, triggering a column and moving the macro knobs are performance actions and are not part of undo. In the timeline and the node editor the same keys work on their own history while those windows have the focus.
@@ -946,7 +990,7 @@ A plugin is a library with a small C interface that adds modulation sources and 
 
 ## Enabling plugins {#plugin-enable}
 
-Plugins are off until you tick them. Settings, Plugins lists the plugin folders found in the plugins folder of the data folder. A folder needs a `plugin.json` file. Tick Enable for a plugin, then pick its source for Plugin 1 to Plugin 8 or for one of the four image slots. Each source has up to four parameters. The start option `--no-plugins` switches all plugins off for one run.
+Plugins are off until you tick them. Settings, Plugins lists the plugin folders found in the plugins folder of the data folder. A folder needs a `plugin.json` file. Tick Enable for a plugin, then pick its source for Plugin 1 to Plugin 8 or for one of the four image slots. Each source has up to four parameters. The start option `--no-plugins` switches all plugins off for one run. A plugin can also arrive in a community package, which copies it here and leaves it off, see [Community packages](#presets/community-packages).
 
 ## Safety {#plugin-safety}
 
@@ -1069,6 +1113,8 @@ NyrexVJ stores everything in its data folder. On Windows that is `%APPDATA%\Nyre
 | `presets` | Your own presets |
 | `shows` | The place the export window suggests for show packages |
 | `show_backups` | Your own files that a show package import replaced, one folder for each import |
+| `packages` | One record for each installed community package, and a copy of its licence text |
+| `package_backups` | Files that an update, a replace or a removal of a community package moved away, one folder each time |
 | `shaders` | Your own shader files |
 | `models` | Your own 3D models |
 | `media` | Images and videos |
@@ -1151,6 +1197,11 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--manual` | Open this manual on start, optionally at a chapter, for example `--manual outputs` |
 | `--timeline` | Open the show timeline window on start |
 | `--show-packages` | Open the Show package window on start, on the Export tab, or on the Import tab with `--show-packages 1` |
+| `--community-packages` | Open the Community packages window on start, on the Installed tab, or on the Install tab with `--community-packages 1` or the Create tab with `2` |
+| `--pack-build FOLDER FILE` | Build a community package from a folder and exit, with `--pack-overwrite` to replace an existing file |
+| `--pack-info FILE` | Show what a community package holds and whether it could be installed, and exit |
+| `--pack-install FILE` | Install a community package and exit, with `--pack-accept-plugin`, `--pack-allow-downgrade`, `--pack-keep-mine` or `--pack-replace` where they are needed |
+| `--pack-remove ID` | Remove an installed community package and exit |
 | `--settings IDX` | Open Settings on page IDX, counted from 0 in the order of the page list |
 | `--check-shaders` | Compile every shader and exit |
 

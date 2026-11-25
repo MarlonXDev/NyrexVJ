@@ -12,6 +12,8 @@ namespace nvj::show {
 constexpr int kFormatVersion = 1;
 constexpr const char* kFormatName = "nyrexvj-show";
 constexpr const char* kExtension = ".nyxshow";
+constexpr const char* kPackFormatName = "nyrexvj-pack";
+constexpr const char* kPackExtension = ".nyxpack";
 constexpr size_t kHeaderBytes = 16;
 constexpr size_t kFooterBytes = 32;
 constexpr size_t kMaxNameBytes = 120;
@@ -19,6 +21,16 @@ constexpr size_t kMaxLicenseBytes = 240;
 constexpr size_t kMaxNotesBytes = 2000;
 constexpr size_t kMaxShowNameBytes = 80;
 constexpr size_t kMaxRequires = 128;
+constexpr size_t kMaxPackDependencies = 32;
+constexpr size_t kMaxPackTextBytes = 2000;
+constexpr size_t kMaxPackShortBytes = 80;
+
+enum class Format {
+    Show,
+    Pack
+};
+
+const char* formatName(Format format);
 
 enum class Kind {
     Composition,
@@ -31,10 +43,15 @@ enum class Kind {
     Venue,
     Mask,
     Cues,
-    Timeline
+    Timeline,
+    Plugin,
+    Preview,
+    License
 };
 
-constexpr int kKindCount = 11;
+constexpr int kKindCount = 14;
+
+bool kindAllowedIn(Format format, Kind kind);
 
 const char* kindName(Kind kind);
 bool kindFromName(const std::string& name, Kind& kind);
@@ -46,6 +63,7 @@ struct Limits {
     int maxJsonDepth = 24;
 
     unsigned long long maxBytesFor(Kind kind) const;
+    static Limits forPack();
 };
 
 bool isSafeItemName(Kind kind, const std::string& name, std::string* reason = nullptr);
@@ -63,7 +81,27 @@ struct Item {
     bool missing = false;
 };
 
+struct PackDependency {
+    std::string id;
+    std::string min;
+};
+
+struct PackMeta {
+    std::string id;
+    std::string version;
+    std::string author;
+    std::string description;
+    std::string license;
+    std::string homepage;
+    std::string minApp;
+    std::string maxApp;
+    std::string preview;
+    std::vector<PackDependency> dependencies;
+};
+
 struct Manifest {
+    Format format = Format::Show;
+    PackMeta meta;
     int version = kFormatVersion;
     std::string appVersion;
     std::string name;
@@ -85,6 +123,8 @@ struct SourceItem {
 };
 
 struct WriteRequest {
+    Format format = Format::Show;
+    PackMeta meta;
     std::string name;
     std::string notes;
     std::string appVersion;
@@ -120,13 +160,13 @@ struct Inspection {
     std::vector<std::string> warnings;
 };
 
-Inspection inspectPackage(const std::filesystem::path& file, const Limits& limits = {});
+Inspection inspectPackage(const std::filesystem::path& file, const Limits& limits = {}, Format expected = Format::Show);
 
 bool extractItem(const std::filesystem::path& package, const Item& item, const std::filesystem::path& destination, bool allowReplace, const ProgressFn& progress, std::string& error);
 bool verifyItem(const std::filesystem::path& package, const Item& item, const ProgressFn& progress, std::string& error);
 bool readItemData(const std::filesystem::path& package, const Item& item, size_t maxBytes, std::string& out, std::string& error);
 
 std::string manifestToJson(const Manifest& manifest);
-bool manifestFromJson(const std::string& text, const Limits& limits, Manifest& manifest, std::vector<std::string>& warnings, std::string& error);
+bool manifestFromJson(const std::string& text, const Limits& limits, Manifest& manifest, std::vector<std::string>& warnings, std::string& error, Format expected = Format::Show);
 
 }

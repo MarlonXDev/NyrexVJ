@@ -4,6 +4,7 @@
 #include "app/engine_host.hpp"
 #include "app/manual_view.hpp"
 #include "app/node_editor.hpp"
+#include "app/pack_dialog.hpp"
 #include "app/show_dialog.hpp"
 #include "app/timeline_view.hpp"
 #include "audio/audio_system.hpp"
@@ -78,6 +79,8 @@ struct StartOptions {
     bool openTimeline = false;
     bool openManual = false;
     int showPackageTab = -1;
+    int packageTab = -1;
+    std::string packageFile;
     std::string manualChapter;
     float transitionSeconds = -1.0f;
     int column = -1;
@@ -200,6 +203,17 @@ private:
     void updateTimeline(double dt);
     void drawTimeline();
     void drawManual();
+    void drawCommunityPackages();
+    void drawPackInstall();
+    void drawPackInstalled();
+    void drawPackCreate();
+    void drawPackProgress();
+    void startPackCheck();
+    void startPackJob(PackJobKind kind, const std::function<void(PackJobResult&, const show::ProgressFn&)>& body);
+    void servicePackJob();
+    void openCommunityPackages(int tab);
+    void importCommunityPackage(const std::string& path);
+    void afterPackChange();
     void drawShowPackages();
     void drawShowExport();
     void drawShowImport();
@@ -308,6 +322,7 @@ private:
     bool timelineHasFocus_ = false;
     bool manualOpen_ = false;
     ShowDialog showDialog_;
+    PackDialog packDialog_;
     bool manualFocus_ = false;
     ManualView manualView_;
     int ltcDeviceListedFrame_ = -1;

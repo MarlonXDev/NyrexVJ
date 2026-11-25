@@ -605,7 +605,12 @@ void testKinds() {
         CHECK(back == static_cast<Kind>(i));
     }
     Kind kind = Kind::Media;
-    CHECK(!kindFromName("plugin", kind));
+    CHECK(!kindFromName("plugins", kind));
+    CHECK(kindFromName("plugin", kind));
+    CHECK(!kindAllowedIn(Format::Show, kind));
+    CHECK(kindAllowedIn(Format::Pack, kind));
+    CHECK(!kindAllowedIn(Format::Pack, Kind::Media));
+    CHECK(!kindAllowedIn(Format::Pack, Kind::Composition));
     CHECK(!kindFromName("", kind));
     CHECK(!kindFromName("Media", kind));
     Limits limits;

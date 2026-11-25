@@ -45,6 +45,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | User manual and website: the manual window, the generated website, the pictures, English and German text | implemented | automated 4/4 | 4 | M-MN-1 open; M-MN-2 open; M-MN-3 open; M-MN-4 open |
 | Live workflow: launch quantize, favorites and tags, replace everywhere, MIDI feedback, controller profiles | implemented | automated 2/2 | 2 | M-LW-1 open; M-LW-2 open; M-LW-3 open |
 | Show packages: export, import, dry run, path repair, rollback, the Show package window | implemented | automated 4/4 | 4 | M-SP-1 open; M-SP-2 open; M-SP-3 open |
+| Community packages: .nyxpack, versioned manifest, dependencies, conflicts, plugin consent, update, removal and rollback, the Community packages window | implemented | automated 5/5 | 5 | M-CP-1 open; M-CP-2 open; M-CP-3 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

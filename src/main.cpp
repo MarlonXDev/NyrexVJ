@@ -3,6 +3,7 @@
 #include "app/bench.hpp"
 #include "app/bench_convert.hpp"
 #include "app/output_selftest.hpp"
+#include "app/pack_cli.hpp"
 #include "app/record_selftest.hpp"
 #include "app/scene_selftest.hpp"
 #include "app/shader_selftest.hpp"
@@ -40,6 +41,12 @@ struct Options {
     std::string benchScene;
     std::string benchVideo;
     std::string benchConvert;
+    std::string packBuildFolder;
+    std::string packBuildFile;
+    std::string packInfoFile;
+    std::string packRemoveId;
+    nvj::PackInstallArgs packInstall;
+    bool packOverwrite = false;
     std::string convertFormat;
     std::string convertKeep;
     std::string benchSwitch;
@@ -264,6 +271,35 @@ Options parseOptions(int argc, char** argv) {
             if (hasValue && argv[i + 1][0] != '-') {
                 options.start.showPackageTab = std::atoi(argv[++i]) > 0 ? 1 : 0;
             }
+        } else if (arg == "--community-packages") {
+            options.start.packageTab = 0;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.start.packageTab = std::clamp(std::atoi(argv[++i]), 0, 2);
+            }
+        } else if (arg == "--pack-file" && hasValue) {
+            options.start.packageFile = argv[++i];
+            if (options.start.packageTab < 0) {
+                options.start.packageTab = 1;
+            }
+        } else if (arg == "--pack-build" && i + 2 < argc) {
+            options.packBuildFolder = argv[++i];
+            options.packBuildFile = argv[++i];
+        } else if (arg == "--pack-info" && hasValue) {
+            options.packInfoFile = argv[++i];
+        } else if (arg == "--pack-install" && hasValue) {
+            options.packInstall.file = argv[++i];
+        } else if (arg == "--pack-remove" && hasValue) {
+            options.packRemoveId = argv[++i];
+        } else if (arg == "--pack-accept-plugin") {
+            options.packInstall.acceptPlugin = true;
+        } else if (arg == "--pack-allow-downgrade") {
+            options.packInstall.allowDowngrade = true;
+        } else if (arg == "--pack-keep-mine") {
+            options.packInstall.conflict = 1;
+        } else if (arg == "--pack-replace") {
+            options.packInstall.conflict = 2;
+        } else if (arg == "--pack-overwrite") {
+            options.packOverwrite = true;
         } else if (arg == "--spout-test-pattern") {
             nvj::SpoutInput::setTestPattern(true);
         } else if (arg == "--welcome") {
@@ -318,6 +354,19 @@ int main(int argc, char** argv) {
     nvj::platform::cleanupOldBinary();
     nvj::logInit();
     nvj::logLine(std::string("NyrexVJ ") + NYREXVJ_VERSION);
+
+    if (!options.packBuildFolder.empty()) {
+        return nvj::runPackBuild(options.packBuildFolder, options.packBuildFile, options.packOverwrite);
+    }
+    if (!options.packInfoFile.empty()) {
+        return nvj::runPackInfo(options.packInfoFile);
+    }
+    if (!options.packInstall.file.empty()) {
+        return nvj::runPackInstall(options.packInstall);
+    }
+    if (!options.packRemoveId.empty()) {
+        return nvj::runPackRemove(options.packRemoveId);
+    }
 
     if (!options.benchConvert.empty()) {
         return nvj::runConvertBenchmark(options.benchConvert, options.convertFormat, options.convertKeep, options.benchOut);

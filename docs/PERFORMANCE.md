@@ -218,6 +218,15 @@ Command line: `--scene-selftest FOLDER` draws the test models through the real r
 - **Independent of the graphics card (`--record-selftest`):** against an encoder that needs 250 ms per frame, 90 frames pass the render loop in about 7 ms in total, the slowest capture call is below 1 ms, and about 80 frames are dropped and counted.
 - **Not measured:** a real graphics card (the cost of the copy, the fences and the read back with real drivers), the hardware encoders, VRChat running next to the program, a recording at 4K, and everything on Windows.
 
+## What is new in 0.43.0: text and particles
+
+Text and particle clips ([GENERATORS.md](GENERATORS.md), [ADR 0036](adr/0036-text-particles-chains.md)) are built so that a clip that is not on a layer costs nothing and one that is costs a bounded amount.
+
+- **No cost when unused.** A text atlas is baked when its clip is first needed, on a worker thread, and freed two minutes after the last use. A particle clip holds its buffer only once it has been drawn. With no text or particle clip in the show, nothing of this exists.
+- **Bounded cost when used.** A text is at most one atlas of 4 MiB and one draw call. Particles are simulated on the processor in at most 8 steps of 1/60 s a frame and drawn in one instanced call, and the number alive is capped by Settings, Performance, Text and particles, Particle limit per layer (64 to 16,384, default 2048, 24 bytes each). A step creates at most 256 particles and a burst at most 500.
+- **Memory is shown.** The Memory block of the performance page lists Text and particles next to render targets and thumbnails.
+- **How to measure it.** `NyrexVJ --generator-selftest 120 --bench-out result.json` times a flat layer, a text layer and particles at 512, 2048, 8192 and 16,384 and writes the milliseconds per frame, the number alive and the graphics memory. On the build machine of this release (Mesa llvmpipe, 960 x 540, no graphics card) the growth was 7.6 ms for the flat layer, 13.9 with text, 13.7 with 512 particles, 15.6 with 2048, 24.0 with 8192 and 33.6 with 16,384. A software renderer draws every sprite on the processor, so these numbers show how the cost grows with the limit and not how a graphics card behaves. A measurement on a real card is an open manual test (M-GN-1).
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

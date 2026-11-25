@@ -11,7 +11,7 @@ The folder `site/` holds a small static website for NyrexVJ: plain HTML and CSS,
 | `site/docs.html` | Links to the documents on GitHub, and a call-out for the manual |
 | `site/privacy.html` | Privacy note |
 | `site/de/*.html` | The same four pages in German |
-| `site/manual/` | The user manual in English: `index.html` (contents), `all.html` (the whole manual on one page) and one page for each of the 35 chapters. **Generated.** |
+| `site/manual/` | The user manual in English: `index.html` (contents), `all.html` (the whole manual on one page) and one page for each of the 36 chapters. **Generated.** |
 | `site/de/handbuch/` | The same in German (`index.html`, `alle.html`, one page for each chapter). **Generated.** |
 | `site/assets/manual/en/`, `site/assets/manual/de/` | The pictures of the manual and the start page, one set for each language (the interface language shows in them). **Generated** by `scripts/make_manual_shots.py`. |
 | `site/assets/` | The stylesheet and the icon. The seven older pictures (`card-*.webp`, `shot-main.webp`) are no longer used by any page. |

@@ -73,6 +73,8 @@
 </li>
 <li><a href="creator.html">The Clip Creator</a>
 </li>
+<li><a href="generators.html">Text, particles and effect chains</a>
+</li>
 <li><a href="nodes.html">The node effect editor</a>
 </li>
 <li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
@@ -161,6 +163,8 @@
 </li>
 <li><a href="creator.html">The Clip Creator</a>
 </li>
+<li><a href="generators.html">Text, particles and effect chains</a>
+</li>
 <li><a href="nodes.html">The node effect editor</a>
 </li>
 <li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
@@ -205,12 +209,12 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Reference and help</p>
 <h1>Files and the data folder</h1>
-<p class="meta">Chapter 31 of 35 &middot; 1 min read</p>
+<p class="meta">Chapter 32 of 36 &middot; 2 min read</p>
 <nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#data-where">Where it is</a><a href="#data-contents">What is in it</a><a href="#data-backup">Backing up and moving</a></nav>
 <h2 id="data-where"><a class="anchor" href="#data-where" aria-label="Link">#</a>Where it is</h2>
 <p>NyrexVJ stores everything in its data folder. On Windows that is <code>%APPDATA%\NyrexVJ</code>, on Linux <code>~/.config/NyrexVJ</code>, or <code>$XDG_CONFIG_HOME/NyrexVJ</code> if that is set. Set the environment variable <code>NYREXVJ_DATA_DIR</code> to use another folder. File, Open data folder and Settings, About open it.</p>
 <h2 id="data-contents"><a class="anchor" href="#data-contents" aria-label="Link">#</a>What is in it</h2>
-<div class="tablewrap"><table><thead><tr><th scope="col">Item</th><th scope="col">What it holds</th></tr></thead><tbody><tr><td><code>settings.json</code></td><td>Your program settings, including outputs, stage and sync</td></tr><tr><td><code>controls.json</code></td><td>MIDI mappings</td></tr><tr><td><code>cues.json</code></td><td>The cue list</td></tr><tr><td><code>timeline.json</code></td><td>The lanes of the show timeline</td></tr><tr><td><code>autosave.json</code> and <code>recovery</code></td><td>The last session and a rotating set of autosaves</td></tr><tr><td><code>presets</code></td><td>Your own presets</td></tr><tr><td><code>shows</code></td><td>The place the export window suggests for show packages</td></tr><tr><td><code>show_backups</code></td><td>Your own files that a show package import replaced, one folder for each import</td></tr><tr><td><code>packages</code></td><td>One record for each installed community package, and a copy of its licence text</td></tr><tr><td><code>package_backups</code></td><td>Files that an update, a replace or a removal of a community package moved away, one folder each time</td></tr><tr><td><code>shaders</code></td><td>Your own shader files</td></tr><tr><td><code>models</code></td><td>Your own 3D models</td></tr><tr><td><code>media</code></td><td>Images and videos</td></tr><tr><td><code>clips</code></td><td>Scenes saved with the Clip Creator</td></tr><tr><td><code>nodes</code></td><td>Node effects</td></tr><tr><td><code>languages</code></td><td>Your own language files</td></tr><tr><td><code>plugins</code></td><td>Plugins</td></tr><tr><td><code>venues</code></td><td>Venue setups</td></tr><tr><td><code>masks</code></td><td>Pictures used as masks</td></tr><tr><td><code>Recordings</code></td><td>Your recordings</td></tr><tr><td><code>nyrexvj.log</code></td><td>The log, useful for bug reports</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th scope="col">Item</th><th scope="col">What it holds</th></tr></thead><tbody><tr><td><code>settings.json</code></td><td>Your program settings, including outputs, stage and sync</td></tr><tr><td><code>controls.json</code></td><td>MIDI mappings</td></tr><tr><td><code>cues.json</code></td><td>The cue list</td></tr><tr><td><code>timeline.json</code></td><td>The lanes of the show timeline</td></tr><tr><td><code>autosave.json</code> and <code>recovery</code></td><td>The last session and a rotating set of autosaves</td></tr><tr><td><code>presets</code></td><td>Your own presets</td></tr><tr><td><code>shows</code></td><td>The place the export window suggests for show packages</td></tr><tr><td><code>show_backups</code></td><td>Your own files that a show package import replaced, one folder for each import</td></tr><tr><td><code>packages</code></td><td>One record for each installed community package, and a copy of its licence text</td></tr><tr><td><code>package_backups</code></td><td>Files that an update, a replace or a removal of a community package moved away, one folder each time</td></tr><tr><td><code>shaders</code></td><td>Your own shader files</td></tr><tr><td><code>texts</code></td><td>Your own text clips, see <a href="generators.html">Text, particles and effect chains</a></td></tr><tr><td><code>particles</code></td><td>Your own particle clips</td></tr><tr><td><code>chains</code></td><td>Your own effect chains</td></tr><tr><td><code>fonts</code></td><td>Your own fonts for text clips</td></tr><tr><td><code>models</code></td><td>Your own 3D models</td></tr><tr><td><code>media</code></td><td>Images and videos</td></tr><tr><td><code>clips</code></td><td>Scenes saved with the Clip Creator</td></tr><tr><td><code>nodes</code></td><td>Node effects</td></tr><tr><td><code>languages</code></td><td>Your own language files</td></tr><tr><td><code>plugins</code></td><td>Plugins</td></tr><tr><td><code>venues</code></td><td>Venue setups</td></tr><tr><td><code>masks</code></td><td>Pictures used as masks</td></tr><tr><td><code>Recordings</code></td><td>Your recordings</td></tr><tr><td><code>nyrexvj.log</code></td><td>The log, useful for bug reports</td></tr></tbody></table></div>
 <h2 id="data-backup"><a class="anchor" href="#data-backup" aria-label="Link">#</a>Backing up and moving</h2>
 <p>Copy the data folder to a safe place to back up everything. To move to another computer copy it into the same place there. Presets and sessions remember clips by name, so keep the file names of your shaders, models and media when you move them. To move one show with everything it uses, a show package is easier than copying the folder, see <a href="presets.html#show-packages">Show packages</a>.</p>
 <p>The token of the web interface is kept in a separate file in the folder. Do not share it.</p>

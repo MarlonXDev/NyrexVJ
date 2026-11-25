@@ -1,0 +1,14 @@
+{
+  "format": "nyrexvj-text",
+  "version": 1,
+  "text": "Welcome to the show\nÜberraschung ♪ Café",
+  "font": "Sans Bold",
+  "size": 0.12,
+  "align": "center",
+  "vertical": "middle",
+  "animation": "wave",
+  "animationSpeed": 1.0,
+  "animationAmount": 0.4,
+  "color": "rainbow",
+  "shadow": 0.4
+}

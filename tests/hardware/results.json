@@ -688,7 +688,7 @@
       "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
       "test": "A-MN-4",
       "command": "NyrexVJ --fresh --no-update-check --no-welcome --manual outputs --lang de --frames 60",
-      "notes": "exit code 0; a separate screenshot run with --manual outputs/slices --lang de showed the German chapter Ausgänge, Mapping und OBS opened at the section Slices und Bildausschnitt"
+      "notes": "exit code 0; a separate screenshot run with --manual outputs/slices --lang de showed the German chapter Ausg\u00e4nge, Mapping und OBS opened at the section Slices und Bildausschnitt"
     },
     {
       "area": "live-workflow",
@@ -832,6 +832,84 @@
       "test": "A-CP-5",
       "command": "NyrexVJ --pack-build, --pack-info, --pack-install (twice), --pack-remove",
       "notes": "build wrote 3 files, info and install exit 0, second install reported same-version, remove moved the files to package_backups; a package with one changed byte was refused with exit 1 and left presets, shaders and packages untouched"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.43.0 (branch feature/creative-tools, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "area": "text-particles-chains",
+      "test": "A-GN-1",
+      "command": "ctest -R nvj_creative_tests",
+      "notes": "380 checks (UTF-8, layout, kerning, atlas limits, damaged and hostile fonts, text and particle files, deterministic particles, beat bursts, limits, chain save, search, export and import, effect lines shared with presets); whole suite 40 of 40 passed"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.43.0 (branch feature/creative-tools, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "area": "text-particles-chains",
+      "test": "A-GN-2",
+      "command": "NyrexVJ --fresh --generator-selftest 60 --bench-out result.json",
+      "notes": "24 of 24 checks passed at 960x540; benchmark in ms per frame: flat layer 7.6, with text 13.9, particles limit 512 13.7, 2048 15.6, 8192 24.0, 16384 33.6 (16,336 alive); software rendering, shows how cost grows and not the speed of a graphics card"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.43.0 (branch feature/creative-tools, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "area": "text-particles-chains",
+      "test": "A-GN-3",
+      "command": "NyrexVJ --check-shaders",
+      "notes": "exit 0, all shaders compiled including the text and particle programs"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.43.0 (branch feature/creative-tools, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "area": "text-particles-chains",
+      "test": "A-GN-4",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "All 2266 translation keys are covered"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.43.0 (branch feature/creative-tools, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "area": "text-particles-chains",
+      "test": "A-GN-5",
+      "command": "NyrexVJ --fresh --generators 0 --frames 40",
+      "notes": "exit 0 for the Text tab and for the Particles tab (--generators 1), windows drawn for 40 frames and looked at in English and German screenshots"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.43.0 (branch feature/creative-tools, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "area": "text-particles-chains",
+      "test": "A-GN-6",
+      "command": "NyrexVJ --fresh --chains 0 --frames 40",
+      "notes": "exit 0, window opened for the first layer and drawn for 40 frames, preview of a chain looked at in a screenshot"
     }
   ]
 }

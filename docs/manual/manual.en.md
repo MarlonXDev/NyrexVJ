@@ -80,7 +80,7 @@ This chapter names every part of the main window, so the rest of the manual can 
 | Audio | Choose the audio source: Off, Demo signal, System audio, Input, and Refresh devices |
 | Timeline | Run the timeline, Show the timeline window, Play, Pause, Stop, Release hand moves |
 | Settings | Opens the Settings window |
-| Creator | Open the Clip Creator, New 3D scene, templates, the node effect editor |
+| Creator | Open the Clip Creator, New 3D scene, templates, the node effect editor, Text and particles, Effect chains |
 | Help | User manual, What's new, links, Language, Check for updates |
 
 ![The main window of NyrexVJ with the clip grid on top, Output and Preview on the left and Master, Clip and Browser at the bottom](main-window.webp)
@@ -294,7 +294,7 @@ Gate is a fast way to make a strobe or a glitch that only hits on the beat.
 
 ## Your own effects {#own-effects}
 
-Besides the built-in effects there are effects that you make or install yourself: node effects from the node editor (shown as Node: name) and ISF filters from your shader folder (shown as ISF: name). They work in the slots like every other effect. See [The node effect editor](#nodes) and [Your own shaders](#shaders).
+Besides the built-in effects there are effects that you make or install yourself: node effects from the node editor (shown as Node: name) and ISF filters from your shader folder (shown as ISF: name). They work in the slots like every other effect. See [The node effect editor](#nodes) and [Your own shaders](#shaders). To keep a set of four effects together, save it as a chain, see [Effect chains](#generators/effect-chains).
 
 # The Library {#library}
 
@@ -306,7 +306,7 @@ The Library tab of the Browser has three views. Clips lists everything you can p
 
 ## Filtering clips {#filters}
 
-In the Clips view a row of filters narrows the list: All, 2D, 3D, Models, Scenes, Spout, Media, Shaders and Live. Clips that were added in the current version carry a small mark that disappears with the next minor version.
+In the Clips view a row of filters narrows the list: All, 2D, 3D, Models, Scenes, Spout, Media, Shaders, Generators and Live. Clips that were added in the current version carry a small mark that disappears with the next minor version.
 
 | Filter | What it shows |
 | --- | --- |
@@ -317,6 +317,7 @@ In the Clips view a row of filters narrows the list: All, 2D, 3D, Models, Scenes
 | Spout | The four Spout input clips |
 | Media | Your images and videos |
 | Shaders | Your own shader files and ISF generators |
+| Generators | Text clips and particle clips, including the built-in particle clips |
 | Live | NDI input and camera clips |
 | Favorites | The clips you marked with a star, from all of the above |
 
@@ -664,6 +665,100 @@ A scene can hold up to eight cameras. Pick the one that plays, or let the clip c
 Start from a template (Creator menu, Start from a template, or Open in the window) or from an empty scene with New. Save writes a `.nyxclip` file into the clips folder. It contains the scene description and, as copies, the .glb models and the PNG or JPEG textures the scene uses, up to 200 MiB, so one file is all you need to share a scene. It then shows up in the Library under Scenes as Scene: name. Use as clip also puts it into the selected cell of the deck. Save copy saves the scene under a new name.
 
 Only .glb models can be stored in a scene. A .gltf that needs separate files is listed in the Assets view but cannot be used. Undo and Redo work inside the Creator while it has the focus. An unsaved scene is kept in the recovery folder in case the program closes unexpectedly.
+
+# Text, particles and effect chains {#generators}
+
+Three tools that make your own content without a shader: text clips for names and messages, particle clips for sparkle, snow and confetti, and effect chains that save the effects of a layer so you can use them again. Text and particles are normal clips. You put them in a cell, play them on any layer, add effects, blend them over other layers and send them to every output like any other clip.
+
+## The window {#generators-window}
+
+Creator, Text and particles... opens one window with two tabs, Text and Particles. Creator, Effect chains... opens the window for chains, and the same window opens from the button Effect chains... under the effect slots of a layer or of the master.
+
+- The top of the Text tab lets you open a saved text or start a new one, and the top of the Particles tab lets you start from one of the built-in clips or a file you saved. The settings are below, and a live preview is next to them that reacts to the music that is playing.
+- Save as clip writes the file and puts the clip in the Library under the filter Generators within a moment. If the clip is already playing on a layer, it changes to the saved version while it plays.
+- Delete removes a file after you confirm it, and Open folder shows the folder with your files.
+
+![The Text tab of the Text and particles window with a preview](generators.webp)
+
+## Text clips {#text-clips}
+
+A text clip shows a text with a background that is see-through, so the layer below stays visible around the letters. It is saved as a small file in the `texts` folder and shows in the Library as Text: name.
+
+| Setting | What it does |
+| --- | --- |
+| The text box | Up to 1000 characters and 40 lines. Line breaks stay where you put them |
+| Font | The fonts NyrexVJ found, and your own fonts from the fonts folder |
+| Size | How tall the text is, as a share of the picture height |
+| Horizontal and vertical alignment | Left, Center, Right and Top, Middle, Bottom |
+| Line spacing, Letter spacing, Pair kerning | Space between lines, between letters, and the fine fitting of letter pairs |
+| Wrap width | Lines break at this width. At 0 the text is not wrapped |
+| Position X and Y, Shadow | Where the text sits and how strong the shadow is |
+| Colour | The colours of the layer, White or Rainbow |
+| Animation, Animation speed, Animation strength | No animation, Typewriter, Fade in, Slide up, Wave, Pulse, Follow the audio level or Bounce, and how fast and how much |
+
+The animations run on the clock of NyrexVJ, so they stay in step with the beat. Follow the audio level makes the text grow with the music.
+
+> Tip: Make a text with just a name, put it on the top layer and use the opacity and a blend mode of that layer to fit it into the picture. Everything the layer offers works for text too.
+
+## Fonts and characters {#text-fonts}
+
+Put your own `.ttf`, `.otf` or `.ttc` files into the `fonts` folder (the button Open fonts folder shows it). NyrexVJ also uses the fonts of your system. Text is read as Unicode, so umlauts, accents, symbols such as a music note, Greek, Cyrillic and Japanese or Chinese characters are all possible, as long as the font you chose contains them.
+
+> Note: A character that the font does not have is shown as a question mark, and the window says so. Switch to another font or add one that has the character. NyrexVJ does not do text shaping: ligatures, Arabic and Indian scripts, right to left text and colour emoji are not supported. Fonts are read by a small library that is not written for hostile files, so only use fonts you trust.
+
+## Particle clips {#particle-clips}
+
+A particle clip shows many small soft dots that are born at a place, move and fade away. Six clips come with the program (Sparks, Snow, Embers, Fountain, Confetti and Bubbles). Your own are saved in the `particles` folder and show in the Library as Particles: name.
+
+| Group | Settings |
+| --- | --- |
+| Emission | Particles per second, Burst on every beat, Lifetime and its variation |
+| Motion | Speed and its variation, Direction, Spread, Gravity, Drag, Turbulence |
+| Look | Size, Size at the end, Size variation, Fade in, Softness, Colour, Add light (glow) |
+| Emitter | Shape (Point, Line, Ring, Box), Origin X and Y, Extent |
+| Music | Level adds particles, Level grows particles, Level speeds particles up |
+| Other | Random seed, Restart, Play |
+
+The beat fires the burst, even when Particles per second is 0, and the loudness of the music drives the three Level sliders. With the same file and the same random seed you get the same movement every time, which is useful when you want a look to repeat.
+
+## Limits that protect the show {#generator-limits}
+
+Text and particles can never take over the computer. A file cannot raise any of these limits, and a clip that is not on a layer costs nothing.
+
+| What | Limit |
+| --- | --- |
+| Particles alive at once | Settings, Performance, Text and particles, Particle limit per layer: 64 to 16,384, default 2048. At 24 bytes each, 16,384 particles are 384 KiB of graphics memory |
+| Newer particles when the limit is reached | Dropped, and the window shows how many, so the picture stays smooth |
+| A text | Up to 1000 characters, 40 lines and a picture of the letters of at most 4 MiB, made in the background so a long text never stops the show |
+| Files | 32 KiB each, 64 of each kind, names up to 64 bytes |
+
+> Warning: If a text or particle file is damaged, or the font cannot be read, only that clip stays empty and says why. The layers below keep playing. Settings, Performance, Text and particles can hide all of these clips from the Library.
+
+## Effect chains {#effect-chains}
+
+A chain is the four effects of a layer, or of the master, saved with their settings and their reaction to the music. It is a recipe for the four effect slots that are already there, not a new kind of effect.
+
+1. Set up the effects of a layer, then press Effect chains... under the effect slots.
+2. Under Save the current effects as a chain give it a name and a short description and press Save chain.
+3. To use a chain later, pick the layer or the master under Applies to, select the chain and press Apply. It replaces the four slots of that layer and Ctrl+Z undoes it.
+4. Search by name, description or effect finds chains, and the preview shows the selected chain on a test picture before you apply it. Delete asks first.
+
+Export copies a chain to a path you type and Import reads a `.nyxchain` file from a path. If a chain uses an effect that does not exist on your computer, for example a node effect from somebody else, the window names it, keeps the other effects and leaves that slot empty. A chain file is data: it is checked when it is read and nothing in it is ever run.
+
+![The Effect chains window with the list, the search and the preview](effect-chains.webp)
+
+## Files and sharing {#generator-files}
+
+Everything in this chapter is a small text file in the data folder. You can copy it to another computer or send it to a friend.
+
+| File | Folder | What it holds |
+| --- | --- | --- |
+| `.nyxtext` | `texts` | A text clip |
+| `.nyxpart` | `particles` | A particle clip |
+| `.nyxchain` | `chains` | A chain of four effects |
+| `.ttf`, `.otf`, `.ttc` | `fonts` | Your own fonts |
+
+Show packages do not pack these files yet. The plan of an export lists text and particle clips as clips the other computer has to have, so copy the files by hand.
 
 # The node effect editor {#nodes}
 
@@ -1018,7 +1113,7 @@ Open Settings with the menu Settings or with `Ctrl+,`. The window has a list of 
 | Sync | Clock source, timecode, MIDI clock, Pro DJ Link, the cue list |
 | Updates | Update channel, automatic checks and downloads, the update status |
 | Shortcuts | The list of keyboard shortcuts |
-| Performance | Frame rate limit, frame budget, render quality, measured frame times, memory, video and FFmpeg, DXV conversion |
+| Performance | Frame rate limit, frame budget, render quality, text and particles, measured frame times, memory, video and FFmpeg, DXV conversion |
 | Plugins | Installed plugins and their sources |
 | About | Version, links, the data folder |
 
@@ -1083,6 +1178,10 @@ Frame rate limit caps how often the program draws a frame, with or without VSync
 
 Layer resolution draws the layers and their effects at a lower size and scales them up when they are mixed. Full quality changes nothing, Balanced draws at 75 percent, Performance at 50 percent. Automatic lowers the resolution in small steps only while a frame takes longer than the budget and raises it again when there is room. Master effects and every output stay at full resolution.
 
+## Text and particles {#perf-generators}
+
+Particle limit per layer is the most particles a particle clip may have alive at once, from 64 to 16,384, and 2048 at the start. When the limit is reached newer particles are dropped and the picture stays smooth. Each particle costs 24 bytes of graphics memory. Show text and particle clips in the library hides them all from the Library. See [Text, particles and effect chains](#generators/generator-limits).
+
 ## What costs time {#perf-cost}
 
 - A layer faded to zero opacity is not drawn, so hidden layers cost nothing.
@@ -1116,6 +1215,10 @@ NyrexVJ stores everything in its data folder. On Windows that is `%APPDATA%\Nyre
 | `packages` | One record for each installed community package, and a copy of its licence text |
 | `package_backups` | Files that an update, a replace or a removal of a community package moved away, one folder each time |
 | `shaders` | Your own shader files |
+| `texts` | Your own text clips, see [Text, particles and effect chains](#generators) |
+| `particles` | Your own particle clips |
+| `chains` | Your own effect chains |
+| `fonts` | Your own fonts for text clips |
 | `models` | Your own 3D models |
 | `media` | Images and videos |
 | `clips` | Scenes saved with the Clip Creator |
@@ -1202,6 +1305,9 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--pack-info FILE` | Show what a community package holds and whether it could be installed, and exit |
 | `--pack-install FILE` | Install a community package and exit, with `--pack-accept-plugin`, `--pack-allow-downgrade`, `--pack-keep-mine` or `--pack-replace` where they are needed |
 | `--pack-remove ID` | Remove an installed community package and exit |
+| `--generators` | Open the Text and particles window on start, on the Text tab, or on the Particles tab with `--generators 1` |
+| `--chains` | Open the Effect chains window on start for layer 1, or for layer 2 to 4 with `--chains 1` to `--chains 3` and the master with `--chains 4`; `--chain-select NAME` selects a chain |
+| `--generator-selftest` | Check text and particle clips in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--settings IDX` | Open Settings on page IDX, counted from 0 in the order of the page list |
 | `--check-shaders` | Compile every shader and exit |
 

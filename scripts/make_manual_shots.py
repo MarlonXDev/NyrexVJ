@@ -13,6 +13,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED = ROOT / "scripts" / "manual_shots" / "seed"
+SEED_GENERATORS = ROOT / "scripts" / "manual_shots" / "seed_generators"
 OUT = ROOT / "site" / "assets" / "manual"
 
 COMMON = ["--fresh", "--no-welcome", "--no-update-check", "--audio-demo", "--frames", "60"]
@@ -29,6 +30,8 @@ TIMELINE = (208, 278, 1184, 562)
 MANUAL = (280, 98, 1042, 704)
 SHOWPKG = (416, 124, 770, 420)
 PACKS = (406, 118, 788, 672)
+GENERATORS = (310, 90, 980, 720)
+CHAINS = (370, 100, 860, 700)
 
 RUNS = {
     "main": ["--column", "1"],
@@ -49,10 +52,13 @@ RUNS = {
     "manual": ["--manual", "first-show"],
     "shows": ["--show-packages", "0"],
     "packs": ["--community-packages", "1"],
+    "generators": ["--generators", "0"],
+    "chains": ["--chains", "0", "--chain-select", "Neon Glow"],
 }
 
 SEEDED = {"nodes", "timeline"}
 PACKED = {"packs"}
+GENERATED = {"generators", "chains"}
 
 FIGURES = [
     ("main-window", "main", WIN),
@@ -76,6 +82,8 @@ FIGURES = [
     ("manual-window", "manual", MANUAL),
     ("show-packages", "shows", SHOWPKG),
     ("community-packages", "packs", PACKS),
+    ("generators", "generators", GENERATORS),
+    ("effect-chains", "chains", CHAINS),
 ]
 
 CARDS = [
@@ -146,6 +154,8 @@ def run_app(binary, lang, key, work):
     data.mkdir(parents=True)
     if key in SEEDED:
         shutil.copytree(SEED, data, dirs_exist_ok=True)
+    if key in GENERATED:
+        shutil.copytree(SEED_GENERATORS, data, dirs_exist_ok=True)
     target = work / f"{lang}-{key}.png"
     env = dict(os.environ)
     env["NYREXVJ_DATA_DIR"] = str(data)

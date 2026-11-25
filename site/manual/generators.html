@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text, particles and effect chains - NyrexVJ Manual</title>
+<meta name="description" content="Three tools that make your own content without a shader: text clips for names and messages, particle clips for sparkle, snow and confetti, and effect chains that save...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/generators.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/generators.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="generators.html" aria-current="page">Text, particles and effect chains</a>
+<ul><li><a href="#generators-window">The window</a></li><li><a href="#text-clips">Text clips</a></li><li><a href="#text-fonts">Fonts and characters</a></li><li><a href="#particle-clips">Particle clips</a></li><li><a href="#generator-limits">Limits that protect the show</a></li><li><a href="#effect-chains">Effect chains</a></li><li><a href="#generator-files">Files and sharing</a></li></ul>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="generators.html" aria-current="page">Text, particles and effect chains</a>
+<ul><li><a href="#generators-window">The window</a></li><li><a href="#text-clips">Text clips</a></li><li><a href="#text-fonts">Fonts and characters</a></li><li><a href="#particle-clips">Particle clips</a></li><li><a href="#generator-limits">Limits that protect the show</a></li><li><a href="#effect-chains">Effect chains</a></li><li><a href="#generator-files">Files and sharing</a></li></ul>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Your own content</p>
+<h1>Text, particles and effect chains</h1>
+<p class="meta">Chapter 19 of 36 &middot; 6 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#generators-window">The window</a><a href="#text-clips">Text clips</a><a href="#text-fonts">Fonts and characters</a><a href="#particle-clips">Particle clips</a><a href="#generator-limits">Limits that protect the show</a><a href="#effect-chains">Effect chains</a><a href="#generator-files">Files and sharing</a></nav>
+<p>Three tools that make your own content without a shader: text clips for names and messages, particle clips for sparkle, snow and confetti, and effect chains that save the effects of a layer so you can use them again. Text and particles are normal clips. You put them in a cell, play them on any layer, add effects, blend them over other layers and send them to every output like any other clip.</p>
+<h2 id="generators-window"><a class="anchor" href="#generators-window" aria-label="Link">#</a>The window</h2>
+<p>Creator, Text and particles... opens one window with two tabs, Text and Particles. Creator, Effect chains... opens the window for chains, and the same window opens from the button Effect chains... under the effect slots of a layer or of the master.</p>
+<ul><li>The top of the Text tab lets you open a saved text or start a new one, and the top of the Particles tab lets you start from one of the built-in clips or a file you saved. The settings are below, and a live preview is next to them that reacts to the music that is playing.</li><li>Save as clip writes the file and puts the clip in the Library under the filter Generators within a moment. If the clip is already playing on a layer, it changes to the saved version while it plays.</li><li>Delete removes a file after you confirm it, and Open folder shows the folder with your files.</li></ul>
+<figure class="shot"><a href="../assets/manual/en/generators.webp"><img src="../assets/manual/en/generators.webp" width="980" height="720" loading="lazy" alt="The Text tab of the Text and particles window with a preview"></a><figcaption>The Text tab of the Text and particles window with a preview</figcaption></figure>
+<h2 id="text-clips"><a class="anchor" href="#text-clips" aria-label="Link">#</a>Text clips</h2>
+<p>A text clip shows a text with a background that is see-through, so the layer below stays visible around the letters. It is saved as a small file in the <code>texts</code> folder and shows in the Library as Text: name.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Setting</th><th scope="col">What it does</th></tr></thead><tbody><tr><td>The text box</td><td>Up to 1000 characters and 40 lines. Line breaks stay where you put them</td></tr><tr><td>Font</td><td>The fonts NyrexVJ found, and your own fonts from the fonts folder</td></tr><tr><td>Size</td><td>How tall the text is, as a share of the picture height</td></tr><tr><td>Horizontal and vertical alignment</td><td>Left, Center, Right and Top, Middle, Bottom</td></tr><tr><td>Line spacing, Letter spacing, Pair kerning</td><td>Space between lines, between letters, and the fine fitting of letter pairs</td></tr><tr><td>Wrap width</td><td>Lines break at this width. At 0 the text is not wrapped</td></tr><tr><td>Position X and Y, Shadow</td><td>Where the text sits and how strong the shadow is</td></tr><tr><td>Colour</td><td>The colours of the layer, White or Rainbow</td></tr><tr><td>Animation, Animation speed, Animation strength</td><td>No animation, Typewriter, Fade in, Slide up, Wave, Pulse, Follow the audio level or Bounce, and how fast and how much</td></tr></tbody></table></div>
+<p>The animations run on the clock of NyrexVJ, so they stay in step with the beat. Follow the audio level makes the text grow with the music.</p>
+<aside class="note tip"><strong class="note-label">Tip</strong><p>Make a text with just a name, put it on the top layer and use the opacity and a blend mode of that layer to fit it into the picture. Everything the layer offers works for text too.</p></aside>
+<h2 id="text-fonts"><a class="anchor" href="#text-fonts" aria-label="Link">#</a>Fonts and characters</h2>
+<p>Put your own <code>.ttf</code>, <code>.otf</code> or <code>.ttc</code> files into the <code>fonts</code> folder (the button Open fonts folder shows it). NyrexVJ also uses the fonts of your system. Text is read as Unicode, so umlauts, accents, symbols such as a music note, Greek, Cyrillic and Japanese or Chinese characters are all possible, as long as the font you chose contains them.</p>
+<aside class="note note"><strong class="note-label">Note</strong><p>A character that the font does not have is shown as a question mark, and the window says so. Switch to another font or add one that has the character. NyrexVJ does not do text shaping: ligatures, Arabic and Indian scripts, right to left text and colour emoji are not supported. Fonts are read by a small library that is not written for hostile files, so only use fonts you trust.</p></aside>
+<h2 id="particle-clips"><a class="anchor" href="#particle-clips" aria-label="Link">#</a>Particle clips</h2>
+<p>A particle clip shows many small soft dots that are born at a place, move and fade away. Six clips come with the program (Sparks, Snow, Embers, Fountain, Confetti and Bubbles). Your own are saved in the <code>particles</code> folder and show in the Library as Particles: name.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Group</th><th scope="col">Settings</th></tr></thead><tbody><tr><td>Emission</td><td>Particles per second, Burst on every beat, Lifetime and its variation</td></tr><tr><td>Motion</td><td>Speed and its variation, Direction, Spread, Gravity, Drag, Turbulence</td></tr><tr><td>Look</td><td>Size, Size at the end, Size variation, Fade in, Softness, Colour, Add light (glow)</td></tr><tr><td>Emitter</td><td>Shape (Point, Line, Ring, Box), Origin X and Y, Extent</td></tr><tr><td>Music</td><td>Level adds particles, Level grows particles, Level speeds particles up</td></tr><tr><td>Other</td><td>Random seed, Restart, Play</td></tr></tbody></table></div>
+<p>The beat fires the burst, even when Particles per second is 0, and the loudness of the music drives the three Level sliders. With the same file and the same random seed you get the same movement every time, which is useful when you want a look to repeat.</p>
+<h2 id="generator-limits"><a class="anchor" href="#generator-limits" aria-label="Link">#</a>Limits that protect the show</h2>
+<p>Text and particles can never take over the computer. A file cannot raise any of these limits, and a clip that is not on a layer costs nothing.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">What</th><th scope="col">Limit</th></tr></thead><tbody><tr><td>Particles alive at once</td><td>Settings, Performance, Text and particles, Particle limit per layer: 64 to 16,384, default 2048. At 24 bytes each, 16,384 particles are 384 KiB of graphics memory</td></tr><tr><td>Newer particles when the limit is reached</td><td>Dropped, and the window shows how many, so the picture stays smooth</td></tr><tr><td>A text</td><td>Up to 1000 characters, 40 lines and a picture of the letters of at most 4 MiB, made in the background so a long text never stops the show</td></tr><tr><td>Files</td><td>32 KiB each, 64 of each kind, names up to 64 bytes</td></tr></tbody></table></div>
+<aside class="note warning"><strong class="note-label">Warning</strong><p>If a text or particle file is damaged, or the font cannot be read, only that clip stays empty and says why. The layers below keep playing. Settings, Performance, Text and particles can hide all of these clips from the Library.</p></aside>
+<h2 id="effect-chains"><a class="anchor" href="#effect-chains" aria-label="Link">#</a>Effect chains</h2>
+<p>A chain is the four effects of a layer, or of the master, saved with their settings and their reaction to the music. It is a recipe for the four effect slots that are already there, not a new kind of effect.</p>
+<ol><li>Set up the effects of a layer, then press Effect chains... under the effect slots.</li><li>Under Save the current effects as a chain give it a name and a short description and press Save chain.</li><li>To use a chain later, pick the layer or the master under Applies to, select the chain and press Apply. It replaces the four slots of that layer and Ctrl+Z undoes it.</li><li>Search by name, description or effect finds chains, and the preview shows the selected chain on a test picture before you apply it. Delete asks first.</li></ol>
+<p>Export copies a chain to a path you type and Import reads a <code>.nyxchain</code> file from a path. If a chain uses an effect that does not exist on your computer, for example a node effect from somebody else, the window names it, keeps the other effects and leaves that slot empty. A chain file is data: it is checked when it is read and nothing in it is ever run.</p>
+<figure class="shot"><a href="../assets/manual/en/effect-chains.webp"><img src="../assets/manual/en/effect-chains.webp" width="860" height="700" loading="lazy" alt="The Effect chains window with the list, the search and the preview"></a><figcaption>The Effect chains window with the list, the search and the preview</figcaption></figure>
+<h2 id="generator-files"><a class="anchor" href="#generator-files" aria-label="Link">#</a>Files and sharing</h2>
+<p>Everything in this chapter is a small text file in the data folder. You can copy it to another computer or send it to a friend.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">File</th><th scope="col">Folder</th><th scope="col">What it holds</th></tr></thead><tbody><tr><td><code>.nyxtext</code></td><td><code>texts</code></td><td>A text clip</td></tr><tr><td><code>.nyxpart</code></td><td><code>particles</code></td><td>A particle clip</td></tr><tr><td><code>.nyxchain</code></td><td><code>chains</code></td><td>A chain of four effects</td></tr><tr><td><code>.ttf</code>, <code>.otf</code>, <code>.ttc</code></td><td><code>fonts</code></td><td>Your own fonts</td></tr></tbody></table></div>
+<p>Show packages do not pack these files yet. The plan of an export lists text and particle clips as clips the other computer has to have, so copy the files by hand.</p>
+<nav class="pager" aria-label="Pager"><a class="prev" href="creator.html"><small>Previous</small><span>The Clip Creator</span></a><a class="next" href="nodes.html"><small>Next</small><span>The node effect editor</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

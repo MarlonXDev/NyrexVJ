@@ -277,6 +277,8 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             ImGui::Separator();
         }
     }
+    ImGui::Separator();
+    drawChainButtons(slots);
 }
 
 void App::drawLayer() {
@@ -466,6 +468,10 @@ void App::drawClipPanel() {
         ImGui::TextColored(ui::kAccent, "%s", tr("Video file"));
     } else if (def.kind == ClipKind::ImageFile) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Image file"));
+    } else if (def.kind == ClipKind::TextFile) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Text clip"));
+    } else if (def.kind == ClipKind::ParticleClip) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Particle clip"));
     } else if (def.isShaderFile()) {
         const bool multipass = def.isAdvancedShader() && def.plan->bufferCount() > 0;
         ImGui::TextColored(ui::kAccent, "%s", multipass ? tr("Shader file (multipass)") : (def.shadertoy ? tr("Shader file (Shadertoy style)") : tr("Shader file")));
@@ -490,6 +496,11 @@ void App::drawClipPanel() {
         if (media->isVideo()) {
             drawPlaybackControls(*media, layer.playback[static_cast<size_t>(clipColumn)]);
         }
+    }
+
+    if (def.isGenerator()) {
+        ImGui::Spacing();
+        drawGeneratorClipInfo(def, clip);
     }
 
     if (def.isShaderFile()) {

@@ -11,6 +11,8 @@
 #include "scene3d/scene_pack.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
 #include <cmath>
 #include <filesystem>
 
@@ -421,6 +423,11 @@ bool Engine::buildPrograms() {
     for (size_t i = 0; i < media_.size(); ++i) {
         media_[i] = makeMedia(clipLibrary()[i]);
     }
+    generators_.clear();
+    generators_.resize(clipLibrary().size());
+    for (size_t i = 0; i < generators_.size(); ++i) {
+        generators_[i] = makeGenerator(clipLibrary()[i]);
+    }
     return true;
 }
 
@@ -466,6 +473,16 @@ std::unique_ptr<MediaPlayer> Engine::makeMedia(const ClipDef& def) {
     if (def.kind == ClipKind::ImageFile || def.kind == ClipKind::VideoFile) {
         const bool video = def.kind == ClipKind::VideoFile;
         return std::make_unique<MediaPlayer>(def.name, def.path, video, video ? &videoGpu_ : nullptr, videoOptions());
+    }
+    return nullptr;
+}
+
+std::unique_ptr<GeneratorPlayer> Engine::makeGenerator(const ClipDef& def) const {
+    if (def.kind == ClipKind::TextFile) {
+        return std::make_unique<TextPlayer>(def.name, generatorStem(def));
+    }
+    if (def.kind == ClipKind::ParticleClip) {
+        return std::make_unique<ParticlePlayer>(def.name, generatorStem(def), def.path.empty(), particleLimit_);
     }
     return nullptr;
 }
@@ -595,6 +612,13 @@ std::string Engine::clipError(int clip) const {
     if (!def.error.empty()) {
         return def.error;
     }
+    if (static_cast<size_t>(clip) < generators_.size() && generators_[static_cast<size_t>(clip)]) {
+        const std::string& own = generators_[static_cast<size_t>(clip)]->error();
+        if (own.empty() && generatorGl_.failed()) {
+            return generatorGl_.failure();
+        }
+        return own;
+    }
     return clips_[static_cast<size_t>(clip)].error;
 }
 
@@ -637,11 +661,13 @@ void Engine::syncLibrary() {
     clips_.resize(library.size());
     scenes_.resize(library.size());
     media_.resize(library.size());
+    generators_.resize(library.size());
     clipThumbs_.resize(library.size());
     for (size_t i = before; i < library.size(); ++i) {
         clipThumbs_[i].create(kThumbWidth, kThumbHeight);
         scenes_[i] = makeScene(library[i]);
         media_[i] = makeMedia(library[i]);
+        generators_[i] = makeGenerator(library[i]);
         if (media_[i]) {
             deferredMediaThumbs_.push_back(i);
         }
@@ -722,6 +748,273 @@ bool Engine::drawMedia(MediaPlayer& player, float scale, bool backdrop, double c
     triangle_.draw();
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
+}
+
+bool Engine::isGeneratorClip(int clip) const {
+    return clip >= 0 && static_cast<size_t>(clip) < generators_.size() && generators_[static_cast<size_t>(clip)];
+}
+
+GeneratorPlayer* Engine::generatorPlayer(int clip) {
+    return isGeneratorClip(clip) ? generators_[static_cast<size_t>(clip)].get() : nullptr;
+}
+
+void Engine::setParticleLimit(int limit) {
+    particleLimit_ = particles::clampLimit(limit);
+    for (std::unique_ptr<GeneratorPlayer>& player : generators_) {
+        if (auto* particle = dynamic_cast<ParticlePlayer*>(player.get())) {
+            particle->setLimit(particleLimit_);
+        }
+    }
+    if (particleEditor_) {
+        particleEditor_->setLimit(particleLimit_);
+    }
+}
+
+void Engine::reloadGeneratorClips(const std::vector<size_t>& indices) {
+    for (size_t index : indices) {
+        if (index >= generators_.size() || !generators_[index]) {
+            continue;
+        }
+        generators_[index]->reload();
+        generators_[index]->thumbnailDone = false;
+        if (std::find(deferredGeneratorThumbs_.begin(), deferredGeneratorThumbs_.end(), index) == deferredGeneratorThumbs_.end()) {
+            deferredGeneratorThumbs_.push_back(index);
+        }
+    }
+}
+
+GeneratorFrame Engine::generatorFrame(const Layer& layer, float scale, double clock, int width, int height) const {
+    GeneratorFrame frame;
+    frame.clock = clock;
+    frame.beat = beat_;
+    frame.level = audio_.level;
+    frame.colorA = {layer.colorA[0], layer.colorA[1], layer.colorA[2]};
+    frame.colorB = {layer.colorB[0], layer.colorB[1], layer.colorB[2]};
+    frame.rainbow = layer.rainbow;
+    frame.scale = scale;
+    frame.width = width;
+    frame.height = height;
+    return frame;
+}
+
+bool Engine::ensureGenerator(size_t index) {
+    if (index >= generators_.size() || !generators_[index]) {
+        return false;
+    }
+    GeneratorPlayer& player = *generators_[index];
+    player.touch();
+    std::string error;
+    if (!generatorGl_.ensure(error)) {
+        return false;
+    }
+    if (player.poll(out_.height) != GeneratorState::Ready) {
+        return false;
+    }
+    if (!player.thumbnailDone) {
+        renderGeneratorThumbnail(index);
+    }
+    return true;
+}
+
+void Engine::renderGeneratorThumbnail(size_t index) {
+    GeneratorPlayer& player = *generators_[index];
+    player.thumbnailDone = true;
+    if (index >= clipThumbs_.size() || !clipThumbs_[index].fbo) {
+        return;
+    }
+    clipThumbs_[index].bind();
+    glDisable(GL_BLEND);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    const Layer defaults;
+    GeneratorFrame frame = generatorFrame(defaults, 1.0f, 1.2, kThumbWidth, kThumbHeight);
+    frame.beat = 2.4;
+    frame.level = 0.5f;
+    if (auto* particle = dynamic_cast<ParticlePlayer*>(&player)) {
+        particle->drawThumbnail(generatorGl_, frame);
+    } else {
+        player.draw(generatorGl_, frame, -1);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+bool Engine::drawGenerator(size_t index, int instance, const Layer& layer, float scale, double clock, const RenderTarget& target) {
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    GeneratorPlayer& player = *generators_[index];
+    player.touch();
+    return player.draw(generatorGl_, generatorFrame(layer, scale, clock, target.width, target.height), instance);
+}
+
+void Engine::serviceGenerators() {
+    constexpr double kIdleSeconds = 120.0;
+    for (const Layer& layer : comp.layers) {
+        for (const int cell : layer.cells) {
+            if (cell >= 0 && static_cast<size_t>(cell) < generators_.size() && generators_[static_cast<size_t>(cell)] && layer.activeColumn >= 0 && layer.cells[static_cast<size_t>(layer.activeColumn)] == cell) {
+                generators_[static_cast<size_t>(cell)]->touch();
+            }
+        }
+    }
+    if (!deferredGeneratorThumbs_.empty()) {
+        const size_t i = deferredGeneratorThumbs_.front();
+        if (i >= generators_.size() || !generators_[i] || generators_[i]->state() == GeneratorState::Failed) {
+            deferredGeneratorThumbs_.erase(deferredGeneratorThumbs_.begin());
+        } else {
+            ensureGenerator(i);
+            if (generators_[i]->thumbnailDone || generators_[i]->state() == GeneratorState::Failed) {
+                deferredGeneratorThumbs_.erase(deferredGeneratorThumbs_.begin());
+            }
+        }
+    }
+    for (std::unique_ptr<GeneratorPlayer>& player : generators_) {
+        if (player && player->state() == GeneratorState::Ready && player->idleSeconds() > kIdleSeconds) {
+            if (dynamic_cast<TextPlayer*>(player.get()) != nullptr) {
+                player->release();
+                logLine("Text '" + player->label() + "' was unloaded because it was not used for two minutes");
+            }
+        }
+    }
+}
+
+bool Engine::drawTextPreview(const text::TextDoc& doc, RenderTarget& target, double clock) {
+    std::string error;
+    if (!generatorGl_.ensure(error) || !target.fbo) {
+        return false;
+    }
+    if (!textEditor_) {
+        textEditor_ = std::make_unique<TextPlayer>("editor", std::string());
+    }
+    const std::string key = text::textDocToJson(doc);
+    if (key != textEditorKey_) {
+        textEditorKey_ = key;
+        textEditor_->setDocument(doc);
+    }
+    textEditor_->touch();
+    target.bind();
+    glDisable(GL_BLEND);
+    glClearColor(0.05f, 0.05f, 0.06f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    if (textEditor_->poll(out_.height) != GeneratorState::Ready) {
+        return false;
+    }
+    const Layer defaults;
+    GeneratorFrame frame = generatorFrame(defaults, 1.0f, clock, target.width, target.height);
+    const bool drawn = textEditor_->draw(generatorGl_, frame, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return drawn;
+}
+
+bool Engine::drawParticlePreview(const particles::Params& params, RenderTarget& target, double clock) {
+    std::string error;
+    if (!generatorGl_.ensure(error) || !target.fbo) {
+        return false;
+    }
+    if (!particleEditor_) {
+        particleEditor_ = std::make_unique<ParticlePlayer>("editor", std::string(), false, particleLimit_);
+    }
+    const std::string key = particles::paramsToJson(params);
+    if (key != particleEditorKey_) {
+        particleEditorKey_ = key;
+        particleEditor_->setParams(params);
+    }
+    particleEditor_->setLimit(particleLimit_);
+    particleEditor_->touch();
+    target.bind();
+    glDisable(GL_BLEND);
+    glClearColor(0.05f, 0.05f, 0.06f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    const Layer defaults;
+    GeneratorFrame frame = generatorFrame(defaults, 1.0f, clock, target.width, target.height);
+    const bool drawn = particleEditor_->draw(generatorGl_, frame, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return drawn;
+}
+
+void Engine::requestTextPreview(const text::TextDoc& doc, double clock) {
+    generatorPreviewKind_ = EditorPreviewKind::Text;
+    generatorPreviewText_ = doc;
+    generatorPreviewClock_ = clock;
+}
+
+void Engine::requestParticlePreview(const particles::Params& params, double clock) {
+    generatorPreviewKind_ = EditorPreviewKind::Particles;
+    generatorPreviewParticles_ = params;
+    generatorPreviewClock_ = clock;
+}
+
+void Engine::requestChainPreview(const std::array<EffectSlot, kEffectSlots>& slots, double clock) {
+    chainPreviewRequested_ = true;
+    chainPreviewSlots_ = slots;
+    chainPreviewClock_ = clock;
+}
+
+void Engine::renderEditorPreviews() {
+    constexpr int kEditorWidth = 480;
+    constexpr int kEditorHeight = 270;
+    generatorPreviewReady_ = false;
+    if (generatorPreviewKind_ == EditorPreviewKind::None) {
+        if (generatorPreview_.fbo) {
+            generatorPreview_.destroy();
+        }
+        textEditor_.reset();
+        particleEditor_.reset();
+        textEditorKey_.clear();
+        particleEditorKey_.clear();
+    } else {
+        if (!generatorPreview_.fbo && !generatorPreview_.create(kEditorWidth, kEditorHeight)) {
+            generatorPreview_.destroy();
+        } else if (generatorPreviewKind_ == EditorPreviewKind::Text) {
+            particleEditor_.reset();
+            particleEditorKey_.clear();
+            generatorPreviewReady_ = drawTextPreview(generatorPreviewText_, generatorPreview_, generatorPreviewClock_) || generatorPreview_.fbo != 0;
+        } else {
+            textEditor_.reset();
+            textEditorKey_.clear();
+            drawParticlePreview(generatorPreviewParticles_, generatorPreview_, generatorPreviewClock_);
+            generatorPreviewReady_ = generatorPreview_.fbo != 0;
+        }
+        generatorPreviewKind_ = EditorPreviewKind::None;
+    }
+
+    chainPreviewResult_ = nullptr;
+    if (!chainPreviewRequested_) {
+        if (chainPreviewA_.fbo) {
+            chainPreviewA_.destroy();
+            chainPreviewB_.destroy();
+            for (RenderTarget& target : chainPreviewFeedback_) {
+                target.destroy();
+            }
+        }
+        return;
+    }
+    chainPreviewRequested_ = false;
+    if (chainPreviewClip_ == -2) {
+        chainPreviewClip_ = -1;
+        const std::vector<ClipDef>& library = clipLibrary();
+        for (size_t i = 0; i < library.size(); ++i) {
+            if (library[i].name == "Plasma" && library[i].error.empty() && !library[i].isScene()) {
+                chainPreviewClip_ = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+    if (chainPreviewClip_ < 0 || !ensureClip(static_cast<size_t>(chainPreviewClip_))) {
+        return;
+    }
+    if (!chainPreviewA_.fbo && !(chainPreviewA_.create(kEditorWidth, kEditorHeight) && chainPreviewB_.create(kEditorWidth, kEditorHeight))) {
+        chainPreviewA_.destroy();
+        chainPreviewB_.destroy();
+        return;
+    }
+    chainPreviewFeedbackUsed_.fill(false);
+    const Layer defaults;
+    drawLayerSource(chainPreviewClip_, kLayerCount * 2, defaults, ClipPlayback{}, 1.0f, chainPreviewClock_, chainPreviewA_);
+    chainPreviewResult_ = runChain(chainPreviewSlots_, chainPreviewFeedback_.data(), chainPreviewFeedbackUsed_.data(), &chainPreviewA_, &chainPreviewB_, 0, -1);
+    for (size_t k = 0; k < chainPreviewFeedback_.size(); ++k) {
+        if (chainPreviewFeedback_[k].fbo && !chainPreviewFeedbackUsed_[k]) {
+            chainPreviewFeedback_[k].destroy();
+        }
+    }
 }
 
 void Engine::serviceMedia() {
@@ -977,6 +1270,17 @@ GpuMemory Engine::gpuMemory() const {
             memory.sceneGeometry += player->stats().gpuBytes;
         }
     }
+    for (const std::unique_ptr<GeneratorPlayer>& player : generators_) {
+        if (player) {
+            memory.generators += static_cast<size_t>(player->gpuBytes());
+        }
+    }
+    if (textEditor_) {
+        memory.generators += static_cast<size_t>(textEditor_->gpuBytes());
+    }
+    if (particleEditor_) {
+        memory.generators += static_cast<size_t>(particleEditor_->gpuBytes());
+    }
     return memory;
 }
 
@@ -997,6 +1301,9 @@ bool Engine::ensureClip(size_t index) {
     }
     if (index < media_.size() && media_[index]) {
         return ensureMedia(index);
+    }
+    if (index < generators_.size() && generators_[index]) {
+        return ensureGenerator(index);
     }
     ClipProgram& clip = clips_[index];
     if (clip.tried) {
@@ -1167,6 +1474,27 @@ int Engine::prepareAll(std::string& report) {
             report += "scene " + clipLibrary()[i].name + ": " + scenes_[i]->error() + "\n";
             continue;
         }
+        if (i < generators_.size() && generators_[i]) {
+            std::string generatorError;
+            if (!generatorGl_.ensure(generatorError)) {
+                ++failed;
+                report += "generator " + clipLibrary()[i].name + ": " + generatorError + "\n";
+                continue;
+            }
+            GeneratorPlayer& player = *generators_[i];
+            for (int attempt = 0; attempt < 600; ++attempt) {
+                const GeneratorState state = player.poll(out_.height);
+                if (state != GeneratorState::Idle && state != GeneratorState::Loading) {
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            if (player.state() != GeneratorState::Ready) {
+                ++failed;
+                report += "generator " + clipLibrary()[i].name + ": " + player.error() + "\n";
+            }
+            continue;
+        }
         if (!ensureClip(i)) {
             ++failed;
             report += "clip " + clipLibrary()[i].name + "\n";
@@ -1196,6 +1524,12 @@ void Engine::shutdown() {
     previewA_.destroy();
     previewB_.destroy();
     for (RenderTarget& target : previewFeedback_) {
+        target.destroy();
+    }
+    generatorPreview_.destroy();
+    chainPreviewA_.destroy();
+    chainPreviewB_.destroy();
+    for (RenderTarget& target : chainPreviewFeedback_) {
         target.destroy();
     }
     for (SpoutInput& slot : spoutSlots_) {
@@ -1231,6 +1565,11 @@ void Engine::shutdown() {
     deferredThumbs_.clear();
     scenes_.clear();
     media_.clear();
+    generators_.clear();
+    deferredGeneratorThumbs_.clear();
+    textEditor_.reset();
+    particleEditor_.reset();
+    generatorGl_.release();
     videoGpu_.destroy();
     deferredMediaThumbs_.clear();
     sceneRenderer_.shutdown();
@@ -2411,6 +2750,10 @@ void Engine::renderClipThumbnails(int maxCount) {
             deferredMediaThumbs_.push_back(i);
             continue;
         }
+        if (i < generators_.size() && generators_[i]) {
+            deferredGeneratorThumbs_.push_back(i);
+            continue;
+        }
         if (i < scenes_.size() && scenes_[i]) {
             if ((clipLibrary()[i].kind == ClipKind::BuiltinScene || clipLibrary()[i].kind == ClipKind::ScenePack) && !ensureScene(i) && scenes_[i]->state() == SceneState::Loading) {
                 deferredThumbs_.push_back(i);
@@ -2478,6 +2821,8 @@ void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, co
         sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, target);
     } else if (media_[static_cast<size_t>(clipIndex)]) {
         drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock, &playback);
+    } else if (static_cast<size_t>(clipIndex) < generators_.size() && generators_[static_cast<size_t>(clipIndex)]) {
+        drawGenerator(static_cast<size_t>(clipIndex), instance, layer, scale, clock, target);
     } else if (liveClip && drawLive(clipDef, scale)) {
     } else if (clipDef.isAdvancedShader()) {
         drawShaderInstance(static_cast<size_t>(clipIndex), instance, layer.colorA, layer.colorB, layer.rainbow, scale, clock, target, playback.values);
@@ -2828,6 +3173,7 @@ void Engine::render() {
     renderClipThumbnails(2);
     serviceScenes();
     serviceMedia();
+    serviceGenerators();
     prewarmMedia();
     serviceSpout();
     serviceLive();
@@ -2865,6 +3211,7 @@ void Engine::render() {
     }
 
     renderPreview();
+    renderEditorPreviews();
 
     if (profiling) {
         profiler_.endFrame();

@@ -102,6 +102,8 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         engine_.setPluginHost(plugins_.get());
     }
 
+    setGeneratorClipsEnabled(settings_.generatorClips);
+    engine_.setParticleLimit(settings_.particleLimit);
     initConversion();
     refreshNodeEffects();
     refreshIsfEffects();
@@ -211,7 +213,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         libraryMode_ = std::clamp(options.libraryMode, 0, 2);
     }
     if (options.libraryKind >= 0) {
-        libraryKind_ = std::clamp(options.libraryKind, 0, 4);
+        libraryKind_ = std::clamp(options.libraryKind, 0, 10);
     }
 
     refreshUserPresets();
@@ -312,6 +314,13 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     }
     if (options.showPackageTab >= 0) {
         openShowPackages(options.showPackageTab);
+    }
+    if (options.generatorTab >= 0) {
+        openGeneratorStudio(options.generatorTab, std::string());
+    }
+    if (options.chainTarget >= 0) {
+        openChainLibrary(options.chainTarget);
+        chainDialog_.selected = options.chainSelect;
     }
     if (options.packageTab >= 0) {
         openCommunityPackages(options.packageTab);
@@ -739,12 +748,17 @@ void App::frame(double dt) {
     if (shaderPoll_ >= 1.0) {
         shaderPoll_ = 0.0;
         const ShaderScan scan = refreshShaderClips();
-        if (scan.added > 0) {
+        const ShaderScan generatorScan = refreshGeneratorClips();
+        if (scan.added > 0 || generatorScan.added > 0) {
             engine_.syncLibrary();
             assetsDirty_ = true;
         }
         if (!scan.changed.empty()) {
             engine_.reloadShaderClips(scan.changed);
+        }
+        if (!generatorScan.changed.empty()) {
+            engine_.reloadGeneratorClips(generatorScan.changed);
+            assetsDirty_ = true;
         }
         syncNodeEffects();
     }
@@ -771,6 +785,8 @@ void App::frame(double dt) {
     drawManual();
     drawShowPackages();
     drawCommunityPackages();
+    drawGeneratorStudio();
+    drawChainLibrary();
     drawSettingsWindow();
     drawUpdateCard();
     drawConversionCards();
@@ -1049,6 +1065,21 @@ void App::drawMenuBar() {
                 }
             }
             ImGui::EndMenu();
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem(tr("Text and particles..."), nullptr, generatorDialog_.open)) {
+            if (generatorDialog_.open) {
+                generatorDialog_.open = false;
+            } else {
+                openGeneratorStudio(-1, std::string());
+            }
+        }
+        if (ImGui::MenuItem(tr("Effect chains..."), nullptr, chainDialog_.open)) {
+            if (chainDialog_.open) {
+                chainDialog_.open = false;
+            } else {
+                openChainLibrary(selectedLayer_);
+            }
         }
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Open scenes folder"))) {

@@ -2,6 +2,7 @@
 
 #include "app/creator.hpp"
 #include "app/engine_host.hpp"
+#include "app/generator_dialog.hpp"
 #include "app/manual_view.hpp"
 #include "app/node_editor.hpp"
 #include "app/pack_dialog.hpp"
@@ -80,6 +81,9 @@ struct StartOptions {
     bool openManual = false;
     int showPackageTab = -1;
     int packageTab = -1;
+    int generatorTab = -1;
+    int chainTarget = -1;
+    std::string chainSelect;
     std::string packageFile;
     std::string manualChapter;
     float transitionSeconds = -1.0f;
@@ -204,6 +208,14 @@ private:
     void drawTimeline();
     void drawManual();
     void drawCommunityPackages();
+    void openGeneratorStudio(int tab, const std::string& name);
+    void drawGeneratorStudio();
+    void drawGeneratorTextTab();
+    void drawGeneratorParticleTab();
+    void drawGeneratorClipInfo(const ClipDef& def, int clip);
+    void openChainLibrary(int target);
+    void drawChainLibrary();
+    void drawChainButtons(std::array<EffectSlot, kEffectSlots>& slots);
     void drawPackInstall();
     void drawPackInstalled();
     void drawPackCreate();
@@ -323,6 +335,8 @@ private:
     bool manualOpen_ = false;
     ShowDialog showDialog_;
     PackDialog packDialog_;
+    GeneratorDialog generatorDialog_;
+    ChainDialog chainDialog_;
     bool manualFocus_ = false;
     ManualView manualView_;
     int ltcDeviceListedFrame_ = -1;

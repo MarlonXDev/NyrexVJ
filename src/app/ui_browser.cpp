@@ -177,6 +177,8 @@ bool matchesKind(const ClipDef& clip, int kind) {
         return clip.isShaderFile();
     case 8:
         return clip.isLive();
+    case 9:
+        return clip.isGenerator();
     default:
         return true;
     }
@@ -542,6 +544,10 @@ void App::drawClipTile(int index, const ImVec2& size) {
         badge = tr("Video");
     } else if (clip.kind == ClipKind::ImageFile) {
         badge = tr("Image");
+    } else if (clip.kind == ClipKind::TextFile) {
+        badge = tr("Text");
+    } else if (clip.kind == ClipKind::ParticleClip) {
+        badge = tr("Particles");
     }
     if (badge != nullptr) {
         const char* label = badge;
@@ -751,9 +757,9 @@ void App::drawLibraryPopups() {
 
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders"), tr("Live"), tr("Favorites")};
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders"), tr("Live"), tr("Generators"), tr("Favorites")};
     const float rightEdge = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
-    for (int k = 0; k < 10; ++k) {
+    for (int k = 0; k < 11; ++k) {
         if (k > 0) {
             const float buttonWidth = ImGui::CalcTextSize(kinds[k]).x + ImGui::GetStyle().FramePadding.x * 2.0f;
             if (ImGui::GetItemRectMax().x + 4.0f + buttonWidth < rightEdge) {
@@ -778,7 +784,7 @@ void App::drawLibraryClips() {
     int total = 0;
     const LibraryQuery query = parseLibraryQuery(libraryFilter_);
     const auto inKind = [this](const ClipDef& clip) {
-        return libraryKind_ == 9 ? libraryMeta_.favorite(clip.name) : matchesKind(clip, libraryKind_);
+        return libraryKind_ == 10 ? libraryMeta_.favorite(clip.name) : matchesKind(clip, libraryKind_);
     };
     for (const ClipDef& clip : library) {
         if (inKind(clip)) {

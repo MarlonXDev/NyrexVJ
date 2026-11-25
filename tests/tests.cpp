@@ -183,7 +183,7 @@ void testLibraries() {
     CHECK(effects.size() >= 20);
     std::set<std::string> clipNames;
     for (const auto& clip : clips) {
-        CHECK((clip.isScene() || clip.isMedia()) ? clip.body.empty() : !clip.body.empty());
+        CHECK((clip.isScene() || clip.isMedia() || clip.isGenerator()) ? clip.body.empty() : !clip.body.empty());
         CHECK(!clip.isScene() || clip.is3d);
         clipNames.insert(clip.name);
     }

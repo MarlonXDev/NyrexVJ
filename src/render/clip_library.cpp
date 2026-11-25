@@ -1,6 +1,10 @@
 #include "render/clip_library.hpp"
 
+#include "core/particles.hpp"
+#include "core/text_doc.hpp"
+
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -31,6 +35,7 @@ std::string utf8(const std::filesystem::path& path) {
 }
 
 int appendShaderClips(std::vector<ClipDef>& clips);
+int appendGeneratorClips(std::vector<ClipDef>& clips);
 
 int appendModelClips(std::vector<ClipDef>& clips) {
     namespace fs = std::filesystem;
@@ -269,6 +274,7 @@ void appendSceneClips(std::vector<ClipDef>& clips) {
     appendPackClips(clips);
     appendMediaClips(clips);
     appendShaderClips(clips);
+    appendGeneratorClips(clips);
 }
 
 
@@ -312,6 +318,90 @@ bool fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
 std::map<std::string, std::pair<long long, unsigned long long>>& filterFiles() {
     static std::map<std::string, std::pair<long long, unsigned long long>> files;
     return files;
+}
+
+
+std::atomic<bool>& generatorFlag() {
+    static std::atomic<bool> enabled{true};
+    return enabled;
+}
+
+void stampOf(const std::filesystem::path& file, long long& stamp, unsigned long long& bytes) {
+    std::error_code ec;
+    const auto size = std::filesystem::file_size(file, ec);
+    bytes = ec ? 0 : static_cast<unsigned long long>(size);
+    const auto time = std::filesystem::last_write_time(file, ec);
+    stamp = ec ? 0 : static_cast<long long>(time.time_since_epoch().count());
+}
+
+int appendGeneratorClips(std::vector<ClipDef>& clips) {
+    if (!generatorFlag().load()) {
+        return 0;
+    }
+    std::set<std::string> taken;
+    size_t texts = 0;
+    size_t particleCount = 0;
+    for (const ClipDef& clip : clips) {
+        taken.insert(lowerCase(clip.name));
+        if (clip.kind == ClipKind::TextFile) {
+            ++texts;
+        } else if (clip.kind == ClipKind::ParticleClip) {
+            ++particleCount;
+        }
+    }
+    int added = 0;
+    for (const particles::Preset& preset : particles::builtinPresets()) {
+        const std::string name = particleClipName(preset.name);
+        if (!taken.insert(lowerCase(name)).second) {
+            continue;
+        }
+        ClipDef def;
+        def.name = name;
+        def.kind = ClipKind::ParticleClip;
+        clips.push_back(std::move(def));
+        ++particleCount;
+        ++added;
+    }
+    for (const std::string& stem : text::listTextDocs()) {
+        if (texts >= kMaxTextClips) {
+            logLine("More than " + std::to_string(kMaxTextClips) + " text files found, the rest is ignored");
+            break;
+        }
+        const std::string name = textClipName(stem);
+        if (!taken.insert(lowerCase(name)).second) {
+            continue;
+        }
+        ClipDef def;
+        def.name = name;
+        def.kind = ClipKind::TextFile;
+        const std::filesystem::path file = text::textDocPath(stem);
+        def.path = utf8(file);
+        stampOf(file, def.stamp, def.bytes);
+        clips.push_back(std::move(def));
+        ++texts;
+        ++added;
+    }
+    for (const std::string& stem : particles::listParticleDocs()) {
+        if (particleCount >= kMaxParticleClips) {
+            logLine("More than " + std::to_string(kMaxParticleClips) + " particle files found, the rest is ignored");
+            break;
+        }
+        const std::string name = particleClipName(stem);
+        if (!taken.insert(lowerCase(name)).second) {
+            logLine("The particle file '" + stem + "' has the name of a built-in preset and is ignored");
+            continue;
+        }
+        ClipDef def;
+        def.name = name;
+        def.kind = ClipKind::ParticleClip;
+        const std::filesystem::path file = particles::particleDocPath(stem);
+        def.path = utf8(file);
+        stampOf(file, def.stamp, def.bytes);
+        clips.push_back(std::move(def));
+        ++particleCount;
+        ++added;
+    }
+    return added;
 }
 
 int appendShaderClips(std::vector<ClipDef>& clips) {
@@ -1071,7 +1161,7 @@ const std::vector<ClipDef>& clipLibrary() {
 }
 
 int rescanLibrary() {
-    return appendModelClips(mutableLibrary()) + appendPackClips(mutableLibrary()) + appendMediaClips(mutableLibrary()) + appendShaderClips(mutableLibrary());
+    return appendModelClips(mutableLibrary()) + appendPackClips(mutableLibrary()) + appendMediaClips(mutableLibrary()) + appendShaderClips(mutableLibrary()) + appendGeneratorClips(mutableLibrary());
 }
 
 ShaderScan refreshShaderClips() {
@@ -1103,6 +1193,62 @@ ShaderScan refreshShaderClips() {
         scan.changed.push_back(i);
     }
     scan.added = appendShaderClips(library);
+    return scan;
+}
+
+std::string textClipName(const std::string& stem) {
+    return "Text: " + stem;
+}
+
+std::string particleClipName(const std::string& stem) {
+    return "Particles: " + stem;
+}
+
+std::string generatorStem(const ClipDef& clip) {
+    const std::string prefix = clip.kind == ClipKind::TextFile ? "Text: " : "Particles: ";
+    if (clip.name.compare(0, prefix.size(), prefix) == 0) {
+        return clip.name.substr(prefix.size());
+    }
+    return clip.name;
+}
+
+void setGeneratorClipsEnabled(bool enabled) {
+    generatorFlag().store(enabled);
+}
+
+bool generatorClipsEnabled() {
+    return generatorFlag().load();
+}
+
+ShaderScan refreshGeneratorClips() {
+    ShaderScan scan;
+    std::vector<ClipDef>& library = mutableLibrary();
+    for (size_t i = 0; i < library.size(); ++i) {
+        ClipDef& def = library[i];
+        if (!def.isGenerator() || def.path.empty()) {
+            continue;
+        }
+        const std::filesystem::path file = pathFromUtf8(def.path);
+        std::error_code ec;
+        if (!std::filesystem::exists(file, ec)) {
+            if (def.error != "The file is gone") {
+                def.error = "The file is gone";
+                scan.changed.push_back(i);
+            }
+            continue;
+        }
+        long long stamp = 0;
+        unsigned long long bytes = 0;
+        stampOf(file, stamp, bytes);
+        if (stamp == def.stamp && bytes == def.bytes && def.error.empty()) {
+            continue;
+        }
+        def.stamp = stamp;
+        def.bytes = bytes;
+        def.error.clear();
+        scan.changed.push_back(i);
+    }
+    scan.added = appendGeneratorClips(library);
     return scan;
 }
 

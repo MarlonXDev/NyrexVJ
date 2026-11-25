@@ -661,6 +661,22 @@ void App::drawPerformancePage() {
         ImGui::TextDisabled(tr("Layers are drawn at %d × %d (%d %%)"), engine_.layerWidth(), engine_.layerHeight(), static_cast<int>(engine_.layerScale() * 100.0f + 0.5f));
     }
 
+    ImGui::SeparatorText(tr("Text and particles"));
+    {
+        int limit = settings_.particleLimit;
+        ImGui::SetNextItemWidth(220.0f);
+        if (ImGui::SliderInt(trId("Particle limit per layer", "optParticleLimit"), &limit, particles::kMinLimit, particles::kHardMaxParticles, "%d", ImGuiSliderFlags_Logarithmic)) {
+            settings_.particleLimit = particles::clampLimit(limit);
+            engine_.setParticleLimit(settings_.particleLimit);
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("No particle clip ever has more particles alive than this. Each particle costs 24 bytes of graphics memory. When the limit is reached, newer particles are dropped and the picture stays smooth."));
+        if (ImGui::Checkbox(trId("Show text and particle clips in the library", "optGeneratorClips"), &settings_.generatorClips)) {
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("Turn this off if you never use them. The change applies the next time NyrexVJ starts."));
+    }
+
     ImGui::SeparatorText(tr("Measured"));
     if (ImGui::BeginTable("##perf", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("##name", ImGuiTableColumnFlags_WidthStretch, 1.6f);
@@ -727,6 +743,7 @@ void App::drawPerformancePage() {
         ImGui::Text("%s: %.1f MB", tr("3D geometry and textures"), megabytes(memory.sceneGeometry));
         ImGui::Text("%s: %.1f MB", tr("Images and videos"), megabytes(memory.media));
         ImGui::Text("%s: %.1f MB", tr("Shader buffers"), megabytes(memory.shaderBuffers));
+        ImGui::Text("%s: %.1f MB", tr("Text and particles"), megabytes(memory.generators));
         ImGui::EndTooltip();
     }
     ImGui::Text("%s: %.1f MB", tr("Video memory"), megabytes(memory.video.total()));

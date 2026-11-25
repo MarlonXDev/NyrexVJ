@@ -79,6 +79,9 @@ void AudioSystem::update(double dt, float demoBpm) {
         silentFor_ = peak > 0.0005f ? 0.0 : silentFor_ + dt;
         if (!scratch_.empty()) {
             analyzer_.push(scratch_.data(), scratch_.size());
+            if (sink_ != nullptr) {
+                sink_->pushSamples(scratch_.data(), scratch_.size(), input_->sampleRate());
+            }
         }
     }
     analyzer_.advance(dt);

@@ -80,6 +80,14 @@ struct Settings {
     std::string ltcDevice;
     bool cuesEnabled = true;
     bool outputFrameLock = true;
+    std::string recordProfile = "h264";
+    int recordWidth = 0;
+    int recordHeight = 0;
+    int recordFps = 60;
+    int recordQuality = 70;
+    bool recordAudio = true;
+    bool recordCrashSafe = true;
+    std::string recordFolder;
 };
 
 bool loadSettings(Settings& settings);

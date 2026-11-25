@@ -3,6 +3,7 @@
 #include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
+#include "core/record_plan.hpp"
 #include "core/render_policy.hpp"
 #include "core/stage_json.hpp"
 #include "media/video_types.hpp"
@@ -231,6 +232,31 @@ bool loadSettings(Settings& settings) {
     }
     result.cuesEnabled = boolean("cuesEnabled", true);
     result.outputFrameLock = boolean("outputFrameLock", true);
+    auto recordProfile = doc.find("recordProfile");
+    if (recordProfile != doc.end() && recordProfile->is_string() && findRecordProfile(recordProfile->get<std::string>()) != nullptr) {
+        result.recordProfile = recordProfile->get<std::string>();
+    }
+    auto recordInt = [&doc](const char* key, int fallback, int low, int high) {
+        auto it = doc.find(key);
+        if (it == doc.end() || !it->is_number_integer()) {
+            return fallback;
+        }
+        return std::clamp(it->get<int>(), low, high);
+    };
+    result.recordWidth = recordInt("recordWidth", 0, 0, kMaxRecordDimension);
+    result.recordHeight = recordInt("recordHeight", 0, 0, kMaxRecordDimension);
+    if (result.recordWidth == 0 || result.recordHeight == 0) {
+        result.recordWidth = 0;
+        result.recordHeight = 0;
+    }
+    result.recordFps = recordInt("recordFps", 60, 24, 120);
+    result.recordQuality = recordInt("recordQuality", 70, 0, 100);
+    result.recordAudio = boolean("recordAudio", true);
+    result.recordCrashSafe = boolean("recordCrashSafe", true);
+    auto recordFolder = doc.find("recordFolder");
+    if (recordFolder != doc.end() && recordFolder->is_string()) {
+        result.recordFolder = recordFolder->get<std::string>().substr(0, 1024);
+    }
     result.outputs = defaultOutputs();
     result.outputs[0].monitor = legacyMonitor;
     auto outputs = doc.find("outputs");
@@ -300,6 +326,14 @@ bool saveSettings(const Settings& settings) {
     doc["ltcDevice"] = settings.ltcDevice;
     doc["cuesEnabled"] = settings.cuesEnabled;
     doc["outputFrameLock"] = settings.outputFrameLock;
+    doc["recordProfile"] = settings.recordProfile;
+    doc["recordWidth"] = settings.recordWidth;
+    doc["recordHeight"] = settings.recordHeight;
+    doc["recordFps"] = settings.recordFps;
+    doc["recordQuality"] = settings.recordQuality;
+    doc["recordAudio"] = settings.recordAudio;
+    doc["recordCrashSafe"] = settings.recordCrashSafe;
+    doc["recordFolder"] = settings.recordFolder;
     doc["oscOutEnabled"] = settings.oscOutEnabled;
     doc["oscOutHost"] = settings.oscOutHost;
     doc["oscOutPort"] = settings.oscOutPort;

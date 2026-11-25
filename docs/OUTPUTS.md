@@ -107,6 +107,10 @@ Every output tab has NDI output with Send this output as NDI and a name (empty u
 - Without the NDI runtime the output works as before and the tab says `The NDI runtime is not installed`; NyrexVJ looks again every three seconds. With the runtime but a failing sender it shows the error.
 - This is separate from the NDI of the main picture in Settings, Output, NDI. Both can run together.
 
+## Recording
+
+Recording ([RECORDING.md](RECORDING.md)) saves the picture of the composition into a video file. Like the NDI source of the main picture it does not use the mapping: slices, corners, warp, masks, edge blending and the colour of an output are not in the file. What an output shows after mapping can be recorded from its NDI source with another program. The recording has its own memory (a pool of pictures in main memory and four pictures on the graphics side) and does not count against the output memory budget below.
+
 ## Output memory budget
 
 Masks, vertex and index buffers, the delay ring and the NDI readback buffers of all outputs share one budget of 384 MiB of video memory. The tab shows `used / 384 MiB`, and a line in orange when the current setup would need more (a 4 x 4K setup with NDI and a long delay does). `estimateOutputBudget` computes the same numbers without a graphics card: meshes (vertices and indices per slice by warp grid), masks (1024 x 576 hard, 512 x 288 soft, a picture mask counts like a hard one), the delay ring (frames + 1 pictures of the composition) and the NDI readback (two buffers of the window size). `--output-selftest` checks that the estimate matches the measured memory exactly for eight masked 17 x 17 slices and for one plain slice. Only the NDI readback is refused when it does not fit; meshes, masks and the delay ring are never refused, they are small or the person chose them.

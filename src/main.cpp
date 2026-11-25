@@ -2,6 +2,7 @@
 #include "app/bench.hpp"
 #include "app/bench_convert.hpp"
 #include "app/output_selftest.hpp"
+#include "app/record_selftest.hpp"
 #include "app/scene_selftest.hpp"
 #include "app/shader_selftest.hpp"
 #include "core/frame_pacer.hpp"
@@ -42,6 +43,8 @@ struct Options {
     std::string convertKeep;
     std::string benchSwitch;
     std::string benchLive;
+    std::string benchRecord;
+    bool recordSelfTest = false;
     bool liveSelfTest = false;
     bool shaderSelfTest = false;
     int shaderSelfTestBench = 0;
@@ -106,6 +109,13 @@ Options parseOptions(int argc, char** argv) {
             options.benchSwitch = argv[++i];
         } else if (arg == "--bench-live" && hasValue) {
             options.benchLive = argv[++i];
+        } else if (arg == "--bench-record") {
+            options.benchRecord = "all";
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.benchRecord = argv[++i];
+            }
+        } else if (arg == "--record-selftest") {
+            options.recordSelfTest = true;
         } else if (arg == "--plugin-selftest" && hasValue) {
             options.pluginSelfTest = argv[++i];
         } else if (arg == "--live-selftest") {
@@ -352,12 +362,16 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || options.liveSelfTest || options.shaderSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.liveSelfTest || options.shaderSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
         app.engine().prewarmNext = !options.noPrewarm;
-        if (options.outputSelfTest) {
+        if (options.recordSelfTest) {
+            benchExit = nvj::runRecordSelfTest(app.engine(), options.benchOut);
+        } else if (!options.benchRecord.empty()) {
+            benchExit = nvj::runRecordBenchmark(app.engine(), options.benchRecord, options.benchOut);
+        } else if (options.outputSelfTest) {
             benchExit = nvj::runOutputSelfTest(window);
         } else if (!options.pluginSelfTest.empty()) {
             benchExit = nvj::runPluginSelfTest(app.engine(), options.pluginSelfTest, options.benchOut);

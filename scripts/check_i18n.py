@@ -89,7 +89,7 @@ def parameter_keys():
 def message_keys():
     keys = set()
     pattern = re.compile(r'(?:error|message|fail|set\(UpdateState::[A-Za-z]+,)\s*(?:=|\()?\s*"((?:[^"\\]|\\.)*)"')
-    for path in ("src/core/preset.cpp", "src/audio/audio_input_win.cpp", "src/audio/audio_input_other.cpp", "src/update/updater.cpp", "src/update/update_logic.cpp", "src/platform/platform_win.cpp", "src/platform/platform_other.cpp", "src/platform/platform_linux_update.cpp", "src/media/ffmpeg_setup.cpp", "src/media/hap_convert.cpp", "src/media/convert_manager.cpp", "src/core/archive.cpp", "src/core/mask_images.cpp", "src/render/output_window.cpp", "src/control/control_system.cpp", "src/control/udp_socket_posix.cpp", "src/control/udp_socket_win.cpp", "src/control/midi_input_win.cpp", "src/control/midi_input_other.cpp"):
+    for path in ("src/core/preset.cpp", "src/audio/audio_input_win.cpp", "src/audio/audio_input_other.cpp", "src/update/updater.cpp", "src/update/update_logic.cpp", "src/platform/platform_win.cpp", "src/platform/platform_other.cpp", "src/platform/platform_linux_update.cpp", "src/media/ffmpeg_setup.cpp", "src/media/hap_convert.cpp", "src/media/video_recorder.cpp", "src/core/record_plan.cpp", "src/media/convert_manager.cpp", "src/core/archive.cpp", "src/core/mask_images.cpp", "src/render/output_window.cpp", "src/control/control_system.cpp", "src/control/udp_socket_posix.cpp", "src/control/udp_socket_win.cpp", "src/control/midi_input_win.cpp", "src/control/midi_input_other.cpp"):
         for match in pattern.finditer(read(path)):
             key = unescape(match.group(1))
             if re.match(r"^[A-Z][A-Za-z ,.'()-]+[A-Za-z.: )]$", key) and key not in IGNORED:

@@ -11,6 +11,8 @@ NyrexVJ does not contain FFmpeg. It loads the FFmpeg libraries at run time, so t
 | A HAP encoder that works (`hap`, `hap_alpha` and `hap_q` are tried with a small test picture) | Converting DXV videos to HAP |
 | The QuickTime (MOV) muxer | Converting DXV videos to HAP |
 | Snappy support in the HAP encoder | Optional, makes the converted files smaller |
+| At least one video encoder from the recording list (`libopenh264`, `prores_ks`, `hap`, `mjpeg`, `ffv1`, `libvpx-vp9`, or `h264_nvenc`, `h264_qsv`, `h264_amf`, `hevc_nvenc`, `hevc_qsv`, `hevc_amf` on a matching graphics card), each tried with a small test picture | Recording the final picture ([RECORDING.md](RECORDING.md)) |
+| The `aac` and `pcm_s16le` encoders and the MP4, MOV and Matroska muxers | Sound in a recording (AAC for MP4 and VP9, PCM for MOV, MKV with FFV1) and the file container |
 
 The check is silent, runs on a separate thread a moment after the program started and again when you press Check again, so the window opens at the same speed with or without FFmpeg. The result is shown in Settings, Performance, in the section FFmpeg (a table with FFmpeg libraries, DXV decoder, HAP encoder and QuickTime (MOV) writer, each Works or Missing, the version, the licence and where it was loaded from). When FFmpeg is missing, or loaded but not ready for the conversion while your library contains a `.mov` video, a notice card offers the setup. Its button Set up FFmpeg only opens that section, and Not now hides the card for good.
 
@@ -49,6 +51,10 @@ What the setup protects against: a download that was cut off or damaged, a file 
 What it does **not** protect against: a compromised BtbN release or GitHub account. The checksum list comes from the same release as the file and the release called `latest` is replaced by every build, so the checksum proves that the file is the one published there, not that the publisher is honest. The builds are not signed. A pinned hash per release would close that gap but would need a NyrexVJ update for every FFmpeg build, which is not how this release does it (see [ADR 0021](adr/0021-dxv-hap-conversion-and-ffmpeg-setup.md)). If that matters to you, use the manual setup with a build you verified yourself.
 
 The libraries remain separate files under the LGPL. Delete the `ffmpeg` folder in the data folder to remove them; NyrexVJ then behaves as if FFmpeg had never been set up.
+
+## Recording
+
+Recording the final picture ([RECORDING.md](RECORDING.md)) uses the same libraries and the same capability check, which probes the recording formats on a worker thread when Settings, Recording is opened (and again with Check again). It needs no download of its own. In the Linux x64 LGPL build of FFmpeg 8.1 that the tests use, `libopenh264`, `prores_ks`, `hap`, `mjpeg`, `ffv1`, `libvpx-vp9` and the AAC encoder all open; the Windows build was not checked. The hardware encoders open only on a computer with a matching graphics card and driver (here they are refused cleanly). A format that does not open is not offered.
 
 ## What was and was not tested
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.34.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.35.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -204,6 +204,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/frame_stats.cpp
     src/core/growth_check.cpp
     src/core/soak_plan.cpp
+    src/core/record_plan.cpp
     src/media/ffmpeg_dyn.cpp
     src/media/ffmpeg_setup.cpp
     src/media/frame_convert.cpp
@@ -216,6 +217,7 @@ set(NYREXVJ_CORE_SOURCES
     src/media/media_image.cpp
     src/media/playback_driver.cpp
     src/media/video_decoder.cpp
+    src/media/video_recorder.cpp
     src/media/video_hardware.cpp
     src/media/video_probe_data.cpp
     src/core/recovery.cpp
@@ -311,6 +313,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/soak.cpp
     src/app/bench_convert.cpp
     src/app/output_selftest.cpp
+    src/app/record_selftest.cpp
     src/app/shader_selftest.cpp
     src/app/scene_selftest.cpp
     src/app/theme.cpp
@@ -320,6 +323,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_creator.cpp
     src/app/ui_nodes.cpp
     src/app/ui_settings.cpp
+    src/app/ui_record.cpp
     src/app/ui_video.cpp
     src/app/ui_convert.cpp
     src/app/ui_profile.cpp
@@ -336,6 +340,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/texture_history.cpp
     src/render/output_manager.cpp
     src/render/ndi_output.cpp
+    src/render/recorder.cpp
     src/render/dmx_strip.cpp
     src/app/ui_outputs.cpp
     src/app/ui_stage.cpp
@@ -448,6 +453,14 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_soak_tests PRIVATE nvj_core)
     target_include_directories(nvj_soak_tests PRIVATE tests)
     add_test(NAME nvj_soak_tests COMMAND nvj_soak_tests)
+    add_executable(nvj_record_tests tests/test_record.cpp)
+    target_link_libraries(nvj_record_tests PRIVATE nvj_core)
+    target_include_directories(nvj_record_tests PRIVATE tests)
+    if(NYREXVJ_HAVE_FFMPEG)
+        target_compile_definitions(nvj_record_tests PRIVATE NYREXVJ_HAVE_FFMPEG=1)
+        target_include_directories(nvj_record_tests SYSTEM PRIVATE "${NYREXVJ_FFMPEG_INCLUDE}")
+    endif()
+    add_test(NAME nvj_record_tests COMMAND nvj_record_tests)
     add_executable(nvj_djlink_tests tests/test_djlink.cpp)
     target_link_libraries(nvj_djlink_tests PRIVATE nvj_core)
     target_include_directories(nvj_djlink_tests PRIVATE tests)

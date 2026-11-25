@@ -193,6 +193,9 @@ jobs:
           build/NyrexVJ --plugin-selftest build/plugins/nyrexvj-example
           build/NyrexVJ --plugin-selftest build/plugins/nyrexvj-legacy
           NYREXVJ_NDI_LIB="$PWD/build/fake_ndi.so" build/NyrexVJ --output-selftest
+          if [ -n "${FFMPEG_SDK:-}" ]; then
+            NYREXVJ_REQUIRE_VIDEO=1 NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-record" build/NyrexVJ --fresh --no-update-check --no-welcome --record-selftest
+          fi
           build/NyrexVJ --shader-selftest
           build/NyrexVJ --scene-selftest tests/data/models
           if [ -n "${FFMPEG_SDK:-}" ]; then

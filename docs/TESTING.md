@@ -27,6 +27,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Spout input from Unreal or Unity (Windows) | implemented | n/a | 1 | M-SPOUTIN-1 open |
 | NDI output | implemented | automated 2/2 | 2 | M-NDIOUT-1 open |
 | NDI input | implemented | automated 3/3 | 3 | M-NDIIN-1 open |
+| Recording the final picture to a video file | implemented | automated 3/3 | 3 | M-RECORD-1 open; M-RECORD-2 open; M-RECORD-3 open; M-RECORD-4 open; M-RECORD-5 open |
 | Cameras and capture cards | implemented | automated 2/3 | 3 | M-CAM-1 open |
 | Several displays and projectors, hot plugging | implemented | automated 3/3 | 3 | M-DISP-1 open |
 | MIDI controllers and MIDI clock | implemented | automated 2/3 | 3 | M-MIDI-1 open |
@@ -112,6 +113,7 @@ Intel on Linux has no source here (`intel_gpu_top` usually needs elevated rights
 | File gone, then back, opened again | same | Opens again and plays. |
 | Program ended with `kill -9`, then started again | `scripts/test_restart.sh` | The second run starts, draws, writes its picture, keeps the log of the killed run and ends its own session cleanly. |
 | A plugin that fails, hangs, leaks or sends wrong data | `nvj_plugin_tests` ([PLUGINS.md](PLUGINS.md)) | See that page. |
+| Recording: disk almost full, write error, slow encoder, cancel, a copy of the file taken while it is written | `nvj_record_tests` and `NyrexVJ --record-selftest` ([RECORDING.md](RECORDING.md)) | A full disk ends the recording cleanly with a playable file, a write error ends it as failed with the partial file, a slow encoder drops and counts frames and never blocks the render loop, cancel deletes the file, a copy of an MP4 or MOV taken while it is written plays up to a moment before. No crash or hang. Not tested: a drive that is unplugged during a recording (manual test `M-RECORD-4`). |
 | A camera or NDI sender that goes away | `nvj_live_tests`, `nvj_ndi_receive_tests`, `nvj_camera_tests` ([LIVE.md](LIVE.md)) | See that page. |
 
 The case "a tenth of the file" is a finding, not a pass: the clip stays silent without telling the user why. It was observed and recorded; the decoder was not changed in this step.

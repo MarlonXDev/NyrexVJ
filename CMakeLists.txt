@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.39.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.40.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -239,6 +239,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/live_source.cpp
     src/core/settings.cpp
     src/core/sha256.cpp
+    src/core/library_meta.cpp
+    src/core/launch_quantizer.cpp
     src/core/archive.cpp
     src/control/control_system.cpp
     src/control/djlink_input.cpp
@@ -246,6 +248,7 @@ set(NYREXVJ_CORE_SOURCES
     src/control/timeline_system.cpp
     src/control/control_targets.cpp
     src/control/midi_map.cpp
+    src/control/midi_feedback.cpp
     src/control/osc.cpp
     src/control/osc_out.cpp
     src/control/stage_out.cpp
@@ -262,11 +265,11 @@ set(NYREXVJ_CORE_SOURCES
 )
 
 if(WIN32)
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_win.cpp src/audio/audio_input_win.cpp src/control/midi_input_win.cpp src/control/udp_socket_win.cpp src/control/tcp_socket_win.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_win.cpp src/audio/audio_input_win.cpp src/control/midi_input_win.cpp src/control/midi_output_win.cpp src/control/udp_socket_win.cpp src/control/tcp_socket_win.cpp)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/platform/platform_linux_update.cpp src/audio/audio_input_linux.cpp src/control/midi_input_linux.cpp src/control/udp_socket_posix.cpp src/control/tcp_socket_posix.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/platform/platform_linux_update.cpp src/audio/audio_input_linux.cpp src/control/midi_input_linux.cpp src/control/midi_output_other.cpp src/control/udp_socket_posix.cpp src/control/tcp_socket_posix.cpp)
 else()
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/audio/audio_input_other.cpp src/control/midi_input_other.cpp src/control/udp_socket_posix.cpp src/control/tcp_socket_posix.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/audio/audio_input_other.cpp src/control/midi_input_other.cpp src/control/midi_output_other.cpp src/control/udp_socket_posix.cpp src/control/tcp_socket_posix.cpp)
 endif()
 
 add_library(nvj_core STATIC ${NYREXVJ_CORE_SOURCES})
@@ -511,6 +514,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)
     add_test(NAME nvj_venue_tests COMMAND nvj_venue_tests)
+    add_executable(nvj_workflow_tests tests/test_workflow.cpp)
+    target_link_libraries(nvj_workflow_tests PRIVATE nvj_core)
+    target_include_directories(nvj_workflow_tests PRIVATE tests)
+    add_test(NAME nvj_workflow_tests COMMAND nvj_workflow_tests)
     add_executable(nvj_node_tests tests/test_nodes.cpp)
     target_link_libraries(nvj_node_tests PRIVATE nvj_core)
     target_include_directories(nvj_node_tests PRIVATE tests)

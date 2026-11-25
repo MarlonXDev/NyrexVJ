@@ -211,4 +211,35 @@ int resolutionIndexFor(int width, int height) {
     return kDefaultResolution;
 }
 
+int replaceClipEverywhere(Composition& comp, int from, int to, bool keepPlayback) {
+    if (from < 0 || to < 0 || from == to) {
+        return 0;
+    }
+    auto rewrite = [&](std::array<Layer, kLayerCount>& layers) {
+        int changed = 0;
+        for (Layer& layer : layers) {
+            for (size_t c = 0; c < kColumnCount; ++c) {
+                if (layer.cells[c] != from) {
+                    continue;
+                }
+                if (keepPlayback) {
+                    layer.cells[c] = to;
+                } else {
+                    layer.setCell(c, to);
+                }
+                ++changed;
+            }
+        }
+        return changed;
+    };
+    int total = rewrite(comp.layers);
+    for (size_t d = 0; d < kDeckCount; ++d) {
+        const int inDeck = rewrite(comp.decks[d].layers);
+        if (static_cast<int>(d) != comp.activeDeck) {
+            total += inDeck;
+        }
+    }
+    return total;
+}
+
 }

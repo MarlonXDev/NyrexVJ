@@ -15,7 +15,7 @@
 namespace nvj {
 
 void App::switchDeckTo(int index) {
-    engine_.switchDeck(index);
+    engine_.requestSwitchDeck(index);
 }
 
 void App::fillDeckFromLook(int index, const Composition& look) {
@@ -233,6 +233,30 @@ void App::drawTransport(bool wide) {
         ImGui::SetItemTooltip("%s", tr("Make the nearest beat the first beat of the bar"));
         ImGui::EndPopup();
     }
+    ImGui::SameLine(0.0f, 10.0f);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Quantize"));
+    ImGui::SameLine();
+    {
+        const char* gridLabels[kQuantizeGridCount] = {tr("Off"), tr("Beat"), tr("Bar"), tr("2 bars"), tr("4 bars")};
+        const QuantizeGrid current = quantizeGridFromName(settings_.launchQuantize.c_str());
+        ImGui::SetNextItemWidth(84.0f);
+        if (ImGui::BeginCombo("##launchQuantize", gridLabels[static_cast<int>(current)])) {
+            for (int g = 0; g < kQuantizeGridCount; ++g) {
+                if (ImGui::Selectable(gridLabels[g], static_cast<int>(current) == g)) {
+                    settings_.launchQuantize = quantizeGridName(static_cast<QuantizeGrid>(g));
+                    saveSettings(settings_);
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SetItemTooltip("%s", tr("Clips, columns and decks that you start with a click, a key, MIDI, OSC or a cue wait for the next beat or bar. If the beat clock is lost, they start at once."));
+        const size_t waiting = engine_.quantizer().pending();
+        if (waiting > 0) {
+            ImGui::SameLine(0.0f, 4.0f);
+            ImGui::TextColored(ui::kAccent, "%zu", waiting);
+        }
+    }
     if (audio_.active()) {
         ImGui::SameLine(0.0f, 10.0f);
         ImGui::Checkbox(trId("Sync BPM to audio", "syncBpm"), &settings_.audioSyncBpm);
@@ -330,7 +354,7 @@ void App::drawDeck() {
                 ++headerColors;
             }
             if (ImGui::Button(label.c_str(), ImVec2(cellW, 0.0f))) {
-                engine_.triggerColumn(c);
+                engine_.requestTriggerColumn(c);
                 selectedColumn_ = c;
             }
             ImGui::PopStyleColor(headerColors);
@@ -396,7 +420,7 @@ void App::drawDeck() {
                         selectedLayer_ = row;
                         selectedColumn_ = c;
                     } else {
-                        engine_.trigger(row, c);
+                        engine_.requestTrigger(row, c);
                         selectedLayer_ = row;
                         selectedColumn_ = c;
                     }

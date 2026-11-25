@@ -557,6 +557,11 @@ void App::drawClipTile(int index, const ImVec2& size) {
         draw->AddRectFilled(badgeMin, badgeMax, IM_COL32(0, 0, 0, 170), 3.0f);
         draw->AddText(ImVec2(badgeMin.x + 3.0f, badgeMin.y + 2.0f), ImGui::GetColorU32(ui::kAccent), "3D");
     }
+    if (libraryMeta_.favorite(clip.name)) {
+        const ImVec2 center(pos.x + 11.0f, pos.y + 11.0f);
+        draw->AddQuadFilled(ImVec2(center.x, center.y - 7.0f), ImVec2(center.x + 5.0f, center.y), ImVec2(center.x, center.y + 7.0f), ImVec2(center.x - 5.0f, center.y), ImGui::GetColorU32(ui::kAccent));
+        draw->AddQuad(ImVec2(center.x, center.y - 7.0f), ImVec2(center.x + 5.0f, center.y), ImVec2(center.x, center.y + 7.0f), ImVec2(center.x - 5.0f, center.y), IM_COL32(0, 0, 0, 200), 1.0f);
+    }
     if (selected) {
         draw->AddRect(pos, max, ImGui::GetColorU32(ui::kAccent), 3.0f, 0, 2.5f);
     } else if (hovered) {
@@ -577,6 +582,14 @@ void App::drawClipTile(int index, const ImVec2& size) {
     } else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
         ImGui::BeginTooltip();
         ImGui::TextUnformatted(clip.name.c_str());
+        const std::vector<std::string>& clipTags = libraryMeta_.tags(clip.name);
+        if (!clipTags.empty()) {
+            std::string line;
+            for (const std::string& tag : clipTags) {
+                line += (line.empty() ? "" : "  ") + std::string("#") + tag;
+            }
+            ImGui::TextDisabled("%s", line.c_str());
+        }
         if (engine_.isSceneClip(index)) {
             ImGui::TextDisabled("%s", tr("3D scene"));
             drawSceneDetails(*engine_.scenePlayer(index));
@@ -608,6 +621,22 @@ void App::drawClipTile(int index, const ImVec2& size) {
             }
             ImGui::EndMenu();
         }
+        ImGui::Separator();
+        const bool isFavorite = libraryMeta_.favorite(clip.name);
+        if (ImGui::MenuItem(isFavorite ? tr("Remove from favorites") : tr("Add to favorites"))) {
+            libraryMeta_.setFavorite(clip.name, !isFavorite);
+            saveLibraryMeta();
+        }
+        if (ImGui::MenuItem(tr("Edit tags"))) {
+            libraryPopup_ = 1;
+            libraryPopupClip_ = index;
+            tagInput_[0] = '\0';
+        }
+        if (ImGui::MenuItem(tr("Replace this clip everywhere"))) {
+            libraryPopup_ = 2;
+            libraryPopupClip_ = index;
+            replaceFilter_[0] = '\0';
+        }
         if (canEditInCreator(clip)) {
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Edit in the Clip Creator"))) {
@@ -619,11 +648,112 @@ void App::drawClipTile(int index, const ImVec2& size) {
     ImGui::PopID();
 }
 
+void App::loadLibraryMeta() {
+    std::string error;
+    if (!loadLibraryMetaFile(libraryMeta_, std::filesystem::path(userDataDir()) / "library_meta.json", error)) {
+        logLine("Library tags and favorites could not be read, the file was set aside: " + error);
+    }
+}
+
+void App::saveLibraryMeta() {
+    std::string error;
+    if (!saveLibraryMetaFile(libraryMeta_, std::filesystem::path(userDataDir()) / "library_meta.json", error)) {
+        toast(tr("Library tags and favorites could not be saved"));
+        logLine("Library tags and favorites could not be saved: " + error);
+        return;
+    }
+    libraryMeta_.markClean();
+}
+
+void App::drawLibraryPopups() {
+    const std::vector<ClipDef>& library = clipLibrary();
+    if (libraryPopup_ != 0 && libraryPopupClip_ >= 0 && libraryPopupClip_ < static_cast<int>(library.size())) {
+        ImGui::OpenPopup(libraryPopup_ == 1 ? "##libraryTags" : "##libraryReplace");
+        libraryPopup_ = 0;
+    }
+    const bool valid = libraryPopupClip_ >= 0 && libraryPopupClip_ < static_cast<int>(library.size());
+    const std::string clipName = valid ? library[static_cast<size_t>(libraryPopupClip_)].name : std::string();
+    if (ImGui::BeginPopup("##libraryTags")) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Tags"));
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", clipName.c_str());
+        const std::vector<std::string> own = libraryMeta_.tags(clipName);
+        if (own.empty()) {
+            ImGui::TextDisabled("%s", tr("No tags yet"));
+        }
+        for (const std::string& tag : own) {
+            const std::string label = "#" + tag + "  x";
+            if (ImGui::SmallButton(label.c_str())) {
+                libraryMeta_.removeTag(clipName, tag);
+                saveLibraryMeta();
+            }
+            ImGui::SameLine();
+        }
+        ImGui::NewLine();
+        ImGui::SetNextItemWidth(180.0f);
+        const bool entered = ImGui::InputTextWithHint("##newTag", tr("New tag"), tagInput_, sizeof(tagInput_), ImGuiInputTextFlags_EnterReturnsTrue);
+        ImGui::SameLine();
+        if ((ImGui::Button(trId("Add", "addTag")) || entered) && tagInput_[0] != '\0') {
+            if (libraryMeta_.addTag(clipName, tagInput_)) {
+                saveLibraryMeta();
+            } else {
+                toast(tr("This tag was not added. A clip can have 8 tags of up to 24 characters."));
+            }
+            tagInput_[0] = '\0';
+        }
+        const std::vector<std::string> known = libraryMeta_.allTags();
+        if (!known.empty()) {
+            ImGui::Spacing();
+            ImGui::TextDisabled("%s", tr("Tags in your library"));
+            int shownKnown = 0;
+            for (const std::string& tag : known) {
+                if (std::find(own.begin(), own.end(), tag) != own.end() || shownKnown >= 16) {
+                    continue;
+                }
+                const std::string label = "#" + tag;
+                if (ImGui::SmallButton(label.c_str())) {
+                    if (libraryMeta_.addTag(clipName, tag)) {
+                        saveLibraryMeta();
+                    }
+                }
+                ImGui::SameLine();
+                ++shownKnown;
+            }
+            ImGui::NewLine();
+        }
+        ImGui::EndPopup();
+    }
+    if (ImGui::BeginPopup("##libraryReplace")) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Replace this clip everywhere"));
+        ImGui::TextDisabled("%s", clipName.c_str());
+        ImGui::TextWrapped("%s", tr("Every cell of every deck that plays this clip plays the clip you pick instead. Layer, effect and mixing settings stay."));
+        ImGui::Checkbox(trId("Keep the playback settings of the cells", "replaceKeep"), &replaceKeepPlayback_);
+        ImGui::SetNextItemWidth(260.0f);
+        ImGui::InputTextWithHint("##replaceFilter", tr("Search"), replaceFilter_, sizeof(replaceFilter_));
+        const LibraryQuery query = parseLibraryQuery(replaceFilter_);
+        ImGui::BeginChild("##replaceList", ImVec2(300.0f, 220.0f), ImGuiChildFlags_Borders);
+        for (int i = 0; i < static_cast<int>(library.size()); ++i) {
+            const ClipDef& candidate = library[static_cast<size_t>(i)];
+            if (i == libraryPopupClip_ || !libraryMeta_.matches(candidate.name, query)) {
+                continue;
+            }
+            if (ImGui::Selectable(candidate.name.c_str())) {
+                const int changed = replaceClipEverywhere(engine_.comp, libraryPopupClip_, i, replaceKeepPlayback_);
+                toast(std::to_string(changed) + " " + tr("cells now play") + " " + candidate.name);
+                ImGui::CloseCurrentPopup();
+                break;
+            }
+        }
+        ImGui::EndChild();
+        ImGui::EndPopup();
+    }
+}
+
 void App::drawLibraryClips() {
     const std::vector<ClipDef>& library = clipLibrary();
-    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders"), tr("Live")};
+    const char* kinds[] = {tr("All"), tr("2D"), tr("3D"), tr("Models"), tr("Scenes"), tr("Spout"), tr("Media"), tr("Shaders"), tr("Live"), tr("Favorites")};
     const float rightEdge = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
-    for (int k = 0; k < 9; ++k) {
+    for (int k = 0; k < 10; ++k) {
         if (k > 0) {
             const float buttonWidth = ImGui::CalcTextSize(kinds[k]).x + ImGui::GetStyle().FramePadding.x * 2.0f;
             if (ImGui::GetItemRectMax().x + 4.0f + buttonWidth < rightEdge) {
@@ -646,15 +776,19 @@ void App::drawLibraryClips() {
 
     int shown = 0;
     int total = 0;
+    const LibraryQuery query = parseLibraryQuery(libraryFilter_);
+    const auto inKind = [this](const ClipDef& clip) {
+        return libraryKind_ == 9 ? libraryMeta_.favorite(clip.name) : matchesKind(clip, libraryKind_);
+    };
     for (const ClipDef& clip : library) {
-        if (matchesKind(clip, libraryKind_)) {
+        if (inKind(clip)) {
             ++total;
         }
     }
     ImGui::BeginChild("clipTiles", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None);
     for (int i = 0; i < static_cast<int>(library.size()); ++i) {
         const ClipDef& clip = library[static_cast<size_t>(i)];
-        if (!matchesKind(clip, libraryKind_) || !matchesFilter(clip.name, libraryFilter_)) {
+        if (!inKind(clip) || !libraryMeta_.matches(clip.name, query)) {
             continue;
         }
         if (shown % columns != 0) {
@@ -709,6 +843,7 @@ void App::drawLibraryClips() {
         openCreator();
     }
     ImGui::SetItemTooltip("%s", tr("Build your own 3D scenes from shapes, models, lights and audio reactions"));
+    drawLibraryPopups();
     ImGui::EndChild();
 }
 
@@ -898,6 +1033,7 @@ void App::drawLibraryTab() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputTextWithHint("##libraryfilter", tr("Search"), libraryFilter_, sizeof(libraryFilter_));
+    ImGui::SetItemTooltip("%s", tr("Type words to search names and tags. tag:name finds a tag, is:fav finds favorites."));
     ImGui::Spacing();
     if (libraryMode_ == 0) {
         drawLibraryClips();

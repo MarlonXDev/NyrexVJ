@@ -161,6 +161,16 @@ Am Anfang jeder Zeile siehst du den Namen des Layers, seinen Deckkraft-Regler, s
 
 > Tipp: Mit Rechtsklick auf einen Regler setzt du ihn auf seinen Standardwert zurück. Das geht bei den meisten Reglern im Programm.
 
+## Auf den Takt starten {#quantize}
+
+Das Menü Quantisierung in der Transportleiste über dem Raster bestimmt, wann ein Start passiert. Aus startet alles sofort, wie bisher. Beat, Takt, 2 Takte und 4 Takte halten einen Start bis zum nächsten Beat, Takt, zweiten oder vierten Takt der Beat-Uhr zurück, sodass ein Clip oder eine ganze Spalte genau auf dem Raster einsetzt, auch wenn du ein bisschen zu früh oder zu spät drückst.
+
+Es gilt für jeden Weg, etwas zu starten: Klick auf eine Zelle oder einen Spaltenkopf, die Tasten `1` bis `8`, einen Deck-Knopf, MIDI, OSC, die Weboberfläche, Cues und die Zeitleiste. Jetzt abspielen im Vorschaufenster, einen Clip aus der Bibliothek in eine Zelle legen und der Start von der Befehlszeile bleiben sofort, weil du dort den Clip ausdrücklich jetzt wolltest. Ein kleiner Zähler neben dem Menü zeigt, wie viele Starts warten. Startest du denselben Layer oder dieselbe Spalte vor dem Beat zweimal, zählt nur der letzte.
+
+Geht die Beat-Uhr verloren oder ist die Show pausiert, wartet nichts auf einen Beat, der nicht kommt: Starts passieren sofort, und die Uhr rastet von selbst wieder ein, wenn der Beat zurückkehrt. Höchstens 32 Starts können warten, der 33. startet sofort. Die Einstellung wird mit deinen anderen Einstellungen gespeichert.
+
+> Tipp: Nimm Takt, solange du mit einem Controller spielst, und Aus beim Proben. Du kannst sie jederzeit mit der Maus umschalten, ein Neustart ist nicht nötig.
+
 # Decks und Übergänge {#decks}
 
 ## Sechzehn Decks {#sixteen}
@@ -308,10 +318,25 @@ In der Ansicht Clips grenzt eine Reihe von Filtern die Liste ein: Alle, 2D, 3D, 
 | Medien | Deine Bilder und Videos |
 | Shader | Deine eigenen Shader-Dateien und ISF-Generatoren |
 | Live | NDI-Eingangs- und Kamera-Clips |
+| Favoriten | Die Clips, die du mit einem Stern markiert hast, aus allen oben genannten |
 
 ## Einen Clip benutzen {#using-clips}
 
 Ein Klick auf einen Clip legt ihn in die gewählte Zelle und spielt ihn ab. Du kannst ihn auch auf eine beliebige Zelle ziehen oder auf einen Spaltenkopf, um ihn in den gewählten Layer dieser Spalte zu legen. Ein Rechtsklick bietet In die gewählte Zelle legen, In die nächste freie Zelle eines Layers legen und bei Szenen Im Clip Creator bearbeiten.
+
+## Favoriten und Tags {#favorites-tags}
+
+Klick mit rechts auf einen Clip und wähl Zu Favoriten hinzufügen. Favoriten zeigen eine kleine Raute in der Liste und stehen alle im Filter Favoriten. Tags bearbeiten öffnet ein kleines Fenster, in dem du ein Wort tippst und mit Enter als Tag hinzufügst, zum Beispiel `intro` oder `rot`. Ein Clip kann 8 Tags mit bis zu 24 Zeichen haben, und das Fenster listet die Tags auf, die deine Bibliothek schon benutzt, damit du einen anklicken kannst, statt ihn noch einmal zu tippen.
+
+Das Suchfeld versteht Tags: Ein Wort findet Clips nach Name und nach Tag, `tag:rot` findet nur Clips mit diesem Tag, und `is:fav` findet nur Favoriten. Du kannst sie verbinden, zum Beispiel `is:fav tag:intro`.
+
+Favoriten und Tags stehen in `library_meta.json` im Datenordner, neben deinen eigenen Dateien, und nicht in Presets. Sie gehören zum Namen des Clips. Benennst du eine Datei um, beginnt der neue Name ohne Stern und ohne Tags. Eine Datei, die sich nicht lesen lässt, bleibt als `library_meta.json.damaged` erhalten, und du beginnst mit einer leeren Liste.
+
+## Einen Clip überall ersetzen {#replace-clip}
+
+Tauschst du ein Video gegen eine bessere Fassung, musst du nicht jede Zelle anfassen. Klick mit rechts auf den Clip in der Bibliothek, wähl Diesen Clip überall ersetzen und such den neuen Clip aus. Jede Zelle in jedem Deck, die den alten Clip spielt, spielt dann den neuen. Layer-, Effekt- und Mischeinstellungen bleiben.
+
+Hak Wiedergabe-Einstellungen der Zellen behalten an, wenn Tempo, Schleife und Start jeder Zelle so bleiben sollen, wie sie sind. Die Meldung danach sagt, wie viele Zellen geändert wurden. Rückgängig (`Strg+Z`) nimmt den ganzen Austausch in einem Schritt zurück.
 
 ## Dateien und Ordner {#library-files}
 
@@ -732,6 +757,22 @@ MIDI funktioniert unter Windows und unter Linux. Unter Linux muss der Controller
 Regler und Fader (CC) setzen Werte. Tasten (Noten) lösen Trigger aus oder schalten etwas ein, solange sie gehalten werden. Hak Invertieren an, um einen Fader umzudrehen, drück Lernen, um einer Zeile einen neuen Regler zu geben, und Entfernen, um sie zu löschen. Die Zuordnungen werden in `controls.json` im Datenordner gespeichert. Ein Controller, den ein anderes Programm exklusiv geöffnet hat, lässt sich nicht von zwei Programmen gleichzeitig nutzen.
 
 > Tipp: Leg den Blackout-Schalter zuerst auf ein großes Pad. Er ist der Regler, den du am meisten willst, wenn etwas schiefgeht.
+
+## Rückmeldung an den Controller {#midi-feedback}
+
+Viele Controller haben leuchtende Pads oder Motor-Fader, die zeigen können, was NyrexVJ gerade tut. Hak unter dem MIDI-Gerät Rückmeldung an den Controller senden an und wähl das Rückmelde-Gerät, das oft denselben Namen wie der Eingang hat, aber für sich aufgelistet ist. Geräte aktualisieren sucht neu, nachdem du eins angesteckt hast.
+
+NyrexVJ antwortet dann auf jede Zuordnung mit derselben Note oder demselben Control Change, auf die es hört. Ein Pad leuchtet (Wert 127), solange sein Clip auf seinem Layer spielt, solange seine Spalte einen spielenden Clip hat, solange sein Deck das Arbeits-Deck ist oder solange sein Schalter (Blackout, Bypass, Solo, Effekt an oder aus) eingeschaltet ist, und ist sonst dunkel (0). Ein Fader oder Regler, der auf einen Wert gelegt ist, folgt diesem Wert innerhalb seines unteren und oberen Bereichs. Es werden nur Änderungen gesendet, nie derselbe Wert zweimal, und höchstens 64 Nachrichten pro Bild.
+
+Während du selbst an einem Regler drehst, sendet NyrexVJ keine Fader-Werte, bis eine Drittelsekunde nach der letzten Bewegung vergangen ist, damit der Controller nicht gegen deine Hand arbeitet. Pads werden nicht zurückgehalten. Antwortet das Gerät nicht mehr, zeigt die Seite die Meldung, die Rückmeldung hört auf und das Programm läuft weiter. Die Rückmeldung funktioniert unter Windows. Unter Linux gibt es das Rückmelde-Gerät in dieser Version noch nicht, und die Seite sagt das.
+
+> Warnung: Nicht jeder Controller leuchtet gleich. Manche wollen für eine Farbe einen anderen Notenwert oder eine besondere Startnachricht. NyrexVJ sendet einfache Noten- und Control-Change-Nachrichten mit den Werten 0 und 127, und mit echten Pads wurde noch nichts probiert.
+
+## Controller-Profile {#midi-profiles}
+
+Ein Profil speichert alle deine Zuordnungen unter einem Namen. Tipp neben Profilname einen Namen und drück Profil speichern. Die Liste zeigt deine Profile, und Laden ersetzt die aktuellen Zuordnungen durch das gewählte Profil. Nimm ein Profil für jeden Controller oder jede Art von Show und wechsle, bevor du anfängst.
+
+Profile sind einfache Dateien im Ordner `midi_profiles` im Datenordner, du kannst eins also auf einen anderen Computer kopieren oder einem Freund schicken. Eine Datei, die zu groß ist, beschädigt ist, kein Profil ist oder von einer neueren Version stammt, wird mit einer Meldung abgelehnt, und deine aktuellen Zuordnungen bleiben, wie sie waren. Namen dürfen Buchstaben, Zahlen, Leerzeichen, Punkte, Bindestriche und Unterstriche enthalten.
 
 ## OSC-Eingang {#osc}
 

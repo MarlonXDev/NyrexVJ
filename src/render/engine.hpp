@@ -3,6 +3,7 @@
 #include "audio/audio_features.hpp"
 #include "core/beat_clock.hpp"
 #include "core/composition.hpp"
+#include "core/launch_quantizer.hpp"
 #include "core/settings.hpp"
 #include "render/clip_library.hpp"
 #include "render/dmx_strip.hpp"
@@ -58,6 +59,13 @@ public:
     void trigger(int layer, int column);
     void triggerColumn(int column);
     void clearLayer(int layer);
+    void requestTrigger(int layer, int column);
+    void requestTriggerColumn(int column);
+    bool requestSwitchDeck(int index);
+    void setQuantizeGrid(QuantizeGrid grid);
+    LaunchQuantizer& quantizer() { return quantizer_; }
+    const LaunchQuantizer& quantizer() const { return quantizer_; }
+    QuantizeClock quantizeClock() const;
     void tap();
     void resync();
     void nudgeBeat(float amount);
@@ -306,6 +314,7 @@ private:
     void updateQuality();
     void destroyTransitionTargets();
     void endTransition();
+    void runLaunch(const LaunchRequest& request);
     RenderTarget* renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews);
     void finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination);
     void transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination);
@@ -444,6 +453,7 @@ private:
     double time_ = 0.0;
     double beat_ = 0.0;
     BeatClock beatClock_;
+    LaunchQuantizer quantizer_;
     double lastCompBpm_ = 0.0;
     double lastClockBpm_ = 0.0;
     bool clockStarted_ = false;

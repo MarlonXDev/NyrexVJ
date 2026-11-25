@@ -9,10 +9,10 @@ class EngineControlHost final : public ControlHost {
 public:
     explicit EngineControlHost(Engine& engine) : engine_(engine) {}
 
-    void triggerClip(int layer, int column) override { engine_.trigger(layer, column); }
-    void triggerColumn(int column) override { engine_.triggerColumn(column); }
+    void triggerClip(int layer, int column) override { engine_.requestTrigger(layer, column); }
+    void triggerColumn(int column) override { engine_.requestTriggerColumn(column); }
     void clearLayer(int layer) override { engine_.clearLayer(layer); }
-    void switchDeck(int index) override { engine_.switchDeck(index); }
+    void switchDeck(int index) override { engine_.requestSwitchDeck(index); }
     void tap() override { engine_.tap(); }
     void resync() override { engine_.resync(); }
     bool blackout() const override { return engine_.blackout; }

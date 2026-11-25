@@ -78,6 +78,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     appliedVsync_ = settings_.vsync ? 1 : 0;
     oscOverridePort_ = options.oscPort;
     control_.loadBindings();
+    loadLibraryMeta();
     sync_.loadCues();
     timeline_.load();
     control_.refreshMidiDevices();
@@ -622,6 +623,7 @@ void App::updateAudio(double dt) {
 }
 
 void App::updateSync(double dt) {
+    engine_.setQuantizeGrid(quantizeGridFromName(settings_.launchQuantize.c_str()));
     SyncConfig config;
     config.mode = syncModeFromName(settings_.syncMode.c_str());
     config.latencyMs = settings_.syncLatencyMs;
@@ -653,6 +655,8 @@ void App::frame(double dt) {
     control.oscPort = oscOverridePort_ > 0 ? oscOverridePort_ : settings_.oscPort;
     control.oscAllowRemote = settings_.oscAllowRemote;
     control.midiDevice = settings_.midiDevice;
+    control.midiFeedback = settings_.midiFeedback;
+    control.midiOutDevice = settings_.midiOutDevice;
     control_.configure(control);
     control_.update(dt);
     ApiConfig api;
@@ -816,7 +820,7 @@ void App::handleShortcuts() {
             if (io.KeyCtrl) {
                 switchDeckTo(i + (io.KeyShift ? 8 : 0));
             } else {
-                engine_.triggerColumn(i);
+                engine_.requestTriggerColumn(i);
             }
         }
     }

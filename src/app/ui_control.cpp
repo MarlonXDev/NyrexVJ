@@ -137,6 +137,8 @@ void App::drawControlPage() {
     drawOscOutSection();
     ImGui::SeparatorText("MIDI");
     drawMidiSection();
+    ImGui::SeparatorText(tr("Controller profiles"));
+    drawProfilesSection();
     ImGui::SeparatorText(tr("Mappings"));
     drawBindingsSection();
 }
@@ -484,6 +486,94 @@ void App::drawMidiSection() {
         ImGui::SameLine();
         ImGui::TextDisabled("(%llu)", control_.midiCount());
     }
+
+    ImGui::Spacing();
+    if (ImGui::Checkbox(trId("Send feedback to the controller", "midiFeedback"), &settings_.midiFeedback)) {
+        persist();
+    }
+    ImGui::SetItemTooltip("%s", tr("Lights pads and moves faders on a controller that has an output port. Pads light while their clip, column, deck or switch is active, faders follow the value."));
+    if (!control_.midiOutSupported()) {
+        ImGui::TextDisabled("%s", trMessage("MIDI feedback is only available on Windows in this version").c_str());
+    }
+    ImGui::BeginDisabled(!settings_.midiFeedback || !control_.midiOutSupported());
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(tr("Feedback device"));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(280.0f);
+    const std::vector<std::string>& outputs = control_.midiOutDevices();
+    const std::string currentOut = settings_.midiOutDevice.empty() ? std::string(tr("None")) : settings_.midiOutDevice;
+    if (ImGui::BeginCombo("##midiOutDevice", currentOut.c_str())) {
+        if (ImGui::Selectable(tr("None"), settings_.midiOutDevice.empty())) {
+            settings_.midiOutDevice.clear();
+            persist();
+        }
+        for (size_t i = 0; i < outputs.size(); ++i) {
+            ImGui::PushID(static_cast<int>(i));
+            if (ImGui::Selectable(outputs[i].c_str(), outputs[i] == settings_.midiOutDevice)) {
+                settings_.midiOutDevice = outputs[i];
+                persist();
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(trId("Refresh devices", "midiOutRefresh"))) {
+        control_.refreshMidiOutDevices();
+    }
+    ImGui::EndDisabled();
+    if (settings_.midiFeedback && control_.midiOutSupported()) {
+        if (control_.midiOutOpen()) {
+            ImGui::TextColored(kGood, "%s%s", tr("Sending feedback to "), settings_.midiOutDevice.c_str());
+        } else if (!control_.midiOutError().empty()) {
+            ImGui::TextColored(kBad, "%s", trMessage(control_.midiOutError()).c_str());
+        } else if (settings_.midiOutDevice.empty()) {
+            ImGui::TextDisabled("%s", tr("Choose the device that receives the feedback"));
+        }
+    }
+}
+
+void App::drawProfilesSection() {
+    ImGui::TextWrapped("%s", tr("A profile saves all your mappings under a name, so you can switch controllers or share the file. Loading a profile replaces the current mappings."));
+    ImGui::SetNextItemWidth(220.0f);
+    ImGui::InputTextWithHint("##profileName", tr("Profile name"), profileName_, sizeof(profileName_));
+    ImGui::SameLine();
+    if (ImGui::Button(trId("Save profile", "profileSave"))) {
+        std::string error;
+        if (control_.saveProfile(profileName_, error)) {
+            profileMessage_ = tr("Profile saved");
+            profileMessageGood_ = true;
+        } else {
+            profileMessage_ = trMessage(error);
+            profileMessageGood_ = false;
+        }
+    }
+    const std::vector<std::string> profiles = control_.listProfiles();
+    for (size_t i = 0; i < profiles.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(profiles[i].c_str());
+        ImGui::SameLine(260.0f);
+        if (ImGui::SmallButton(trId("Load", "profileLoad"))) {
+            std::string error;
+            if (control_.loadProfile(profiles[i], error)) {
+                profileMessage_ = tr("Profile loaded");
+                profileMessageGood_ = true;
+                std::snprintf(profileName_, sizeof(profileName_), "%s", profiles[i].c_str());
+            } else {
+                profileMessage_ = trMessage(error);
+                profileMessageGood_ = false;
+            }
+        }
+        ImGui::PopID();
+    }
+    if (profiles.empty()) {
+        ImGui::TextDisabled("%s", tr("No profiles yet"));
+    }
+    if (!profileMessage_.empty()) {
+        ImGui::TextColored(profileMessageGood_ ? kGood : kBad, "%s", profileMessage_.c_str());
+    }
+    ImGui::TextDisabled("%s", ControlSystem::profileDirectory().string().c_str());
 }
 
 void App::drawBindingsSection() {

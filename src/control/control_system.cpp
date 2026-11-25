@@ -15,6 +15,7 @@ constexpr const char* kOscPrefix = "/nyrex/";
 constexpr int kMaxPacketsPerUpdate = 512;
 constexpr double kSaveDelay = 0.5;
 constexpr size_t kMaxSyncMessages = 8192;
+constexpr double kFeedbackQuietSeconds = 0.3;
 
 std::filesystem::path bindingsPath() {
     return std::filesystem::path(userDataDir()) / "controls.json";
@@ -22,7 +23,7 @@ std::filesystem::path bindingsPath() {
 
 }
 
-ControlSystem::ControlSystem(Composition& comp, ControlHost& host) : router_(comp, host), midi_(createMidiInput()) {}
+ControlSystem::ControlSystem(Composition& comp, ControlHost& host) : router_(comp, host), midi_(createMidiInput()), output_(createMidiOutput()) {}
 
 ControlSystem::~ControlSystem() {
     if (dirty_) {
@@ -32,6 +33,18 @@ ControlSystem::~ControlSystem() {
 
 void ControlSystem::refreshMidiDevices() {
     midiDevices_ = midi_->listDevices();
+}
+
+void ControlSystem::refreshMidiOutDevices() {
+    midiOutDevices_ = output_->listDevices();
+}
+
+void ControlSystem::useMidiOutput(std::unique_ptr<MidiOutput> output) {
+    output_->close();
+    output_ = std::move(output);
+    feedback_.reset();
+    midiOutError_.clear();
+    appliedOutDevice_.clear();
 }
 
 void ControlSystem::configure(const ControlConfig& config) {
@@ -54,6 +67,17 @@ void ControlSystem::configure(const ControlConfig& config) {
         }
         appliedMidiDevice_ = config.midiDevice;
         refreshMidiDevices();
+    }
+    const std::string wantedOut = config.midiFeedback ? config.midiOutDevice : std::string();
+    if (!configured_ || wantedOut != appliedOutDevice_) {
+        output_->close();
+        midiOutError_.clear();
+        feedback_.reset();
+        if (!wantedOut.empty()) {
+            output_->open(wantedOut, midiOutError_);
+        }
+        appliedOutDevice_ = wantedOut;
+        refreshMidiOutDevices();
     }
     config_ = config;
     configured_ = true;
@@ -170,6 +194,26 @@ void ControlSystem::update(double dt) {
         }
     }
 
+    quietFor_ += dt;
+    for (const MidiMessage& message : messages) {
+        if ((message.status & 0xF0) == 0xB0) {
+            quietFor_ = 0.0;
+        }
+    }
+    if (output_->isOpen()) {
+        std::vector<MidiMessage> feedback;
+        feedback_.compute(bindings_, router_, feedback, quietFor_ > kFeedbackQuietSeconds);
+        for (const MidiMessage& message : feedback) {
+            if (output_->send(message)) {
+                ++feedbackSent_;
+            } else {
+                midiOutError_ = "The MIDI output stopped answering";
+                output_->close();
+                break;
+            }
+        }
+    }
+
     if (socket_.isOpen()) {
         unsigned char buffer[2048];
         std::vector<OscMessage> parsed;
@@ -214,6 +258,90 @@ bool ControlSystem::saveBindings() {
     }
     file << bindingsToJson(bindings_);
     return static_cast<bool>(file);
+}
+
+std::filesystem::path ControlSystem::profileDirectory() {
+    return std::filesystem::path(userDataDir()) / "midi_profiles";
+}
+
+std::vector<std::string> ControlSystem::listProfiles() const {
+    std::vector<std::string> names;
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(profileDirectory(), ec)) {
+        if (entry.is_regular_file(ec) && entry.path().extension() == ".json") {
+            const std::string stem = entry.path().stem().string();
+            if (sanitizeProfileName(stem) == stem) {
+                names.push_back(stem);
+            }
+        }
+        if (names.size() >= 256) {
+            break;
+        }
+    }
+    std::sort(names.begin(), names.end());
+    return names;
+}
+
+bool ControlSystem::saveProfile(const std::string& name, std::string& error) {
+    const std::string clean = sanitizeProfileName(name);
+    if (clean.empty()) {
+        error = "Choose a name with letters or numbers";
+        return false;
+    }
+    std::error_code ec;
+    std::filesystem::create_directories(profileDirectory(), ec);
+    std::filesystem::path file = profileDirectory() / (clean + ".json");
+    std::filesystem::path temporary = file;
+    temporary += ".tmp";
+    {
+        std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            error = "The profile could not be written";
+            return false;
+        }
+        out << profileToJson(clean, bindings_);
+        if (!out.good()) {
+            error = "The profile could not be written";
+            return false;
+        }
+    }
+    std::filesystem::rename(temporary, file, ec);
+    if (ec) {
+        std::filesystem::remove(temporary, ec);
+        error = "The profile could not be replaced";
+        return false;
+    }
+    return true;
+}
+
+bool ControlSystem::loadProfile(const std::string& name, std::string& error) {
+    const std::string clean = sanitizeProfileName(name);
+    if (clean.empty() || clean != name) {
+        error = "This is not a valid profile name";
+        return false;
+    }
+    const std::filesystem::path file = profileDirectory() / (clean + ".json");
+    std::error_code ec;
+    const auto size = std::filesystem::file_size(file, ec);
+    if (ec) {
+        error = "The profile was not found";
+        return false;
+    }
+    if (size > kMaxProfileBytes) {
+        error = "The profile file is too large";
+        return false;
+    }
+    std::ifstream in(file, std::ios::binary);
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    std::vector<MidiBinding> parsed;
+    if (!profileFromJson(buffer.str(), parsed, error)) {
+        return false;
+    }
+    bindings_ = parsed;
+    feedback_.reset();
+    markDirty();
+    return true;
 }
 
 }

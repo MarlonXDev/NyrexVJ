@@ -1027,6 +1027,100 @@
           "criteria": "Proposed: the names are right, a change shows within two seconds, a delete leaves a message and the picture stays intact."
         }
       ]
+    },
+    {
+      "id": "show-timeline",
+      "title": "Show timeline: keyframe lanes, cues on a ruler, timecode following, hand moves",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/TIMELINE.md",
+        "docs/SYNC.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0031-show-timeline.md"
+      ],
+      "sources": [
+        "src/core/show_timeline.cpp",
+        "src/control/timeline_system.cpp",
+        "src/app/ui_timeline.cpp",
+        "src/app/timeline_view.hpp",
+        "tests/test_timeline.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-TL-1",
+          "kind": "ctest",
+          "name": "nvj_timeline_tests"
+        },
+        {
+          "id": "A-TL-2",
+          "kind": "ctest",
+          "name": "nvj_sync_system_tests"
+        },
+        {
+          "id": "A-TL-3",
+          "kind": "ctest",
+          "name": "nvj_timecode_tests"
+        },
+        {
+          "id": "A-TL-4",
+          "kind": "cli",
+          "command": "NyrexVJ --timeline --frames 60",
+          "note": "opens the timeline window and runs 60 frames through a real OpenGL context; a smoke test of the window, not a test of its use"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-TL-1",
+          "title": "Following a real LTC or MTC source: start, jump, loss and return",
+          "needs": "A DAW or timecode generator that sends LTC to an audio input or MTC to a MIDI port, and a timeline with at least three lanes and five cues",
+          "steps": [
+            "Set Settings, Sync to the source, turn the timeline on and play the DAW from the start; watch the lanes and the cues.",
+            "Jump around in the DAW (forwards, backwards, to the start), and read the counters Jumps and Cues skipped.",
+            "Stop the timecode for 10 seconds with Hold the position, then with Keep running on its own transport, and start it again at another time."
+          ],
+          "measure": "Position error against the DAW in frames, cues fired twice or missed, whether the lanes take the new value at once after a jump, behaviour at loss and return",
+          "criteria": "Proposed: the position stays within two frames of the source, no cue fires twice, cues after a jump are skipped and counted, lanes chase within one frame, and a lost timecode behaves as the chosen policy says."
+        },
+        {
+          "id": "M-TL-2",
+          "title": "Hand moves with a MIDI controller or the web interface during playback",
+          "needs": "A MIDI controller or a phone with the web interface, and a timeline with lanes on layer opacity and master level",
+          "steps": [
+            "Play the timeline on its own transport and move a controlled slider with the controller.",
+            "Check that the lane shows Moved by hand and the timeline stops writing to it, then wait for the next keyframe segment (policy Until the next keyframe segment) or press Release (policy Until I release it).",
+            "Repeat with a lane on a toggle such as blackout and with two lanes moved at once."
+          ],
+          "measure": "Time between the move and the lane letting go, any visible fight between hand and lane, state after release",
+          "criteria": "Proposed: the lane lets go within two frames, the picture never flickers between the two values, and the lane takes over again exactly as the policy says."
+        },
+        {
+          "id": "M-TL-3",
+          "title": "Window, keys and files on Windows",
+          "needs": "A Windows computer",
+          "steps": [
+            "Open the window from the menu and with --timeline; add lanes and keyframes, use Space, Home, Ctrl+Z and Ctrl+Y with the window focused and with another window focused.",
+            "Change something, end the program with the task manager within half a second and again after two seconds, and start it again.",
+            "Replace timeline.json by a damaged file and start the program."
+          ],
+          "measure": "Which keys act where, what timeline.json holds after each kill, whether timeline.json.damaged appears and the timeline starts empty",
+          "criteria": "Proposed: Space is tap tempo and undo is the composition's whenever the timeline window is not focused, the file is always whole (old or new), and a damaged file is kept as a copy."
+        },
+        {
+          "id": "M-TL-4",
+          "title": "A long show with a looping timeline next to VRChat",
+          "needs": "A real graphics card, VRChat, a timeline with 16 or more lanes and a loop, and scripts/measure_live.py",
+          "steps": [
+            "Run the timeline in its loop for two hours with the output on, VRChat open and measure_live.py sampling NyrexVJ and VRChat.",
+            "Compare the frame time and memory with the same show with the timeline off.",
+            "Look at the counters at the end."
+          ],
+          "measure": "Frame time and its spread, memory growth, writes and hand moves counters, any missed loop wrap",
+          "criteria": "Proposed: no measurable cost beyond the spread of the baseline, no memory growth beyond the growth check of the soak test, and every loop wrap counted."
+        }
+      ]
     }
   ]
 }

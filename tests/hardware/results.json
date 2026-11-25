@@ -585,6 +585,58 @@
       "test": "A-ISF-4",
       "command": "NyrexVJ --shader-selftest 60",
       "notes": "1280x720 on llvmpipe, two runs: plain shader 13.3 and 13.7 ms, ISF generator 13.4 and 13.9 ms, ISF generator with a half size buffer 18.2 and 18.5 ms, one pass filter 17.2 and 18.5 ms, two pass blur filter 59.3 and 59.7 ms, trails filter 30.4 and 29.4 ms; the cases that existed before are within the noise of the previous release (about 5 percent) and use the same buffer memory; software renderer, so this says nothing about a real graphics card"
+    },
+    {
+      "area": "show-timeline",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.38.0 (branch feature/show-timeline, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-TL-1",
+      "command": "ctest -R nvj_timeline_tests",
+      "notes": "420671 checks, 0 failed; also 0 failed and no report under AddressSanitizer and UndefinedBehaviorSanitizer; the update of 32 lanes with 512 keys each and 64 cues took 5.6 to 6.2 us per frame with a fake host (three runs); whole suite 34 of 34 passed"
+    },
+    {
+      "area": "show-timeline",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.38.0 (branch feature/show-timeline, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-TL-2",
+      "command": "ctest -R nvj_sync_system_tests",
+      "notes": "whole suite 34 of 34 passed; the cue path of the sync system is unchanged by the timeline"
+    },
+    {
+      "area": "show-timeline",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.38.0 (branch feature/show-timeline, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-TL-3",
+      "command": "ctest -R nvj_timecode_tests",
+      "notes": "whole suite 34 of 34 passed; the cue runner is unchanged by the timeline"
+    },
+    {
+      "area": "show-timeline",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.38.0 (branch feature/show-timeline, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-TL-4",
+      "command": "NyrexVJ --timeline --frames 60",
+      "notes": "60 frames with the window open on llvmpipe, exit code 0; also driven with scripted mouse and key input through a temporary patch that is not part of the program (play, pause, stop, drag, undo, add lane, loop, zoom, menus)"
     }
   ]
 }

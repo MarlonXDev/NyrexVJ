@@ -3,12 +3,14 @@
 #include "app/creator.hpp"
 #include "app/engine_host.hpp"
 #include "app/node_editor.hpp"
+#include "app/timeline_view.hpp"
 #include "audio/audio_system.hpp"
 #include "app/api_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
 #include "control/stage_out.hpp"
 #include "control/sync_system.hpp"
+#include "control/timeline_system.hpp"
 #include "core/edit_history.hpp"
 #include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
@@ -69,6 +71,7 @@ struct StartOptions {
     std::string creator;
     std::string nodeEffect;
     bool openNodes = false;
+    bool openTimeline = false;
     float transitionSeconds = -1.0f;
     int column = -1;
     int resolution = -1;
@@ -184,6 +187,15 @@ private:
     void drawSyncDjLinkSection();
     void drawSyncCueSection();
     void updateSync(double dt);
+    void updateTimeline(double dt);
+    void drawTimeline();
+    void drawTimelineToolbar();
+    void drawTimelineCanvas();
+    void drawTimelineTargetPicker();
+    void timelineUndo();
+    void timelineRedo();
+    void timelineBeginEdit();
+    void timelineEndEdit();
     void drawOscSection();
     void drawApiSection();
     void loadFromApi(const Composition& comp, const std::string& name);
@@ -265,6 +277,11 @@ private:
     OscSender oscOut_;
     StageOutput stage_;
     SyncSystem sync_;
+    TimelineSystem timeline_;
+    TimelineView timelineView_;
+    bool timelineOpen_ = false;
+    bool timelineFocus_ = false;
+    bool timelineHasFocus_ = false;
     int ltcDeviceListedFrame_ = -1;
     char cueTimeBuffer_[24] = {};
     int cueTargetPick_ = -1;

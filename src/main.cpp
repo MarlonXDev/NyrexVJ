@@ -252,6 +252,8 @@ Options parseOptions(int argc, char** argv) {
             if (hasValue && argv[i + 1][0] != '-') {
                 options.start.nodeEffect = argv[++i];
             }
+        } else if (arg == "--timeline") {
+            options.start.openTimeline = true;
         } else if (arg == "--spout-test-pattern") {
             nvj::SpoutInput::setTestPattern(true);
         } else if (arg == "--welcome") {

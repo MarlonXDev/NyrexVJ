@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.37.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.38.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -192,6 +192,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/djlink.cpp
     src/core/midi_clock.cpp
     src/core/cue_list.cpp
+    src/core/show_timeline.cpp
     src/core/beat_clock.cpp
     src/core/ndi_runtime.cpp
     src/core/ndi_receiver.cpp
@@ -237,6 +238,7 @@ set(NYREXVJ_CORE_SOURCES
     src/control/control_system.cpp
     src/control/djlink_input.cpp
     src/control/sync_system.cpp
+    src/control/timeline_system.cpp
     src/control/control_targets.cpp
     src/control/midi_map.cpp
     src/control/osc.cpp
@@ -356,6 +358,8 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_outputs.cpp
     src/app/ui_stage.cpp
     src/app/ui_sync.cpp
+
+    src/app/ui_timeline.cpp
     src/render/scene_player.cpp
     src/render/media_player.cpp
     src/render/video_gpu.cpp
@@ -488,6 +492,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_sync_system_tests PRIVATE nvj_core)
     target_include_directories(nvj_sync_system_tests PRIVATE tests)
     add_test(NAME nvj_sync_system_tests COMMAND nvj_sync_system_tests)
+    add_executable(nvj_timeline_tests tests/test_timeline.cpp)
+    target_link_libraries(nvj_timeline_tests PRIVATE nvj_core)
+    target_include_directories(nvj_timeline_tests PRIVATE tests)
+    add_test(NAME nvj_timeline_tests COMMAND nvj_timeline_tests)
     add_executable(nvj_venue_tests tests/test_venues.cpp)
     target_link_libraries(nvj_venue_tests PRIVATE nvj_core)
     target_include_directories(nvj_venue_tests PRIVATE tests)

@@ -2091,6 +2091,123 @@
           "criteria": "Proposed: no drift beyond the frame time over two hours, no growth in memory, every restart ends in In sync by itself, and the report lists only the differences of media you know about."
         }
       ]
+    },
+    {
+      "id": "hot-standby",
+      "title": "Hot standby: a primary and a standby PC with readiness checks, health reports, a takeover by hand or automatic, a leader epoch against two leaders, a held output on the standby, and the Hot standby window",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SYNC.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0042-hot-standby.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/failover.cpp",
+        "src/core/netsync.cpp",
+        "src/control/netsync_transport.cpp",
+        "src/app/failover_system.cpp",
+        "src/app/failover_selftest.cpp",
+        "src/app/netsync_system.cpp",
+        "src/app/ui_failover.cpp",
+        "tests/test_failover.cpp",
+        "tests/test_netsync.cpp",
+        "scripts/test_failover_two_instances.py"
+      ],
+      "automated": [
+        {
+          "id": "A-HS-1",
+          "kind": "ctest",
+          "name": "nvj_failover_tests",
+          "note": "the readiness checks, the fingerprint of the show, the state machine of the standby (wait, loss, manual and automatic takeover, the blockers, the confirmation window) and the measured times"
+        },
+        {
+          "id": "A-HS-2",
+          "kind": "ctest",
+          "name": "nvj_netsync_tests",
+          "note": "protocol version 2: the readiness and health tail on Clock and Ping, an old peer that never sees it, the signed Takeover message with its epoch rule, no reply loop between two masters and the Bye reason"
+        },
+        {
+          "id": "A-HS-3",
+          "kind": "cli",
+          "command": "NYREXVJ_DATA_DIR=dir NyrexVJ --fresh --no-update-check --no-welcome --failover-selftest --bench-out result.json",
+          "note": "in the real engine: readiness, a held and really black output, a primary that falls silent after ten seconds of readiness and the automatic takeover with its measured times, the leader serving a new follower, the notice to the old primary, a step down for a higher epoch, a clean close without automatic takeover, a takeover by hand, and a clip that cannot be decoded; it uses a temporary data folder"
+        },
+        {
+          "id": "A-HS-4",
+          "kind": "script",
+          "command": "xvfb-run -a python3 scripts/test_failover_two_instances.py build/NyrexVJ --output result.json",
+          "note": "two real NyrexVJ programs on one computer: a frozen primary (SIGSTOP, a network partition) and the automatic takeover, the old primary stepping down after SIGCONT, a kill of the leader (SIGKILL) and the automatic takeover by the former primary, and a clean close followed by a takeover by hand"
+        },
+        {
+          "id": "A-HS-5",
+          "kind": "ctest",
+          "name": "nvj_control_tests",
+          "note": "the four hot standby settings and the leader port with their defaults and ranges"
+        },
+        {
+          "id": "A-HS-6",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Hot standby window has a translation in all seven tables"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-HS-1",
+          "title": "Two computers in a real network: pulled cable, closed program and crashed program",
+          "needs": "Two computers with NyrexVJ 0.49.0 or later in the same wired network, the same media files, one projector or monitor on each, UDP port 9030 open",
+          "steps": [
+            "Turn on Use hot standby on both, set one to master and one to follower, copy the key and wait until the standby has been ready for ten seconds.",
+            "Pull the network cable of the primary for 10 seconds and plug it in again.",
+            "End the primary through the task manager (a crash) and watch the standby.",
+            "Start the primary again as a follower of the new leader.",
+            "Repeat with the automatic takeover off and press Take over by hand."
+          ],
+          "measure": "Seconds from the event to the first picture on the standby (film both screens at 60 frames a second), the numbers under Last takeover, whether both screens ever showed a picture at the same time, and what the old primary did when it came back",
+          "criteria": "Proposed: the standby takes over within the set time plus about two seconds, the old primary steps down after the cable is back, no value of the show is older than the set time, and nothing opens or switches without the setting that allows it."
+        },
+        {
+          "id": "M-HS-2",
+          "title": "Seamless switching with a video switcher or router",
+          "needs": "Two NyrexVJ computers and a video switcher, matrix or router (or an NDI router) that your venue uses, with one input for each computer",
+          "steps": [
+            "Send the output of both computers into the switcher and the switcher into the projector.",
+            "Let the primary play, take over by hand on the standby and switch the switcher to the standby input at the same moment.",
+            "Repeat the switch with the standby input already selected as a preview and with an automatic takeover."
+          ],
+          "measure": "The length of the black or frozen picture on the projector, filmed at 60 frames a second or more, and the offset between the beat on both computers",
+          "criteria": "Proposed: no black picture longer than the switching time of the switcher itself, and a beat that jumps by less than a quarter of a beat."
+        },
+        {
+          "id": "M-HS-3",
+          "title": "A real decoder or output failure on the standby",
+          "needs": "A standby computer with a video file that you can damage, a graphics card and a projector",
+          "steps": [
+            "Make the standby play a clip, then rename or damage the file on the standby only.",
+            "Watch the readiness table and the primary, then stop the primary and watch the standby.",
+            "Close the output window of the standby and look at the table again."
+          ],
+          "measure": "Which check changed, how long it took, what the primary showed about the standby, and whether the standby took over by itself",
+          "criteria": "Proposed: the table names the problem within a few seconds, the primary shows that the standby is not ready, and the standby does not take over by itself while it is not ready."
+        },
+        {
+          "id": "M-HS-4",
+          "title": "Windows at run time",
+          "needs": "Two Windows 10 or 11 computers with the same version",
+          "steps": [
+            "Run NyrexVJ --failover-selftest --bench-out result.json with NYREXVJ_DATA_DIR set to an empty folder.",
+            "Do the steps of the first test with the Windows firewall asking for the permission once on the new leader port.",
+            "Run scripts/test_failover_two_instances.py if Python is installed (it uses SIGSTOP and SIGKILL, which only exist on Linux and macOS, so on Windows use the Task Manager by hand)."
+          ],
+          "measure": "Whether every check of the self test passed, what the firewall asked, and the times under Last takeover",
+          "criteria": "Proposed: the self test passes, the leader port can be opened and the takeover works in both directions."
+        }
+      ]
     }
   ]
 }

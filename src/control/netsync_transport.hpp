@@ -25,6 +25,7 @@ struct TransportConfig {
     std::uint64_t schema = 0;
     size_t stateSize = 0;
     int maxFollowers = kMaxFollowers;
+    std::uint32_t epoch = 1;
     bool operator==(const TransportConfig&) const = default;
 };
 
@@ -59,6 +60,7 @@ public:
     const Follower* follower() const { return follower_.get(); }
     const TransportStats& stats() const { return stats_; }
     unsigned generation() const { return generation_; }
+    void setByeReason(std::uint8_t reason) { byeReason_ = reason; }
 
 private:
     void start(double now);
@@ -72,6 +74,7 @@ private:
     bool running_ = false;
     bool failed_ = false;
     unsigned generation_ = 0;
+    std::uint8_t byeReason_ = kByeEnded;
     double nextRetry_ = 0.0;
     std::string error_;
     UdpSocket socket_;

@@ -404,6 +404,11 @@ Bytes encodeBody(const ClockMsg& m) {
     w.u16(m.jumps);
     w.u32(m.stateSeq);
     w.u32(m.cues);
+    if (m.extended) {
+        w.u32(m.epoch);
+        w.u8(m.health);
+        w.u64(m.showHash);
+    }
     return w.bytes();
 }
 
@@ -412,6 +417,19 @@ Bytes encodeBody(const PingMsg& m) {
     w.f64(m.t0);
     w.u32(m.number);
     w.u32(m.stateSeq);
+    if (m.extended) {
+        w.u8(m.readiness);
+        w.u8(m.health);
+        w.u64(m.showHash);
+    }
+    return w.bytes();
+}
+
+Bytes encodeBody(const TakeoverMsg& m) {
+    Writer w;
+    w.u32(m.epoch);
+    w.u16(m.port);
+    w.str(m.name);
     return w.bytes();
 }
 
@@ -532,6 +550,13 @@ bool decodeBody(const Bytes& body, ClockMsg& m) {
     m.jumps = r.u16();
     m.stateSeq = r.u32();
     m.cues = r.u32();
+    m.extended = false;
+    if (r.good() && !r.atEnd()) {
+        m.epoch = r.u32();
+        m.health = r.u8();
+        m.showHash = r.u64();
+        m.extended = true;
+    }
     if (!r.good() || !r.atEnd()) {
         return false;
     }
@@ -543,7 +568,25 @@ bool decodeBody(const Bytes& body, PingMsg& m) {
     m.t0 = r.f64();
     m.number = r.u32();
     m.stateSeq = r.u32();
+    m.extended = false;
+    if (r.good() && !r.atEnd()) {
+        m.readiness = r.u8();
+        m.health = r.u8();
+        m.showHash = r.u64();
+        m.extended = true;
+        if (m.readiness > kReadinessNotReady) {
+            return false;
+        }
+    }
     return r.good() && r.atEnd() && std::isfinite(m.t0);
+}
+
+bool decodeBody(const Bytes& body, TakeoverMsg& m) {
+    Reader r(body.data(), body.size());
+    m.epoch = r.u32();
+    m.port = r.u16();
+    m.name = r.str();
+    return r.good() && r.atEnd() && m.epoch > 0 && m.port > 0;
 }
 
 bool decodeBody(const Bytes& body, PongMsg& m) {
@@ -946,8 +989,24 @@ void Master::handle(const Peer& peer, const Header& header, const Bytes& body, d
         handleHello(peer, header, body, now);
         return;
     }
+    if (header.type == Type::Takeover) {
+        TakeoverMsg takeover;
+        if (!decodeBody(body, takeover)) {
+            ++stats_.malformed;
+            return;
+        }
+        if (takeover.epoch > config_.epoch && takeover.epoch > takeoverSeen_) {
+            takeoverSeen_ = takeover.epoch;
+            takeovers_.push_back({peer, takeover.epoch, takeover.port, limitName(takeover.name)});
+        }
+        return;
+    }
     Slot* slot = find(peer, header.session);
     if (slot == nullptr) {
+        if (header.type == Type::Reject || header.type == Type::Bye || header.type == Type::Welcome || header.type == Type::Pong) {
+            ++stats_.stray;
+            return;
+        }
         ++stats_.unknownSession;
         if (now - lastReject_ >= 1.0) {
             lastReject_ = now;
@@ -972,6 +1031,13 @@ void Master::handle(const Peer& peer, const Header& header, const Bytes& body, d
             return;
         }
         slot->info.reportedSeq = ping.stateSeq;
+        if (ping.extended) {
+            slot->info.reports = true;
+            slot->info.readiness = ping.readiness;
+            slot->info.health = ping.health;
+            slot->info.showHash = ping.showHash;
+            slot->info.reportedAt = now;
+        }
         PongMsg pong;
         pong.t0 = ping.t0;
         pong.number = ping.number;
@@ -1077,6 +1143,12 @@ void Master::sendClock(Slot& slot, const MasterFrame& frame, double now) {
     message.jumps = frame.clock.jumps;
     message.stateSeq = slot.info.compat == Compat::Full ? slot.seq : 0;
     message.cues = frame.clock.cues;
+    if (slot.protocol >= kProtocolFailover) {
+        message.extended = true;
+        message.epoch = config_.epoch;
+        message.health = frame.clock.health;
+        message.showHash = frame.clock.showHash;
+    }
     send(slot, Type::Clock, encodeBody(message));
 }
 
@@ -1130,14 +1202,28 @@ void Master::update(double now, const MasterFrame& frame) {
     }
 }
 
-void Master::shutdown(double now) {
+void Master::shutdown(double now, std::uint8_t reason) {
     lastNow_ = now;
     for (Slot& slot : slots_) {
         ByeMsg bye;
-        bye.reason = 0;
+        bye.reason = reason;
         send(slot, Type::Bye, encodeBody(bye));
     }
     slots_.clear();
+}
+
+void Master::announceTakeover(const Peer& peer, std::uint32_t epoch, std::uint16_t port, const std::string& name) {
+    TakeoverMsg message;
+    message.epoch = epoch;
+    message.port = port;
+    message.name = limitName(name);
+    sendRaw(peer, kProtocolFailover, Type::Takeover, 0, ++takeoverSeq_, encodeBody(message));
+}
+
+std::vector<TakeoverNotice> Master::takeTakeovers() {
+    std::vector<TakeoverNotice> out;
+    out.swap(takeovers_);
+    return out;
 }
 
 std::vector<Datagram> Master::takeOutgoing() {
@@ -1193,6 +1279,12 @@ void Follower::start(double now) {
     outgoing_.clear();
     masterName_.clear();
     masterVersion_.clear();
+    byeSeen_ = false;
+    byeReason_ = 0;
+    primaryKnown_ = false;
+    primaryEpoch_ = 0;
+    primaryHealth_ = 0;
+    primaryShowHash_ = 0;
 }
 
 void Follower::stop(double now) {
@@ -1224,7 +1316,7 @@ void Follower::sendHello(double now) {
     hello.nonce = nonce_;
     hello.name = config_.name;
     hello.appVersion = config_.appVersion;
-    Bytes packet = encodePacket(config_.key, kProtocol, Type::Hello, clientId_, ++outSeq_, encodeBody(hello));
+    Bytes packet = encodePacket(config_.key, 1, Type::Hello, clientId_, ++outSeq_, encodeBody(hello));
     if (!packet.empty()) {
         outgoing_.push_back(std::move(packet));
         ++stats_.sent;
@@ -1275,6 +1367,12 @@ void Follower::update(double now) {
         ping.t0 = now;
         ping.number = ++pingNumber_;
         ping.stateSeq = stateSeq_;
+        if (protocol_ >= kProtocolFailover) {
+            ping.extended = true;
+            ping.readiness = reportReadiness_;
+            ping.health = reportHealth_;
+            ping.showHash = reportShowHash_;
+        }
         sendPacket(Type::Ping, encodeBody(ping));
         if (pingBurst_ > 0) {
             --pingBurst_;
@@ -1345,6 +1443,8 @@ void Follower::handle(const Header& header, const Bytes& body, double now) {
         epoch_ = header.session;
         inSeq_ = header.seq;
         protocol_ = welcome.protocol;
+        byeSeen_ = false;
+        byeReason_ = 0;
         compat_ = welcome.compat;
         masterName_ = welcome.name;
         masterVersion_ = welcome.appVersion;
@@ -1454,6 +1554,12 @@ void Follower::handle(const Header& header, const Bytes& body, double now) {
             jumpPending_ = true;
         }
         lastJumps_ = message.jumps;
+        if (message.extended) {
+            primaryKnown_ = true;
+            primaryEpoch_ = message.epoch;
+            primaryHealth_ = message.health;
+            primaryShowHash_ = message.showHash;
+        }
         beacon_ = message;
         beaconLocal_ = now;
         haveBeacon_ = true;
@@ -1491,6 +1597,9 @@ void Follower::handle(const Header& header, const Bytes& body, double now) {
         break;
     }
     case Type::Bye: {
+        ByeMsg bye;
+        byeSeen_ = true;
+        byeReason_ = decodeBody(body, bye) ? bye.reason : kByeEnded;
         phase_ = FollowerPhase::Lost;
         nextHello_ = now + kHelloRetryMin;
         helloDelay_ = kHelloRetryMin;
@@ -1522,6 +1631,25 @@ bool Follower::takeJump() {
     const bool value = jumpPending_;
     jumpPending_ = false;
     return value;
+}
+
+PrimaryView Follower::primary() const {
+    PrimaryView view;
+    view.known = primaryKnown_;
+    view.extended = primaryKnown_;
+    view.epoch = primaryEpoch_;
+    view.health = primaryHealth_;
+    view.showHash = primaryShowHash_;
+    view.byeSeen = byeSeen_;
+    view.byeReason = byeReason_;
+    view.lastHeard = lastHeard_;
+    return view;
+}
+
+void Follower::setReport(std::uint8_t readiness, std::uint8_t health, std::uint64_t showHash) {
+    reportReadiness_ = readiness;
+    reportHealth_ = health;
+    reportShowHash_ = showHash;
 }
 
 ClockView Follower::clock(double now) const {

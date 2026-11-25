@@ -10,6 +10,7 @@
 
 #include <array>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -35,6 +36,14 @@ public:
     NetSyncSystem& operator=(const NetSyncSystem&) = delete;
 
     void configure(const NetSyncSettings& settings);
+    NetSyncSettings effective() const { return override_ ? *override_ : wanted_; }
+    bool overridden() const { return override_.has_value(); }
+    std::uint32_t epoch() const { return epoch_; }
+    void becomeLeader(std::uint32_t epoch, int port);
+    void stepDown(const std::string& host, int port, std::uint32_t epoch);
+    void setFailoverReport(std::uint8_t readiness, std::uint8_t health, std::uint64_t showHash);
+    std::vector<netsync::TakeoverNotice> takeTakeovers();
+    void announceTakeover(const std::string& host, int port, std::uint32_t epoch);
     void update(double dt, double now);
     void afterEngineUpdate(double now, double dt);
     void noteCues(size_t count);
@@ -79,6 +88,11 @@ private:
     netsync::Transport transport_;
     netsync::ShowFollower show_;
     NetSyncSettings wanted_;
+    std::optional<NetSyncSettings> override_;
+    std::uint32_t epoch_ = 1;
+    std::uint8_t reportReadiness_ = 0;
+    std::uint8_t reportHealth_ = 0;
+    std::uint64_t reportHash_ = 0;
     netsync::Key key_{};
     bool haveKey_ = false;
     std::string error_;

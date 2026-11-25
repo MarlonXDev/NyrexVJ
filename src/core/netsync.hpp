@@ -12,7 +12,8 @@
 
 namespace nvj::netsync {
 
-constexpr int kProtocol = 1;
+constexpr int kProtocol = 2;
+constexpr int kProtocolFailover = 2;
 constexpr int kDefaultPort = 9030;
 constexpr size_t kMaxPacket = 1200;
 constexpr size_t kHeaderBytes = 26;
@@ -105,7 +106,8 @@ enum class Type : std::uint8_t {
     Resync = 8,
     Manifest = 9,
     Bye = 10,
-    Reject = 11
+    Reject = 11,
+    Takeover = 12
 };
 
 struct Header {
@@ -171,6 +173,18 @@ struct DeltaMsg {
     std::vector<std::pair<std::uint16_t, float>> items;
 };
 
+constexpr std::uint8_t kHealthDecoder = 1;
+constexpr std::uint8_t kHealthOutput = 2;
+constexpr std::uint8_t kHealthOverloaded = 4;
+
+constexpr std::uint8_t kReadinessUnknown = 0;
+constexpr std::uint8_t kReadinessReady = 1;
+constexpr std::uint8_t kReadinessDegraded = 2;
+constexpr std::uint8_t kReadinessNotReady = 3;
+
+constexpr std::uint8_t kByeEnded = 0;
+constexpr std::uint8_t kByeSuperseded = 1;
+
 constexpr std::uint8_t kClockRunning = 1;
 constexpr std::uint8_t kClockTimecode = 2;
 constexpr std::uint8_t kClockLocked = 4;
@@ -186,12 +200,26 @@ struct ClockMsg {
     std::uint16_t jumps = 0;
     std::uint32_t stateSeq = 0;
     std::uint32_t cues = 0;
+    bool extended = false;
+    std::uint32_t epoch = 0;
+    std::uint8_t health = 0;
+    std::uint64_t showHash = 0;
 };
 
 struct PingMsg {
     double t0 = 0.0;
     std::uint32_t number = 0;
     std::uint32_t stateSeq = 0;
+    bool extended = false;
+    std::uint8_t readiness = kReadinessUnknown;
+    std::uint8_t health = 0;
+    std::uint64_t showHash = 0;
+};
+
+struct TakeoverMsg {
+    std::uint32_t epoch = 0;
+    std::uint16_t port = 0;
+    std::string name;
 };
 
 struct PongMsg {
@@ -240,6 +268,7 @@ Bytes encodeBody(const ResyncMsg& message);
 Bytes encodeBody(const ManifestMsg& message);
 Bytes encodeBody(const ByeMsg& message);
 Bytes encodeBody(const RejectMsg& message);
+Bytes encodeBody(const TakeoverMsg& message);
 
 bool decodeBody(const Bytes& body, Hello& message);
 bool decodeBody(const Bytes& body, Welcome& message);
@@ -252,6 +281,7 @@ bool decodeBody(const Bytes& body, ResyncMsg& message);
 bool decodeBody(const Bytes& body, ManifestMsg& message);
 bool decodeBody(const Bytes& body, ByeMsg& message);
 bool decodeBody(const Bytes& body, RejectMsg& message);
+bool decodeBody(const Bytes& body, TakeoverMsg& message);
 
 struct Manifest {
     std::array<std::string, kDecks> deckNames;
@@ -278,6 +308,9 @@ struct ClockData {
     int timecodeRate = 0;
     std::uint16_t jumps = 0;
     std::uint32_t cues = 0;
+    std::uint32_t epoch = 1;
+    std::uint8_t health = 0;
+    std::uint64_t showHash = 0;
 };
 
 struct MasterFrame {
@@ -326,7 +359,15 @@ struct MasterConfig {
     std::uint64_t schema = 0;
     size_t stateSize = 0;
     int maxFollowers = kMaxFollowers;
+    std::uint32_t epoch = 1;
     RandomFn random;
+};
+
+struct TakeoverNotice {
+    Peer peer;
+    std::uint32_t epoch = 0;
+    std::uint16_t port = 0;
+    std::string name;
 };
 
 struct FollowerInfo {
@@ -342,6 +383,11 @@ struct FollowerInfo {
     std::uint32_t knownSeq = 0;
     std::uint64_t packetsOut = 0;
     std::uint64_t packetsIn = 0;
+    bool reports = false;
+    std::uint8_t readiness = kReadinessUnknown;
+    std::uint8_t health = 0;
+    std::uint64_t showHash = 0;
+    double reportedAt = 0.0;
 };
 
 class Master {
@@ -350,7 +396,10 @@ public:
 
     void receive(const Peer& peer, const std::uint8_t* data, size_t size, double now);
     void update(double now, const MasterFrame& frame);
-    void shutdown(double now);
+    void shutdown(double now, std::uint8_t reason = kByeEnded);
+    void announceTakeover(const Peer& peer, std::uint32_t epoch, std::uint16_t port, const std::string& name);
+    std::vector<TakeoverNotice> takeTakeovers();
+    std::uint32_t epoch() const { return config_.epoch; }
     std::vector<Datagram> takeOutgoing();
     std::vector<FollowerInfo> followers() const;
     const Stats& stats() const { return stats_; }
@@ -403,6 +452,9 @@ private:
     std::deque<std::uint64_t> seenOrder_;
     std::unordered_map<std::uint32_t, Bucket> buckets_;
     std::vector<Datagram> outgoing_;
+    std::vector<TakeoverNotice> takeovers_;
+    std::uint64_t takeoverSeq_ = 0;
+    std::uint32_t takeoverSeen_ = 0;
     Stats stats_;
     double lastNow_ = 0.0;
     double lastReject_ = -1e9;
@@ -439,6 +491,17 @@ private:
 };
 
 enum class FollowerPhase { Idle, Connecting, Syncing, Live, Lost };
+
+struct PrimaryView {
+    bool known = false;
+    bool extended = false;
+    std::uint32_t epoch = 0;
+    std::uint8_t health = 0;
+    std::uint64_t showHash = 0;
+    bool byeSeen = false;
+    std::uint8_t byeReason = 0;
+    double lastHeard = 0.0;
+};
 
 struct Change {
     std::uint16_t index = 0;
@@ -499,6 +562,9 @@ public:
     const Stats& stats() const { return stats_; }
     const ClockEstimator& estimator() const { return estimator_; }
     double lastHeard() const { return lastHeard_; }
+    int protocol() const { return protocol_; }
+    PrimaryView primary() const;
+    void setReport(std::uint8_t readiness, std::uint8_t health, std::uint64_t showHash);
 
 private:
     void handle(const Header& header, const Bytes& body, double now);
@@ -543,6 +609,15 @@ private:
     bool jumpPending_ = false;
     Manifest manifest_;
     std::uint64_t manifestVersion_ = 0;
+    std::uint8_t reportReadiness_ = kReadinessUnknown;
+    std::uint8_t reportHealth_ = 0;
+    std::uint64_t reportShowHash_ = 0;
+    bool byeSeen_ = false;
+    std::uint8_t byeReason_ = 0;
+    bool primaryKnown_ = false;
+    std::uint32_t primaryEpoch_ = 0;
+    std::uint8_t primaryHealth_ = 0;
+    std::uint64_t primaryShowHash_ = 0;
     std::vector<Bytes> outgoing_;
     Stats stats_;
 };

@@ -385,6 +385,7 @@ void App::shutdown() {
         return;
     }
     shutDown_ = true;
+    failover_.shutdown();
     netSync_.shutdown(steadyNowSeconds());
     api_.shutdown();
     if (!recoveryPending()) {
@@ -434,6 +435,9 @@ void App::autosaveTick(double dt) {
         const std::string text = compositionToJson(engine_.comp);
         if (text != lastSessionText_ && saveSession(engine_.comp)) {
             lastSessionText_ = text;
+            snapshotAt_ = steadyNowSeconds();
+        } else if (text == lastSessionText_) {
+            snapshotAt_ = steadyNowSeconds();
         }
         const std::filesystem::path dataDir = userDataDir();
         if (creatorUnsaved()) {
@@ -707,6 +711,20 @@ void App::frame(double dt) {
     netSync.follow.clips = settings_.netSyncFollowClips;
     netSync.follow.clock = settings_.netSyncFollowClock;
     netSync_.configure(netSync);
+    FailoverSettings failoverSettings;
+    failoverSettings.enabled = settings_.failoverEnabled;
+    failoverSettings.autoTakeover = settings_.failoverAutoTakeover;
+    failoverSettings.lostAfter = settings_.failoverLostAfter;
+    failoverSettings.holdOutputs = settings_.failoverHoldOutputs;
+    failoverSettings.leaderPort = settings_.failoverLeaderPort;
+    failover_.configure(failoverSettings);
+    FailoverEnv failoverEnv;
+    for (const OutputSpec& spec : outputs_.specs()) {
+        failoverEnv.outputsWanted += spec.enabled ? 1 : 0;
+    }
+    failoverEnv.outputsOpen = outputs_.openCount();
+    failoverEnv.snapshotAge = snapshotAt_ >= 0.0 ? std::max(steadyNowSeconds() - snapshotAt_, 0.0) : -1.0;
+    failover_.update(steadyNowSeconds(), dt, failoverEnv);
     netSync_.update(dt, steadyNowSeconds());
     updateSync(dt);
     updateTimeline(dt);
@@ -816,6 +834,7 @@ void App::frame(double dt) {
     drawGeneratorStudio();
     drawShaderEditor();
     drawRoutingWindow();
+    drawFailoverWindow();
     drawChainLibrary();
     drawSettingsWindow();
     drawUpdateCard();
@@ -1021,6 +1040,9 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Video routing..."), nullptr, routingOpen_)) {
             routingOpen_ = !routingOpen_;
+        }
+        if (ImGui::MenuItem(tr("Hot standby..."), nullptr, failoverOpen_)) {
+            failoverOpen_ = !failoverOpen_;
         }
         ImGui::Separator();
         if (recorder_.active()) {

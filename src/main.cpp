@@ -7,6 +7,7 @@
 #include "app/routing_selftest.hpp"
 #include "app/shader_editor_selftest.hpp"
 #include "app/gpu_particle_selftest.hpp"
+#include "app/failover_selftest.hpp"
 #include "app/netsync_selftest.hpp"
 #include "app/output_selftest.hpp"
 #include "app/pack_cli.hpp"
@@ -35,6 +36,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -74,6 +76,9 @@ struct Options {
     bool gpuDiagSelfTest = false;
     bool routingSelfTest = false;
     bool netSyncSelfTest = false;
+    bool failoverSelfTest = false;
+    std::string failoverReport;
+    double failoverTakeoverAt = 0.0;
     double runSeconds = 0.0;
     std::string netSyncReport;
     bool routingDemo = false;
@@ -184,6 +189,12 @@ Options parseOptions(int argc, char** argv) {
             }
         } else if (arg == "--netsync-selftest") {
             options.netSyncSelfTest = true;
+        } else if (arg == "--failover-selftest") {
+            options.failoverSelfTest = true;
+        } else if (arg == "--failover-report" && hasValue) {
+            options.failoverReport = argv[++i];
+        } else if (arg == "--failover-takeover-at" && hasValue) {
+            options.failoverTakeoverAt = std::max(0.0, std::atof(argv[++i]));
         } else if (arg == "--netsync-report" && hasValue) {
             options.netSyncReport = argv[++i];
         } else if (arg == "--run-seconds" && hasValue) {
@@ -518,7 +529,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.netSyncSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.netSyncSelfTest || options.failoverSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -545,6 +556,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runGpuDiagSelfTest(app.engine(), options.gpuDiagSelfTestBench, options.benchOut);
         } else if (options.netSyncSelfTest) {
             benchExit = nvj::runNetSyncSelfTest(app, options.benchOut);
+        } else if (options.failoverSelfTest) {
+            benchExit = nvj::runFailoverSelfTest(app, options.benchOut);
         } else if (options.routingSelfTest) {
             benchExit = nvj::runRoutingSelfTest(app.engine(), options.routingSelfTestBench, options.benchOut);
         } else if (options.shaderEditorSelfTest) {
@@ -610,6 +623,27 @@ int main(int argc, char** argv) {
     const double loopStart = glfwGetTime();
     app.netSync().recordSamples(!options.netSyncReport.empty());
     double reportSlept = 0.0;
+    double failoverReportLast = -1.0;
+    double failoverRequestedAt = -1.0;
+    bool failoverConfirmed = false;
+    auto writeFailoverReport = [&]() {
+        nlohmann::json failoverJson = app.failover().json(nvj::steadyNowSeconds());
+        failoverJson["netsync"] = app.netSync().report();
+        nlohmann::json failoverControls = nlohmann::json::object();
+        const nvj::netsync::ShowLayout& failoverShow = nvj::netsync::ShowLayout::get();
+        for (size_t i = 0; i < failoverShow.targets.size(); ++i) {
+            failoverControls[failoverShow.ids[i + 1]] = app.control().router().value(failoverShow.targets[i]);
+        }
+        failoverJson["controls"] = failoverControls;
+        failoverJson["blackout"] = app.engine().blackout;
+        const std::string temporary = options.failoverReport + ".tmp";
+        {
+            std::ofstream file(temporary);
+            file << failoverJson.dump(1) << '\n';
+        }
+        std::error_code renameError;
+        std::filesystem::rename(temporary, options.failoverReport, renameError);
+    };
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
@@ -720,6 +754,24 @@ int main(int argc, char** argv) {
             }
         }
 
+        if (options.failoverTakeoverAt > 0.0 && !failoverConfirmed && glfwGetTime() - loopStart >= options.failoverTakeoverAt) {
+            const double steady = nvj::steadyNowSeconds();
+            if (failoverRequestedAt < 0.0) {
+                if (app.failover().requestTakeover(steady)) {
+                    failoverRequestedAt = steady;
+                }
+            } else if (steady - failoverRequestedAt >= 0.7) {
+                failoverConfirmed = app.failover().confirmTakeover(steady);
+                if (!failoverConfirmed) {
+                    failoverRequestedAt = -1.0;
+                }
+            }
+        }
+        if (!options.failoverReport.empty() && glfwGetTime() - failoverReportLast >= 0.5) {
+            failoverReportLast = glfwGetTime();
+            writeFailoverReport();
+        }
+
         if (options.runSeconds > 0.0 && glfwGetTime() - loopStart >= options.runSeconds) {
             break;
         }
@@ -764,6 +816,10 @@ int main(int argc, char** argv) {
         report["samples"] = app.netSync().samples();
         std::ofstream file(options.netSyncReport);
         file << report.dump(1) << '\n';
+    }
+
+    if (!options.failoverReport.empty()) {
+        writeFailoverReport();
     }
 
     app.shutdown();

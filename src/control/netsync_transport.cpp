@@ -97,6 +97,7 @@ void Transport::start(double now) {
         config.schema = active_.schema;
         config.stateSize = active_.stateSize;
         config.maxFollowers = active_.maxFollowers;
+        config.epoch = active_.epoch;
         config.random = &randomValue;
         master_ = std::make_unique<Master>(config);
     } else {
@@ -131,7 +132,8 @@ void Transport::start(double now) {
 
 void Transport::stop(double now) {
     if (master_) {
-        master_->shutdown(now);
+        master_->shutdown(now, byeReason_);
+        byeReason_ = kByeEnded;
         flush();
     }
     if (follower_) {

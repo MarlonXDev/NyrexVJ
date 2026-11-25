@@ -1082,6 +1082,25 @@ If the connection drops, the follower says Master lost, holding the last state: 
 
 > Note: This follows beat, tempo and show state over the network. It is not a hardware frame lock: each PC draws at its own frame time, so two outputs can differ by about one frame, and graphics cards, displays and projectors add their own delay. A master serves up to 8 followers. Finding PCs automatically, encryption, IPv6 and a shared timeline are not built, and it was tested on one computer and with simulated networks, not yet on a real network with real PCs.
 
+## Hot standby: a backup PC that takes over {#sync-failover}
+
+Hot standby uses two PCs for one show. The **primary** runs the show and the **standby** runs the same program, follows it through the network sync and keeps its picture black. If the primary stops, the standby can become the **leader**: it releases its picture, opens the network sync as master and tells the old primary to step down when it comes back. It is **off by default** and needs the network sync from the section above. Open Output, Hot standby to see everything in one window.
+
+1. Set up the network sync first: one PC as master (the primary), the other as follower (the standby), the same key and the same media files on both.
+2. On **both** PCs tick Use hot standby. Open the output window on both PCs, because an output that is not open counts as not ready.
+3. Watch the table Readiness of this PC on the standby. It checks the connection, the program version, the clock, the age of the show state, the clips of the show (by name and as files on this PC), that both PCs have the same show, the outputs, that every playing clip really works, whether the primary reports a fault and the age of the last session snapshot. Ready means every check passed, Check means a hint and Not ready means a check failed.
+4. Take over by hand with Take over... and confirm in the window that follows. The confirmation needs a moment on purpose. If the primary still answers, the window says so, because both PCs may then send a picture until the old primary has stepped down.
+
+The standby takes over **by itself** only if you tick Take over automatically when the primary is lost, and only when all of this is true: the standby was ready for ten seconds before the loss, the primary did not answer for the set time (3 to 60 seconds, 5 at the start), the primary did not close on purpose, nothing is wrong on the standby (no clip that fails, an output that is open) and it did not already take over once. A takeover by itself happens once and you arm it again with Arm again. After a clean close of the primary there is no automatic takeover, but you can still take over by hand.
+
+> Warning: An automatic takeover releases the picture of the standby without asking. NyrexVJ does **not** switch projectors, video cables or network streams. A video switcher, a matrix or an NDI router in front of the projectors has to move to the standby, by hand or by the control of that device. Without one, the projector keeps showing the input it is connected to, and a standby on another input does nothing for the audience.
+
+When a standby takes over, it counts the leader epoch one up. If the old primary comes back, it hears the higher epoch from the leader, steps down and follows the new leader as the new standby, with its picture held black. While the network between the two PCs is cut, both PCs may think that they are the primary, because neither can tell the other. That is why the video switcher must decide which picture the audience sees.
+
+The block Last takeover (measured, not promised) shows the numbers of the last takeover on this PC: after how long the loss was detected, how old the last state was, how long the standby had been ready before, and how long it took to serve as leader. These are measurements from your own network and PCs and not a promise. Events lists what happened, newest first.
+
+> Note: The settings are Use hot standby, Keep the outputs of the standby black, The primary counts as lost after, Port as leader (0 means the port of the primary, which is right for two PCs; use another port only for two programs on one PC) and Take over automatically. Media files are never sent: a standby without a clip that the primary plays shows a table entry and does not play it. Only two PCs are supported, other followers of the old primary are not moved. A takeover does not open output windows, does not change monitors and does not start or stop NDI, Spout or the recording; they only get the picture again when the black hold ends.
+
 ## The cue list {#cues}
 
 The cue list fires any control target at a time of the timecode: a clip, a column, a deck or a value. Add cue creates a cue at the current timecode, or after the last one if there is no timecode. Each cue has a time, an action and, for values, a value. Test fires it at once. Run cues turns the list on, and each cue fires once when the timecode passes its time. Cues do not fire after large jumps, so skipping through the timecode does not fire everything in between.
@@ -1404,6 +1423,9 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--netsync-selftest` | Check the network sync in the real engine in both roles with a lossy relay and exit with code 0 or 1, with `--bench-out FILE.json` for the result; it replaces the key file for the run and puts it back, so use `NYREXVJ_DATA_DIR` |
 | `--netsync-report FILE` | Write a JSON report of the network sync when the program ends: role, state, counters, clock, every synced control and a beat sample per frame |
 | `--run-seconds N` | Close the program after N seconds of real time, for tests |
+| `--failover-selftest` | Check hot standby in the real engine with a simulated primary (readiness, a held and black output, the automatic takeover, a step down, a clean close, a takeover by hand and a clip that cannot be decoded) and exit with 0 or 1, with `--bench-out FILE.json` for the result; it uses a temporary data folder |
+| `--failover-report FILE` | Write a JSON report of hot standby about twice a second and when the program ends: state, readiness checks, measured times and events |
+| `--failover-takeover-at N` | Ask for a takeover by hand N seconds after the start and confirm it 0.7 seconds later, for tests |
 
 ## Tests and measurements {#cli-tests}
 

@@ -624,6 +624,33 @@ std::string Engine::clipError(int clip) const {
     return clips_[static_cast<size_t>(clip)].error;
 }
 
+int Engine::playingFaults(std::vector<std::string>* names) {
+    int faults = 0;
+    for (const Layer& layer : comp.layers) {
+        if (layer.activeColumn < 0 || layer.activeColumn >= static_cast<int>(kColumnCount)) {
+            continue;
+        }
+        const int clip = layer.cells[static_cast<size_t>(layer.activeColumn)];
+        if (clip < 0 || static_cast<size_t>(clip) >= clips_.size()) {
+            continue;
+        }
+        bool failed = false;
+        if (isMediaClip(clip)) {
+            const MediaPlayer* player = mediaPlayer(clip);
+            failed = player != nullptr && player->state() == MediaState::Failed;
+        } else {
+            failed = !clipError(clip).empty();
+        }
+        if (failed) {
+            ++faults;
+            if (names != nullptr) {
+                names->push_back(clipLibrary()[static_cast<size_t>(clip)].name);
+            }
+        }
+    }
+    return faults;
+}
+
 std::string Engine::shaderRuntimeError(int clip) const {
     if (clip < 0 || static_cast<size_t>(clip) >= clips_.size()) {
         return std::string();
@@ -3399,7 +3426,7 @@ void Engine::finalPass(const RenderTarget& source, const ColorGrade& grade, floa
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, source.texture);
     glUniform1i(final_.tex, 0);
-    glUniform1f(final_.level, blackout ? 0.0f : level);
+    glUniform1f(final_.level, (blackout || holdOutput) ? 0.0f : level);
     glUniform4f(final_.grade, grade.hue, grade.saturation, grade.brightness, grade.contrast);
     triangle_.draw();
 }

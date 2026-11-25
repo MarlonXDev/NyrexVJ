@@ -659,6 +659,32 @@ void testLearnAndFiles() {
     Settings hostile;
     CHECK(loadSettings(hostile));
     CHECK(hostile.netSyncRole == "off" && hostile.netSyncPort == 1024 && hostile.netSyncHost.size() == 64 && hostile.netSyncName.size() == 60);
+
+    CHECK(!loaded.failoverEnabled && !loaded.failoverAutoTakeover && loaded.failoverHoldOutputs);
+    CHECK(loaded.failoverLostAfter == 5.0f && loaded.failoverLeaderPort == 0);
+    Settings standby;
+    standby.failoverEnabled = true;
+    standby.failoverAutoTakeover = true;
+    standby.failoverHoldOutputs = false;
+    standby.failoverLostAfter = 12.0f;
+    standby.failoverLeaderPort = 9200;
+    CHECK(saveSettings(standby));
+    Settings standbyLoaded;
+    CHECK(loadSettings(standbyLoaded));
+    CHECK(standbyLoaded.failoverEnabled && standbyLoaded.failoverAutoTakeover && !standbyLoaded.failoverHoldOutputs);
+    CHECK(standbyLoaded.failoverLostAfter == 12.0f && standbyLoaded.failoverLeaderPort == 9200);
+    standby.failoverLostAfter = 0.5f;
+    standby.failoverLeaderPort = 80;
+    CHECK(saveSettings(standby));
+    Settings tooLow;
+    CHECK(loadSettings(tooLow));
+    CHECK(tooLow.failoverLostAfter == 3.0f && tooLow.failoverLeaderPort == 0);
+    standby.failoverLostAfter = 900.0f;
+    standby.failoverLeaderPort = 70000;
+    CHECK(saveSettings(standby));
+    Settings tooHigh;
+    CHECK(loadSettings(tooHigh));
+    CHECK(tooHigh.failoverLostAfter == 60.0f && tooHigh.failoverLeaderPort == 0);
 }
 
 #ifndef _WIN32

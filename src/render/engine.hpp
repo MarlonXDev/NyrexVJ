@@ -167,6 +167,7 @@ public:
     int checkNodeCatalogue(std::string& report);
     std::string effectError(int effect) const;
     std::string clipError(int clip) const;
+    int playingFaults(std::vector<std::string>* names = nullptr);
 
     GLuint outputTexture() const { return out_.texture; }
     int width() const { return out_.width; }
@@ -251,6 +252,7 @@ public:
 
     Composition comp;
     bool blackout = false;
+    bool holdOutput = false;
     bool paused = false;
     bool prewarmNext = true;
 

@@ -222,8 +222,12 @@ void App::drawGeneratorClipInfo(const ClipDef& def, int clip) {
         if (textPlayer->state() == GeneratorState::Ready) {
             hint(tr("%d letters, drawn from a %d px atlas, %s"), textPlayer->glyphCount(), textPlayer->atlasSide(), megabytes(textPlayer->gpuBytes()).c_str());
         }
-    } else if (dynamic_cast<ParticlePlayer*>(player) != nullptr) {
-        hint(tr("Up to %d particles per layer"), engine_.particleLimit());
+    } else if (auto* particlePlayer = dynamic_cast<ParticlePlayer*>(player)) {
+        if (particlePlayer->params().gpu && engine_.gpuParticlesEnabled()) {
+            hint(tr("Up to %d particles on the graphics card, %s"), particlePlayer->params().gpuCount, megabytes(gpuparticles::bytesFor(particlePlayer->params().gpuCount)).c_str());
+        } else {
+            hint(tr("Up to %d particles per layer"), engine_.particleLimit());
+        }
     }
     ImGui::PushID("generatorInfo");
     if (ImGui::SmallButton(tr("Edit..."))) {
@@ -417,6 +421,16 @@ void App::drawGeneratorParticleTab() {
                 }
             }
             ImGui::Separator();
+            hint("%s", tr("Graphics card (experimental)"));
+            for (const particles::Preset& preset : particles::gpuPresets()) {
+                if (ImGui::Selectable(preset.name.c_str())) {
+                    d.params = preset.params;
+                    d.particleName[0] = '\0';
+                    d.particleStatus.clear();
+                    d.clock = 0.0;
+                }
+            }
+            ImGui::Separator();
             hint("%s", tr("Saved"));
             for (const std::string& name : d.particleFiles) {
                 if (ImGui::Selectable(name.c_str(), name == d.particleName)) {
@@ -430,9 +444,18 @@ void App::drawGeneratorParticleTab() {
         }
 
         particles::Params& p = d.params;
+        if (ImGui::CollapsingHeader(tr("Graphics card"), ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox(tr("Run on the graphics card"), &p.gpu);
+            ImGui::SetItemTooltip("%s", tr("The graphics card keeps and moves every particle itself, so far more particles are possible. It needs Experimental GPU particles turned on in Settings, Performance. Otherwise, or when the card cannot do it, the clip runs on the processor with fewer particles."));
+            if (p.gpu) {
+                ImGui::SetNextItemWidth(220.0f);
+                ImGui::SliderInt(tr("Particle pool"), &p.gpuCount, particles::kGpuMinCount, particles::kGpuMaxCount, "%d", ImGuiSliderFlags_Logarithmic);
+                ImGui::SetItemTooltip("%s", tr("How many particles the graphics card keeps. When the pool is full, the oldest particles are reused for new ones."));
+            }
+        }
         if (ImGui::CollapsingHeader(tr("Emission"), ImGuiTreeNodeFlags_DefaultOpen)) {
-            ui::sliderFloat(tr("Particles per second"), &p.rate, 0.0f, 2000.0f, "%.0f");
-            ui::sliderFloat(tr("Burst on every beat"), &p.burst, 0.0f, static_cast<float>(particles::kMaxBurst), "%.0f");
+            ui::sliderFloat(tr("Particles per second"), &p.rate, 0.0f, p.gpu ? particles::kGpuMaxRate : particles::kCpuMaxRate, "%.0f", p.gpu ? ImGuiSliderFlags_Logarithmic : 0);
+            ui::sliderFloat(tr("Burst on every beat"), &p.burst, 0.0f, static_cast<float>(p.gpu ? particles::kGpuMaxBurst : particles::kMaxBurst), "%.0f", p.gpu ? ImGuiSliderFlags_Logarithmic : 0);
             ui::sliderFloat(tr("Lifetime"), &p.life, 0.2f, 10.0f, "%.1f s");
             ui::sliderFloat(tr("Lifetime variation"), &p.lifeJitter, 0.0f, 1.0f, "%.2f");
         }
@@ -444,6 +467,7 @@ void App::drawGeneratorParticleTab() {
             ui::sliderFloat(tr("Gravity"), &p.gravity, -3.0f, 3.0f, "%.2f");
             ui::sliderFloat(tr("Drag"), &p.drag, 0.0f, 5.0f, "%.2f");
             ui::sliderFloat(tr("Turbulence"), &p.turbulence, 0.0f, 1.0f, "%.2f");
+            ui::sliderFloat(tr("Swirl"), &p.swirl, -4.0f, 4.0f, "%.2f");
         }
         if (ImGui::CollapsingHeader(tr("Look"), ImGuiTreeNodeFlags_DefaultOpen)) {
             ui::sliderFloat(tr("Size"), &p.size, 0.002f, 0.25f, "%.3f");
@@ -475,10 +499,23 @@ void App::drawGeneratorParticleTab() {
 
         const int limit = engine_.particleLimit();
         const float expected = p.rate * p.life;
-        if (expected > static_cast<float>(limit)) {
-            textLine(kWarn, std::string(tr("At this rate and lifetime more than the limit of particles would be alive. Newer particles are dropped. The limit is in Settings, Performance.")));
+        if (p.gpu) {
+            const int pool = gpuparticles::capacityFor(p.gpuCount, static_cast<std::uint64_t>(engine_.gpuParticleBudgetMb()) * 1024ull * 1024ull);
+            if (!engine_.gpuParticlesEnabled()) {
+                textLine(kWarn, std::string(tr("GPU particles are turned off in Settings, Performance. This clip runs on the processor with fewer particles.")));
+            } else if (pool < p.gpuCount) {
+                textLine(kWarn, std::string(tr("The graphics memory budget in Settings, Performance is smaller than this pool. The pool is cut down.")));
+            }
+            if (expected > static_cast<float>(std::max(pool, particles::kGpuMinCount))) {
+                textLine(kWarn, std::string(tr("At this rate and lifetime the pool is too small. The oldest particles are reused before they fade out.")));
+            }
+            hint(tr("Pool: %d particles, %s of graphics memory"), p.gpuCount, megabytes(gpuparticles::bytesFor(p.gpuCount)).c_str());
+        } else {
+            if (expected > static_cast<float>(limit)) {
+                textLine(kWarn, std::string(tr("At this rate and lifetime more than the limit of particles would be alive. Newer particles are dropped. The limit is in Settings, Performance.")));
+            }
+            hint(tr("Limit: %d particles per layer, %s of graphics memory"), limit, megabytes(particles::gpuBytes(limit)).c_str());
         }
-        hint(tr("Limit: %d particles per layer, %s of graphics memory"), limit, megabytes(particles::gpuBytes(limit)).c_str());
 
         ImGui::SeparatorText(tr("Save"));
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 180.0f);
@@ -538,7 +575,15 @@ void App::drawGeneratorParticleTab() {
             d.clock = 0.0;
         }
         if (ParticlePlayer* player = engine_.particleEditorPlayer()) {
-            hint(tr("%d particles alive, %lld dropped because of the limit"), player->alive(0), player->dropped());
+            const ParticlePlayer::BackendInfo& backend = player->backend();
+            if (backend.gpu) {
+                hint(tr("On the graphics card: %d of %d slots in use, %lld reused"), backend.used, backend.capacity, static_cast<long long>(backend.recycled));
+            } else {
+                hint(tr("%d particles alive, %lld dropped because of the limit"), player->alive(0), player->dropped());
+            }
+            if (!backend.note.empty()) {
+                textLine(kWarn, trMessage(backend.note));
+            }
         }
         hint("%s", tr("The preview reacts to the beat and the level of the music that is playing."));
         ImGui::EndTable();

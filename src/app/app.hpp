@@ -82,6 +82,8 @@ struct StartOptions {
     int showPackageTab = -1;
     int packageTab = -1;
     int generatorTab = -1;
+    std::string generatorSelect;
+    int gpuParticles = -1;
     int chainTarget = -1;
     std::string chainSelect;
     std::string packageFile;

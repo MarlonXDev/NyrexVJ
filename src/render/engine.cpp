@@ -482,7 +482,9 @@ std::unique_ptr<GeneratorPlayer> Engine::makeGenerator(const ClipDef& def) const
         return std::make_unique<TextPlayer>(def.name, generatorStem(def));
     }
     if (def.kind == ClipKind::ParticleClip) {
-        return std::make_unique<ParticlePlayer>(def.name, generatorStem(def), def.path.empty(), particleLimit_);
+        auto player = std::make_unique<ParticlePlayer>(def.name, generatorStem(def), def.path.empty(), particleLimit_);
+        player->setGpu(gpuParticles_);
+        return player;
     }
     return nullptr;
 }
@@ -770,6 +772,20 @@ void Engine::setParticleLimit(int limit) {
     }
 }
 
+void Engine::setGpuParticles(bool enabled, int budgetMb) {
+    gpuParticles_ = enabled;
+    gpuParticleBudgetMb_ = gpuparticles::clampBudgetMb(budgetMb);
+    generatorGl_.gpuParticles.budget->setLimit(static_cast<std::uint64_t>(gpuParticleBudgetMb_) * 1024ull * 1024ull);
+    for (std::unique_ptr<GeneratorPlayer>& player : generators_) {
+        if (auto* particle = dynamic_cast<ParticlePlayer*>(player.get())) {
+            particle->setGpu(gpuParticles_);
+        }
+    }
+    if (particleEditor_) {
+        particleEditor_->setGpu(gpuParticles_);
+    }
+}
+
 void Engine::reloadGeneratorClips(const std::vector<size_t>& indices) {
     for (size_t index : indices) {
         if (index >= generators_.size() || !generators_[index]) {
@@ -911,6 +927,7 @@ bool Engine::drawParticlePreview(const particles::Params& params, RenderTarget& 
     }
     if (!particleEditor_) {
         particleEditor_ = std::make_unique<ParticlePlayer>("editor", std::string(), false, particleLimit_);
+        particleEditor_->setGpu(gpuParticles_);
     }
     const std::string key = particles::paramsToJson(params);
     if (key != particleEditorKey_) {

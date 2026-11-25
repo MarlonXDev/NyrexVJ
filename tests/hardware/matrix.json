@@ -1019,7 +1019,7 @@
           "title": "File names with umlauts and spaces, hot reload on Windows",
           "needs": "A Windows computer",
           "steps": [
-            "Copy ISF files with names like Gr\u00f6\u00dfe Welle.fs and with spaces into the shaders folder.",
+            "Copy ISF files with names like Größe Welle.fs and with spaces into the shaders folder.",
             "Check the names in the Library and the effect list, save a change in an editor while the shader plays, and delete a file.",
             "Save a preset that uses a filter, restart and load it."
           ],
@@ -1575,6 +1575,92 @@
           ],
           "measure": "Whether anything stutters while a window is open, whether Undo restores the old effects, and what the import window says about the missing effect",
           "criteria": "Proposed: no dropped frames while the windows are open, one Undo step restores the effects, and the missing effect is named while the other effects are kept."
+        }
+      ]
+    },
+    {
+      "id": "gpu-particles",
+      "title": "GPU particles with transform feedback and a processor fallback: card against processor reference, repeatability, ring reuse, memory budget, every fallback, audio and beat modulation, state left clean",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/GENERATORS.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0037-gpu-particles.md"
+      ],
+      "sources": [
+        "src/core/gpu_particles.cpp",
+        "src/core/particles.cpp",
+        "src/render/gpu_particles.cpp",
+        "src/render/generators.cpp",
+        "src/app/ui_generators.cpp",
+        "src/app/gpu_particle_selftest.cpp",
+        "tests/test_gpu_particles.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-GP-1",
+          "kind": "ctest",
+          "name": "nvj_gpuparticles_tests"
+        },
+        {
+          "id": "A-GP-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --gpu-particle-selftest 8 --bench-out result.json",
+          "note": "in the real engine with OpenGL: the shaders compile, the card matches a processor reference of the same algorithm and itself bit for bit, another seed and louder audio change the result, every beat adds one burst, the ring reuses the oldest slots, the memory budget cuts, refuses and returns, every fallback (setting off, shader fault, budget too small) runs the clip on the processor and the clip returns to the card, no GL state is left behind, the pictures are visible and repeat, the engine switches without a restart; the benchmark times the update step and the draw at 1920 x 1080 and 3840 x 2160 for 16,384 to 1,048,576 particles"
+        },
+        {
+          "id": "A-GP-3",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Graphics card section, the GPU settings and the fallback messages has a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-GP-4",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --gpu-particles 1 --generators 1 --generator-select \"GPU Nebula\" --frames 40",
+          "note": "opens the Particles tab on the GPU Nebula clip with the setting on and runs 40 frames through a real OpenGL context; a smoke test of the window, not a test of its use"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-GP-1",
+          "title": "GPU particle cost on a real graphics card",
+          "needs": "A Windows or Linux computer with a graphics card (the card and driver version are part of the result), NyrexVJ and the output resolution you use for shows",
+          "steps": [
+            "Run NyrexVJ --gpu-particle-selftest 8 --bench-out result.json and keep the file. A failed check of the card against the processor reference is a result too.",
+            "Turn on Settings, Performance, Experimental GPU particles, play GPU Nebula on a layer above a heavy clip and read the GPU time in the status bar with and without it.",
+            "Raise the Particle pool of GPU Nebula in the Particles tab step by step to 1,048,576 with a budget of 64 MB and read the GPU time and the frame rate at each step."
+          ],
+          "measure": "The update and draw milliseconds of the self test at 1080p and 4K, the GPU time of the status bar with and without the clip, the frame rate at each pool size, and whether any check failed",
+          "criteria": "Proposed: the checks pass, a pool of 262,144 adds under 2 ms of GPU time at 1080p on a graphics card of the last five years, a million particles stay under 8 ms, and the frame rate holds the target in both cases. If the numbers are worse, the budget default and the limits are to be revisited."
+        },
+        {
+          "id": "M-GP-2",
+          "title": "The fallback on a real computer",
+          "needs": "A computer with NyrexVJ and, if you have one, a second computer with an older or integrated graphics card",
+          "steps": [
+            "With GPU particles on, play GPU Beat Burst with music and turn the setting off and on again while it plays.",
+            "Set Graphics memory for GPU particles to 8 MB, play GPU Nebula and look at the message under the preview and the pool.",
+            "On the older or integrated card run the self test and play GPU Nebula."
+          ],
+          "measure": "Whether the clip keeps playing when the setting changes, what the window says when the budget is too small, and which checks pass on the older card",
+          "criteria": "Proposed: the clip never stops or leaves a black picture when the setting changes, the budget message names the cause, and on a card without transform feedback or with a failed check the clip plays on the processor and the window says why."
+        },
+        {
+          "id": "M-GP-3",
+          "title": "A show with GPU particles on the beat",
+          "needs": "A computer with NyrexVJ, an audio source with a beat, and the output setup you use for events",
+          "steps": [
+            "Play GPU Beat Burst and GPU Rain on two layers over a video for 30 minutes with the audio running and the beat clock locked.",
+            "Watch the memory page of Settings, the GPU time and the dropped frames, and switch the output resolution once.",
+            "Save a GPU clip of your own with a different pool and seed, restart NyrexVJ and play it again."
+          ],
+          "measure": "The graphics memory counted for Text and particles at the start and the end, the number of dropped frames, and whether the saved clip looks the same after the restart",
+          "criteria": "Proposed: the memory stays inside the budget and does not grow, no dropped frames that were not there without the clips, and the saved clip starts from the same seed and looks the same on the same computer."
         }
       ]
     }

@@ -713,13 +713,31 @@ Ein Partikel-Clip zeigt viele kleine weiche Punkte, die an einem Ort entstehen, 
 | Gruppe | Einstellungen |
 | --- | --- |
 | Ausstoß | Partikel pro Sekunde, Stoß bei jedem Beat, Lebensdauer und ihre Abweichung |
-| Bewegung | Geschwindigkeit und ihre Abweichung, Richtung, Streuung, Schwerkraft, Luftwiderstand, Turbulenz |
+| Bewegung | Geschwindigkeit und ihre Abweichung, Richtung, Streuung, Schwerkraft, Luftwiderstand, Turbulenz, Wirbel |
 | Look | Größe, Größe am Ende, Größen-Abweichung, Einblenden, Weichheit, Farbe, Licht addieren (Leuchten) |
 | Quelle | Form (Punkt, Reihe, Ring, Rechteck), Ursprung X und Y, Ausdehnung |
 | Musik | Pegel fügt Partikel hinzu, Pegel vergrößert Partikel, Pegel beschleunigt Partikel |
 | Weiteres | Zufallswert, Neustart, Abspielen |
 
 Der Beat löst den Stoß aus, auch wenn Partikel pro Sekunde auf 0 steht, und die Lautstärke der Musik steuert die drei Pegel-Regler. Mit derselben Datei und demselben Zufallswert bekommst du jedes Mal dieselbe Bewegung, praktisch, wenn ein Look sich wiederholen soll.
+
+## GPU-Partikel {#gpu-particles}
+
+Manche Partikel-Clips können auf der Grafikkarte statt auf dem Prozessor laufen. Die Karte hält dann jedes Partikel selbst und bewegt alle in einem Schritt pro Bild, deshalb passen weit mehr hinein als die 16.384 eines normalen Partikel-Clips: von 1.024 bis 1.048.576. Drei eingebaute Clips nutzen das, GPU Nebula, GPU Beat Burst und GPU Rain. Es ist experimentell und aus, bis du unter Einstellungen, Leistung, Text und Partikel die Option Experimentelle GPU-Partikel einschaltest, weil es noch niemand auf einer echten Grafikkarte ausprobiert hat.
+
+| Einstellung | Was sie macht |
+| --- | --- |
+| Auf der Grafikkarte laufen lassen | Im Reiter Partikel unter Grafikkarte. Macht aus einem Partikel-Clip einen GPU-Clip, und die Datei merkt es sich |
+| Partikel-Vorrat | Wie viele Partikel die Karte hält, 1.024 bis 1.048.576. Ist der Vorrat voll, werden die ältesten Partikel für neue wiederverwendet |
+| Wirbel | Schiebt die Partikel um die Quelle herum. Das geht auch auf dem Prozessor |
+| Partikel pro Sekunde, Stoß bei jedem Beat | Bei einem GPU-Clip bis zu 200.000 pro Sekunde und 100.000 bei jedem Beat |
+| Grafikspeicher für GPU-Partikel | In Einstellungen, Leistung. Alle GPU-Clips zusammen bleiben in diesem Budget, 8 bis 512 MB, am Anfang 64 MB |
+
+Jedes Partikel kostet 64 Byte Grafikspeicher, also fassen 64 MB rund eine Million Partikel. Ein Clip, der nicht ins Budget passt, bekommt einen kleineren Vorrat, und passt nicht einmal der kleinste, läuft er auf dem Prozessor.
+
+![Der Reiter Partikel mit dem Clip GPU Nebula, der auf der Grafikkarte läuft](gpu-particles.webp)
+
+> Hinweis: Ist die Einstellung aus, kann der Grafiktreiber es nicht, lassen sich die Shader nicht übersetzen oder meldet der Treiber einen Fehler, läuft der Clip mit weniger Partikeln auf dem Prozessor, und das Fenster sagt warum. Die Show hält nie an. Auf dem Prozessor sieht ein GPU-Clip dünner aus, weil viel weniger Partikel hineinpassen. Dieselbe Datei und derselbe Zufallswert ergeben auf demselben Rechner dasselbe Bild. Eine andere Grafikkarte kann sich in den letzten Stellen unterscheiden.
 
 ## Grenzen, die die Show schützen {#generator-limits}
 
@@ -730,6 +748,7 @@ Text und Partikel können den Rechner nie übernehmen. Eine Datei kann keine die
 | Gleichzeitig lebende Partikel | Einstellungen, Leistung, Text und Partikel, Partikel-Obergrenze pro Ebene: 64 bis 16.384, Voreinstellung 2048. Bei je 24 Byte sind 16.384 Partikel 384 KiB Grafikspeicher |
 | Neuere Partikel, wenn die Grenze erreicht ist | Werden verworfen, und das Fenster zeigt, wie viele, damit das Bild flüssig bleibt |
 | Ein Text | Bis zu 1000 Zeichen, 40 Zeilen und ein Bild der Buchstaben von höchstens 4 MiB, im Hintergrund gemacht, damit ein langer Text die Show nie anhält |
+| GPU-Partikel | Einstellungen, Leistung, Text und Partikel, Grafikspeicher für GPU-Partikel: 8 bis 512 MB, 64 Byte je Partikel, bis zu 1.048.576 je Clip und 200.000 neue Partikel pro Sekunde |
 | Dateien | je 32 KiB, 64 je Art, Namen bis 64 Byte |
 
 > Warning: Ist eine Text- oder Partikeldatei beschädigt oder lässt sich die Schrift nicht lesen, bleibt nur dieser Clip leer und sagt warum. Die Ebenen darunter spielen weiter. Einstellungen, Leistung, Text und Partikel können alle diese Clips aus der Bibliothek ausblenden.
@@ -1180,7 +1199,7 @@ Die Layer-Auflösung zeichnet die Layer und ihre Effekte in kleinerer Größe un
 
 ## Text und Partikel {#perf-generators}
 
-Partikel-Obergrenze pro Ebene ist die größte Zahl an Partikeln, die ein Partikel-Clip gleichzeitig am Leben haben darf, von 64 bis 16.384, am Anfang 2048. Ist die Grenze erreicht, werden neuere Partikel verworfen und das Bild bleibt flüssig. Jedes Partikel kostet 24 Byte Grafikspeicher. Text- und Partikel-Clips in der Bibliothek zeigen blendet sie alle aus der Bibliothek aus. Siehe [Text, Partikel und Effektketten](#generators/generator-limits).
+Partikel-Obergrenze pro Ebene ist die größte Zahl an Partikeln, die ein Partikel-Clip gleichzeitig am Leben haben darf, von 64 bis 16.384, am Anfang 2048. Ist die Grenze erreicht, werden neuere Partikel verworfen und das Bild bleibt flüssig. Jedes Partikel kostet 24 Byte Grafikspeicher. Text- und Partikel-Clips in der Bibliothek zeigen blendet sie alle aus der Bibliothek aus. Experimentelle GPU-Partikel lässt Clips, die es verlangen, auf der Grafikkarte laufen, und Grafikspeicher für GPU-Partikel ist das Budget für alle zusammen, 8 bis 512 MB. Siehe [Text, Partikel und Effektketten](#generators/gpu-particles).
 
 ## Was Zeit kostet {#perf-cost}
 

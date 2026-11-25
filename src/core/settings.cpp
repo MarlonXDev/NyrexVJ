@@ -64,6 +64,11 @@ bool loadSettings(Settings& settings) {
     result.videoGpuConvert = boolean("videoGpuConvert", true);
     result.prewarmNext = boolean("prewarmNext", true);
     result.generatorClips = boolean("generatorClips", true);
+    result.gpuParticles = boolean("gpuParticles", false);
+    auto gpuBudget = doc.find("gpuParticleBudgetMb");
+    if (gpuBudget != doc.end() && gpuBudget->is_number_integer()) {
+        result.gpuParticleBudgetMb = std::clamp(gpuBudget->get<int>(), 8, 512);
+    }
     auto particleLimit = doc.find("particleLimit");
     if (particleLimit != doc.end() && particleLimit->is_number_integer()) {
         result.particleLimit = std::clamp(particleLimit->get<int>(), 64, 16384);
@@ -326,6 +331,8 @@ bool saveSettings(const Settings& settings) {
     doc["prewarmNext"] = settings.prewarmNext;
     doc["generatorClips"] = settings.generatorClips;
     doc["particleLimit"] = std::clamp(settings.particleLimit, 64, 16384);
+    doc["gpuParticles"] = settings.gpuParticles;
+    doc["gpuParticleBudgetMb"] = std::clamp(settings.gpuParticleBudgetMb, 8, 512);
     doc["convertMode"] = settings.convertMode;
     doc["convertFormat"] = settings.convertFormat;
     doc["convertCacheMb"] = settings.convertCacheMb;

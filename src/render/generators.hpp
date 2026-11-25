@@ -5,6 +5,7 @@
 #include "core/text_font.hpp"
 #include "core/text_layout.hpp"
 #include "render/gl_util.hpp"
+#include "render/gpu_particles.hpp"
 
 #include <array>
 #include <chrono>
@@ -30,6 +31,8 @@ struct GeneratorFrame {
 
 enum class GeneratorState { Idle, Loading, Ready, Failed };
 
+const char* particleFragmentSource();
+
 class GeneratorGl {
 public:
     ~GeneratorGl();
@@ -52,6 +55,7 @@ public:
     GLint particleMode = -1;
     GLint particleSoft = -1;
     GLint particleScale = -1;
+    GpuParticleGl gpuParticles;
 
 private:
     bool tried_ = false;
@@ -160,18 +164,34 @@ public:
     void release() override;
     unsigned long long gpuBytes() const override;
 
+    struct BackendInfo {
+        bool gpu = false;
+        int capacity = 0;
+        int used = 0;
+        std::uint64_t recycled = 0;
+        std::string note;
+    };
+
     void setParams(const particles::Params& params);
     void setLimit(int limit);
+    void setGpu(bool enabled);
+    bool gpuEnabled() const { return gpuEnabled_; }
     const particles::Params& params() const { return params_; }
     int alive(int instance) const;
     long long dropped() const;
     int limit() const { return limit_; }
+    const BackendInfo& backend() const { return backend_; }
+    GpuParticleSystem* gpuSystem(int instance);
 
 private:
     struct Slot {
         std::unique_ptr<particles::System> system;
+        std::unique_ptr<GpuParticleSystem> gpu;
         int version = -1;
+        int epoch = -1;
+        std::string note;
     };
+    void rebuild(GeneratorGl& gl, Slot& slot);
     bool drawSystem(GeneratorGl& gl, const GeneratorFrame& frame, particles::System& system, const particles::Drive& drive);
 
     std::string name_;
@@ -182,6 +202,9 @@ private:
     int version_ = 0;
     int limit_ = particles::kDefaultLimit;
     std::map<int, Slot> slots_;
+    bool gpuEnabled_ = false;
+    int gpuEpoch_ = 0;
+    BackendInfo backend_;
     GLuint buffer_ = 0;
     size_t bufferCapacity_ = 0;
     std::vector<particles::Vertex> vertices_;

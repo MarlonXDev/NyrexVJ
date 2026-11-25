@@ -688,7 +688,7 @@
       "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
       "test": "A-MN-4",
       "command": "NyrexVJ --fresh --no-update-check --no-welcome --manual outputs --lang de --frames 60",
-      "notes": "exit code 0; a separate screenshot run with --manual outputs/slices --lang de showed the German chapter Ausg\u00e4nge, Mapping und OBS opened at the section Slices und Bildausschnitt"
+      "notes": "exit code 0; a separate screenshot run with --manual outputs/slices --lang de showed the German chapter Ausgänge, Mapping und OBS opened at the section Slices und Bildausschnitt"
     },
     {
       "area": "live-workflow",
@@ -910,6 +910,58 @@
       "test": "A-GN-6",
       "command": "NyrexVJ --fresh --chains 0 --frames 40",
       "notes": "exit 0, window opened for the first layer and drawn for 40 frames, preview of a chain looked at in a screenshot"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.44.0 (branch feature/gpu-particles, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-particles",
+      "test": "A-GP-1",
+      "command": "ctest -R nvj_gpuparticles_tests",
+      "notes": "217 checks (hash, memory budget, scheduler, processor reference, file format, fallback scaling, built-in GPU clips, swirl on the processor); whole suite 41 of 41 passed"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.44.0 (branch feature/gpu-particles, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-particles",
+      "test": "A-GP-2",
+      "command": "NyrexVJ --fresh --gpu-particle-selftest 8 --bench-out result.json",
+      "notes": "30 checks passed; the card matched the processor reference exactly on llvmpipe, which computes on the processor and says nothing about real cards; benchmark of 16,384 to 1,048,576 particles at 1080p and 4K is a software renderer and does not predict a graphics card"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.44.0 (branch feature/gpu-particles, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-particles",
+      "test": "A-GP-3",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "All 2291 translation keys are covered"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.44.0 (branch feature/gpu-particles, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "gpu-particles",
+      "test": "A-GP-4",
+      "command": "NyrexVJ --fresh --gpu-particles 1 --generators 1 --generator-select \"GPU Nebula\" --frames 40",
+      "notes": "the window opened on the Particles tab and showed the clip on the graphics card path; a smoke test only"
     }
   ]
 }

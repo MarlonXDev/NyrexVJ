@@ -93,6 +93,10 @@ void pushVertex(std::vector<float>& out, float x, float y, float u, float v, con
 
 }
 
+const char* particleFragmentSource() {
+    return kParticleFragment;
+}
+
 GeneratorGl::~GeneratorGl() {
     release();
 }
@@ -157,6 +161,7 @@ void GeneratorGl::release() {
         glDeleteVertexArrays(1, &vao);
         vao = 0;
     }
+    gpuParticles.release();
 }
 
 int textBakeHeight(float neededPixels) {
@@ -495,6 +500,18 @@ void ParticlePlayer::setLimit(int limit) {
     limit_ = particles::clampLimit(limit);
 }
 
+void ParticlePlayer::setGpu(bool enabled) {
+    if (gpuEnabled_ != enabled) {
+        gpuEnabled_ = enabled;
+        ++gpuEpoch_;
+    }
+}
+
+GpuParticleSystem* ParticlePlayer::gpuSystem(int instance) {
+    auto it = slots_.find(instance);
+    return it == slots_.end() ? nullptr : it->second.gpu.get();
+}
+
 void ParticlePlayer::reload() {
     if (fromFile_) {
         loaded_ = false;
@@ -507,7 +524,13 @@ void ParticlePlayer::release() {
 }
 
 unsigned long long ParticlePlayer::gpuBytes() const {
-    return buffer_ ? static_cast<unsigned long long>(bufferCapacity_) : 0ull;
+    unsigned long long total = buffer_ ? static_cast<unsigned long long>(bufferCapacity_) : 0ull;
+    for (const auto& entry : slots_) {
+        if (entry.second.gpu) {
+            total += entry.second.gpu->gpuBytes();
+        }
+    }
+    return total;
 }
 
 int ParticlePlayer::alive(int instance) const {
@@ -602,6 +625,40 @@ bool ParticlePlayer::drawSystem(GeneratorGl& gl, const GeneratorFrame& frame, pa
     return true;
 }
 
+void ParticlePlayer::rebuild(GeneratorGl& gl, Slot& slot) {
+    if (slot.gpu && params_.gpu && gpuEnabled_ && slot.epoch == gpuEpoch_ && slot.gpu->reconfigure(params_)) {
+        slot.version = version_;
+        return;
+    }
+    slot.system.reset();
+    slot.gpu.reset();
+    slot.note.clear();
+    if (params_.gpu) {
+        if (!gpuEnabled_) {
+            slot.note = "GPU particles are turned off in the settings, so this clip runs on the CPU with fewer particles";
+        } else {
+            std::string error;
+            if (!gl.gpuParticles.ensure(error, kParticleFragment)) {
+                slot.note = error;
+            } else {
+                auto gpu = std::make_unique<GpuParticleSystem>(gl.gpuParticles);
+                if (gpu->create(params_, error)) {
+                    slot.gpu = std::move(gpu);
+                } else {
+                    slot.note = error;
+                }
+            }
+        }
+    }
+    if (!slot.gpu) {
+        slot.system = std::make_unique<particles::System>(limit_);
+        slot.system->setParams(params_.gpu ? particles::cpuEquivalent(params_, limit_) : params_);
+        slot.system->reset();
+    }
+    slot.version = version_;
+    slot.epoch = gpuEpoch_;
+}
+
 bool ParticlePlayer::draw(GeneratorGl& gl, const GeneratorFrame& frame, int instance) {
     if (state_ != GeneratorState::Ready || frame.width <= 0 || frame.height <= 0) {
         return false;
@@ -611,25 +668,48 @@ bool ParticlePlayer::draw(GeneratorGl& gl, const GeneratorFrame& frame, int inst
         if (slots_.size() >= 16) {
             return false;
         }
-        Slot slot;
-        slot.system = std::make_unique<particles::System>(limit_);
-        found = slots_.emplace(instance, std::move(slot)).first;
+        found = slots_.emplace(instance, Slot()).first;
     }
     Slot& slot = found->second;
-    particles::System& system = *slot.system;
-    if (slot.version != version_) {
-        system.setParams(params_);
-        system.reset();
-        slot.version = version_;
+    if (slot.version != version_ || slot.epoch != gpuEpoch_) {
+        rebuild(gl, slot);
     }
-    if (system.limit() != particles::clampLimit(limit_)) {
-        system.setLimit(limit_);
-    }
-    system.setAspect(static_cast<float>(frame.width) / static_cast<float>(frame.height));
+    const float aspect = static_cast<float>(frame.width) / static_cast<float>(frame.height);
     particles::Drive drive;
     drive.clock = frame.clock;
     drive.beat = frame.beat;
     drive.level = frame.level;
+    if (slot.gpu && !slot.gpu->advance(drive, aspect)) {
+        slot.note = "The graphics driver reported an error in the GPU particles, so this clip runs on the CPU";
+        slot.gpu.reset();
+        slot.system = std::make_unique<particles::System>(limit_);
+        slot.system->setParams(particles::cpuEquivalent(params_, limit_));
+        slot.system->reset();
+    }
+    backend_.note = slot.note;
+    if (slot.gpu) {
+        backend_.gpu = true;
+        backend_.capacity = slot.gpu->capacity();
+        backend_.used = slot.gpu->used();
+        backend_.recycled = slot.gpu->recycled();
+        GpuParticleView view;
+        view.aspect = aspect;
+        view.scale = frame.scale;
+        view.level = frame.level;
+        view.colorA = frame.colorA;
+        view.colorB = frame.colorB;
+        view.rainbow = frame.rainbow;
+        return slot.gpu->draw(view);
+    }
+    backend_.gpu = false;
+    backend_.capacity = slot.system->limit();
+    backend_.used = slot.system->alive();
+    backend_.recycled = static_cast<std::uint64_t>(slot.system->dropped());
+    particles::System& system = *slot.system;
+    if (system.limit() != particles::clampLimit(limit_)) {
+        system.setLimit(limit_);
+    }
+    system.setAspect(aspect);
     system.advance(drive);
     return drawSystem(gl, frame, system, drive);
 }
@@ -639,7 +719,7 @@ bool ParticlePlayer::drawThumbnail(GeneratorGl& gl, const GeneratorFrame& frame)
         return false;
     }
     particles::System system(limit_);
-    system.setParams(params_);
+    system.setParams(params_.gpu ? particles::cpuEquivalent(params_, limit_) : params_);
     system.setAspect(static_cast<float>(frame.width) / static_cast<float>(frame.height));
     system.reset();
     particles::Drive drive;

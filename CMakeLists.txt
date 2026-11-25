@@ -174,6 +174,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/generator_files.cpp
     src/core/text_doc.cpp
     src/core/particles.cpp
+    src/core/gpu_particles.cpp
     src/core/effect_json.cpp
     src/core/effect_chain.cpp
     src/core/show_workflow.cpp
@@ -347,6 +348,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/record_selftest.cpp
     src/app/shader_selftest.cpp
     src/app/generator_selftest.cpp
+    src/app/gpu_particle_selftest.cpp
     src/app/scene_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
@@ -372,6 +374,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/gpu_profiler.cpp
     src/render/gl_util.cpp
     src/render/generators.cpp
+    src/render/gpu_particles.cpp
     src/render/shader_passes.cpp
     src/render/output_window.cpp
     src/render/texture_history.cpp
@@ -548,6 +551,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_creative_tests PRIVATE tests)
     target_compile_definitions(nvj_creative_tests PRIVATE NVJ_TEST_FONT_DIR="${imgui_SOURCE_DIR}/misc/fonts")
     add_test(NAME nvj_creative_tests COMMAND nvj_creative_tests)
+    add_executable(nvj_gpuparticles_tests tests/test_gpu_particles.cpp)
+    target_link_libraries(nvj_gpuparticles_tests PRIVATE nvj_core)
+    target_include_directories(nvj_gpuparticles_tests PRIVATE tests)
+    add_test(NAME nvj_gpuparticles_tests COMMAND nvj_gpuparticles_tests)
     add_executable(nvj_workflow_tests tests/test_workflow.cpp)
     target_link_libraries(nvj_workflow_tests PRIVATE nvj_core)
     target_include_directories(nvj_workflow_tests PRIVATE tests)

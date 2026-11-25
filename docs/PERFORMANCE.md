@@ -227,6 +227,14 @@ Text and particle clips ([GENERATORS.md](GENERATORS.md), [ADR 0036](adr/0036-tex
 - **Memory is shown.** The Memory block of the performance page lists Text and particles next to render targets and thumbnails.
 - **How to measure it.** `NyrexVJ --generator-selftest 120 --bench-out result.json` times a flat layer, a text layer and particles at 512, 2048, 8192 and 16,384 and writes the milliseconds per frame, the number alive and the graphics memory. On the build machine of this release (Mesa llvmpipe, 960 x 540, no graphics card) the growth was 7.6 ms for the flat layer, 13.9 with text, 13.7 with 512 particles, 15.6 with 2048, 24.0 with 8192 and 33.6 with 16,384. A software renderer draws every sprite on the processor, so these numbers show how the cost grows with the limit and not how a graphics card behaves. A measurement on a real card is an open manual test (M-GN-1).
 
+## What is new in 0.44.0: GPU particles
+
+GPU particles ([GENERATORS.md](GENERATORS.md), [ADR 0037](adr/0037-gpu-particles.md)) move the simulation of a particle clip onto the graphics card. They are off by default, and when they are off nothing of this exists.
+
+- **Bounded memory.** 64 bytes per particle. One budget for all GPU clips together (Settings, Performance, Graphics memory for GPU particles, 8 to 512 MB, default 64). A pool that does not fit is cut, and one that cannot be made at all runs on the processor. The budget is returned when a pool or clip is released, and the memory page of Settings counts the buffers under Text and particles.
+- **Bounded work.** One update pass and one instanced draw per place, at most 8 steps of 1/60 s a frame, at most 131,072 births in a step. The update costs the slots in use, not the particles alive.
+- **Measured here.** `NyrexVJ --gpu-particle-selftest 8 --bench-out result.json` gave, on a software renderer with no graphics card, an update of 0.44 ms for 16,384 slots up to 32 ms for 1,048,576, and a draw of 23 ms up to 856 ms at 1920 x 1080 and 42 ms up to 1382 ms at 3840 x 2160. The cost is linear in the pool. A software renderer draws every sprite on the processor, so these numbers do not predict a graphics card. A measurement on a real card is an open manual test (M-GP-1).
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

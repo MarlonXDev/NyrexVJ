@@ -671,6 +671,24 @@ void App::drawPerformancePage() {
             persist();
         }
         ImGui::SetItemTooltip("%s", tr("No particle clip ever has more particles alive than this. Each particle costs 24 bytes of graphics memory. When the limit is reached, newer particles are dropped and the picture stays smooth."));
+        if (ImGui::Checkbox(trId("Experimental GPU particles", "optGpuParticles"), &settings_.gpuParticles)) {
+            engine_.setGpuParticles(settings_.gpuParticles, settings_.gpuParticleBudgetMb);
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("Lets particle clips that ask for it run on the graphics card with up to a million particles. If the card cannot do it, or the memory budget is used up, the clip runs on the processor with fewer particles. Off until it has been tried on a real graphics card."));
+        ImGui::BeginDisabled(!settings_.gpuParticles);
+        int budget = settings_.gpuParticleBudgetMb;
+        ImGui::SetNextItemWidth(220.0f);
+        if (ImGui::SliderInt(trId("Graphics memory for GPU particles", "optGpuParticleBudget"), &budget, gpuparticles::kMinBudgetMb, gpuparticles::kMaxBudgetMb, "%d MB", ImGuiSliderFlags_Logarithmic)) {
+            settings_.gpuParticleBudgetMb = gpuparticles::clampBudgetMb(budget);
+            engine_.setGpuParticles(settings_.gpuParticles, settings_.gpuParticleBudgetMb);
+            persist();
+        }
+        ImGui::EndDisabled();
+        ImGui::SetItemTooltip("%s", tr("All GPU particle clips together never use more than this. Each particle costs 64 bytes, so 64 MB hold about a million particles. A clip that does not fit runs on the processor instead."));
+        if (settings_.gpuParticles) {
+            ImGui::TextDisabled(tr("In use now: %.1f MB of %d MB"), static_cast<double>(engine_.gpuParticleBytes()) / (1024.0 * 1024.0), engine_.gpuParticleBudgetMb());
+        }
         if (ImGui::Checkbox(trId("Show text and particle clips in the library", "optGeneratorClips"), &settings_.generatorClips)) {
             persist();
         }

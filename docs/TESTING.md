@@ -47,6 +47,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Show packages: export, import, dry run, path repair, rollback, the Show package window | implemented | automated 4/4 | 4 | M-SP-1 open; M-SP-2 open; M-SP-3 open |
 | Community packages: .nyxpack, versioned manifest, dependencies, conflicts, plugin consent, update, removal and rollback, the Community packages window | implemented | automated 5/5 | 5 | M-CP-1 open; M-CP-2 open; M-CP-3 open |
 | Text clips, limited particle clips and effect chains: fonts and Unicode, transparency, audio and beat modulation, particle limits, damaged files, chain save, search, preview, export and import | implemented | automated 6/6 | 6 | M-GN-1 open; M-GN-2 open; M-GN-3 open |
+| GPU particles with transform feedback and a processor fallback: card against processor reference, repeatability, ring reuse, memory budget, every fallback, audio and beat modulation, state left clean | implemented | automated 4/4 | 4 | M-GP-1 open; M-GP-2 open; M-GP-3 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

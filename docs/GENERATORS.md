@@ -1,6 +1,6 @@
 # Text, particles and effect chains
 
-Added in 0.43.0 ([ADR 0036](adr/0036-text-particles-chains.md)). Three things that were missing for a VJ working with names, logos and sparkle: text as a clip, a small particle system as a clip, and effect chains that you can save, search, preview, export and import. Text and particles are normal clips. They sit in the clip grid, on layers and in presets, and every effect, blend mode, audio reaction and output works with them as with any other clip. There is no second effect engine: a chain is the four effect slots that the program already has, written to a file.
+Added in 0.43.0 ([ADR 0036](adr/0036-text-particles-chains.md)); the particle clips can also run on the graphics card since 0.44.0, see [GPU particles](#gpu-particles-experimental). Three things that were missing for a VJ working with names, logos and sparkle: text as a clip, a small particle system as a clip, and effect chains that you can save, search, preview, export and import. Text and particles are normal clips. They sit in the clip grid, on layers and in presets, and every effect, blend mode, audio reaction and output works with them as with any other clip. There is no second effect engine: a chain is the four effect slots that the program already has, written to a file.
 
 ## What was there before
 
@@ -48,7 +48,7 @@ The text is drawn premultiplied with an alpha channel and a transparent backgrou
 
 The Particles tab edits a particle clip, a file `particles/<name>.nyxpart`. Six built-in clips come with the program under the filter Generators: Sparks, Snow, Embers, Fountain, Confetti and Bubbles. A saved file shows as `Particles: <name>`.
 
-The simulation runs on the processor in fixed steps of 1/60 s (at most 8 steps in one frame) and the result is drawn as one instanced draw call with a soft round sprite, so it needs OpenGL 3.3 and nothing more. It is deterministic: the same file, the same seed and the same clock and audio give the same particles. The settings are rate (0 to 2000 a second), burst on every beat (0 to 500), life, speed, direction, spread, gravity, drag, turbulence, size at start and end, jitter for life, speed and size, fade in, softness, emitter shape (Point, Line, Ring, Box) with position and extent, colour (Gradient, Rainbow, White), additive or normal blending and a seed.
+The simulation runs on the processor in fixed steps of 1/60 s (at most 8 steps in one frame) and the result is drawn as one instanced draw call with a soft round sprite, so it needs OpenGL 3.3 and nothing more. It is deterministic: the same file, the same seed and the same clock and audio give the same particles. The settings are rate (0 to 2000 a second), burst on every beat (0 to 500), life, speed, direction, spread, gravity, drag, turbulence, size at start and end, jitter for life, speed and size, fade in, softness, emitter shape (Point, Line, Ring, Box) with position and extent, swirl (-4 to 4, since 0.44.0), colour (Gradient, Rainbow, White), additive or normal blending and a seed.
 
 **Audio and beat.** Every beat of the engine's beat clock fires one burst, even when the steady rate is 0. The music level adds to the rate, the size and the speed with the three Level sliders. Without audio the level is 0 and nothing else changes.
 
@@ -64,6 +64,82 @@ An effect chain is the four effect slots of a layer or of the master, written to
 - **Export and import.** Export copies the chain file to a path you give, import reads a `.nyxchain` file from a path. An import names every effect that does not exist on this computer (for example a node effect you do not have) and keeps the rest; a chain with more than four effects is shortened with a notice; a damaged file, a file over 32 KiB or another format is refused and changes nothing.
 
 Chains are not part of show packages or community packages yet. Copy the files by hand or ask for it in [ADR 0036](adr/0036-text-particles-chains.md). A show package does not pack text and particle files either: the plan of an export lists the text and particle clips of the show as clips that the other computer needs to have (as it does for Spout, NDI and cameras).
+
+## GPU particles (experimental)
+
+Added in 0.44.0 ([ADR 0037](adr/0037-gpu-particles.md)). The same particle clips, but the graphics card keeps and moves the particles. Off until Settings, Performance, Text and particles, Experimental GPU particles is turned on, because it has not been run on a real graphics card yet. Turned off, or when anything is missing, a GPU clip plays on the processor like any other particle clip.
+
+### What was there before
+
+| Part | State | Where |
+| --- | --- | --- |
+| Particle clips on the processor, limit 16,384, `.nyxpart` version 1 | existed (0.43.0) | `src/core/particles.*`, `src/render/generators.*` |
+| OpenGL 3.3 core context | existed | `src/main.cpp` |
+| Transform feedback functions in the loader | existed (core since OpenGL 3.0) | `third_party/glad` |
+| Compute shaders | not usable: needs OpenGL 4.3, the context asks for 3.3, the function pointer is null there | |
+| Simulation on the graphics card | not found | |
+| What a real driver returns for a 3.3 request | not verified (the build machine's Mesa returns 4.5) | |
+
+### How it works
+
+- **One pass and one draw.** The state of every particle (position, velocity, age, lifetime, size, hue: 8 floats) is in a buffer on the card. Every 1/60 s step a vertex shader reads the old buffer and writes the new one through transform feedback with rasterising turned off. One instanced draw then reads the same buffer. This needs OpenGL 3.3 and nothing more.
+- **A ring of slots.** Particles are born into the next free slots of a ring; when the ring wraps, the oldest slots are reused, alive or not. The processor works out from the step counter which slots a step creates, so nothing is read back from the card and nothing waits. Slots that were never used are neither updated nor drawn.
+- **Deterministic.** Randomness is a stateless integer hash of seed, birth number and stream number, computed the same way in GLSL and in C++. The steps, the births, the beat bursts and the audio level come from the same fixed 1/60 s clock as the processor system (at most 8 steps in a frame). The same file, seed, clock and audio give the same state on the same computer.
+- **The settings.** A GPU clip is a normal `.nyxpart` file with `"backend": "gpu"`, `gpuCount` (the pool, 1,024 to 1,048,576, default 65,536) and `swirl` (-4 to 4, also works on the processor). The other fields mean the same as for a processor clip, with a rate of up to 200,000 a second and a burst of up to 100,000. Files without the new fields read as before and a program of 0.43.0 opens a GPU file as a processor clip with the rate clamped.
+- **Three built-in clips.** GPU Nebula (262,144 pool, a slow swirling ring of 40,000 a second), GPU Beat Burst (131,072, 20,000 on every beat, rainbow) and GPU Rain (98,304, a line of 12,000 a second falling). They are in the Library under Generators next to the six processor clips.
+
+### Memory and limits
+
+| What | Limit |
+| --- | --- |
+| Graphics memory per particle | 64 bytes (two buffers of 32) |
+| Budget for all GPU clips together | Settings, Performance: 8 to 512 MB, default 64 MB (about a million particles) |
+| One pool | 1,024 to 1,048,576 particles; cut to what is left of the budget in steps of 1,024, refused below 1,024 |
+| Playing places of one clip | up to 16, each with its own pool, all in the one budget |
+| Particles born in one step | at most 131,072, a burst at most 100,000, the rate at most 200,000 a second |
+| The budget is returned | when a pool or a clip is released (tested) |
+
+### The fallback
+
+The clip plays on the processor, scaled by `particles::cpuEquivalent` so that rate times lifetime fits the processor limit, when the setting is off (the default), the driver has no transform feedback, the shaders do not compile or link, the budget is used up, the buffers cannot be created or the first frames raise an OpenGL error. The reason is shown in the window (Particles tab, below the preview) and on the clip, nothing else is affected, and the clip returns to the card when the cause is gone and the clip or the setting changes. The thumbnails of the Library always use the processor version. A GPU clip on the processor looks sparser; that is the limit working.
+
+### Limits you should know
+
+- **Not tried on a real graphics card.** Every number below is a software renderer. The manual test M-GP-1 asks for a real card.
+- **Same picture on the same computer, not on every computer.** The card was compared with a processor reference of the same algorithm and matched exactly on Mesa, which computes on the processor. `sin`, `cos` and fused multiply-add may differ in the last digits on a real card, so two graphics cards can give slightly different pictures.
+- **The update costs the pool, not the particles alive.** A pool of a million slots is a million vertices a step even when most are dead. The draw cost grows with the pool and the fill rate (size and blending).
+- **A small pool recycles young particles.** When rate times lifetime is more than the pool, the oldest slots are reused before the particles fade out. The window warns and counts the reused slots.
+- **No exact count alive** (nothing is read back); the window shows the slots in use and the reused ones.
+- **Only the first three frames of a pool are checked for OpenGL errors.**
+- **Not built:** compute shaders (OpenGL 4.3, a possible later backend behind the same interface), collisions, trails, sorting for normal blending (additive blending does not depend on the order), textured or mesh particles, particles that follow the picture.
+
+### Measurements
+
+`NyrexVJ --gpu-particle-selftest 8 --bench-out result.json` fills a pool with the Nebula settings, times the update step alone and the draw alone into a 1920 x 1080 and a 3840 x 2160 target (RGBA16F, 15.8 MB and 63.3 MB), with `glFinish` after every pass. **These numbers are from the build machine of this release: 2 cores, Mesa llvmpipe software OpenGL 4.5, no graphics card.** A software renderer draws every sprite on the processor, so they say how the cost grows and not how fast a graphics card is. The program offers resolutions up to 2560 x 1440 for a composition, so 4K is measured on the generator alone.
+
+| Pool (slots, alive) | State buffers | Update, one step | Draw 1080p | Draw 4K | One frame 1080p | One frame 4K |
+| --- | --- | --- | --- | --- | --- | --- |
+| 16,384 (16,384) | 1 MB | 0.44 ms | 22.8 ms | 41.7 ms | 23.2 ms | 42.1 ms |
+| 65,536 (65,536) | 4 MB | 1.7 ms | 87.5 ms | 128.8 ms | 89.2 ms | 130.6 ms |
+| 262,144 (262,144) | 16 MB | 9.9 ms | 269 ms | 448 ms | 279 ms | 458 ms |
+| 1,048,576 (952,797) | 64 MB | 32.0 ms | 856 ms | 1382 ms | 888 ms | 1414 ms |
+
+For comparison the processor system advances and collects 11,670 alive particles in 0.18 ms and then still has to upload and draw them. Growing the pool by 4 grows the update by about 4 and the draw by about 3 to 4, so the cost is linear. What a graphics card does with a million particles is the open question of M-GP-1.
+
+### Tests
+
+| Test | What it covers | Where it runs |
+| --- | --- | --- |
+| `nvj_gpuparticles_tests` (217 checks) | The hash, the memory budget and the capacity maths, the scheduler (steps, rate, level, beat bursts, ring head and wrap, clock jumps and non-finite input), the processor reference (same seed same state, other seed, level and aspect change it, finite, bounds, the speed gain of the level), the file format (round trip, old files, wild values, the rate clamp for each backend), `cpuEquivalent`, the three built-in clips, swirl on the processor | ctest, every build, no graphics card needed |
+| `--gpu-particle-selftest` (30 checks) | With OpenGL: the shaders compile, the card matches the reference, the same seed gives the same bytes, another seed another picture, audio and beats change the spawn, the ring reuses the oldest slots, the budget cuts, refuses and returns, buffers are kept when a parameter changes, particles are visible and the picture repeats, alpha blending differs, no GL state is left behind, every fallback (setting off, shader fault, budget too small, a normal clip never uses the card), return to the card after a fault, and the engine switches without a restart | CI on Linux, with Xvfb and Mesa |
+
+### Command line
+
+| Option | What it does |
+| --- | --- |
+| `--gpu-particles [0\|1]` | Turn Experimental GPU particles on (without a value) or off (0) for this start; the setting is kept like any change in Settings |
+| `--generator-select NAME` | With `--generators`, open the window with that built-in clip or saved file |
+| `--gpu-particle-selftest [FRAMES]` | Run the checks above and exit with code 1 on a failure; FRAMES adds the benchmark, `--bench-out FILE.json` writes the JSON |
 
 ## Files
 
@@ -117,7 +193,7 @@ The generator buffers grew from 6.22 MB to 6.61 MB between the first and the las
 
 ## What is not built
 
-- A GPU particle system with compute or transform feedback (Prompt 19 in the project plan, a separate decision) and 3D geometry nodes.
+- 3D geometry nodes, and the GPU particle parts listed under [GPU particles](#gpu-particles-experimental): compute shaders, collisions, trails, sorting, textured and mesh particles.
 - Text shaping, right to left text, colour emoji, text along a path, outlines and GPOS kerning.
 - Particles that follow the picture, collide or are drawn as meshes or textures.
 - Chains in show packages and community packages, a catalogue of chains, and chain parameters that stay free for a macro.

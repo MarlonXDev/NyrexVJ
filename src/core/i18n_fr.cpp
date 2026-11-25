@@ -1670,6 +1670,10 @@ const Translation kFrench[] = {
     {"Could not open the port, it may be in use", "Impossible d'ouvrir le port, il est peut-être utilisé"},
     {"Could not listen on the port", "Impossible d'écouter sur le port"},
     {"The port must be between 1 and 65535", "Le port doit être compris entre 1 et 65535"},
+    {"Shader controls", "Réglages du shader"},
+    {"Reset controls", "Réinitialiser les réglages"},
+    {"Notes about this file", "Remarques sur ce fichier"},
+    {"Right click resets this control to the default of the file", "Un clic droit remet ce réglage à la valeur par défaut du fichier"},
 };
 
 }

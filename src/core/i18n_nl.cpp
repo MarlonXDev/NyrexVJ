@@ -1670,6 +1670,10 @@ const Translation kDutch[] = {
     {"Could not open the port, it may be in use", "Kon de poort niet openen, mogelijk is hij in gebruik"},
     {"Could not listen on the port", "Kon niet luisteren op de poort"},
     {"The port must be between 1 and 65535", "De poort moet tussen 1 en 65535 liggen"},
+    {"Shader controls", "Shaderregelaars"},
+    {"Reset controls", "Regelaars resetten"},
+    {"Notes about this file", "Opmerkingen over dit bestand"},
+    {"Right click resets this control to the default of the file", "Rechtsklikken zet deze regelaar terug naar de standaardwaarde van het bestand"},
 };
 
 }

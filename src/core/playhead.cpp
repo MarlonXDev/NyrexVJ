@@ -70,6 +70,11 @@ ClipPlayback clampedPlayback(const ClipPlayback& playback) {
         result.syncBeats = 0.0f;
     }
     result.syncBeats = syncBeatsChoice(syncBeatsIndex(result.syncBeats));
+    for (float& value : result.values) {
+        if (!std::isfinite(value) || std::fabs(value) > 1.0e6f) {
+            value = kClipValueUnset;
+        }
+    }
     return result;
 }
 

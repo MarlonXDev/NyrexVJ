@@ -4,7 +4,7 @@ Any fragment shader you write, or copy from a site like Shadertoy, can become a 
 
 ## Where the files go
 
-- Library, Open shaders folder opens the folder (it is `shaders` inside the NyrexVJ data folder, shown at the bottom of the Library). Files ending in `.glsl`, `.frag` or `.fs` are used, up to 128 of them and up to 256 KiB each.
+- Library, Open shaders folder opens the folder (it is `shaders` inside the NyrexVJ data folder, shown at the bottom of the Library). Files ending in `.glsl`, `.frag` or `.fs` are used, up to 128 of them and up to 256 KiB each. An ISF file (see [ISF files](#isf-files-v0370)) is recognised by its header and works from the same folder.
 - Dragging a shader file onto the NyrexVJ window copies it into that folder.
 - Library, Create example shader writes a small working shader there as a starting point.
 - NyrexVJ looks at the folder once a second while it runs. A new file appears in the Library, a saved change reloads the shader and its thumbnail, so you can edit in any text editor with the clip playing. A deleted file stays in the list with the note that the file is gone.
@@ -78,8 +78,11 @@ Sections start with a directive line:
 | `#pragma nyrexvj image` | The picture that is shown. Required when a file has sections. |
 | `#pragma nyrexvj channel N source [options]` | Inside a buffer or image section: what `iChannelN` (N from 0 to 3) reads. |
 | `#pragma nyrexvj alpha [premultiplied]` | See above, anywhere in the file. |
+| `#pragma nyrexvj plain` | The file gets only the uniform declarations and not the helper functions of the NyrexVJ style (`PI`, `hash21`, `rot` and so on). For code that brings its own helpers with the same names. Anywhere in the file. |
+| `#pragma nyrexvj param name kind "Label" ...` | A control for your shader, see [Controls](#controls-for-your-shader-v0370). |
+| `#pragma nyrexvj filter` | The file is an image filter for the effect list and not a clip, see [Image filters](#image-filters-v0370). |
 
-Sources for a channel: `audio` (the default for channel 0, spectrum and waveform as above), `buffer a` to `buffer d`, `media "Image: name"` or `media "Video: name"` (an image or a video of the Library, by its clip name or just its file name), and `none` (reads transparent black). Options after the source: `nearest` or `linear` (default linear), `clamp` or `repeat` (default clamp). Mipmaps are not used.
+Sources for a channel: `audio` (the default for channel 0, spectrum and waveform as above), `picture` (in a filter only, see below), `buffer a` to `buffer d`, `media "Image: name"` or `media "Video: name"` (an image or a video of the Library, by its clip name or just its file name), and `none` (reads transparent black). Options after the source: `nearest` or `linear` (default linear), `clamp` or `repeat` (default clamp). Mipmaps are not used.
 
 Order of work, the same as Shadertoy: Buffer A, B, C, D, then Image, once per frame. A pass that reads a buffer which was already drawn in this frame sees the new picture, a pass that reads itself or a later buffer sees the picture of the previous frame. Buffers hold 16 bit floating point colour (RGBA16F), so values above 1 and below 0 survive between frames. The image pass is written to the normal 8 bit layer picture.
 
@@ -101,7 +104,85 @@ Inside a pass:
 
 ### Not supported (still)
 
-Mouse and keyboard input, webcam, cubemaps and 3D textures, mipmapped sampling, sound shaders, live inputs (NDI, camera, Spout) as a channel, shader parameters as sliders, and an editor in the program. Importing ISF files is planned separately.
+Mouse and keyboard input, webcam, cubemaps and 3D textures, mipmapped sampling, sound shaders, live inputs (NDI, camera, Spout) as a channel, and an editor in the program. What an ISF file cannot do is listed under [ISF files](#isf-files-v0370).
+
+## Controls for your shader (v0.37.0)
+
+A shader can ask for sliders, switches, colours and menus with `param` lines. They need no code in the shader besides using the name:
+
+```glsl
+#pragma nyrexvj param speed float "Speed" 0 4 1
+#pragma nyrexvj param steps int "Steps" 1 12 4
+#pragma nyrexvj param flash bool "Flash" off
+#pragma nyrexvj param centre point "Centre" 0 0 1 1 0.5 0.5
+#pragma nyrexvj param tint color "Tint" 1 0.5 0 1
+#pragma nyrexvj param mode list "Mode" 0 "Waves" 0 "Rings" 1 "Checks" 2
+```
+
+| Kind | Arguments after the label | In the shader |
+|---|---|---|
+| `float` | minimum maximum default | `uniform float name` |
+| `int` | minimum maximum default (rounded to whole numbers) | `uniform int name` |
+| `bool` | `on` or `off` | `uniform bool name` |
+| `point` | minX minY maxX maxY defaultX defaultY | `uniform vec2 name` |
+| `color` | red green blue alpha, each 0 to 1 | `uniform vec4 name` |
+| `list` | the number of the default entry, then pairs of `"Label" value` (1 to 16 entries) | `uniform int name`, the value of the chosen entry |
+
+You do not declare the uniform, NyrexVJ does it. The name uses letters, digits and underscore (up to 32 characters, not a name that NyrexVJ, Shadertoy or GLSL already use, for example `iTime`, `uTime`, `texture`, `filter` or `input`), the label has 1 to 40 characters, numbers are between -1,000,000 and 1,000,000. A file can have up to 8 controls and up to 16 numbers together (a point is 2, a colour is 4). A mistake in a `param` line is reported with its line number.
+
+Where you see and change them:
+
+- A clip: the Clip window shows the controls under "Shader controls" for the cell that is playing. Right click on a control puts it back to the value from the file, "Reset controls" does it for all. Every cell keeps its own values, so the same shader can be in two cells with different settings. Presets and sessions store the values of a cell only when you changed one.
+- An image filter: the controls are the four controls of the effect, see below.
+
+A control you never touched uses the value from the file, so changing a default in the file moves every cell that still has the old one.
+
+## Image filters (v0.37.0)
+
+`#pragma nyrexvj filter` makes the file an effect and not a clip. It is then in the effect list as `ISF: <file name>` (every filter file gets this name, whatever its style) and not in the Library. A filter file that cannot be read at all (a mistake in the ISF header, an unsupported feature) cannot be told apart from a clip, so it stays in the Library with its message. The picture of the layer (everything before this effect in the rack) is the input:
+
+- In the first channel of a pass, `#pragma nyrexvj channel 0 picture` reads that picture (`iChannel0`, or `uChannel0` in the NyrexVJ style). `picture` is allowed only in a filter, and it can be used in several passes.
+- The result is mixed with the input by the strength of the effect (the gate in the effect's audio settings uses it), so a filter fades in and out like every other effect.
+- The first four controls (float, int, bool or list, in the order of the file) become the four controls of the effect, with the label and the default from the file. They are saved with presets, can follow audio, LFOs and macros like any effect control, and the effect list shows the range of each as 0 to 1 over the range from the file. More controls than four keep the value from the file, and the Clip window and the effect panel say which.
+- A filter can have buffers and several passes exactly like a clip. Its buffers are held per effect slot, are freed after four seconds without use and count in the 512 MiB budget.
+- An error stays with the effect: the picture passes through unchanged, the effect panel shows the message in red with the line number of the file, and the other effects and layers keep running.
+
+## ISF files (v0.37.0)
+
+ISF ("Interactive Shader Format", the format of VIDVOX and the Syphon world) is read directly. Put a `.fs` file into the shaders folder. A file that starts with a `/*{ ... }*/` header is read as ISF, everything else works as before. NyrexVJ turns the ISF file into the same plan as a Shader 2.0 file (buffers, channels, controls) and runs it with the same code, so memory budget, release of buffers, hot reload, errors and thumbnails behave the same. Error lines count from the first line of your file.
+
+A file with an input named `inputImage` is a filter and goes into the effect list, a file without one is a generator and goes into the Library as a clip.
+
+| ISF | What NyrexVJ does |
+|---|---|
+| `DESCRIPTION`, `CREDIT`, `CATEGORIES`, `ISFVSN` | Shown in the Clip window under the type of the clip (the version reads for example `ISF 2.0`). |
+| `float` input (`MIN`, `MAX`, `DEFAULT`, `LABEL`) | A slider. A default outside the range is moved into it (and the Clip window says so). |
+| `long` input (`VALUES`, `LABELS`) | A menu. `VALUES` holds the numbers the shader gets as `int`. |
+| `bool` input | A switch. |
+| `event` input | A switch. It is never pulsed by the program, the Clip window says so. |
+| `point2D` input | Two sliders. Without `MAX` the range 0 to 1920 by 0 to 1080 is used. |
+| `color` input | A colour with alpha. |
+| `image` input named `inputImage` | The picture that the filter works on. |
+| `IMPORTED` | A picture from the Library, found by the file name without the ending (`Image: name`). Copy the picture into the media folder under that name. |
+| `PASSES` with `TARGET` | The targets become buffers A to D in the order of the file. Buffers are always kept between frames and always 16 bit floating point, so `PERSISTENT` and `FLOAT` are accepted and need no setting. The last pass has no `TARGET` and is the picture that is shown. |
+| `WIDTH`, `HEIGHT` of a pass | Calculated from `$WIDTH`, `$HEIGHT` and the names of float inputs with `+ - * /`, brackets, `floor`, `ceil`, `round`, `abs`, `min`, `max`. A size that is a fixed share of the picture (for example `$WIDTH/2`) becomes the scale of the buffer, from a quarter to the full size. |
+| `PASSINDEX`, `TIME`, `TIMEDELTA`, `FRAMEINDEX`, `RENDERSIZE`, `isf_FragNormCoord`, `IMG_PIXEL`, `IMG_NORM_PIXEL`, `IMG_THIS_PIXEL`, `IMG_THIS_NORM_PIXEL`, `IMG_SIZE`, `texture2D` | Supported. `TIME` is the shader time (follows Speed and pause). |
+| `gl_FragColor` | Supported. The alpha channel is used (straight alpha, as in Shader 2.0). |
+
+What is not supported, and what happens:
+
+- **Vertex shaders and old OpenGL.** NyrexVJ reads only the fragment part and uses OpenGL 3.3. A file that uses `varying`, `attribute`, `isf_vertShaderInit`, `gl_TexCoord`, `gl_Vertex`, the old matrices, `ftransform`, `sampler2DRect` or `texture2DRect` is refused with the name of the first one found. `.vs` files are not read.
+- **Transitions** (`startImage` and `endImage`): refused. NyrexVJ has its own deck transitions.
+- **`audio` and `audioFFT` inputs, cube map imports and other image inputs than `inputImage`:** the shader still runs, these read transparent black, and the Clip window lists each one. (The audio of NyrexVJ is available to the NyrexVJ style as `uAudio` and as channel 0, but it is not wired to ISF inputs.)
+- **`DATE`** has the fixed value year 2026, month 1, day 1, 0 seconds; the real date and time of day are not available.
+- **More than 8 controls or 16 numbers:** the rest are fixed to their default values (the file keeps working, the Clip window lists them). **More than four controls in a filter:** the first four are on the effect, the rest keep the defaults.
+- **A buffer size that is not a fixed share** of the picture (a fixed pixel size, a different factor for width and height, an expression that is not understood) uses the full picture size, and the Clip window says so.
+- **More than 4 buffers, more than 4 different pictures** (buffers, imported images and the filter picture together) in one file: refused.
+- **Names:** an input name that GLSL 3.30 reserves (`filter`, `input`, `long`, `common`, `smooth` and so on), a name of NyrexVJ or of ISF is refused with the name.
+
+Safety limits when a file is read: the header up to 64 KiB, nested at most 12 levels, at most 64 inputs, 16 passes, 8 imported pictures and 8 categories, texts up to 512 bytes, numbers between -1,000,000 and 1,000,000. A mistake in the header is reported with the line number inside the header, a mistake in the shader with the line number of the file. The header is read as data and never run. A file that fails stays in the Library (or the effect list) with its message, the picture stays dark (or passes through for a filter), and every other layer and effect runs on.
+
+Examples for every kind are in `docs/shaders/`: `isf_plasma.fs` (a generator with sliders, a menu, a colour and a switch), `isf_feedback_dots.fs` (a generator with a buffer that fades at half size), `isf_color_shift.fs` (a one pass filter), `isf_blur.fs` (a two pass filter with a half size buffer) and `isf_trails.fs` (a filter with a buffer that is kept between frames). Copy one into the shaders folder to try it.
 
 ## Errors
 
@@ -117,9 +198,13 @@ If a shader does not compile, its tile stays dark and the Clip window shows the 
 
 - Tested automatically: finding and telling apart the two styles, cleaning the text, the file scan with reload, new and removed files, the example shader, and the file import (`nvj_shader_tests`). Also there: the parser of the `#pragma nyrexvj` lines with 31 kinds of mistakes, the generated source of every pass, a fixed fingerprint of the source of old shaders (it must never change), and the function that lowers the buffer scale to fit the budget.
 - Tested automatically with a real render, `NyrexVJ --shader-selftest` (runs in the CI on Linux with the Mesa software renderer, writes its shaders into a temporary data folder): old shaders keep alpha 1 and the old alpha convention, alpha over another layer for both styles and for premultiplied, buffer feedback over several frames, the restart on a trigger, the order of the passes, `iFrame` and `iTimeDelta`, buffer scale, channel options (nearest, linear, repeat, clamp), an image of the Library as a channel, the name and line of a compile error, a broken shader next to a working one, a hot reload from a multipass to a plain file, the release of the buffers, a deck switch with a transition (the old deck keeps its buffers while it fades out), and the budget (smaller scale, refused, recovered). `NyrexVJ --shader-selftest 60` adds a timing of a plain shader, an alpha shader and shaders with two and four buffers.
+- ISF and controls (v0.37.0), tested automatically: `nvj_isf_tests` (22,970 checks): telling ISF from other files, the five example files (controls, plan, generated GLSL, line numbers), 44 kinds of damaged ISF files each with the message that is expected (unclosed header, wrong JSON with its line, nesting, a huge header, too many inputs, buffers, passes or pictures, bad or reserved or doubled names, wrong types, ranges and numbers, a transition, vertex and old OpenGL features, a missing `main`), 27 kinds of mistakes in `param` lines, buffer size expressions, every note about an unsupported feature, the conversion between the four effect controls and the parameters, the preset round trip of the cell values (with hostile numbers), and 22,699 cut, mutated and random inputs (no crash, always a result or a message, 0.75 s together).
+- ISF and controls, tested with a real render (`NyrexVJ --shader-selftest`, now 94 checks, 54 of them new): an ISF generator with its defaults, a stored value per cell for a float, a colour, a bool and a list, unset values back to the defaults, a persistent buffer at half size (it keeps its content, and uses a quarter of the memory of a full size one), an imported picture, an ISF filter in the effect rack (changes the layer, first control, switched off, the strength gate, absent from the Library), a two pass blur and a persistent filter buffer with their memory released after use, a compile error with the right line, an unsupported file next to a working layer, a broken filter that passes the picture through, hot reload of a generator and of a filter, a removed filter, and the five example files.
+- Frame times, from `NyrexVJ --shader-selftest 60` on the Mesa software renderer at 1280 x 720 (two runs each, average per frame in ms; the previous release is the commit before this change built the same way): plain single pass 13.4 and 12.9 before, 13.3 and 13.7 now; alpha 13.3 and 13.2 before, 13.3 and 14.5 now; two buffers 37.0 and 37.7 before, 37.7 and 36.8 now; four buffers 55.4 and 54.7 before, 58.2 and 55.7 now; the memory of the buffers is the same byte for byte (29,491,200 and 58,982,400). So the existing paths did not get slower beyond the noise of about 5 percent. New cases: an ISF generator 13.4 and 13.9 (the same as the plain shader), an ISF generator with two controls 13.5 and 13.9, an ISF generator with a half size buffer 18.2 and 18.5 (3,686,400 bytes), a one pass filter on a generator 17.2 and 18.5, the two pass blur filter 59.3 and 59.7 (3,686,400 bytes), the trails filter 30.4 and 29.4 (14,745,600 bytes). The software renderer draws on the processor, so these numbers show how the cost grows, not how fast a graphics card is.
 - Tested by hand on Linux with the Mesa software renderer: both styles compile and render, a mistake is reported with the right line number, a changed file reloads while it plays.
+- Not tested, ISF: any real graphics card, files made by other programs in bulk (only the five examples written for this change were rendered, so features that real files use but these do not may still fail), a comparison of the picture with VDMX, Resolume or another ISF host, Windows beyond the CI build and the unit tests, projectors and VRChat. The notes of the Clip window list what a file loses, but the picture of a file that uses an unsupported feature (audio inputs, for example) can differ from the other program.
 - Not tested: the graphics drivers of NVIDIA, AMD and Intel on Windows, and anything on Windows at all (the CI builds there but runs no render test). Drivers differ in how strict they are, for example with `int` to `float` conversions, so a shader that works on one machine can need a small fix on another. Not tested: a video as a channel (only an image), 4K output, and the speed on a real graphics card. The timings of the software renderer say how the cost grows (more buffers, more time), not how fast a real card is.
 
 ## Not built
 
-Sliders for your own shader parameters, an ISF import, and a built-in editor.
+A built-in editor, ISF vertex shaders, ISF transitions, ISF audio inputs, and moving the controls of a clip with audio, LFOs, MIDI or OSC (they are set by hand in the Clip window; the four controls of a filter can be moved because they are effect controls).

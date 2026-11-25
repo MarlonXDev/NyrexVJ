@@ -81,5 +81,6 @@ int clipIndexByName(const std::string& name);
 const std::string& clipVertexSource();
 std::string clipFragmentSource(const ClipDef& clip);
 std::string clipPassFragmentSource(const ClipDef& clip, int pass);
+std::string planPassFragmentSource(const ShaderPlan& plan, bool shadertoy, int pass);
 
 }

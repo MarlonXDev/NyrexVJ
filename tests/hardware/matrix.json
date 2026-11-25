@@ -931,6 +931,102 @@
           "criteria": "Proposed: no change in the VRChat frame time and no growth beyond the soak limits."
         }
       ]
+    },
+    {
+      "id": "isf-import",
+      "title": "ISF shader import: generators, image filters, several passes",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SHADERS.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0030-isf-import.md"
+      ],
+      "sources": [
+        "src/render/isf.cpp",
+        "src/render/shader_source.cpp",
+        "src/render/clip_library.cpp",
+        "src/render/effect_library.cpp",
+        "src/render/engine.cpp",
+        "src/app/shader_selftest.cpp",
+        "tests/test_isf.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-ISF-1",
+          "kind": "ctest",
+          "name": "nvj_isf_tests"
+        },
+        {
+          "id": "A-ISF-2",
+          "kind": "ctest",
+          "name": "nvj_shader_tests"
+        },
+        {
+          "id": "A-ISF-3",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest",
+          "note": "renders ISF generators, per cell values, image filters in the effect rack, a two pass blur, persistent buffers, compile error fallbacks, hot reload and the five example files through a real OpenGL context"
+        },
+        {
+          "id": "A-ISF-4",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest 60",
+          "note": "adds the frame times of ISF generators and filters next to the plain Shader 2.0 cases"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-ISF-1",
+          "title": "Real ISF files from other programs on each graphics card vendor",
+          "needs": "A collection of ISF files made for VDMX, Resolume or Magic (generators and filters, at least 30, with and without several passes) and a graphics card of each vendor",
+          "steps": [
+            "Copy the files into the shaders folder and watch the Library and the effect list.",
+            "Play every generator and put every filter on a layer with a picture, change every control, and read the notes in the Clip window.",
+            "Open the same files in the program they were made for and compare the pictures."
+          ],
+          "measure": "Files refused, files with notes, compile errors per driver, differences from the other program, visible glitches",
+          "criteria": "Proposed: every file that uses only supported features compiles on every vendor and looks the same as in the other program, and every file that does not says why."
+        },
+        {
+          "id": "M-ISF-2",
+          "title": "Heavy multipass filters and buffer memory at 1080p and 4K",
+          "needs": "A real graphics card, a tool that shows video memory (the driver panel or GPU-Z) and the filters isf_blur.fs and isf_trails.fs",
+          "steps": [
+            "Put the blur and the trails filter on all four layers at 1920 x 1080, then at 3840 x 2160.",
+            "Read Settings, Performance (frame time, Shader buffers) and the video memory from the driver tool.",
+            "Switch decks and clear layers, and check that the memory goes back down."
+          ],
+          "measure": "Frame time, video memory by the driver, the value of the line Shader buffers",
+          "criteria": "Proposed: the frame time stays under the frame budget of the chosen rate, the program's number is within 10 percent of the driver's growth, and the memory is freed within a few seconds."
+        },
+        {
+          "id": "M-ISF-3",
+          "title": "Filter controls with audio, LFOs, macros and a MIDI controller during a show",
+          "needs": "A MIDI controller or the web interface, music as audio input and an ISF filter with four controls",
+          "steps": [
+            "Put the filter on a layer and map its four controls to LFOs, audio bands and a macro.",
+            "Save a preset, restart and load it again, and check the values.",
+            "Turn the strength of the effect with the audio gate and play for ten minutes."
+          ],
+          "measure": "Whether the controls move the picture as the labels say, whether the preset restores them, frame time",
+          "criteria": "Proposed: all four controls follow their sources, the preset brings back the values and the picture, and the frame time does not rise during the run."
+        },
+        {
+          "id": "M-ISF-4",
+          "title": "File names with umlauts and spaces, hot reload on Windows",
+          "needs": "A Windows computer",
+          "steps": [
+            "Copy ISF files with names like Größe Welle.fs and with spaces into the shaders folder.",
+            "Check the names in the Library and the effect list, save a change in an editor while the shader plays, and delete a file.",
+            "Save a preset that uses a filter, restart and load it."
+          ],
+          "measure": "Names shown, reload time, message after a delete, preset result",
+          "criteria": "Proposed: the names are right, a change shows within two seconds, a delete leaves a message and the picture stays intact."
+        }
+      ]
     }
   ]
 }

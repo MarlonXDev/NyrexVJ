@@ -155,6 +155,9 @@ private:
         GLint audioTex = -1;
         GLint frame = -1;
         GLint delta = -1;
+        GLint mix = -1;
+        GLint picture = -1;
+        std::array<GLint, kMaxShaderParams> param{-1, -1, -1, -1, -1, -1, -1, -1};
         std::array<GLint, kShaderChannels> channel{};
         std::array<GLint, kShaderChannels> channelRes{};
         std::array<GLint, kShaderChannels> channelTime{};
@@ -197,6 +200,10 @@ private:
         GLint mix = -1;
         GLint macros = -1;
         bool usesPrevious = false;
+        std::vector<PassProgram> passes;
+        std::shared_ptr<const ShaderPlan> plan;
+        std::string error;
+        std::string runtimeError;
     };
 
     struct Effective {
@@ -310,9 +317,11 @@ private:
     void drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target);
     void releaseClipProgram(ClipProgram& clip);
     bool buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& clip);
+    bool buildPlanPasses(const ShaderPlan& plan, bool shadertoy, const std::string& name, std::vector<PassProgram>& passes, std::string& errors);
+    RenderTarget* runPlanEffect(size_t effectIndex, int stateKey, const EffectSlot& slot, const std::array<float, kParamCount>& params, float mixAmount, RenderTarget* in, RenderTarget* out);
     bool allocateShaderState(ShaderPassState& state, size_t clipIndex, const ShaderPlan& plan, int width, int height, std::string& error, std::string& note);
-    void drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target);
-    void runShaderPasses(ClipProgram& clip, const ClipDef& def, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail);
+    void drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target, const ShaderValues& stored);
+    void runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgram>& programs, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail, const ShaderValues& values, const RenderTarget* picture, float mixAmount);
     void renderShaderThumbnail(size_t clipIndex, const RenderTarget& target);
     void releaseIdleShaderStates();
     void restartShaders(bool carryOver);
@@ -420,6 +429,8 @@ private:
     double previewClock_ = 0.0;
     double previewLastTime_ = 0.0;
     std::array<bool, kLayerCount> live_{};
+    static constexpr int kEffectStateBase = 100000;
+    static constexpr int kEffectKeyBase = 1000;
     static constexpr int kChainsPerSet = kLayerCount + 1;
     static constexpr int kFeedbackSets = 2;
     std::array<RenderTarget, kFeedbackSets * kChainsPerSet * kEffectSlots> feedback_;

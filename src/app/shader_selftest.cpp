@@ -3,6 +3,7 @@
 #include "audio/audio_features.hpp"
 #include "core/log.hpp"
 #include "render/clip_library.hpp"
+#include "render/effect_library.hpp"
 
 #include <glad/gl.h>
 
@@ -12,11 +13,13 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <thread>
 #include <vector>
@@ -159,6 +162,79 @@ const char* kFourBuffers =
 
 const char* kSinglePassBench = "void mainImage(out vec4 c, in vec2 p) { vec2 uv = p / iResolution.xy; c = vec4(uv, 0.5 + 0.5 * sin(iTime), 1.0); }\n";
 
+const char* kIsfSolid =
+    "/*{\"DESCRIPTION\":\"solid\",\"INPUTS\":["
+    "{\"NAME\":\"level\",\"TYPE\":\"float\",\"MIN\":0.0,\"MAX\":1.0,\"DEFAULT\":0.5},"
+    "{\"NAME\":\"tint\",\"TYPE\":\"color\",\"DEFAULT\":[1.0,0.5,0.0,1.0]},"
+    "{\"NAME\":\"flip\",\"TYPE\":\"bool\",\"DEFAULT\":false},"
+    "{\"NAME\":\"which\",\"TYPE\":\"long\",\"VALUES\":[0,1,2],\"LABELS\":[\"a\",\"b\",\"c\"],\"DEFAULT\":0}]}*/\n"
+    "void main() { vec3 c = tint.rgb * level; if (flip) { c = c.bgr; } if (which == 2) { c = vec3(0.0, 0.0, 1.0); } gl_FragColor = vec4(c, 1.0); }\n";
+
+const char* kIsfSolidReloaded =
+    "/*{\"INPUTS\":[{\"NAME\":\"level\",\"TYPE\":\"float\",\"MIN\":0.0,\"MAX\":1.0,\"DEFAULT\":1.0}]}*/\n"
+    "void main() { gl_FragColor = vec4(0.0, level, 0.0, 1.0); }\n";
+
+const char* kIsfBroken =
+    "/*{\"INPUTS\":[]}*/\n"
+    "void main() {\n"
+    "    gl_FragColor = vec4(1.0) +;\n"
+    "}\n";
+
+const char* kIsfLegacy =
+    "/*{\"INPUTS\":[]}*/\n"
+    "varying vec2 uv;\n"
+    "void main() { gl_FragColor = vec4(uv, 0.0, 1.0); }\n";
+
+const char* kIsfAccumulate =
+    "/*{\"INPUTS\":[],\"PASSES\":[{\"TARGET\":\"acc\",\"PERSISTENT\":true,\"WIDTH\":\"$WIDTH/2\",\"HEIGHT\":\"$HEIGHT/2\"},{}]}*/\n"
+    "void main() { if (PASSINDEX == 0) { gl_FragColor = IMG_THIS_NORM_PIXEL(acc) + vec4(0.1, 0.0, 0.0, 0.0); } else { gl_FragColor = vec4(IMG_THIS_NORM_PIXEL(acc).r, 0.0, 0.0, 1.0); } }\n";
+
+const char* kIsfAccumulateFull =
+    "/*{\"INPUTS\":[],\"PASSES\":[{\"TARGET\":\"acc\",\"PERSISTENT\":true},{}]}*/\n"
+    "void main() { if (PASSINDEX == 0) { gl_FragColor = IMG_THIS_NORM_PIXEL(acc) + vec4(0.1, 0.0, 0.0, 0.0); } else { gl_FragColor = vec4(IMG_THIS_NORM_PIXEL(acc).r, 0.0, 0.0, 1.0); } }\n";
+
+const char* kIsfImported =
+    "/*{\"INPUTS\":[],\"IMPORTED\":{\"pic\":{\"PATH\":\"split.png\"}}}*/\n"
+    "void main() { gl_FragColor = IMG_THIS_NORM_PIXEL(pic); }\n";
+
+const char* kIsfSwap =
+    "/*{\"INPUTS\":[{\"NAME\":\"inputImage\",\"TYPE\":\"image\"},{\"NAME\":\"amount\",\"TYPE\":\"float\",\"MIN\":0.0,\"MAX\":1.0,\"DEFAULT\":0.5}]}*/\n"
+    "void main() { vec4 c = IMG_THIS_NORM_PIXEL(inputImage); gl_FragColor = vec4(mix(c.rgb, c.bgr, amount), c.a); }\n";
+
+const char* kIsfSwapReloaded =
+    "/*{\"INPUTS\":[{\"NAME\":\"inputImage\",\"TYPE\":\"image\"}]}*/\n"
+    "void main() { vec4 c = IMG_THIS_NORM_PIXEL(inputImage); gl_FragColor = vec4(c.g, c.r, c.b, c.a); }\n";
+
+const char* kIsfFilterBroken =
+    "/*{\"INPUTS\":[{\"NAME\":\"inputImage\",\"TYPE\":\"image\"}]}*/\n"
+    "void main() {\n"
+    "    gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage) +;\n"
+    "}\n";
+
+const char* kIsfBlur =
+    "/*{\"INPUTS\":[{\"NAME\":\"inputImage\",\"TYPE\":\"image\"},{\"NAME\":\"radius\",\"TYPE\":\"float\",\"MIN\":0.0,\"MAX\":8.0,\"DEFAULT\":3.0}],"
+    "\"PASSES\":[{\"TARGET\":\"sideways\",\"WIDTH\":\"$WIDTH/2\",\"HEIGHT\":\"$HEIGHT/2\"},{}]}*/\n"
+    "void main() {\n"
+    "    vec2 px = 1.0 / RENDERSIZE;\n"
+    "    vec4 sum = vec4(0.0);\n"
+    "    float total = 0.0;\n"
+    "    for (int i = -6; i <= 6; ++i) {\n"
+    "        float w = exp(-float(i * i) / 18.0);\n"
+    "        float d = float(i) * radius;\n"
+    "        if (PASSINDEX == 0) { sum += IMG_NORM_PIXEL(inputImage, isf_FragNormCoord + vec2(d * px.x, 0.0)) * w; }\n"
+    "        else { sum += IMG_NORM_PIXEL(sideways, isf_FragNormCoord + vec2(0.0, d * px.y)) * w; }\n"
+    "        total += w;\n"
+    "    }\n"
+    "    gl_FragColor = sum / total;\n"
+    "}\n";
+
+const char* kIsfTrail =
+    "/*{\"INPUTS\":[{\"NAME\":\"inputImage\",\"TYPE\":\"image\"}],\"PASSES\":[{\"TARGET\":\"trail\",\"PERSISTENT\":true},{}]}*/\n"
+    "void main() { if (PASSINDEX == 0) { gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage) * 0.5 + IMG_THIS_NORM_PIXEL(trail) * 0.5; } else { gl_FragColor = IMG_THIS_NORM_PIXEL(trail); } }\n";
+
+const char* kRed = "void mainImage(out vec4 c, in vec2 p) { c = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+const char* kSplitRedBlue = "void mainImage(out vec4 c, in vec2 p) { c = p.x < iResolution.x * 0.5 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(0.0, 0.0, 1.0, 1.0); }\n";
+
 class Runner {
 public:
     Runner(Engine& engine, json& report) : engine_(engine), report_(report) {}
@@ -188,6 +264,39 @@ public:
         rescanLibrary();
         engine_.syncLibrary();
         return clipIndexByName(shaderClipName(stem));
+    }
+
+    int addFile(const std::string& fileName, const std::string& text) {
+        writeText(root_ / "shaders" / fileName, text);
+        rescanLibrary();
+        engine_.syncLibrary();
+        return clipIndexByName(shaderClipName(fs::path(fileName).stem().string()));
+    }
+
+    int addFilter(const std::string& stem, const std::string& text) {
+        writeText(root_ / "shaders" / (stem + ".fs"), text);
+        rescanLibrary();
+        engine_.syncLibrary();
+        refreshIsfEffects();
+        engine_.syncEffects();
+        return effectIndexByName(isfEffectName(stem));
+    }
+
+    void useEffect(int layer, int effect) {
+        setEffect(engine_.comp.layers[static_cast<size_t>(layer)].fx[0], effect);
+    }
+
+    int lit(int minimumSum) {
+        std::vector<unsigned char> pixels;
+        int width = 0;
+        int height = 0;
+        int count = 0;
+        if (engine_.readOutput(pixels, width, height)) {
+            for (size_t i = 0; i + 3 < pixels.size(); i += 4) {
+                count += static_cast<int>(pixels[i]) + static_cast<int>(pixels[i + 1]) + static_cast<int>(pixels[i + 2]) >= minimumSum ? 1 : 0;
+            }
+        }
+        return count;
     }
 
     void step(int count) {
@@ -520,24 +629,351 @@ void testTransition(Runner& run) {
     run.step(2);
 }
 
+bool mentionsLine(const std::string& text, int number) {
+    const std::string wanted = std::to_string(number);
+    for (size_t i = 0; i + wanted.size() <= text.size(); ++i) {
+        if (text.compare(i, wanted.size(), wanted) != 0) {
+            continue;
+        }
+        const bool before = i == 0 || !std::isdigit(static_cast<unsigned char>(text[i - 1]));
+        const bool after = i + wanted.size() >= text.size() || !std::isdigit(static_cast<unsigned char>(text[i + wanted.size()]));
+        if (before && after) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void testIsfGenerator(Runner& run) {
+    const int solid = run.add("isf_solid", kIsfSolid);
+    run.record("ISF generator is in the clip library", solid >= 0, "isf_solid");
+    run.clearAll();
+    run.place(0, solid);
+    run.step(3);
+    run.expect("ISF generator draws with the defaults of the file", run.centre(), 128, 64, 0, 3);
+    run.record("ISF generator has no error", run.engine().clipError(solid).empty() && run.engine().shaderRuntimeError(solid).empty(), run.engine().clipError(solid));
+
+    Layer& layer = run.engine().comp.layers[0];
+    layer.playback[0].values[0] = 1.0f;
+    run.step(2);
+    run.expect("a stored value of the cell changes the picture", run.centre(), 255, 128, 0, 3);
+
+    layer.playback[0].values[1] = 0.0f;
+    layer.playback[0].values[2] = 1.0f;
+    layer.playback[0].values[3] = 0.0f;
+    layer.playback[0].values[4] = 1.0f;
+    run.step(2);
+    run.expect("a colour value is passed on as four numbers", run.centre(), 0, 255, 0, 3);
+
+    layer.playback[0].values[1] = 1.0f;
+    layer.playback[0].values[2] = 0.5f;
+    layer.playback[0].values[3] = 0.0f;
+    layer.playback[0].values[5] = 1.0f;
+    run.step(2);
+    run.expect("a bool value is passed on", run.centre(), 0, 128, 255, 3);
+
+    layer.playback[0].values[6] = 2.0f;
+    run.step(2);
+    run.expect("a list value is passed on", run.centre(), 0, 0, 255, 3);
+
+    layer.playback[0].values = unsetClipValues();
+    run.step(2);
+    run.expect("unset values fall back to the defaults of the file", run.centre(), 128, 64, 0, 3);
+
+    run.clearAll();
+    run.place(0, solid);
+    run.place(1, solid);
+    run.engine().comp.layers[1].playback[0].values[0] = 1.0f;
+    run.engine().comp.layers[1].blend = BlendNormal;
+    run.step(3);
+    run.expect("every cell keeps its own values", run.centre(), 255, 128, 0, 3);
+    run.engine().clearLayer(1);
+    run.step(2);
+    run.expect("the other cell still has its defaults", run.centre(), 128, 64, 0, 3);
+
+    const int accumulate = run.add("isf_accumulate", kIsfAccumulate);
+    const int accumulateFull = run.add("isf_accumulate_full", kIsfAccumulateFull);
+    run.clearAll();
+    run.place(0, accumulate);
+    run.step(1);
+    run.expect("ISF persistent buffer after 1 frame", run.centre(), 26, 0, 0, 3);
+    run.step(4);
+    run.expect("ISF persistent buffer keeps its content over frames", run.centre(), 128, 0, 0, 4);
+    const unsigned long long half = run.engine().shaderBufferBytes();
+    run.clearAll();
+    run.place(0, accumulateFull);
+    run.step(2);
+    const unsigned long long full = run.engine().shaderBufferBytes();
+    const double ratio = full > 0 ? static_cast<double>(half) / static_cast<double>(full) : 0.0;
+    run.record("ISF WIDTH and HEIGHT halve the buffer", half > 0 && ratio > 0.2 && ratio < 0.3, std::to_string(half) + " bytes at half size, " + std::to_string(full) + " bytes at full size");
+
+    run.clearAll();
+    run.place(0, run.add("isf_imported", kIsfImported));
+    bool seen = false;
+    const auto start = std::chrono::steady_clock::now();
+    Pixel left;
+    Pixel right;
+    while (std::chrono::steady_clock::now() - start < std::chrono::seconds(20)) {
+        run.step(2);
+        left = run.sample(0.25, 0.5);
+        right = run.sample(0.75, 0.5);
+        if (left.r > 200 && right.g > 200) {
+            seen = true;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    run.record("ISF imported image comes from the media library", seen, "left (" + std::to_string(left.r) + "," + std::to_string(left.g) + ") right (" + std::to_string(right.r) + "," + std::to_string(right.g) + ")");
+}
+
+void testIsfFilter(Runner& run) {
+    const int blue = clipIndexByName(shaderClipName("blue"));
+    const int swap = run.addFilter("isf_swap", kIsfSwap);
+    run.record("ISF filter is in the effect list", swap >= 0 && effectLibrary()[static_cast<size_t>(std::max(swap, 0))].isIsf, isfEffectName("isf_swap"));
+    run.record("ISF filter is not a clip", clipIndexByName(shaderClipName("isf_swap")) < 0, "not in the clip library");
+    run.record("the first control starts at the default of the file", swap >= 0 && std::fabs(effectLibrary()[static_cast<size_t>(swap)].defaults[0] - 0.5f) < 0.001f, "0.5");
+
+    run.clearAll();
+    run.place(0, blue);
+    run.useEffect(0, swap);
+    run.step(3);
+    run.expect("ISF filter changes the layer picture", run.centre(), 128, 0, 128, 3);
+    run.record("ISF filter has no error", run.engine().effectError(swap).empty(), run.engine().effectError(swap));
+
+    run.engine().comp.layers[0].fx[0].params[0] = 1.0f;
+    run.step(2);
+    run.expect("the first control sets the first parameter", run.centre(), 255, 0, 0, 3);
+
+    run.engine().comp.layers[0].fx[0].params[0] = 0.0f;
+    run.step(2);
+    run.expect("the control at zero leaves the picture alone", run.centre(), 0, 0, 255, 3);
+
+    run.engine().comp.layers[0].fx[0].enabled = false;
+    run.engine().comp.layers[0].fx[0].params[0] = 1.0f;
+    run.step(2);
+    run.expect("a switched off ISF filter does nothing", run.centre(), 0, 0, 255, 3);
+
+    run.clearAll();
+    run.place(0, blue);
+    run.useEffect(0, swap);
+    EffectSlot& gated = run.engine().comp.layers[0].fx[0];
+    gated.params[0] = 1.0f;
+    gated.reactBand = BandLevel;
+    gated.reactMode = ReactGate;
+    gated.reactAmount = 0.0f;
+    run.step(6);
+    const Pixel mixed = run.centre();
+    run.record("the mix of an ISF filter follows an audio gate", mixed.r > 4 && mixed.r < 160 && std::abs(mixed.r + mixed.b - 255) <= 4, "got (" + std::to_string(mixed.r) + "," + std::to_string(mixed.g) + "," + std::to_string(mixed.b) + "), a part of the filtered and a part of the original picture");
+
+    const int split = run.add("split_red_blue", kSplitRedBlue);
+    const int blur = run.addFilter("isf_blur_test", kIsfBlur);
+    run.clearAll();
+    run.place(0, split);
+    run.step(2);
+    const Pixel sharp = run.sample(0.49, 0.5);
+    run.useEffect(0, blur);
+    run.step(3);
+    const Pixel soft = run.sample(0.49, 0.5);
+    run.expect("two pass ISF blur keeps far areas unchanged", run.sample(0.1, 0.5), 255, 0, 0, 4);
+    run.expect("two pass ISF blur mixes both sides at the edge", run.centre(), 128, 0, 128, 14);
+    run.record("two pass ISF blur softens a hard edge", sharp.b < 10 && soft.b > 20 && soft.r > 20, "sharp blue " + std::to_string(sharp.b) + ", soft red " + std::to_string(soft.r) + " blue " + std::to_string(soft.b));
+    run.record("two pass ISF blur holds its buffer", run.engine().shaderBufferBytes() > 0, std::to_string(run.engine().shaderBufferBytes()) + " bytes");
+    run.clearAll();
+    run.step(static_cast<int>(kShaderIdleReleaseFrames) + 10);
+    run.record("the buffer of the filter is released when it is not used", run.engine().shaderBufferBytes() == 0, std::to_string(run.engine().shaderBufferBytes()) + " bytes");
+
+    const int trail = run.addFilter("isf_trail_test", kIsfTrail);
+    run.clearAll();
+    run.place(0, blue);
+    run.useEffect(0, trail);
+    run.step(1);
+    run.expect("ISF persistent filter buffer after 1 frame", run.centre(), 0, 0, 128, 4);
+    run.step(2);
+    run.expect("ISF persistent filter buffer builds up over frames", run.centre(), 0, 0, 223, 6);
+
+    run.clearAll();
+    run.place(0, blue);
+    run.useEffect(1, swap);
+    run.engine().comp.layers[1].fx[0].params[0] = 1.0f;
+    run.step(3);
+    run.expect("a filter on an empty layer does not touch the layers below", run.centre(), 0, 0, 255, 3);
+}
+
+void testIsfFallbacks(Runner& run) {
+    const int blue = clipIndexByName(shaderClipName("blue"));
+    const int broken = run.add("isf_broken", kIsfBroken);
+    run.clearAll();
+    run.place(0, blue);
+    run.place(1, broken);
+    run.step(3);
+    const std::string error = run.engine().clipError(broken);
+    run.record("a compile error in an ISF file names the line of the file", !error.empty() && mentionsLine(error, 3), error.substr(0, 200));
+    run.expect("a broken ISF file does not stop other layers", run.centre(), 0, 0, 255, 2);
+
+    const int legacy = run.add("isf_legacy", kIsfLegacy);
+    run.clearAll();
+    run.place(0, blue);
+    run.place(1, legacy);
+    run.step(3);
+    const std::string unsupported = run.engine().clipError(legacy);
+    run.record("an unsupported ISF feature is named", unsupported.find("varying") != std::string::npos, unsupported.substr(0, 200));
+    run.expect("an unsupported ISF file draws nothing and the other layer stays", run.centre(), 0, 0, 255, 2);
+
+    const int swap = effectIndexByName(isfEffectName("isf_swap"));
+    const int bad = run.addFilter("isf_filter_broken", kIsfFilterBroken);
+    run.record("a broken ISF filter is listed in the effect list", bad >= 0, isfEffectName("isf_filter_broken"));
+    run.clearAll();
+    run.place(0, blue);
+    run.useEffect(0, bad);
+    run.step(3);
+    run.expect("a broken ISF filter passes the picture through", run.centre(), 0, 0, 255, 2);
+    run.record("the compile error of a filter names the line", mentionsLine(run.engine().effectError(bad), 3), run.engine().effectError(bad).substr(0, 200));
+    run.record("the compile error of a filter is shown", !run.engine().effectError(bad).empty(), run.engine().effectError(bad).substr(0, 200));
+    run.useEffect(0, swap);
+    run.step(2);
+    run.expect("a working ISF filter still works next to a broken one", run.centre(), 128, 0, 128, 3);
+}
+
+void testIsfReload(Runner& run) {
+    const int solid = clipIndexByName(shaderClipName("isf_solid"));
+    run.clearAll();
+    run.place(0, solid);
+    run.step(2);
+    writeText(run.root() / "shaders" / "isf_solid.glsl", kIsfSolidReloaded);
+    std::error_code ec;
+    fs::last_write_time(run.root() / "shaders" / "isf_solid.glsl", fs::file_time_type::clock::now() + std::chrono::seconds(240), ec);
+    const ShaderScan scan = refreshShaderClips();
+    run.engine().syncLibrary();
+    run.engine().reloadShaderClips(scan.changed);
+    run.step(3);
+    run.expect("hot reload of an ISF generator", run.centre(), 0, 255, 0, 3);
+
+    const int swap = effectIndexByName(isfEffectName("isf_swap"));
+    const int blue = clipIndexByName(shaderClipName("blue"));
+    run.clearAll();
+    run.place(0, blue);
+    run.useEffect(0, swap);
+    run.step(2);
+    writeText(run.root() / "shaders" / "isf_swap.fs", kIsfSwapReloaded);
+    fs::last_write_time(run.root() / "shaders" / "isf_swap.fs", fs::file_time_type::clock::now() + std::chrono::seconds(240), ec);
+    const IsfScan isf = refreshIsfEffects();
+    run.engine().syncEffects();
+    run.engine().reloadNodeEffects(isf.changed);
+    run.step(3);
+    run.record("a changed ISF filter file is noticed", !isf.changed.empty(), std::to_string(isf.changed.size()) + " changed");
+    run.expect("hot reload of an ISF filter", run.centre(), 0, 0, 255, 3);
+
+    fs::remove(run.root() / "shaders" / "isf_swap.fs", ec);
+    const IsfScan gone = refreshIsfEffects();
+    run.engine().reloadNodeEffects(gone.changed);
+    run.step(2);
+    run.record("a removed ISF filter file is reported", !run.engine().effectError(swap).empty(), run.engine().effectError(swap));
+    run.expect("a removed ISF filter passes the picture through", run.centre(), 0, 0, 255, 2);
+}
+
+void testIsfExamples(Runner& run) {
+    const char* configured = std::getenv("NYREXVJ_SHADER_EXAMPLES");
+    const fs::path directory = configured && *configured ? fs::path(configured) : fs::path("docs") / "shaders";
+    std::error_code ec;
+    if (!fs::is_directory(directory, ec)) {
+        logLine("Shader self test: the ISF example folder " + directory.string() + " was not found, the example files are not checked");
+        return;
+    }
+    const auto read = [&](const char* name) {
+        std::ifstream in(directory / name, std::ios::binary);
+        return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    };
+    const int red = run.add("example_red", kRed);
+    const int split = run.add("example_split", kSplitRedBlue);
+    const int blue = clipIndexByName(shaderClipName("blue"));
+
+    const int plasma = run.addFile("example_plasma.fs", read("isf_plasma.fs"));
+    run.clearAll();
+    run.place(0, plasma);
+    run.step(8);
+    run.record("example isf_plasma.fs compiles and draws", plasma >= 0 && run.engine().clipError(plasma).empty() && run.engine().shaderRuntimeError(plasma).empty() && run.lit(60) > 1000, plasma >= 0 ? run.engine().clipError(plasma) : std::string("missing"));
+    run.engine().comp.layers[0].playback[0].values[2] = 2.0f;
+    run.engine().comp.layers[0].playback[0].values[5] = 1.0f;
+    run.step(3);
+    run.record("example isf_plasma.fs draws with another pattern and invert", run.engine().shaderRuntimeError(plasma).empty() && run.lit(60) > 1000, "mode 2, invert on");
+
+    const int dots = run.addFile("example_dots.fs", read("isf_feedback_dots.fs"));
+    run.clearAll();
+    run.place(0, dots);
+    run.step(30);
+    run.record("example isf_feedback_dots.fs compiles and leaves a trail", dots >= 0 && run.engine().clipError(dots).empty() && run.engine().shaderRuntimeError(dots).empty() && run.lit(40) > 200, dots >= 0 ? run.engine().clipError(dots) : std::string("missing"));
+
+    const int shift = run.addFilter("example_color_shift", read("isf_color_shift.fs"));
+    run.clearAll();
+    run.place(0, red);
+    run.useEffect(0, shift);
+    run.step(3);
+    run.expect("example isf_color_shift.fs mixes the colour channels", run.centre(), 102, 51, 102, 5);
+    run.record("example isf_color_shift.fs has no error", shift >= 0 && run.engine().effectError(shift).empty(), shift >= 0 ? run.engine().effectError(shift) : std::string("missing"));
+
+    const int blur = run.addFilter("example_blur", read("isf_blur.fs"));
+    run.clearAll();
+    run.place(0, split);
+    run.useEffect(0, blur);
+    run.step(3);
+    run.expect("example isf_blur.fs mixes both sides at the edge", run.centre(), 128, 0, 128, 16);
+    run.record("example isf_blur.fs has no error", blur >= 0 && run.engine().effectError(blur).empty(), blur >= 0 ? run.engine().effectError(blur) : std::string("missing"));
+
+    const int trails = run.addFilter("example_trails", read("isf_trails.fs"));
+    run.clearAll();
+    run.place(0, blue);
+    run.useEffect(0, trails);
+    run.step(3);
+    run.expect("example isf_trails.fs builds up a trail", run.centre(), 0, 0, 223, 6);
+    run.record("example isf_trails.fs has no error", trails >= 0 && run.engine().effectError(trails).empty(), trails >= 0 ? run.engine().effectError(trails) : std::string("missing"));
+    run.clearAll();
+    run.step(2);
+}
+
+struct BenchCase {
+    std::string name;
+    std::string clipText;
+    std::string filterText;
+};
+
 json benchmark(Runner& run, int frames) {
     json result = json::array();
     run.engine().setResolutionIndex(1);
-    const std::vector<std::pair<std::string, std::string>> cases = {
-        {"bench_single", kSinglePassBench},
-        {"bench_alpha", std::string("#pragma nyrexvj alpha\n") + kSinglePassBench},
-        {"bench_two_buffers", kOrder},
-        {"bench_four_buffers", kFourBuffers},
+    const std::string isfSingle = "/*{\"INPUTS\":[]}*/\nvoid main() { vec2 uv = isf_FragNormCoord; gl_FragColor = vec4(uv, 0.5 + 0.5 * sin(TIME), 1.0); }\n";
+    const std::string isfParams =
+        "/*{\"INPUTS\":[{\"NAME\":\"speed\",\"TYPE\":\"float\",\"MIN\":0.0,\"MAX\":4.0,\"DEFAULT\":1.0},{\"NAME\":\"tint\",\"TYPE\":\"color\",\"DEFAULT\":[1.0,0.5,0.2,1.0]}]}*/\n"
+        "void main() { vec2 uv = isf_FragNormCoord; gl_FragColor = vec4(tint.rgb * (0.5 + 0.5 * sin(TIME * speed + uv.x * 6.0)), 1.0); }\n";
+    const std::vector<BenchCase> cases = {
+        {"bench_single", kSinglePassBench, ""},
+        {"bench_alpha", std::string("#pragma nyrexvj alpha\n") + kSinglePassBench, ""},
+        {"bench_two_buffers", kOrder, ""},
+        {"bench_four_buffers", kFourBuffers, ""},
+        {"bench_isf_single", isfSingle, ""},
+        {"bench_isf_params", isfParams, ""},
+        {"bench_isf_accumulate", kIsfAccumulate, ""},
+        {"bench_filter_swap", kSinglePassBench, kIsfSwap},
+        {"bench_filter_blur", kSinglePassBench, kIsfBlur},
+        {"bench_filter_trail", kSinglePassBench, kIsfTrail},
     };
-    for (const auto& entry : cases) {
-        const int clip = run.add(entry.first, entry.second);
+    for (const BenchCase& entry : cases) {
+        const int clip = run.add(entry.name, entry.clipText);
         if (clip < 0) {
             continue;
+        }
+        int effect = -1;
+        if (!entry.filterText.empty()) {
+            effect = run.addFilter(entry.name + "_filter", entry.filterText);
+            if (effect < 0) {
+                continue;
+            }
         }
         run.clearAll();
         run.engine().setResolutionIndex(1);
         run.step(static_cast<int>(kShaderIdleReleaseFrames) + 10);
         run.place(0, clip);
+        if (effect >= 0) {
+            run.useEffect(0, effect);
+        }
         run.step(6);
         double total = 0.0;
         double worst = 0.0;
@@ -549,12 +985,12 @@ json benchmark(Runner& run, int frames) {
             worst = std::max(worst, ms);
         }
         json item;
-        item["name"] = entry.first;
+        item["name"] = entry.name;
         item["averageMs"] = total / static_cast<double>(std::max(frames, 1));
         item["worstMs"] = worst;
         item["bufferBytes"] = run.engine().shaderBufferBytes();
         result.push_back(std::move(item));
-        logLine("Shader benchmark " + entry.first + ": " + std::to_string(total / std::max(frames, 1)) + " ms per frame");
+        logLine("Shader benchmark " + entry.name + ": " + std::to_string(total / std::max(frames, 1)) + " ms per frame");
     }
     return result;
 }
@@ -572,6 +1008,11 @@ int runShaderSelfTest(Engine& engine, int benchFrames, const std::string& output
     testErrors(run);
     testReloadAndRelease(run);
     testBudget(run);
+    testIsfGenerator(run);
+    testIsfFilter(run);
+    testIsfFallbacks(run);
+    testIsfReload(run);
+    testIsfExamples(run);
     testTransition(run);
     report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
     report["checks"] = run.items();

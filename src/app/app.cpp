@@ -102,6 +102,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
 
     initConversion();
     refreshNodeEffects();
+    refreshIsfEffects();
     if (!engine_.init()) {
         logLine("Engine initialisation failed");
         return false;
@@ -414,7 +415,10 @@ void App::autosaveTick(double dt) {
 }
 
 void App::syncNodeEffects(const std::string& forceName) {
-    const NodeScan scan = refreshNodeEffects(forceName);
+    NodeScan scan = refreshNodeEffects(forceName);
+    const IsfScan isf = refreshIsfEffects();
+    scan.added += isf.added;
+    scan.changed.insert(scan.changed.end(), isf.changed.begin(), isf.changed.end());
     if (scan.added > 0) {
         engine_.syncEffects();
         assetsDirty_ = true;

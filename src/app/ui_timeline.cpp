@@ -368,7 +368,7 @@ void App::drawTimelineToolbar() {
         ImGui::TextColored(ui::kAccent, "%s", tr("Timeline settings"));
         ImGui::Spacing();
         const TimelineSourceChoice source = timelineSourceFromName(settings_.timelineSource);
-        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SetNextItemWidth(ui::px(300.0f));
         if (ImGui::BeginCombo(tr("Position source"), sourceLabel(source))) {
             for (TimelineSourceChoice choice : {TimelineSourceChoice::Auto, TimelineSourceChoice::Timecode, TimelineSourceChoice::Transport}) {
                 if (ImGui::Selectable(sourceLabel(choice), choice == source)) {
@@ -380,7 +380,7 @@ void App::drawTimelineToolbar() {
         }
         ImGui::SetItemTooltip("%s", tr("Automatic follows the timecode when one is present and otherwise uses the timeline's own transport."));
         const LostPolicy lost = lostPolicyFromName(settings_.timelineLost);
-        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SetNextItemWidth(ui::px(300.0f));
         if (ImGui::BeginCombo(tr("When the timecode is lost"), lostLabel(lost))) {
             for (LostPolicy policy : {LostPolicy::Hold, LostPolicy::Continue}) {
                 if (ImGui::Selectable(lostLabel(policy), policy == lost)) {
@@ -391,7 +391,7 @@ void App::drawTimelineToolbar() {
             ImGui::EndCombo();
         }
         const OverridePolicy override = overridePolicyFromName(settings_.timelineOverride);
-        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SetNextItemWidth(ui::px(300.0f));
         if (ImGui::BeginCombo(tr("How long a hand move wins"), overrideLabel(override))) {
             for (OverridePolicy policy : {OverridePolicy::NextSegment, OverridePolicy::UntilReleased}) {
                 if (ImGui::Selectable(overrideLabel(policy), policy == override)) {
@@ -405,10 +405,10 @@ void App::drawTimelineToolbar() {
         ImGui::Spacing();
         double loopStart = tl.loop.start;
         double loopEnd = tl.loop.end;
-        ImGui::SetNextItemWidth(140.0f);
+        ImGui::SetNextItemWidth(ui::px(140.0f));
         bool loopChanged = ImGui::InputDouble(tr("Loop start (s)"), &loopStart, 0.0, 0.0, "%.3f", ImGuiInputTextFlags_EnterReturnsTrue);
         loopChanged = ImGui::IsItemDeactivatedAfterEdit() || loopChanged;
-        ImGui::SetNextItemWidth(140.0f);
+        ImGui::SetNextItemWidth(ui::px(140.0f));
         bool endChanged = ImGui::InputDouble(tr("Loop end (s)"), &loopEnd, 0.0, 0.0, "%.3f", ImGuiInputTextFlags_EnterReturnsTrue);
         endChanged = ImGui::IsItemDeactivatedAfterEdit() || endChanged;
         if (loopChanged || endChanged) {
@@ -431,7 +431,7 @@ void App::drawTimelineToolbar() {
 void App::drawTimelineTargetPicker() {
     TimelineView& view = timelineView_;
     ShowTimeline& tl = timeline_.timeline();
-    ImGui::SetNextWindowSize(ImVec2(440.0f, 380.0f), ImGuiCond_Appearing);
+    ui::setNextWindowSize(ImVec2(440.0f, 380.0f), ImGuiCond_Appearing);
     if (!ImGui::BeginPopup("##tlPick")) {
         return;
     }
@@ -1054,7 +1054,7 @@ void App::drawTimeline() {
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowSize(ImVec2(std::min(1180.0f, viewport->WorkSize.x * 0.9f), std::min(560.0f, viewport->WorkSize.y * 0.7f)), ImGuiCond_FirstUseEver);
+    ui::setNextWindowSize(ImVec2(std::min(1180.0f, viewport->WorkSize.x * 0.9f), std::min(560.0f, viewport->WorkSize.y * 0.7f)), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + viewport->WorkSize.y * 0.62f), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
     if (timelineFocus_) {
         ImGui::SetNextWindowFocus();
@@ -1121,12 +1121,12 @@ void App::drawTimeline() {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", tr("Keyframe"));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(ui::px(120.0f));
         double seconds = key.seconds;
         bool timeChanged = ImGui::InputDouble("##keyTime", &seconds, 0.0, 0.0, "%.3f s", ImGuiInputTextFlags_EnterReturnsTrue);
         timeChanged = ImGui::IsItemDeactivatedAfterEdit() || timeChanged;
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(160.0f);
+        ImGui::SetNextItemWidth(ui::px(160.0f));
         float value = key.value;
         const bool valueChanged = ui::sliderFloat("##keyValue", &value, 0.0f, 1.0f, "%.3f");
         const bool valueDone = ImGui::IsItemDeactivated();
@@ -1138,7 +1138,7 @@ void App::drawTimeline() {
             timelineEndEdit();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(ui::px(120.0f));
         if (ImGui::BeginCombo("##keyShape", shapeLabel(key.shape))) {
             for (KeyShape candidate : {KeyShape::Linear, KeyShape::Smooth, KeyShape::Hold}) {
                 if (ImGui::Selectable(shapeLabel(candidate), candidate == key.shape)) {
@@ -1164,7 +1164,7 @@ void App::drawTimeline() {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled("%s", tr("Cue"));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(ui::px(120.0f));
         double seconds = cue.seconds;
         bool timeChanged = ImGui::InputDouble("##cueTime", &seconds, 0.0, 0.0, "%.3f s", ImGuiInputTextFlags_EnterReturnsTrue);
         timeChanged = ImGui::IsItemDeactivatedAfterEdit() || timeChanged;
@@ -1181,7 +1181,7 @@ void App::drawTimeline() {
         const bool continuous = cueTargetIndex >= 0 && controlTargets()[static_cast<size_t>(cueTargetIndex)].kind == ControlKind::Continuous;
         if (continuous && view.selectCue >= 0) {
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(140.0f);
+            ImGui::SetNextItemWidth(ui::px(140.0f));
             float value = cues[static_cast<size_t>(view.selectCue)].value;
             if (ui::sliderFloat("##cueValue", &value, 0.0f, 1.0f, "%.2f")) {
                 timelineBeginEdit();

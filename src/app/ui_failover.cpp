@@ -172,7 +172,7 @@ void App::drawFailoverWindow() {
     if (!failoverOpen_) {
         return;
     }
-    ImGui::SetNextWindowSize(ImVec2(620.0f, 760.0f), ImGuiCond_FirstUseEver);
+    ui::setNextWindowSize(ImVec2(620.0f, 760.0f), ImGuiCond_FirstUseEver);
     const std::string title = std::string(tr("Hot standby")) + "###failoverWindow";
     if (!ImGui::Begin(title.c_str(), &failoverOpen_)) {
         ImGui::End();
@@ -197,7 +197,7 @@ void App::drawFailoverWindow() {
     }
     ImGui::SetItemTooltip("%s", tr("While this PC follows, its picture stays black, so nothing is shown twice. This also blacks the output preview of the standby."));
     float lost = static_cast<float>(settings_.failoverLostAfter);
-    ImGui::SetNextItemWidth(260.0f);
+    ImGui::SetNextItemWidth(ui::px(260.0f));
     if (ui::sliderFloat(trId("The primary counts as lost after (seconds)", "failoverLost"), &lost, 3.0f, 60.0f, "%.0f s")) {
         settings_.failoverLostAfter = failover::clampLostAfter(lost);
     }
@@ -206,7 +206,7 @@ void App::drawFailoverWindow() {
     }
     ImGui::SetItemTooltip("%s", tr("A short time reacts faster but may take over after a network hiccup."));
     int leaderPort = settings_.failoverLeaderPort;
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(ui::px(120.0f));
     ImGui::InputInt(trId("Port as leader (0 = the port of the primary)", "failoverLeaderPort"), &leaderPort, 0, 0);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         settings_.failoverLeaderPort = leaderPort >= 1024 && leaderPort <= 65535 ? leaderPort : 0;

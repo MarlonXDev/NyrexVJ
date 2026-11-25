@@ -22,7 +22,7 @@ void App::drawWelcome() {
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(780.0f, viewport->Size.x - 40.0f), std::min(640.0f, viewport->Size.y - 40.0f)), ImGuiCond_Appearing);
+    ui::setNextWindowSize(ImVec2(std::min(780.0f, viewport->Size.x - 40.0f), std::min(640.0f, viewport->Size.y - 40.0f)), ImGuiCond_Appearing);
     const char* title = welcomeFirstRun_ ? trId("Welcome to NyrexVJ", "welcome") : trId("What's new in NyrexVJ", "welcome");
     if (!ImGui::BeginPopupModal(title, nullptr, ImGuiWindowFlags_NoSavedSettings)) {
         welcomeOpen_ = false;
@@ -36,7 +36,7 @@ void App::drawWelcome() {
     ImGui::TextDisabled("%s", NYREXVJ_VERSION);
 
     ImGui::SameLine(ImGui::GetWindowWidth() - 190.0f);
-    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SetNextItemWidth(ui::px(160.0f));
     if (ImGui::BeginCombo("##welcomeLanguage", languageLabel(currentLanguage()))) {
         for (int i = 0; i < languageCount(); ++i) {
             Language language = static_cast<Language>(i);

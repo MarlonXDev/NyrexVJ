@@ -108,6 +108,7 @@ struct View {
     ImVec2 origin{0.0f, 0.0f};
     ImVec2 pan{0.0f, 0.0f};
     float k = 1.0f;
+    float zoom = 1.0f;
 
     ImVec2 position(const GraphNode& node) const {
         return ImVec2(origin.x + pan.x + node.x * k, origin.y + pan.y + node.y * k);
@@ -264,15 +265,16 @@ void drawValueBox(ImDrawList* list, const View& view, const GraphNode& node, con
             list->AddRectFilled(a, ImVec2(a.x + (b.x - a.x) * t, b.y), withAlpha(ImGui::GetColorU32(ui::kAccentDim), alpha), rounding);
         }
     }
-    const float fontSize = ImGui::GetFontSize();
+    ImFont* font = ImGui::GetFont();
+    const float fontSize = ImGui::GetFontSize() * view.zoom;
     const float textY = a.y + ((b.y - a.y) - fontSize) * 0.5f;
-    const ImU32 textColour = withAlpha(IM_COL32(225, 225, 225, 255), alpha);
+    const ImU32 textColour = withAlpha(ui::kHighContrast ? IM_COL32(255, 255, 255, 255) : IM_COL32(225, 225, 225, 255), alpha);
     const std::string text = valueText(meta, value);
-    const ImVec2 size = ImGui::CalcTextSize(text.c_str());
+    const ImVec2 size = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, text.c_str());
     list->PushClipRect(a, ImVec2(std::max(a.x, b.x - size.x - 8.0f * view.k), b.y), true);
-    list->AddText(ImVec2(a.x + 4.0f * view.k, textY), textColour, meta.name);
+    list->AddText(font, fontSize, ImVec2(a.x + 4.0f * view.k, textY), textColour, meta.name);
     list->PopClipRect();
-    list->AddText(ImVec2(b.x - size.x - 4.0f * view.k, textY), textColour, text.c_str());
+    list->AddText(font, fontSize, ImVec2(b.x - size.x - 4.0f * view.k, textY), textColour, text.c_str());
 }
 
 void drawNode(ImDrawList* list, const View& view, const NodeEditorState& s, const GraphNode& node, const NodeSpec& spec, bool used, const std::string& error, const ImVec2& mouse, bool interactive) {
@@ -282,20 +284,22 @@ void drawNode(ImDrawList* list, const View& view, const NodeEditorState& s, cons
     const ImVec2 size = view.extent(spec);
     const ImVec2 b(a.x + size.x, a.y + size.y);
     const float rounding = 6.0f * k;
-    const float fontSize = ImGui::GetFontSize();
+    ImFont* font = ImGui::GetFont();
+    const float fontSize = ImGui::GetFontSize() * view.zoom;
     list->AddRectFilled(a, b, withAlpha(IM_COL32(32, 32, 36, 245), alpha), rounding);
     list->AddRectFilled(a, ImVec2(b.x, a.y + kNodeTitleHeight * k), withAlpha(categoryColour(spec.category), alpha), rounding, ImDrawFlags_RoundCornersTop);
-    list->AddText(ImVec2(a.x + 8.0f * k, a.y + (kNodeTitleHeight * k - fontSize) * 0.5f), withAlpha(IM_COL32(245, 245, 245, 255), alpha), spec.title);
+    list->AddText(font, fontSize, ImVec2(a.x + 8.0f * k, a.y + (kNodeTitleHeight * k - fontSize) * 0.5f), withAlpha(IM_COL32(245, 245, 245, 255), alpha), spec.title);
     const bool selected = s.selected == node.id;
     if (!error.empty()) {
         list->AddRect(a, b, IM_COL32(235, 70, 70, 255), rounding, 0, 2.0f);
-        list->AddText(ImVec2(b.x - fontSize - 6.0f * k, a.y + (kNodeTitleHeight * k - fontSize) * 0.5f), IM_COL32(255, 230, 230, 255), "!");
+        list->AddText(font, fontSize, ImVec2(b.x - fontSize - 6.0f * k, a.y + (kNodeTitleHeight * k - fontSize) * 0.5f), IM_COL32(255, 230, 230, 255), "!");
     } else if (selected) {
         list->AddRect(a, b, ImGui::GetColorU32(ui::kAccent), rounding, 0, 2.0f);
     } else {
-        list->AddRect(a, b, withAlpha(IM_COL32(90, 90, 100, 255), alpha), rounding, 0, 1.0f);
+        list->AddRect(a, b, withAlpha(ui::kHighContrast ? IM_COL32(190, 190, 200, 255) : IM_COL32(90, 90, 100, 255), alpha), rounding, 0, ui::kHighContrast ? 1.5f : 1.0f);
     }
     const float radius = 5.0f * k;
+    const ImU32 portText = ui::kHighContrast ? IM_COL32(255, 255, 255, 255) : IM_COL32(205, 205, 205, 255);
     for (size_t i = 0; i < spec.inputs.size(); ++i) {
         const PortSpec& port = spec.inputs[i];
         const int row = static_cast<int>(i);
@@ -313,7 +317,7 @@ void drawNode(ImDrawList* list, const View& view, const NodeEditorState& s, cons
             const bool hot = interactive && inside(mouse, view.boxMin(node, row), view.boxMax(node, row));
             drawValueBox(list, view, node, spec, i, alpha, hot);
         } else {
-            list->AddText(ImVec2(pin.x + 10.0f * k, pin.y - fontSize * 0.5f), withAlpha(IM_COL32(205, 205, 205, 255), alpha), port.name);
+            list->AddText(font, fontSize, ImVec2(pin.x + 10.0f * k, pin.y - fontSize * 0.5f), withAlpha(portText, alpha), port.name);
         }
     }
     for (size_t c = 0; c < spec.consts.size(); ++c) {
@@ -329,12 +333,12 @@ void drawNode(ImDrawList* list, const View& view, const NodeEditorState& s, cons
         const bool closeBy = interactive && distance(mouse, pin) <= 9.0f * k;
         const ImU32 colour = port.generic ? typeColour(PortType::Float) : typeColour(port.type);
         list->AddCircleFilled(pin, closeBy ? radius + 1.5f * k : radius, colour);
-        const ImVec2 text = ImGui::CalcTextSize(port.name);
-        list->AddText(ImVec2(pin.x - 10.0f * k - text.x, pin.y - fontSize * 0.5f), withAlpha(IM_COL32(205, 205, 205, 255), alpha), port.name);
+        const ImVec2 text = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, port.name);
+        list->AddText(font, fontSize, ImVec2(pin.x - 10.0f * k - text.x, pin.y - fontSize * 0.5f), withAlpha(portText, alpha), port.name);
     }
     if (!error.empty()) {
         const float wrap = kNodeWidth * k * 1.3f;
-        list->AddText(ImGui::GetFont(), fontSize * 0.9f, ImVec2(a.x, b.y + 3.0f * k), IM_COL32(255, 130, 130, 255), error.c_str(), nullptr, wrap);
+        list->AddText(font, fontSize * 0.9f, ImVec2(a.x, b.y + 3.0f * k), IM_COL32(255, 130, 130, 255), error.c_str(), nullptr, wrap);
     }
 }
 
@@ -600,7 +604,7 @@ void drawAddMenu(NodeEditorState& s) {
         s.search[0] = '\0';
         ImGui::SetKeyboardFocusHere();
     }
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     const bool entered = ImGui::InputTextWithHint("##nodesearch", tr("Search nodes"), s.search, sizeof(s.search), ImGuiInputTextFlags_EnterReturnsTrue);
     ImGui::Separator();
     bool hasOutput = false;
@@ -697,7 +701,7 @@ void drawValuePopups(NodeEditorState& s) {
         if (ImGui::IsWindowAppearing()) {
             ImGui::SetKeyboardFocusHere();
         }
-        ImGui::SetNextItemWidth(140.0f);
+        ImGui::SetNextItemWidth(ui::px(140.0f));
         if (ImGui::InputFloat(meta.name, &s.editValue, 0.0f, 0.0f, "%.4f", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll)) {
             s.graph.setValue(s.editNode, static_cast<size_t>(s.editIndex), s.editValue);
             ImGui::CloseCurrentPopup();
@@ -752,6 +756,22 @@ void finishLink(NodeEditorState& s, const View& view, const ImVec2& mouse) {
     }
     s.linking = false;
     s.linkRestore = false;
+}
+
+void applyZoom(NodeEditorState& s, const ImVec2& local, float target) {
+    const float current = std::clamp(s.zoom, kNodeZoomMin, kNodeZoomMax);
+    const float next = std::clamp(target, kNodeZoomMin, kNodeZoomMax);
+    if (next == current) {
+        return;
+    }
+    const float ratio = next / current;
+    s.pan.x = local.x - (local.x - s.pan.x) * ratio;
+    s.pan.y = local.y - (local.y - s.pan.y) * ratio;
+    s.zoom = next;
+}
+
+void zoomCanvas(NodeEditorState& s, const View& view, const ImVec2& anchor, float target) {
+    applyZoom(s, ImVec2(anchor.x - view.origin.x, anchor.y - view.origin.y), target);
 }
 
 void handleCanvasInput(NodeEditorState& s, const View& view, bool hovered, bool windowFocused) {
@@ -841,7 +861,9 @@ void handleCanvasInput(NodeEditorState& s, const View& view, bool hovered, bool 
         }
     }
     if (hovered && io.MouseWheel != 0.0f) {
-        if (io.KeyShift) {
+        if (io.KeyCtrl) {
+            zoomCanvas(s, view, mouse, view.zoom * std::pow(1.1f, io.MouseWheel));
+        } else if (io.KeyShift) {
             s.pan.x += io.MouseWheel * 48.0f;
         } else {
             s.pan.y += io.MouseWheel * 48.0f;
@@ -892,6 +914,16 @@ void handleCanvasInput(NodeEditorState& s, const View& view, bool hovered, bool 
         if (ImGui::IsKeyPressed(ImGuiKey_Delete, false) || ImGui::IsKeyPressed(ImGuiKey_Backspace, false)) {
             removeSelected(s);
         }
+        if (!io.KeyCtrl && !io.KeyShift && !io.KeyAlt) {
+            const ImVec2 centre(view.origin.x + s.canvasSize.x * 0.5f, view.origin.y + s.canvasSize.y * 0.5f);
+            if (ImGui::IsKeyPressed(ImGuiKey_Equal, true)) {
+                zoomCanvas(s, view, centre, view.zoom * 1.1f);
+            } else if (ImGui::IsKeyPressed(ImGuiKey_Minus, true)) {
+                zoomCanvas(s, view, centre, view.zoom / 1.1f);
+            } else if (ImGui::IsKeyPressed(ImGuiKey_0, false)) {
+                zoomCanvas(s, view, centre, 1.0f);
+            }
+        }
         if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_D, false)) {
             duplicateNode(s, s.selected);
         }
@@ -917,11 +949,18 @@ void drawCanvas(NodeEditorState& s, const ImVec2& size, bool windowFocused) {
     View view;
     view.origin = cmin;
     view.pan = s.pan;
-    view.k = std::clamp(ImGui::GetFontSize() / 16.0f, 0.75f, 2.5f);
+    s.canvasSize = size;
+    s.canvasOrigin = cmin;
+    s.zoom = std::clamp(s.zoom, kNodeZoomMin, kNodeZoomMax);
+    view.zoom = s.zoom;
+    const float baseScale = std::clamp(ImGui::GetFontSize() / 16.0f, 0.75f, 2.5f);
+    view.k = baseScale * view.zoom;
 
     syncOrder(s);
     handleCanvasInput(s, view, hovered, windowFocused);
     view.pan = s.pan;
+    view.zoom = s.zoom;
+    view.k = baseScale * view.zoom;
     recompile(s);
 
     const ImVec2 mouse = ImGui::GetIO().MousePos;
@@ -1039,6 +1078,13 @@ void App::openNodeEditor(const std::string& stem) {
     }
 }
 
+void App::openNodeEditorNew() {
+    openNodeEditor(std::string());
+    if (!nodes_->hasGraph) {
+        createGraph(*nodes_, "New effect", nullptr);
+    }
+}
+
 bool App::importNodeGraph(const std::string& path) {
     std::string name;
     std::string error;
@@ -1077,7 +1123,7 @@ void App::drawNodeEditor() {
     s.hadFocus = true;
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowSize(ImVec2(std::min(1240.0f, viewport->WorkSize.x * 0.92f), std::min(760.0f, viewport->WorkSize.y * 0.88f)), ImGuiCond_FirstUseEver);
+    ui::setNextWindowSize(ImVec2(std::min(1240.0f, viewport->WorkSize.x * 0.92f), std::min(760.0f, viewport->WorkSize.y * 0.88f)), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + viewport->WorkSize.y * 0.5f), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
     if (nodesFocus_) {
         ImGui::SetNextWindowFocus();
@@ -1097,7 +1143,7 @@ void App::drawNodeEditor() {
         createGraph(s, "New effect", nullptr);
     }
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::BeginCombo("##nodeopen", s.hasGraph ? s.stem.c_str() : tr("Open an effect..."))) {
         for (const std::string& stem : s.files) {
             if (ImGui::Selectable(stem.c_str(), s.hasGraph && stem == s.stem)) {
@@ -1111,7 +1157,7 @@ void App::drawNodeEditor() {
     }
     if (s.hasGraph) {
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(200.0f);
+        ImGui::SetNextItemWidth(ui::px(200.0f));
         ImGui::InputText("##nodename", s.nameBuffer, sizeof(s.nameBuffer));
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             renameCurrent(s, s.nameBuffer);
@@ -1156,7 +1202,7 @@ void App::drawNodeEditor() {
         }
     }
 
-    ImGui::SetNextItemWidth(360.0f);
+    ImGui::SetNextItemWidth(ui::px(360.0f));
     ImGui::InputTextWithHint("##nodepath", tr("File path"), s.pathBuffer, sizeof(s.pathBuffer));
     ImGui::SameLine();
     ImGui::BeginDisabled(!s.hasGraph || s.pathBuffer[0] == '\0');
@@ -1265,6 +1311,27 @@ void App::drawNodeEditor() {
             ImGui::TextDisabled("%s %d", tr("Texture reads:"), pickedSpec->reads);
         }
     }
+    ImGui::SeparatorText(tr("Zoom"));
+    const ImVec2 zoomCentre(s.canvasSize.x * 0.5f, s.canvasSize.y * 0.5f);
+    if (ImGui::SmallButton("-##zoomOut")) {
+        applyZoom(s, zoomCentre, s.zoom / 1.1f);
+    }
+    ImGui::SetItemTooltip("%s", tr("Zoom out"));
+    ImGui::SameLine();
+    ImGui::Text("%d%%", static_cast<int>(std::lround(s.zoom * 100.0f)));
+    ImGui::SameLine();
+    if (ImGui::SmallButton("+##zoomIn")) {
+        applyZoom(s, zoomCentre, s.zoom * 1.1f);
+    }
+    ImGui::SetItemTooltip("%s", tr("Zoom in"));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(trId("Reset", "nodeZoomReset"))) {
+        applyZoom(s, zoomCentre, 1.0f);
+    }
+    ImGui::SetItemTooltip("%s", tr("Back to 100 %"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Ctrl + mouse wheel zooms the view. The keys - and = zoom out and in, 0 resets the zoom."));
+    ImGui::PopTextWrapPos();
     ImGui::SeparatorText(tr("Mouse and keys"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Right click: add a node. Drag from a pin: connect. Drag a connected input away: remove the link. Double click or Ctrl+click a value to type it. Delete: remove the node. Ctrl+D: duplicate. Middle mouse or empty space: move the view."));

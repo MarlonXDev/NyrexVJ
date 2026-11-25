@@ -345,7 +345,7 @@ void App::drawRecordingPage() {
 
     ImGui::SeparatorText(tr("Format"));
     ImGui::BeginDisabled(running);
-    ImGui::SetNextItemWidth(260.0f);
+    ImGui::SetNextItemWidth(ui::px(260.0f));
     if (ImGui::BeginCombo(trId("Format", "recFormat"), profileLabel(current))) {
         for (int i = 0; i < availableCount; ++i) {
             const RecordProfile profile = available[static_cast<size_t>(i)];
@@ -386,7 +386,7 @@ void App::drawRecordingPage() {
     } else if (recordSizeChoice_ > 0) {
         sizeLabel = kSizeChoices[recordSizeChoice_ - 1].label;
     }
-    ImGui::SetNextItemWidth(260.0f);
+    ImGui::SetNextItemWidth(ui::px(260.0f));
     if (ImGui::BeginCombo(trId("Size", "recSize"), sizeLabel)) {
         if (ImGui::Selectable(outputLabel, recordSizeChoice_ == kSizeSameAsOutput)) {
             recordSizeChoice_ = kSizeSameAsOutput;
@@ -411,10 +411,10 @@ void App::drawRecordingPage() {
         ImGui::EndCombo();
     }
     if (recordSizeChoice_ == kSizeCustom) {
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(ui::px(120.0f));
         bool edited = ImGui::InputInt(trId("Width", "recWidth"), &recordCustomWidth_, 0, 0);
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(ui::px(120.0f));
         edited = ImGui::InputInt(trId("Height", "recHeight"), &recordCustomHeight_, 0, 0) || edited;
         if (edited) {
             recordCustomWidth_ = std::clamp(recordCustomWidth_, 0, kMaxRecordDimension);
@@ -433,7 +433,7 @@ void App::drawRecordingPage() {
     }
     char fpsLabel[24];
     std::snprintf(fpsLabel, sizeof(fpsLabel), "%d", kRecordFrameRates[fpsIndex]);
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(ui::px(120.0f));
     if (ImGui::BeginCombo(trId("Frame rate", "recFps"), fpsLabel)) {
         for (int i = 0; i < kRecordFrameRateCount; ++i) {
             std::snprintf(fpsLabel, sizeof(fpsLabel), "%d", kRecordFrameRates[i]);
@@ -447,7 +447,7 @@ void App::drawRecordingPage() {
     ImGui::SetItemTooltip("%s", tr("Pictures per second in the file. The show itself keeps running at its own speed."));
 
     if (info.usesQuality) {
-        ImGui::SetNextItemWidth(260.0f);
+        ImGui::SetNextItemWidth(ui::px(260.0f));
         ui::sliderInt(trId("Quality", "recQuality"), &settings_.recordQuality, 0, 100, "%d");
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             persist();
@@ -486,7 +486,7 @@ void App::drawRecordingPage() {
         ImGui::SetItemTooltip("%s", tr("If the program or the computer stops during a recording, everything recorded so far can still be played. Some programs open such files a little slower."));
     }
     const std::string folderShown = recordFolder_[0] != '\0' ? std::string(recordFolder_) : defaultRecordFolder();
-    ImGui::SetNextItemWidth(-250.0f);
+    ImGui::SetNextItemWidth(ui::px(-250.0f));
     if (ImGui::InputTextWithHint(trId("Folder", "recFolder"), defaultRecordFolder().c_str(), recordFolder_, sizeof(recordFolder_))) {
         settings_.recordFolder = recordFolder_;
     }

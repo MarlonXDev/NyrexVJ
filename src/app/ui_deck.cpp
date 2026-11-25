@@ -129,7 +129,7 @@ void App::drawDeckBar() {
     }
     if (ImGui::BeginPopup("###renameDeck")) {
         ImGui::TextDisabled("%s %d", tr("Deck"), renameDeck_ + 1);
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::IsWindowAppearing()) {
             ImGui::SetKeyboardFocusHere();
         }
@@ -162,7 +162,7 @@ void App::drawTransport(bool wide) {
     ImGui::TextDisabled("BPM");
     ImGui::SameLine();
     float bpm = comp.bpm;
-    ImGui::SetNextItemWidth(78.0f);
+    ImGui::SetNextItemWidth(ui::px(78.0f));
     if (ImGui::DragFloat("##bpm", &bpm, 0.1f, 40.0f, 240.0f, "%.1f")) {
         comp.bpm = std::clamp(bpm, 40.0f, 240.0f);
     }
@@ -207,7 +207,7 @@ void App::drawTransport(bool wide) {
     ImGui::SetItemTooltip("%s", tr("Click to adjust the beat grid"));
     if (ImGui::BeginPopup("##beatGrid")) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Beat grid"));
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(ui::px(120.0f));
         int beatsPerBar = comp.beatsPerBar;
         if (ui::sliderInt(tr("Beats per bar"), &beatsPerBar, kMinBeatsPerBar, kMaxBeatsPerBar)) {
             comp.beatsPerBar = clampBeatsPerBar(beatsPerBar);
@@ -240,7 +240,7 @@ void App::drawTransport(bool wide) {
     {
         const char* gridLabels[kQuantizeGridCount] = {tr("Off"), tr("Beat"), tr("Bar"), tr("2 bars"), tr("4 bars")};
         const QuantizeGrid current = quantizeGridFromName(settings_.launchQuantize.c_str());
-        ImGui::SetNextItemWidth(84.0f);
+        ImGui::SetNextItemWidth(ui::px(84.0f));
         if (ImGui::BeginCombo("##launchQuantize", gridLabels[static_cast<int>(current)])) {
             for (int g = 0; g < kQuantizeGridCount; ++g) {
                 if (ImGui::Selectable(gridLabels[g], static_cast<int>(current) == g)) {
@@ -290,7 +290,7 @@ void App::drawTransport(bool wide) {
     ImGui::Checkbox(trId("Beat sync", "transSync"), &settings.syncBeats);
     ImGui::SetItemTooltip("%s", tr("Transition length follows the tempo"));
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(ui::px(120.0f));
     if (settings.syncBeats) {
         ui::sliderInt("##transbeats", &settings.beats, 1, 32, "%d beats");
     } else {
@@ -303,7 +303,7 @@ void App::drawTransport(bool wide) {
         ImGui::SameLine();
         ImGui::TextDisabled("%s", tr("every"));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(110.0f);
+        ImGui::SetNextItemWidth(ui::px(110.0f));
         ui::sliderInt("##cyclebeats", &settings.cycleBeats, 4, 128, "%d beats");
     }
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);

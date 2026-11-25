@@ -127,7 +127,7 @@ void App::drawRoutingWindow() {
     if (!routingOpen_) {
         return;
     }
-    ImGui::SetNextWindowSize(ImVec2(660.0f, 720.0f), ImGuiCond_FirstUseEver);
+    ui::setNextWindowSize(ImVec2(660.0f, 720.0f), ImGuiCond_FirstUseEver);
     std::string title = std::string(tr("Video routing")) + "###routingWindow";
     if (!ImGui::Begin(title.c_str(), &routingOpen_)) {
         ImGui::End();
@@ -197,7 +197,7 @@ void App::drawRoutingWindow() {
             current = routing::Source{};
         }
         ImGui::PushID(k);
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::BeginCombo(senderNames[k], sourceText(current).c_str())) {
             for (const routing::Source& choice : routing::senderChoices()) {
                 const bool selected = choice == current;

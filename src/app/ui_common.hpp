@@ -13,6 +13,7 @@
 
 namespace nvj::ui {
 
+inline bool kHighContrast = false;
 inline ImVec4 kAccent(1.00f, 0.55f, 0.12f, 1.00f);
 inline ImVec4 kAccentHover(1.00f, 0.68f, 0.32f, 1.00f);
 inline ImVec4 kAccentDim(0.50f, 0.28f, 0.06f, 1.00f);
@@ -40,6 +41,31 @@ inline const Palette kPalettes[] = {
     {"Violet", {0.55f, 0.25f, 1.00f}, {0.00f, 0.85f, 0.90f}},
     {"Mono", {1.00f, 1.00f, 1.00f}, {0.35f, 0.35f, 0.35f}},
 };
+
+inline float scale() {
+    const ImGuiStyle& style = ImGui::GetStyle();
+    return style.FontScaleMain * style.FontScaleDpi;
+}
+
+inline float px(float value) {
+    return value * scale();
+}
+
+inline void setNextWindowSize(const ImVec2& size, ImGuiCond condition = 0) {
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const float margin = 16.0f;
+    const float factor = scale();
+    ImGui::SetNextWindowSize(ImVec2(std::min(size.x * factor, std::max(160.0f, viewport->Size.x - margin * 2.0f)), std::min(size.y * factor, std::max(120.0f, viewport->Size.y - margin * 2.0f))), condition);
+}
+
+inline void setNextWindowSizeConstraints(const ImVec2& smallest, const ImVec2& largest) {
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const float margin = 16.0f;
+    const float factor = scale();
+    const float maxWidth = std::max(160.0f, viewport->Size.x - margin * 2.0f);
+    const float maxHeight = std::max(120.0f, viewport->Size.y - margin * 2.0f);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(std::min(smallest.x * factor, maxWidth), std::min(smallest.y * factor, maxHeight)), largest);
+}
 
 inline float fitComboWidth(float minWidth, const char* text) {
     const ImGuiStyle& style = ImGui::GetStyle();

@@ -15,6 +15,11 @@ struct ThemeInfo {
 int themeCount();
 const ThemeInfo& themeInfo(int index);
 int themeIndex(const std::string& id);
-void applyTheme(int index = 0);
+struct ThemeOptions {
+    bool highContrast = false;
+    float sizeScale = 1.0f;
+};
+
+void applyTheme(int index = 0, const ThemeOptions& options = ThemeOptions());
 
 }

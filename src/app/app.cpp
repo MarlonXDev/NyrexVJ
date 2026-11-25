@@ -61,9 +61,17 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     ImGuiIO& io = ImGui::GetIO();
     iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v6.ini").string();
     io.IniFilename = iniPath_.c_str();
-    needsLayout_ = !std::filesystem::exists(iniPath_);
+    recoverInterfaceFiles(options);
 
     loadSettings(settings_);
+    if (options.resetInterface) {
+        settings_.uiScale = 1.0f;
+        settings_.uiAutoScale = false;
+        settings_.uiContrast = "standard";
+        settings_.uiKeyboardNav = false;
+        saveSettings(settings_);
+    }
+    loadShortcuts();
     if (settings_.design < 1) {
         settings_.design = 1;
         if (settings_.theme == "orange") {
@@ -685,7 +693,8 @@ void App::frame(double dt) {
         glfwSwapInterval(vsync);
         appliedVsync_ = vsync;
     }
-    ImGui::GetStyle().FontScaleMain = settings_.uiScale;
+    applyPendingWorkspace();
+    updateInterfaceStyle();
     ControlConfig control;
     control.oscEnabled = settings_.oscEnabled || oscOverridePort_ > 0;
     control.oscPort = oscOverridePort_ > 0 ? oscOverridePort_ : settings_.oscPort;
@@ -907,7 +916,7 @@ void App::buildLayout(ImGuiID dock) {
 
 void App::handleShortcuts() {
     ImGuiIO& io = ImGui::GetIO();
-    if (io.WantTextInput) {
+    if (io.WantTextInput || shortcutCapture_ >= 0) {
         return;
     }
     for (int i = 0; i < kColumnCount; ++i) {
@@ -919,48 +928,54 @@ void App::handleShortcuts() {
             }
         }
     }
-    if (io.KeyCtrl && !creatorHasFocus_ && !nodesHasFocus_ && !timelineHasFocus_) {
-        if (ImGui::IsKeyPressed(ImGuiKey_Z, false)) {
-            if (io.KeyShift) {
-                redoEdit();
-            } else {
-                undoEdit();
-            }
-        } else if (ImGui::IsKeyPressed(ImGuiKey_Y, false)) {
+    using shortcuts::Action;
+    if (!creatorHasFocus_ && !nodesHasFocus_ && !timelineHasFocus_) {
+        if (shortcutPressed(Action::Undo)) {
+            undoEdit();
+        } else if (shortcutPressed(Action::Redo)) {
+            redoEdit();
+        } else if (io.KeyCtrl && io.KeyShift && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_Z, false)) {
             redoEdit();
         }
     }
-    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
+    if (shortcutPressed(Action::Settings)) {
         openSettings(-1);
     }
-    if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_R, false)) {
+    if (shortcutPressed(Action::Record)) {
         if (recorder_.active()) {
             stopRecording();
         } else {
             startRecording();
         }
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_PageDown, false)) {
+    if (shortcutPressed(Action::NextDeck)) {
         switchDeckTo(nextUsedDeck(engine_.comp, engine_.comp.activeDeck, 1));
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_PageUp, false)) {
+    if (shortcutPressed(Action::PreviousDeck)) {
         switchDeckTo(nextUsedDeck(engine_.comp, engine_.comp.activeDeck, -1));
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_Space, false) && !timelineHasFocus_) {
+    if (!timelineHasFocus_ && shortcutPressed(Action::Tap)) {
         engine_.tap();
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_B, false)) {
+    if (shortcutPressed(Action::Blackout)) {
         engine_.blackout = !engine_.blackout;
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_F11, false)) {
+    if (shortcutPressed(Action::Fullscreen)) {
         outputs_.toggleFullscreen(window_);
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_F1, false)) {
+    if (shortcutPressed(Action::Manual)) {
         if (manualOpen_) {
             manualOpen_ = false;
         } else {
             openManual(std::string());
         }
+    }
+    if (shortcutPressed(Action::InterfaceLarger)) {
+        changeInterfaceScale(1);
+    } else if (shortcutPressed(Action::InterfaceSmaller)) {
+        changeInterfaceScale(-1);
+    } else if (shortcutPressed(Action::InterfaceReset)) {
+        changeInterfaceScale(0);
     }
 }
 
@@ -1016,14 +1031,15 @@ void App::drawMenuBar() {
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(tr("Edit"))) {
-        if (ImGui::MenuItem(tr("Undo"), "Ctrl+Z", false, history_.canUndo())) {
+        if (ImGui::MenuItem(tr("Undo"), shortcuts::format(shortcuts_.get(shortcuts::Action::Undo)).c_str(), false, history_.canUndo())) {
             undoEdit();
         }
-        if (ImGui::MenuItem(tr("Redo"), "Ctrl+Y", false, history_.canRedo())) {
+        if (ImGui::MenuItem(tr("Redo"), shortcuts::format(shortcuts_.get(shortcuts::Action::Redo)).c_str(), false, history_.canRedo())) {
             redoEdit();
         }
         ImGui::EndMenu();
     }
+    drawViewMenu();
     if (ImGui::BeginMenu(trId("Output", "menuOutput"))) {
         if (ImGui::MenuItem(outputs_.anyOpen() ? tr("Close output windows") : tr("Open output windows"))) {
             if (outputs_.anyOpen()) {
@@ -1032,7 +1048,7 @@ void App::drawMenuBar() {
                 openOutputWindow(false);
             }
         }
-        if (ImGui::MenuItem(tr("Fullscreen"), "F11", outputs_.anyFullscreen(), outputs_.anyOpen())) {
+        if (ImGui::MenuItem(tr("Fullscreen"), shortcuts::format(shortcuts_.get(shortcuts::Action::Fullscreen)).c_str(), outputs_.anyFullscreen(), outputs_.anyOpen())) {
             outputs_.toggleFullscreen(window_);
         }
         if (ImGui::MenuItem(tr("Outputs and mapping..."))) {
@@ -1046,10 +1062,10 @@ void App::drawMenuBar() {
         }
         ImGui::Separator();
         if (recorder_.active()) {
-            if (ImGui::MenuItem(tr("Stop recording"), "Ctrl+Shift+R")) {
+            if (ImGui::MenuItem(tr("Stop recording"), shortcuts::format(shortcuts_.get(shortcuts::Action::Record)).c_str())) {
                 stopRecording();
             }
-        } else if (ImGui::MenuItem(tr("Start recording"), "Ctrl+Shift+R")) {
+        } else if (ImGui::MenuItem(tr("Start recording"), shortcuts::format(shortcuts_.get(shortcuts::Action::Record)).c_str())) {
             startRecording();
         }
         if (ImGui::MenuItem(tr("Recording settings..."))) {
@@ -1176,7 +1192,7 @@ void App::drawMenuBar() {
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(trId("Help", "menuHelp"))) {
-        if (ImGui::MenuItem(tr("User manual"), "F1", manualOpen_)) {
+        if (ImGui::MenuItem(tr("User manual"), shortcuts::format(shortcuts_.get(shortcuts::Action::Manual)).c_str(), manualOpen_)) {
             if (manualOpen_) {
                 manualOpen_ = false;
             } else {

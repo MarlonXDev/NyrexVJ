@@ -21,7 +21,7 @@ PARTS = [
     ("content", ["video", "shaders", "models", "creator", "generators", "nodes", "live-sources"]),
     ("output", ["outputs", "recording"]),
     ("shows", ["control", "sync", "timeline", "stage", "plugins"]),
-    ("reference", ["settings", "shortcuts", "performance", "files", "troubleshooting", "cli", "languages", "glossary"]),
+    ("reference", ["settings", "interface", "shortcuts", "performance", "files", "troubleshooting", "cli", "languages", "glossary"]),
 ]
 
 TEXT = {

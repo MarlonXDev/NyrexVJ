@@ -102,6 +102,8 @@
 <h4>Nachschlagen und Hilfe</h4><ul>
 <li><a href="settings.html">Einstellungen im Überblick</a>
 </li>
+<li><a href="interface.html">Oberfläche, Arbeitsbereiche und Barrierefreiheit</a>
+</li>
 <li><a href="shortcuts.html">Tastenkürzel und Maus</a>
 </li>
 <li><a href="performance.html">Leistung</a>
@@ -192,6 +194,8 @@
 <h4>Nachschlagen und Hilfe</h4><ul>
 <li><a href="settings.html">Einstellungen im Überblick</a>
 </li>
+<li><a href="interface.html">Oberfläche, Arbeitsbereiche und Barrierefreiheit</a>
+</li>
 <li><a href="shortcuts.html">Tastenkürzel und Maus</a>
 </li>
 <li><a href="performance.html">Leistung</a>
@@ -209,7 +213,7 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Eigene Inhalte</p>
 <h1>Der Node-Effekt-Editor</h1>
-<p class="meta">Kapitel 20 von 36 &middot; 3 Min. Lesezeit</p>
+<p class="meta">Kapitel 20 von 37 &middot; 3 Min. Lesezeit</p>
 <nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#nodes-what">Was er macht</a><a href="#nodes-quick">Schnellstart</a><a href="#nodes-graph">Im Graphen arbeiten</a><a href="#nodes-catalogue">Die 68 Nodes</a><a href="#nodes-share">Regler, Weitergeben und Grenzen</a></nav>
 <h2 id="nodes-what"><a class="anchor" href="#nodes-what" aria-label="Link">#</a>Was er macht</h2>
 <p>Der Node-Editor baut deine eigenen Effekte ohne Code. Du verbindest Nodes für Bilder, Audio, Beats, LFOs, Mathe, Farbe, Verzerrung, Rauschen und Formen, und NyrexVJ macht aus dem Graphen einen einzigen Shader. Das Ergebnis ist ein normaler Effekt: Er steht in der Bibliothek als Node: Name, passt in jeden Slot eines Layers oder des Masters, hat bis zu vier Regler und kann die Makros, das Audio und den Beat lesen. Ein Node-Effekt kostet so viel wie derselbe Effekt von Hand geschrieben.</p>
@@ -217,7 +221,7 @@
 <ol><li>Öffne den Editor über Creator, Node-Effekt-Editor, oder über Nodes bearbeiten unter einem Node-Effekt im Effekt-Rack.</li><li>Drück Neu, oder Beispiele erstellen für vier fertige Effekte: Wavy Rainbow, Mirror Swirl, Kick Pulse und Trails.</li><li>Klick mit rechts in den Graphen und such einen Node. Zieh von einem Ausgangs-Pin rechts an einem Node zu einem Eingangs-Pin links an einem anderen, um sie zu verbinden. Der Output-Node ist das Ende jedes Effekts.</li><li>Der Effekt wird nach jeder Änderung einen Moment später gespeichert und neu gebaut. Die Statuszeile zeigt, ob er kompiliert, wie oft er das Bild liest und die Meldung auf dem Node, der falsch ist. Eine ungültige Änderung lässt den letzten guten Shader weiterlaufen.</li><li>Drück Zu Layer hinzufügen, um den Effekt auf dem gewählten Layer zu nutzen.</li></ol>
 <figure class="shot"><a href="../../assets/manual/de/node-editor.webp"><img src="../../assets/manual/de/node-editor.webp" width="1244" height="764" loading="lazy" alt="Der Node-Effekt-Editor mit einem Graphen aus verbundenen Nodes"></a><figcaption>Der Node-Effekt-Editor mit einem Graphen aus verbundenen Nodes</figcaption></figure>
 <h2 id="nodes-graph"><a class="anchor" href="#nodes-graph" aria-label="Link">#</a>Im Graphen arbeiten</h2>
-<div class="tablewrap"><table><thead><tr><th scope="col">Aktion</th><th scope="col">So geht es</th></tr></thead><tbody><tr><td>Node hinzufügen</td><td>Rechtsklick auf leere Fläche, zum Suchen tippen, Node anklicken</td></tr><tr><td>Verbinden</td><td>Von einem Ausgangs-Pin auf einen Eingangs-Pin ziehen</td></tr><tr><td>Verbindung entfernen</td><td>Einen verbundenen Eingang wegziehen, oder rechts auf den Node klicken und Eingänge trennen wählen</td></tr><tr><td>Wert ändern</td><td>Das Wertefeld ziehen, oder doppelklicken und eine Zahl tippen</td></tr><tr><td>Node löschen</td><td>Wählen und Entf oder Rücktaste drücken</td></tr><tr><td>Duplizieren</td><td>Strg+D oder Rechtsklick, Duplizieren</td></tr><tr><td>Ansicht verschieben</td><td>Mittlere Maustaste, oder auf leerer Fläche ziehen</td></tr><tr><td>Rückgängig und Wiederherstellen</td><td>Strg+Z und Strg+Y</td></tr><tr><td>Aufräumen</td><td>Die Schaltfläche Anordnen setzt die Nodes in Spalten von den Eingängen zum Ausgang</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th scope="col">Aktion</th><th scope="col">So geht es</th></tr></thead><tbody><tr><td>Node hinzufügen</td><td>Rechtsklick auf leere Fläche, zum Suchen tippen, Node anklicken</td></tr><tr><td>Verbinden</td><td>Von einem Ausgangs-Pin auf einen Eingangs-Pin ziehen</td></tr><tr><td>Verbindung entfernen</td><td>Einen verbundenen Eingang wegziehen, oder rechts auf den Node klicken und Eingänge trennen wählen</td></tr><tr><td>Wert ändern</td><td>Das Wertefeld ziehen, oder doppelklicken und eine Zahl tippen</td></tr><tr><td>Node löschen</td><td>Wählen und Entf oder Rücktaste drücken</td></tr><tr><td>Duplizieren</td><td>Strg+D oder Rechtsklick, Duplizieren</td></tr><tr><td>Ansicht verschieben</td><td>Mittlere Maustaste, oder auf leerer Fläche ziehen</td></tr><tr><td>Ansicht zoomen</td><td>Strg und das Mausrad zoomt zur Maus hin; <code>=</code> und <code>-</code> zoomen hinein und heraus, <code>0</code> geht zurück auf 100 Prozent</td></tr><tr><td>Rückgängig und Wiederherstellen</td><td>Strg+Z und Strg+Y</td></tr><tr><td>Aufräumen</td><td>Die Schaltfläche Anordnen setzt die Nodes in Spalten von den Eingängen zum Ausgang</td></tr></tbody></table></div>
 <p>Eine Zahl kann einen Vektor oder eine Farbe speisen, und eine Farbe kann eine Farbe mit Alpha speisen. Eine Verbindung, die eine Schleife ergäbe oder sich nicht umwandeln lässt, wird beim Loslassen abgelehnt.</p>
 <h2 id="nodes-catalogue"><a class="anchor" href="#nodes-catalogue" aria-label="Link">#</a>Die 68 Nodes</h2>
 <p>Die Nodes sind in Gruppen geordnet: Input (Bild, vorheriges Bild für Feedback, Position, Zeit, Beat, Audio, Spektrum, Wellenform, Regler, Makros, LFO und Konstanten), Maths, Vector, Colour, Distort, Noise, Shape, Filter und Output. Nodes lesen das Bild, die Audio-Analyse, den Beat, die acht Makros und vier Regler. Ein LFO-Node läuft im Shader auf der Beat-Clock und folgt der Sync-Quelle ganz ohne Prozessorarbeit. Der vollständige Katalog mit jedem Eingang und jeder Option steht in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/NODES.md" target="_blank" rel="noopener noreferrer">docs/NODES.md</a> des Projekts.</p>

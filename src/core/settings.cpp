@@ -154,7 +154,14 @@ bool loadSettings(Settings& settings) {
         }
         return std::clamp(it->get<float>(), low, high);
     };
-    result.uiScale = number("uiScale", 1.0f, 0.7f, 1.8f);
+    result.uiScale = number("uiScale", 1.0f, 0.7f, 2.5f);
+    result.uiAutoScale = boolean("uiAutoScale", false);
+    result.uiKeyboardNav = boolean("uiKeyboardNav", false);
+    auto contrast = doc.find("uiContrast");
+    if (contrast != doc.end() && contrast->is_string()) {
+        const std::string value = contrast->get<std::string>();
+        result.uiContrast = value == "high" ? "high" : "standard";
+    }
     result.audioGain = number("audioGain", 1.0f, 0.1f, 8.0f);
     result.audioSmoothing = number("audioSmoothing", 0.5f, 0.0f, 1.0f);
     result.audioBeatSensitivity = number("audioBeatSensitivity", 0.5f, 0.0f, 1.0f);
@@ -413,7 +420,16 @@ bool saveSettings(const Settings& settings) {
     doc["diagDroppedPerMinute"] = std::clamp(settings.diagDroppedPerMinute, 1, 600);
     doc["diagMemoryPercent"] = std::clamp(settings.diagMemoryPercent, 50, 99);
     doc["renderQuality"] = settings.renderQuality;
-    doc["uiScale"] = settings.uiScale;
+    doc["uiScale"] = std::clamp(settings.uiScale, 0.7f, 2.5f);
+    if (settings.uiAutoScale) {
+        doc["uiAutoScale"] = true;
+    }
+    if (settings.uiContrast == "high") {
+        doc["uiContrast"] = "high";
+    }
+    if (settings.uiKeyboardNav) {
+        doc["uiKeyboardNav"] = true;
+    }
     doc["theme"] = settings.theme;
     doc["design"] = settings.design;
     doc["channel"] = channelName(settings.channel);

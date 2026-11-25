@@ -361,6 +361,7 @@ Jeder Push auf `main` aktualisiert außerdem den `nightly`-Prerelease, dem der S
 | `--profile` | Mit `--bench-comp` jeden Render-Durchlauf einzeln messen und die Tabelle ins JSON-Ergebnis schreiben |
 | `--bench-shaders FRAMES` | Die GPU-Zeit jedes Clips allein und jedes Effekts allein über FRAMES Bilder messen und die teuersten ausgeben (`--bench-out` schreibt JSON), dann beenden |
 | `--bench-memory` | Die Größe der Render-Ziele im Leerlauf, während und nach einem Deck-Übergang und für jede Render-Qualität ausgeben, dann beenden |
+| `--soak SEKUNDEN[,FPS]` | Einen langen Show-Test in Echtzeit fahren (Looks, Deck-Wechsel und Qualitätswechsel nach Zeitplan), Bildzeit, CPU, Speicher, Grafikschätzung, Threads und Handles messen, Wachstum melden, dann beenden; siehe [docs/TESTING.md](docs/TESTING.md) |
 | `--quality 0\|1\|2\|3` | Ebenen-Auflösung für diesen Lauf: 0 Voll, 1 Ausgewogen, 2 Leistung, 3 Automatisch |
 | `--bench-video SEKUNDEN:CLIP1,CLIP2` | Prozessorzeit, Decodierzeit, Upload-Zeit und Videospeicher der genannten Video-Clips messen, SEKUNDEN lang, dann beenden (`--bench-out` schreibt JSON) |
 | `--bench-convert DURCHLÄUFE:DATEI1,DATEI2` | Die genannten DXV-Videos DURCHLÄUFE-mal ohne Fenster in HAP umwandeln und Zeit, Decodier- und Kodierzeit, Bilder pro Sekunde und Größe ausgeben (`--convert-format auto\|hap\|hap_alpha\|hap_q` wählt das Format, `--convert-keep ORDNER` behält die letzte Kopie, `--bench-out` schreibt JSON), dann beenden |

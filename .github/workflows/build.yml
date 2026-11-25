@@ -41,6 +41,12 @@ jobs:
         shell: pwsh
         run: python scripts/check_i18n.py
 
+      - name: Check the test matrix and the measuring script
+        shell: pwsh
+        run: |
+          python scripts/check_test_matrix.py
+          python scripts/test_measure_live.py
+
       - name: Get the FFmpeg headers and libraries
         shell: pwsh
         continue-on-error: true
@@ -124,6 +130,11 @@ jobs:
       - name: Check translations
         run: python3 scripts/check_i18n.py
 
+      - name: Check the test matrix and the measuring script
+        run: |
+          python3 scripts/check_test_matrix.py
+          python3 scripts/test_measure_live.py
+
       - name: Install build and test packages
         run: |
           sudo apt-get update
@@ -187,6 +198,9 @@ jobs:
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data
           fi
+          build/NyrexVJ --fresh --no-update-check --no-welcome --soak 6 --bench-out "$RUNNER_TEMP/soak.json"
+          test -s "$RUNNER_TEMP/soak.json"
+          bash scripts/test_restart.sh build/NyrexVJ
           build/NyrexVJ --bench-nodes 5
           build/NyrexVJ --frames 30 --fresh --no-update-check --screenshot "$RUNNER_TEMP/smoke.png"
           test -s "$RUNNER_TEMP/smoke.png"

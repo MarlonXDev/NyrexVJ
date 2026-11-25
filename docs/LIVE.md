@@ -58,6 +58,8 @@ NyrexVJ --live-selftest
 
 ## What was and was not tested
 
+The overview of what is tested automatically and what needs real hardware, with the manual steps for each, is in [TESTING.md](TESTING.md) (v0.34.0).
+
 Tested (automatically, see `nvj_live_tests`, `nvj_ndi_receive_tests`, `nvj_camera_tests`): the state machine and its delays, keeping only the newest picture, choosing an NDI source, receiving from a fake NDI library (formats, lost sender, reconnecting, unsupported formats), cameras with FFmpeg test sources (sizes, rates, colours in both matrices, ranges, a device that does not exist), the conversion shader against a reference on the processor, the three second release, and that graphics memory and threads return to their start values.
 
 **Not tested, because no hardware was available:** a real camera or capture card (format negotiation, the MJPEG request, plugging in and out), DirectShow device listing and opening on Windows, the real NDI runtime (versions 5 and 6, alpha handling, other colour formats, several senders), real graphics card timings, end to end latency, and the effect on VRChat. NDI alpha is assumed to be straight (not premultiplied). The numbers above come from a software rasteriser. Please run `--bench-live` on your computer and report what you see.

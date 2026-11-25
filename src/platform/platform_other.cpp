@@ -97,6 +97,34 @@ double processCpuSeconds() {
     return seconds(usage.ru_utime) + seconds(usage.ru_stime);
 }
 
+int processThreadCount() {
+#ifdef __linux__
+    std::error_code error;
+    int count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator("/proc/self/task", error)) {
+        (void)entry;
+        ++count;
+    }
+    return error ? 0 : count;
+#else
+    return 0;
+#endif
+}
+
+int processHandleCount() {
+#ifdef __linux__
+    std::error_code error;
+    int count = 0;
+    for (const auto& entry : std::filesystem::directory_iterator("/proc/self/fd", error)) {
+        (void)entry;
+        ++count;
+    }
+    return error ? 0 : count;
+#else
+    return 0;
+#endif
+}
+
 void sleepPrecise(double seconds) {
     if (seconds <= 0.0) {
         return;

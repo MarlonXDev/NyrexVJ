@@ -30,6 +30,8 @@ struct Settings {
     bool prewarmNext = true;
     bool generatorClips = true;
     int particleLimit = 2048;
+    bool gpuParticles = false;
+    int gpuParticleBudgetMb = 64;
     std::string convertMode = "ask";
     std::string convertFormat = "auto";
     int convertCacheMb = 4096;

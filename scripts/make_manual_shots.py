@@ -53,12 +53,13 @@ RUNS = {
     "shows": ["--show-packages", "0"],
     "packs": ["--community-packages", "1"],
     "generators": ["--generators", "0"],
+    "gpuparticles": ["--generators", "1", "--generator-select", "GPU Nebula", "--gpu-particles", "1"],
     "chains": ["--chains", "0", "--chain-select", "Neon Glow"],
 }
 
 SEEDED = {"nodes", "timeline"}
 PACKED = {"packs"}
-GENERATED = {"generators", "chains"}
+GENERATED = {"generators", "gpuparticles", "chains"}
 
 FIGURES = [
     ("main-window", "main", WIN),
@@ -83,6 +84,7 @@ FIGURES = [
     ("show-packages", "shows", SHOWPKG),
     ("community-packages", "packs", PACKS),
     ("generators", "generators", GENERATORS),
+    ("gpu-particles", "gpuparticles", GENERATORS),
     ("effect-chains", "chains", CHAINS),
 ]
 

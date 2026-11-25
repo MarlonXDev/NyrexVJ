@@ -18,6 +18,12 @@ constexpr double kStep = 1.0 / 60.0;
 constexpr int kMaxStepsPerCall = 8;
 constexpr int kMaxSpawnPerStep = 256;
 constexpr int kMaxBurst = 500;
+constexpr int kGpuMinCount = 1024;
+constexpr int kGpuMaxCount = 1048576;
+constexpr int kGpuDefaultCount = 65536;
+constexpr float kGpuMaxRate = 200000.0f;
+constexpr int kGpuMaxBurst = 100000;
+constexpr float kCpuMaxRate = 2000.0f;
 
 enum class Shape { Point, Line, Ring, Box };
 enum class ColorMode { Gradient, Rainbow, White };
@@ -48,6 +54,9 @@ struct Params {
     float levelRate = 0.0f;
     float levelSize = 0.0f;
     float levelSpeed = 0.0f;
+    float swirl = 0.0f;
+    bool gpu = false;
+    int gpuCount = kGpuDefaultCount;
     std::uint32_t seed = 1;
 };
 
@@ -133,6 +142,8 @@ struct Preset {
 };
 
 const std::vector<Preset>& builtinPresets();
+const std::vector<Preset>& gpuPresets();
+Params cpuEquivalent(const Params& params, int limit);
 bool findBuiltin(const std::string& name, Params& params);
 
 std::string paramsToJson(const Params& params);

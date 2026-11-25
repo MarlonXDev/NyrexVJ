@@ -3,6 +3,7 @@
 #include "app/bench.hpp"
 #include "app/bench_convert.hpp"
 #include "app/generator_selftest.hpp"
+#include "app/gpu_particle_selftest.hpp"
 #include "app/output_selftest.hpp"
 #include "app/pack_cli.hpp"
 #include "app/record_selftest.hpp"
@@ -60,6 +61,8 @@ struct Options {
     bool shaderSelfTest = false;
     bool generatorSelfTest = false;
     int generatorSelfTestBench = 0;
+    bool gpuParticleSelfTest = false;
+    int gpuParticleSelfTestBench = 0;
     int shaderSelfTestBench = 0;
     std::string pluginSelfTest;
     bool outputSelfTest = false;
@@ -149,6 +152,11 @@ Options parseOptions(int argc, char** argv) {
             options.generatorSelfTest = true;
             if (hasValue && argv[i + 1][0] != '-') {
                 options.generatorSelfTestBench = std::max(0, std::atoi(argv[++i]));
+            }
+        } else if (arg == "--gpu-particle-selftest") {
+            options.gpuParticleSelfTest = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                options.gpuParticleSelfTestBench = std::max(0, std::atoi(argv[++i]));
             }
         } else if (arg == "--output-selftest") {
             options.outputSelfTest = true;
@@ -293,6 +301,13 @@ Options parseOptions(int argc, char** argv) {
             options.start.chainTarget = 0;
             if (hasValue && argv[i + 1][0] != '-') {
                 options.start.chainTarget = std::clamp(std::atoi(argv[++i]), 0, 4);
+            }
+        } else if (arg == "--generator-select" && hasValue) {
+            options.start.generatorSelect = argv[++i];
+        } else if (arg == "--gpu-particles") {
+            options.start.gpuParticles = 1;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.start.gpuParticles = std::atoi(argv[++i]) != 0 ? 1 : 0;
             }
         } else if (arg == "--chain-select" && hasValue) {
             options.start.chainSelect = argv[++i];
@@ -453,7 +468,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -474,6 +489,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runShaderSelfTest(app.engine(), options.shaderSelfTestBench, options.benchOut);
         } else if (options.generatorSelfTest) {
             benchExit = nvj::runGeneratorSelfTest(app.engine(), options.generatorSelfTestBench, options.benchOut);
+        } else if (options.gpuParticleSelfTest) {
+            benchExit = nvj::runGpuParticleSelfTest(app.engine(), options.gpuParticleSelfTestBench, options.benchOut);
         } else if (options.liveSelfTest) {
             benchExit = nvj::runLiveSelfTest(app.engine(), options.benchOut);
         } else if (!options.benchLive.empty()) {

@@ -70,8 +70,8 @@ void clampParams(Params& p) {
     auto fix = [](float& value, float low, float high, float fallback) {
         value = std::isfinite(value) ? std::clamp(value, low, high) : fallback;
     };
-    fix(p.rate, 0.0f, 2000.0f, defaults.rate);
-    fix(p.burst, 0.0f, static_cast<float>(kMaxBurst), defaults.burst);
+    fix(p.rate, 0.0f, p.gpu ? kGpuMaxRate : kCpuMaxRate, defaults.rate);
+    fix(p.burst, 0.0f, static_cast<float>(p.gpu ? kGpuMaxBurst : kMaxBurst), defaults.burst);
     fix(p.life, 0.2f, 10.0f, defaults.life);
     fix(p.lifeJitter, 0.0f, 1.0f, defaults.lifeJitter);
     fix(p.speed, 0.0f, 3.0f, defaults.speed);
@@ -92,6 +92,8 @@ void clampParams(Params& p) {
     fix(p.levelRate, 0.0f, 4.0f, defaults.levelRate);
     fix(p.levelSize, 0.0f, 2.0f, defaults.levelSize);
     fix(p.levelSpeed, 0.0f, 2.0f, defaults.levelSpeed);
+    fix(p.swirl, -4.0f, 4.0f, defaults.swirl);
+    p.gpuCount = std::clamp(p.gpuCount, kGpuMinCount, kGpuMaxCount);
 }
 
 System::System(int limit) {
@@ -196,6 +198,12 @@ void System::stepOnce(float level) {
     while (i < particles_.size()) {
         Particle& p = particles_[i];
         p.vy -= params_.gravity * dt;
+        if (params_.swirl != 0.0f) {
+            const float rx = p.x - params_.originX * aspect_;
+            const float ry = p.y - params_.originY;
+            p.vx -= ry * params_.swirl * dt;
+            p.vy += rx * params_.swirl * dt;
+        }
         if (params_.turbulence > 0.0f) {
             p.vx += signedUnit() * params_.turbulence * dt * 4.0f;
             p.vy += signedUnit() * params_.turbulence * dt * 4.0f;
@@ -437,7 +445,111 @@ bool findBuiltin(const std::string& name, Params& params) {
             return true;
         }
     }
+    for (const Preset& preset : gpuPresets()) {
+        if (preset.name == name) {
+            params = preset.params;
+            return true;
+        }
+    }
     return false;
+}
+
+const std::vector<Preset>& gpuPresets() {
+    static const std::vector<Preset> presets = [] {
+        std::vector<Preset> list;
+        {
+            Params p;
+            p.gpu = true;
+            p.gpuCount = 262144;
+            p.rate = 40000.0f;
+            p.life = 6.0f;
+            p.lifeJitter = 0.4f;
+            p.speed = 0.25f;
+            p.speedJitter = 0.6f;
+            p.direction = 90.0f;
+            p.spread = 360.0f;
+            p.drag = 0.35f;
+            p.turbulence = 0.3f;
+            p.swirl = 0.7f;
+            p.size = 0.006f;
+            p.sizeEnd = 0.4f;
+            p.sizeJitter = 0.5f;
+            p.originY = 0.0f;
+            p.shape = Shape::Ring;
+            p.extent = 0.12f;
+            p.softness = 0.8f;
+            p.seed = 101;
+            p.levelRate = 1.2f;
+            p.levelSize = 0.6f;
+            list.push_back({"GPU Nebula", p});
+        }
+        {
+            Params p;
+            p.gpu = true;
+            p.gpuCount = 131072;
+            p.rate = 1500.0f;
+            p.burst = 20000.0f;
+            p.life = 2.4f;
+            p.lifeJitter = 0.5f;
+            p.speed = 0.9f;
+            p.speedJitter = 0.7f;
+            p.spread = 360.0f;
+            p.gravity = 0.5f;
+            p.drag = 0.9f;
+            p.size = 0.008f;
+            p.sizeEnd = 0.2f;
+            p.originY = 0.0f;
+            p.color = ColorMode::Rainbow;
+            p.softness = 0.5f;
+            p.seed = 113;
+            p.levelSpeed = 0.9f;
+            p.levelSize = 0.5f;
+            list.push_back({"GPU Beat Burst", p});
+        }
+        {
+            Params p;
+            p.gpu = true;
+            p.gpuCount = 98304;
+            p.rate = 12000.0f;
+            p.life = 3.2f;
+            p.lifeJitter = 0.3f;
+            p.speed = 0.7f;
+            p.speedJitter = 0.3f;
+            p.direction = 270.0f;
+            p.spread = 6.0f;
+            p.gravity = 0.2f;
+            p.drag = 0.05f;
+            p.size = 0.004f;
+            p.sizeEnd = 1.0f;
+            p.originY = 1.1f;
+            p.shape = Shape::Line;
+            p.extent = 1.0f;
+            p.color = ColorMode::White;
+            p.softness = 0.7f;
+            p.seed = 127;
+            p.levelRate = 1.5f;
+            list.push_back({"GPU Rain", p});
+        }
+        for (Preset& preset : list) {
+            clampParams(preset.params);
+        }
+        return list;
+    }();
+    return presets;
+}
+
+Params cpuEquivalent(const Params& source, int limit) {
+    Params p = source;
+    p.gpu = false;
+    clampParams(p);
+    const float room = static_cast<float>(clampLimit(limit)) * 0.9f;
+    const float demand = p.rate * p.life;
+    if (demand > room && demand > 0.0f) {
+        p.rate *= room / demand;
+    }
+    p.burst = std::min(p.burst, static_cast<float>(kMaxBurst));
+    clampParams(p);
+    return p;
 }
 
 std::string paramsToJson(const Params& source) {
@@ -471,6 +583,9 @@ std::string paramsToJson(const Params& source) {
     node["levelRate"] = p.levelRate;
     node["levelSize"] = p.levelSize;
     node["levelSpeed"] = p.levelSpeed;
+    node["swirl"] = p.swirl;
+    node["backend"] = p.gpu ? "gpu" : "cpu";
+    node["gpuCount"] = p.gpuCount;
     node["seed"] = p.seed;
     return node.dump(2);
 }
@@ -500,8 +615,9 @@ bool paramsFromJson(const std::string& text, Params& params, std::string& error,
         return false;
     }
     Params r;
-    r.rate = number(node, "rate", r.rate, 0.0f, 2000.0f);
-    r.burst = number(node, "burst", r.burst, 0.0f, static_cast<float>(kMaxBurst));
+    r.gpu = stringValue(node, "backend") == "gpu";
+    r.rate = number(node, "rate", r.rate, 0.0f, r.gpu ? kGpuMaxRate : kCpuMaxRate);
+    r.burst = number(node, "burst", r.burst, 0.0f, static_cast<float>(r.gpu ? kGpuMaxBurst : kMaxBurst));
     r.life = number(node, "life", r.life, 0.2f, 10.0f);
     r.lifeJitter = number(node, "lifeJitter", r.lifeJitter, 0.0f, 1.0f);
     r.speed = number(node, "speed", r.speed, 0.0f, 3.0f);
@@ -525,11 +641,16 @@ bool paramsFromJson(const std::string& text, Params& params, std::string& error,
     r.levelRate = number(node, "levelRate", r.levelRate, 0.0f, 4.0f);
     r.levelSize = number(node, "levelSize", r.levelSize, 0.0f, 2.0f);
     r.levelSpeed = number(node, "levelSpeed", r.levelSpeed, 0.0f, 2.0f);
+    r.swirl = number(node, "swirl", r.swirl, -4.0f, 4.0f);
+    auto gpuCount = node.find("gpuCount");
+    if (gpuCount != node.end() && gpuCount->is_number_integer()) {
+        r.gpuCount = static_cast<int>(std::clamp<long long>(gpuCount->get<long long>(), kGpuMinCount, kGpuMaxCount));
+    }
     auto seed = node.find("seed");
     if (seed != node.end() && seed->is_number_unsigned()) {
         r.seed = static_cast<std::uint32_t>(std::min<std::uint64_t>(seed->get<std::uint64_t>(), 0xFFFFFFFFull));
     }
-    if (warnings && r.rate * r.life > static_cast<float>(kDefaultLimit)) {
+    if (warnings && !r.gpu && r.rate * r.life > static_cast<float>(kDefaultLimit)) {
         warnings->push_back("This file could use more particles than the default limit and the limit will cut them off");
     }
     clampParams(r);

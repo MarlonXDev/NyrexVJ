@@ -713,13 +713,31 @@ A particle clip shows many small soft dots that are born at a place, move and fa
 | Group | Settings |
 | --- | --- |
 | Emission | Particles per second, Burst on every beat, Lifetime and its variation |
-| Motion | Speed and its variation, Direction, Spread, Gravity, Drag, Turbulence |
+| Motion | Speed and its variation, Direction, Spread, Gravity, Drag, Turbulence, Swirl |
 | Look | Size, Size at the end, Size variation, Fade in, Softness, Colour, Add light (glow) |
 | Emitter | Shape (Point, Line, Ring, Box), Origin X and Y, Extent |
 | Music | Level adds particles, Level grows particles, Level speeds particles up |
 | Other | Random seed, Restart, Play |
 
 The beat fires the burst, even when Particles per second is 0, and the loudness of the music drives the three Level sliders. With the same file and the same random seed you get the same movement every time, which is useful when you want a look to repeat.
+
+## GPU particles {#gpu-particles}
+
+Some particle clips can run on the graphics card instead of the processor. The card then keeps every particle itself and moves all of them in one step per frame, so it can hold far more than the 16,384 of a normal particle clip: from 1,024 up to 1,048,576. Three built-in clips use it, GPU Nebula, GPU Beat Burst and GPU Rain. It is experimental and off until you turn on Settings, Performance, Text and particles, Experimental GPU particles, because nobody has tried it on a real graphics card yet.
+
+| Setting | What it does |
+| --- | --- |
+| Run on the graphics card | In the Particles tab under Graphics card. Turns a particle clip into a GPU clip, and the file remembers it |
+| Particle pool | How many particles the card keeps, 1,024 to 1,048,576. When the pool is full, the oldest particles are reused for new ones |
+| Swirl | Pushes the particles around the emitter. It works on the processor too |
+| Particles per second, Burst on every beat | Up to 200,000 a second and 100,000 on every beat for a GPU clip |
+| Graphics memory for GPU particles | In Settings, Performance. All GPU clips together stay inside this budget, 8 to 512 MB, 64 MB at the start |
+
+Every particle costs 64 bytes of graphics memory, so 64 MB hold about a million particles. A clip that does not fit into the budget gets a smaller pool, and if not even the smallest pool fits, it runs on the processor.
+
+![The Particles tab with the GPU Nebula clip running on the graphics card](gpu-particles.webp)
+
+> Note: If the setting is off, if the graphics driver cannot do it, if the shaders do not compile or if the driver reports an error, the clip runs on the processor with fewer particles and the window says why. The show never stops. On the processor a GPU clip looks sparser, because far fewer particles fit. The same file and the same random seed give the same picture on the same computer. Another graphics card can differ in the last digits.
 
 ## Limits that protect the show {#generator-limits}
 
@@ -730,6 +748,7 @@ Text and particles can never take over the computer. A file cannot raise any of 
 | Particles alive at once | Settings, Performance, Text and particles, Particle limit per layer: 64 to 16,384, default 2048. At 24 bytes each, 16,384 particles are 384 KiB of graphics memory |
 | Newer particles when the limit is reached | Dropped, and the window shows how many, so the picture stays smooth |
 | A text | Up to 1000 characters, 40 lines and a picture of the letters of at most 4 MiB, made in the background so a long text never stops the show |
+| GPU particles | Settings, Performance, Text and particles, Graphics memory for GPU particles: 8 to 512 MB, 64 bytes per particle, up to 1,048,576 per clip and 200,000 new particles a second |
 | Files | 32 KiB each, 64 of each kind, names up to 64 bytes |
 
 > Warning: If a text or particle file is damaged, or the font cannot be read, only that clip stays empty and says why. The layers below keep playing. Settings, Performance, Text and particles can hide all of these clips from the Library.
@@ -1180,7 +1199,7 @@ Layer resolution draws the layers and their effects at a lower size and scales t
 
 ## Text and particles {#perf-generators}
 
-Particle limit per layer is the most particles a particle clip may have alive at once, from 64 to 16,384, and 2048 at the start. When the limit is reached newer particles are dropped and the picture stays smooth. Each particle costs 24 bytes of graphics memory. Show text and particle clips in the library hides them all from the Library. See [Text, particles and effect chains](#generators/generator-limits).
+Particle limit per layer is the most particles a particle clip may have alive at once, from 64 to 16,384, and 2048 at the start. When the limit is reached newer particles are dropped and the picture stays smooth. Each particle costs 24 bytes of graphics memory. Show text and particle clips in the library hides them all from the Library. Experimental GPU particles lets clips that ask for it run on the graphics card, and Graphics memory for GPU particles is the budget for all of them together, 8 to 512 MB. See [Text, particles and effect chains](#generators/gpu-particles).
 
 ## What costs time {#perf-cost}
 

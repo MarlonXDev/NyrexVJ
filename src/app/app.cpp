@@ -104,6 +104,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
 
     setGeneratorClipsEnabled(settings_.generatorClips);
     engine_.setParticleLimit(settings_.particleLimit);
+    engine_.setGpuParticles(settings_.gpuParticles, settings_.gpuParticleBudgetMb);
     initConversion();
     refreshNodeEffects();
     refreshIsfEffects();
@@ -315,8 +316,12 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.showPackageTab >= 0) {
         openShowPackages(options.showPackageTab);
     }
+    if (options.gpuParticles >= 0) {
+        settings_.gpuParticles = options.gpuParticles != 0;
+        engine_.setGpuParticles(settings_.gpuParticles, settings_.gpuParticleBudgetMb);
+    }
     if (options.generatorTab >= 0) {
-        openGeneratorStudio(options.generatorTab, std::string());
+        openGeneratorStudio(options.generatorTab, options.generatorSelect);
     }
     if (options.chainTarget >= 0) {
         openChainLibrary(options.chainTarget);

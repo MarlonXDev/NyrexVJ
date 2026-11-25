@@ -350,17 +350,19 @@ int appendGeneratorClips(std::vector<ClipDef>& clips) {
         }
     }
     int added = 0;
-    for (const particles::Preset& preset : particles::builtinPresets()) {
-        const std::string name = particleClipName(preset.name);
-        if (!taken.insert(lowerCase(name)).second) {
-            continue;
+    for (const std::vector<particles::Preset>* list : {&particles::builtinPresets(), &particles::gpuPresets()}) {
+        for (const particles::Preset& preset : *list) {
+            const std::string name = particleClipName(preset.name);
+            if (!taken.insert(lowerCase(name)).second) {
+                continue;
+            }
+            ClipDef def;
+            def.name = name;
+            def.kind = ClipKind::ParticleClip;
+            clips.push_back(std::move(def));
+            ++particleCount;
+            ++added;
         }
-        ClipDef def;
-        def.name = name;
-        def.kind = ClipKind::ParticleClip;
-        clips.push_back(std::move(def));
-        ++particleCount;
-        ++added;
     }
     for (const std::string& stem : text::listTextDocs()) {
         if (texts >= kMaxTextClips) {

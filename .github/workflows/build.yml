@@ -202,6 +202,8 @@ jobs:
           build/NyrexVJ --shader-selftest
           NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-generators" build/NyrexVJ --fresh --no-update-check --no-welcome --generator-selftest 5 --bench-out "$RUNNER_TEMP/generators.json"
           test -s "$RUNNER_TEMP/generators.json"
+          NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-gpuparticles" build/NyrexVJ --fresh --no-update-check --no-welcome --gpu-particle-selftest 2 --bench-out "$RUNNER_TEMP/gpuparticles.json"
+          test -s "$RUNNER_TEMP/gpuparticles.json"
           build/NyrexVJ --scene-selftest tests/data/models
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data

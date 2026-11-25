@@ -85,6 +85,10 @@ public:
     void reloadGeneratorClips(const std::vector<size_t>& indices);
     void setParticleLimit(int limit);
     int particleLimit() const { return particleLimit_; }
+    void setGpuParticles(bool enabled, int budgetMb);
+    bool gpuParticlesEnabled() const { return gpuParticles_; }
+    int gpuParticleBudgetMb() const { return gpuParticleBudgetMb_; }
+    std::uint64_t gpuParticleBytes() const { return generatorGl_.gpuParticles.budget->used(); }
     bool isGeneratorClip(int clip) const;
     GeneratorPlayer* generatorPlayer(int clip);
     void requestTextPreview(const text::TextDoc& doc, double clock);
@@ -393,6 +397,8 @@ private:
     std::vector<size_t> deferredGeneratorThumbs_;
     GeneratorGl generatorGl_;
     int particleLimit_ = particles::kDefaultLimit;
+    bool gpuParticles_ = false;
+    int gpuParticleBudgetMb_ = gpuparticles::kDefaultBudgetMb;
     std::unique_ptr<TextPlayer> textEditor_;
     std::unique_ptr<ParticlePlayer> particleEditor_;
     std::string textEditorKey_;

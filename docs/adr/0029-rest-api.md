@@ -47,5 +47,5 @@ The request: an optional, **disabled by default** local HTTP API for status, cli
 
 ## Validation / open questions
 - Done here: `nvj_api_tests` (21,016 checks), `--api-selftest` (59 checks), the page in Chrome (46 checks), AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer, the frame time measurement in [API.md](../API.md).
-- **Not done:** any run on Windows, on a real graphics card, on a phone or tablet, with a second computer on a network, next to VRChat, or for hours. The load generator in `--bench-api` runs inside the same process, so the flood number is an upper bound on a two core machine.
+- **Not done:** `--api-selftest`, the page in a browser and the exclusive port on Windows (the unit tests, including the real server on Winsock sockets, passed in the Windows CI), a run on a real graphics card, on a phone or tablet, with a second computer on a network, next to VRChat, or for hours. The load generator in `--bench-api` runs inside the same process, so the flood number is an upper bound on a two core machine.
 - Open for the maintainer: TLS, the scope of write access (presets, composition structure, recording), events, whether a read only token is wanted, and whether the page should offer a QR code with the address (it would put the token in an image).

@@ -19,6 +19,8 @@ std::string sanitizePresetName(const std::string& name);
 std::string presetsDirectory();
 std::vector<std::string> listUserPresets();
 bool saveUserPreset(const Composition& comp, const std::string& name, std::string& error);
+bool readUserPresetText(const std::string& name, std::string& text, std::string& error);
+bool parseUserPreset(const std::string& name, const std::string& text, Composition& comp, std::string& error);
 bool loadUserPreset(const std::string& name, Composition& comp, std::string& error);
 bool deleteUserPreset(const std::string& name);
 

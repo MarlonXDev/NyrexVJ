@@ -149,6 +149,12 @@ bool loadSettings(Settings& settings) {
     if (oscPort != doc.end() && oscPort->is_number_integer()) {
         result.oscPort = std::clamp(oscPort->get<int>(), 1, 65535);
     }
+    result.apiEnabled = boolean("apiEnabled", false);
+    result.apiAllowRemote = boolean("apiAllowRemote", false);
+    auto apiPort = doc.find("apiPort");
+    if (apiPort != doc.end() && apiPort->is_number_integer()) {
+        result.apiPort = std::clamp(apiPort->get<int>(), 1024, 65535);
+    }
     auto midiDevice = doc.find("midiDevice");
     if (midiDevice != doc.end() && midiDevice->is_string()) {
         result.midiDevice = midiDevice->get<std::string>();
@@ -317,6 +323,9 @@ bool saveSettings(const Settings& settings) {
     doc["oscEnabled"] = settings.oscEnabled;
     doc["oscPort"] = settings.oscPort;
     doc["oscAllowRemote"] = settings.oscAllowRemote;
+    doc["apiEnabled"] = settings.apiEnabled;
+    doc["apiPort"] = settings.apiPort;
+    doc["apiAllowRemote"] = settings.apiAllowRemote;
     doc["midiDevice"] = settings.midiDevice;
     doc["syncMode"] = settings.syncMode;
     doc["syncLatencyMs"] = settings.syncLatencyMs;

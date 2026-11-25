@@ -39,6 +39,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Restart and recovery after a crash | implemented | automated 2/3 | 3 | M-REC-1 open |
 | Running next to VRChat (CPU, GPU and VRAM shared) | implemented | n/a | 0 | M-VRC-1 open |
 | Media outages: file removed or truncated while it plays | implemented | automated 1/1 | 1 | M-OUT-1 open |
+| Web interface and REST API | implemented | automated 3/3 | 3 | M-API-1 open; M-API-2 open; M-API-3 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

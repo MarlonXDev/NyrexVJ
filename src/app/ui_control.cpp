@@ -2,6 +2,7 @@
 
 #include "app/ui_common.hpp"
 #include "app/ui_targets.hpp"
+#include "platform/platform.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -130,12 +131,95 @@ void App::drawControlPage() {
     }
     ImGui::SeparatorText("OSC");
     drawOscSection();
+    ImGui::SeparatorText(tr("Web interface"));
+    drawApiSection();
     ImGui::SeparatorText(tr("OSC output"));
     drawOscOutSection();
     ImGui::SeparatorText("MIDI");
     drawMidiSection();
     ImGui::SeparatorText(tr("Mappings"));
     drawBindingsSection();
+}
+
+void App::drawApiSection() {
+    auto persist = [this]() { saveSettings(settings_); };
+    ImGui::TextWrapped("%s", tr("Control NyrexVJ from a web page in your browser. It stays off until you turn it on, and every request needs the token below."));
+    if (ImGui::Checkbox(trId("Turn on the web interface", "apiEnable"), &settings_.apiEnabled)) {
+        persist();
+    }
+    ImGui::BeginDisabled(!settings_.apiEnabled);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Port");
+    ImGui::SameLine();
+    int port = settings_.apiPort;
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::InputInt("##apiPort", &port, 0, 0);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        settings_.apiPort = std::clamp(port, 1024, 65535);
+        persist();
+    }
+    if (ImGui::Checkbox(trId("Allow other devices on the network", "apiRemote"), &settings_.apiAllowRemote)) {
+        persist();
+    }
+    ImGui::EndDisabled();
+    if (settings_.apiEnabled && settings_.apiAllowRemote) {
+        ImGui::TextColored(ImVec4(1.0f, 0.65f, 0.2f, 1.0f), "%s", tr("Anyone on your network who has the token can then control NyrexVJ. The connection is not encrypted. Only turn this on in a network you trust."));
+    }
+
+    ImGui::Spacing();
+    if (!settings_.apiEnabled) {
+        ImGui::TextDisabled("%s", tr("The web interface is off"));
+        return;
+    }
+    if (api_.running()) {
+        ImGui::TextColored(kGood, "%s%d", tr("Listening on port "), api_.port());
+        ImGui::TextDisabled("%s", api_.allowRemote() ? tr("Other devices on the network can reach it with the IP address of this computer") : tr("Only this computer can reach it"));
+    } else if (!api_.error().empty()) {
+        ImGui::TextColored(kBad, "%s", trMessage(api_.error()).c_str());
+        if (ImGui::Button(trId("Try again", "apiRetry"))) {
+            api_.restart();
+        }
+    }
+    if (!api_.warning().empty()) {
+        ImGui::TextColored(ImVec4(1.0f, 0.65f, 0.2f, 1.0f), "%s", trMessage(api_.warning()).c_str());
+    }
+    if (!api_.running()) {
+        return;
+    }
+
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    const ImGuiID showId = ImGui::GetID("apiShowToken");
+    bool showToken = storage->GetBool(showId, false);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(tr("Token"));
+    ImGui::SameLine();
+    char tokenText[96] = {};
+    std::snprintf(tokenText, sizeof(tokenText), "%s", api_.token().c_str());
+    ImGui::SetNextItemWidth(260.0f);
+    ImGui::InputText("##apiToken", tokenText, sizeof(tokenText), ImGuiInputTextFlags_ReadOnly | (showToken ? 0 : ImGuiInputTextFlags_Password));
+    ImGui::SameLine();
+    if (ImGui::Button(showToken ? trId("Hide", "apiHide") : trId("Show", "apiShow"))) {
+        storage->SetBool(showId, !showToken);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(trId("Copy token", "apiCopy"))) {
+        ImGui::SetClipboardText(api_.token().c_str());
+        toast(tr("Copied"));
+    }
+    if (ImGui::Button(trId("Open web interface", "apiOpen"))) {
+        platform::openUrl(api_.browserUrl());
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(trId("New token", "apiNewToken"))) {
+        api_.regenerateToken();
+    }
+    ImGui::SetItemTooltip("%s", tr("A new token signs out every open web page."));
+    ImGui::TextDisabled("%s", tr("The token is saved in a separate file. Do not share it or show it on a stream."));
+    const api::ServerStats server = api_.serverStats();
+    const api::Stats* stats = api_.routerStats();
+    if (stats != nullptr) {
+        ImGui::TextDisabled("%s: %llu   %s: %llu   %s: %zu", tr("Requests"), static_cast<unsigned long long>(stats->requests.load()), tr("Refused"), static_cast<unsigned long long>(stats->authFailures.load() + stats->rejected.load() + stats->limited.load() + server.refused), tr("Waiting"), api_.queued());
+    }
 }
 
 void App::drawOscOutSection() {

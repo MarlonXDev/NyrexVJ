@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.35.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.36.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -241,16 +241,24 @@ set(NYREXVJ_CORE_SOURCES
     src/control/osc.cpp
     src/control/osc_out.cpp
     src/control/stage_out.cpp
+    src/control/api_hub.cpp
+    src/control/api_page.cpp
+    src/control/api_page_lang.cpp
+    src/control/api_router.cpp
+    src/control/api_security.cpp
+    src/control/api_server.cpp
+    src/control/http_client.cpp
+    src/core/http_message.cpp
     src/update/update_logic.cpp
     src/update/updater.cpp
 )
 
 if(WIN32)
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_win.cpp src/audio/audio_input_win.cpp src/control/midi_input_win.cpp src/control/udp_socket_win.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_win.cpp src/audio/audio_input_win.cpp src/control/midi_input_win.cpp src/control/udp_socket_win.cpp src/control/tcp_socket_win.cpp)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/platform/platform_linux_update.cpp src/audio/audio_input_linux.cpp src/control/midi_input_linux.cpp src/control/udp_socket_posix.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/platform/platform_linux_update.cpp src/audio/audio_input_linux.cpp src/control/midi_input_linux.cpp src/control/udp_socket_posix.cpp src/control/tcp_socket_posix.cpp)
 else()
-    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/audio/audio_input_other.cpp src/control/midi_input_other.cpp src/control/udp_socket_posix.cpp)
+    list(APPEND NYREXVJ_CORE_SOURCES src/platform/platform_other.cpp src/audio/audio_input_other.cpp src/control/midi_input_other.cpp src/control/udp_socket_posix.cpp src/control/tcp_socket_posix.cpp)
 endif()
 
 add_library(nvj_core STATIC ${NYREXVJ_CORE_SOURCES})
@@ -299,7 +307,7 @@ target_compile_definitions(nvj_core PUBLIC
 )
 
 if(WIN32)
-    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32 ws2_32 winmm psapi)
+    target_link_libraries(nvj_core PUBLIC winhttp shell32 ole32 ws2_32 winmm psapi bcrypt)
 else()
     find_package(Threads REQUIRED)
     target_link_libraries(nvj_core PUBLIC Threads::Threads)
@@ -308,6 +316,8 @@ endif()
 set(NYREXVJ_APP_SOURCES
     src/main.cpp
     src/app/app.cpp
+    src/app/api_system.cpp
+    src/app/api_selftest.cpp
     src/app/fonts.cpp
     src/app/bench.cpp
     src/app/soak.cpp
@@ -461,6 +471,10 @@ if(NYREXVJ_BUILD_TESTS)
         target_include_directories(nvj_record_tests SYSTEM PRIVATE "${NYREXVJ_FFMPEG_INCLUDE}")
     endif()
     add_test(NAME nvj_record_tests COMMAND nvj_record_tests)
+    add_executable(nvj_api_tests tests/test_api.cpp)
+    target_link_libraries(nvj_api_tests PRIVATE nvj_core)
+    target_include_directories(nvj_api_tests PRIVATE tests)
+    add_test(NAME nvj_api_tests COMMAND nvj_api_tests)
     add_executable(nvj_djlink_tests tests/test_djlink.cpp)
     target_link_libraries(nvj_djlink_tests PRIVATE nvj_core)
     target_include_directories(nvj_djlink_tests PRIVATE tests)

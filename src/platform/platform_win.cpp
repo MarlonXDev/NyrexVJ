@@ -9,6 +9,7 @@
 #include <tlhelp32.h>
 #include <shellapi.h>
 #include <winhttp.h>
+#include <bcrypt.h>
 
 #include "core/log.hpp"
 
@@ -696,6 +697,13 @@ bool processAlive(unsigned long pid) {
     const bool running = WaitForSingleObject(process, 0) == WAIT_TIMEOUT;
     CloseHandle(process);
     return running;
+}
+
+bool secureRandomBytes(unsigned char* out, size_t size) {
+    if (out == nullptr || size == 0) {
+        return false;
+    }
+    return BCryptGenRandom(nullptr, out, static_cast<ULONG>(size), BCRYPT_USE_SYSTEM_PREFERRED_RNG) >= 0;
 }
 
 }

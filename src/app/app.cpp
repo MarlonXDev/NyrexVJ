@@ -227,6 +227,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         spout_.start(spoutName_);
     }
 
+    std::snprintf(recordFolder_, sizeof(recordFolder_), "%s", settings_.recordFolder.c_str());
+    audio_.setSink(&recorder_);
+
     std::snprintf(ndiName_, sizeof(ndiName_), "%s", settings_.ndiName.c_str());
     if (!options.ndiName.empty()) {
         std::snprintf(ndiName_, sizeof(ndiName_), "%s", options.ndiName.c_str());
@@ -354,7 +357,13 @@ void App::shutdown() {
     settings_.spoutName = spoutName_;
     settings_.ndiEnabled = ndi_.active();
     settings_.ndiName = ndiName_;
+    settings_.recordFolder = recordFolder_;
     saveSettings(settings_);
+    audio_.setSink(nullptr);
+    recorder_.shutdown(10.0);
+    if (recordProbe_.valid()) {
+        recordProbe_.wait();
+    }
     spout_.stop();
     ndi_.stop();
     oscOut_.stop();
@@ -668,6 +677,10 @@ void App::frame(double dt) {
     if (ndi_.active()) {
         ndi_.send(engine_.outputTexture(), engine_.width(), engine_.height());
     }
+    if (recorder_.recording()) {
+        recorder_.capture(engine_.outputTexture(), engine_.width(), engine_.height(), steadyNowSeconds());
+    }
+    serviceRecording();
     outputs_.setFrameLock(settings_.outputFrameLock);
     outputs_.render(engine_.outputTexture(), engine_.width(), engine_.height());
 
@@ -795,6 +808,13 @@ void App::handleShortcuts() {
     if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
         openSettings(-1);
     }
+    if (io.KeyCtrl && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_R, false)) {
+        if (recorder_.active()) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    }
     if (ImGui::IsKeyPressed(ImGuiKey_PageDown, false)) {
         switchDeckTo(nextUsedDeck(engine_.comp, engine_.comp.activeDeck, 1));
     }
@@ -871,6 +891,17 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Outputs and mapping..."))) {
             openSettings(SettingsOutput);
+        }
+        ImGui::Separator();
+        if (recorder_.active()) {
+            if (ImGui::MenuItem(tr("Stop recording"), "Ctrl+Shift+R")) {
+                stopRecording();
+            }
+        } else if (ImGui::MenuItem(tr("Start recording"), "Ctrl+Shift+R")) {
+            startRecording();
+        }
+        if (ImGui::MenuItem(tr("Recording settings..."))) {
+            openSettings(SettingsRecording);
         }
         ImGui::Separator();
         bool spoutActive = spout_.active();

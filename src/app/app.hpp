@@ -24,6 +24,7 @@
 #include "render/output_manager.hpp"
 #include "render/output_window.hpp"
 #include "render/ndi_output.hpp"
+#include "render/recorder.hpp"
 #include "render/spout_output.hpp"
 #include "update/updater.hpp"
 
@@ -44,6 +45,7 @@ enum SettingsPage {
     SettingsAppearance,
     SettingsAudio,
     SettingsOutput,
+    SettingsRecording,
     SettingsControl,
     SettingsStage,
     SettingsSync,
@@ -219,6 +221,14 @@ private:
     bool captureOutput(int index, OutputCapture& out);
     void drawSpoutControls();
     void drawNdiControls();
+    void drawRecordingPage();
+    void drawRecordingStatusBar();
+    bool startRecording();
+    void stopRecording();
+    void cancelRecording();
+    void serviceRecording();
+    void startRecordProbe();
+    RecordSettings recordSettingsFromConfig() const;
     void drawSpoutInputControls(int slot);
     void drawLiveInputControls(const ClipDef& def);
     void serviceLiveBrowse();
@@ -264,6 +274,7 @@ private:
     AudioSystem audio_;
     SpoutOutput spout_;
     NdiOutput ndi_;
+    Recorder recorder_;
     GLFWwindow* window_ = nullptr;
     std::string iniPath_;
     bool needsLayout_ = false;
@@ -335,6 +346,16 @@ private:
     std::vector<CameraDevice> cameraList_;
     double cameraListedAt_ = -1.0e9;
     char ndiName_[64] = {};
+    std::future<RecordCapabilities> recordProbe_;
+    RecordCapabilities recordCaps_;
+    bool recordCapsKnown_ = false;
+    char recordFolder_[512] = {};
+    std::string recordLastPath_;
+    std::string recordLastNote_;
+    bool recordLastFailed_ = false;
+    int recordSizeChoice_ = -1;
+    int recordCustomWidth_ = 1920;
+    int recordCustomHeight_ = 1080;
     char oscOutFilter_[64] = {};
     int oscOutPick_ = -1;
     std::string selectedUserPreset_;

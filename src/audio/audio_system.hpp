@@ -2,6 +2,7 @@
 
 #include "audio/audio_analyzer.hpp"
 #include "audio/audio_input.hpp"
+#include "audio/audio_sink.hpp"
 #include "audio/synthetic_source.hpp"
 
 #include <memory>
@@ -24,6 +25,9 @@ public:
     const std::string& error() const { return error_; }
     bool active() const { return mode_ != Mode::Off; }
     bool lost() const;
+    bool deviceActive() const { return mode_ == Mode::Device && input_ != nullptr && input_->running(); }
+    int sampleRate() const { return mode_ == Mode::Device && input_ != nullptr ? input_->sampleRate() : 0; }
+    void setSink(AudioSink* sink) { sink_ = sink; }
     bool noSignal() const { return mode_ == Mode::Device && silentFor_ > 3.0; }
     void update(double dt, float demoBpm);
     void setGain(float gain);
@@ -44,6 +48,7 @@ private:
     Mode mode_ = Mode::Off;
     double demoCarry_ = 0.0;
     double silentFor_ = 0.0;
+    AudioSink* sink_ = nullptr;
 };
 
 }

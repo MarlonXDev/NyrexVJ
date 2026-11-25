@@ -455,6 +455,45 @@
       "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
       "command": "ctest -R nvj_media_tests",
       "notes": "1328 checks including testMediaOutage; ctest with NYREXVJ_REQUIRE_VIDEO=1"
+    },
+    {
+      "area": "recording",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.35.0 (branch feature/live-recording, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-RECORD-1",
+      "command": "ctest -R nvj_record_tests",
+      "notes": "82219 checks, 0 failed; ctest, whole suite 31 of 31 passed; also 0 failed under AddressSanitizer and UndefinedBehaviorSanitizer and, with 0 warnings, under ThreadSanitizer"
+    },
+    {
+      "area": "recording",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.35.0 (branch feature/live-recording, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-RECORD-2",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --record-selftest",
+      "notes": "29 checks, 0 failed on llvmpipe; exit 0 also under AddressSanitizer and UndefinedBehaviorSanitizer with leak detection off (the leaks LeakSanitizer reports at exit come from the existing ALSA MIDI listing)"
+    },
+    {
+      "area": "recording",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.35.0 (branch feature/live-recording, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-RECORD-3",
+      "command": "NyrexVJ --bench-record all:90",
+      "notes": "every format that opens here finished cleanly, drops only where the encoder is slower than the frame interval; hardware formats refused cleanly (no card); capture times are software OpenGL and say nothing about a graphics card"
     }
   ]
 }

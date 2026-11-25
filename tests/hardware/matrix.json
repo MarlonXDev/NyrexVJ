@@ -249,6 +249,106 @@
       ]
     },
     {
+      "id": "recording",
+      "title": "Recording the final picture to a video file",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/RECORDING.md",
+        "docs/FFMPEG.md",
+        "docs/OUTPUTS.md"
+      ],
+      "sources": [
+        "src/render/recorder.cpp",
+        "src/media/video_recorder.cpp",
+        "src/core/record_plan.cpp",
+        "src/app/record_selftest.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-RECORD-1",
+          "kind": "ctest",
+          "name": "nvj_record_tests"
+        },
+        {
+          "id": "A-RECORD-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --record-selftest",
+          "note": "checks picture orientation, scaling, frame order, the GL state, backpressure, size changes and stalls of the live recording"
+        },
+        {
+          "id": "A-RECORD-3",
+          "kind": "cli",
+          "command": "NyrexVJ --bench-record all:90",
+          "note": "records the output in every working format and reports capture time, encoder time, drops and file size"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-RECORD-1",
+          "title": "Hardware encoders on a real graphics card",
+          "needs": "A graphics card with NVENC, Quick Sync or AMF and an FFmpeg with the matching encoder",
+          "steps": [
+            "Open Settings, Recording and check that the hardware formats are listed.",
+            "Record two minutes at 1920 x 1080 and 60 frames per second with each hardware format and with H.264 software.",
+            "Play the files in a normal player and check picture, speed and file size."
+          ],
+          "measure": "Encoder name, frame time in NyrexVJ with and without recording, encoder load, dropped frames, CPU and GPU use",
+          "criteria": "Proposed: the hardware formats record without dropped frames, the frame time rises by less than 0.5 ms and the files play correctly."
+        },
+        {
+          "id": "M-RECORD-2",
+          "title": "Recording next to VRChat",
+          "needs": "A computer that runs VRChat with the usual world and avatar load",
+          "steps": [
+            "Start VRChat and NyrexVJ with the output on a second display.",
+            "Record ten minutes in H.264 and in HAP while the VRChat frame time is logged.",
+            "Compare the VRChat frame time with and without the recording."
+          ],
+          "measure": "VRChat frame time, NyrexVJ frame time, dropped frames, disk write rate",
+          "criteria": "Proposed: no frame drops in the recording and no visible change in the VRChat frame time."
+        },
+        {
+          "id": "M-RECORD-3",
+          "title": "Sound and picture stay in sync over a long recording",
+          "needs": "A real audio input or system audio and a file player that shows both tracks",
+          "steps": [
+            "Play a clip with a click track as audio source and record it for one hour.",
+            "Open the file and compare the click track with the picture of the clip at the start, the middle and the end.",
+            "Repeat once while the program is stalled on purpose for a few seconds."
+          ],
+          "measure": "Offset between picture and sound at the start, middle and end of the file",
+          "criteria": "Proposed: the offset stays below 40 ms for the whole hour."
+        },
+        {
+          "id": "M-RECORD-4",
+          "title": "Full disk and unplugged drive",
+          "needs": "A small or nearly full drive and a removable drive",
+          "steps": [
+            "Choose the small drive as recording folder and record until it is almost full.",
+            "Record to the removable drive and unplug it while recording.",
+            "Check the message in the program and open the files that were written."
+          ],
+          "measure": "Message shown, state of the program, state of the file",
+          "criteria": "Proposed: the program stays responsive, the recording ends with a clear message and the file that was written plays up to that point."
+        },
+        {
+          "id": "M-RECORD-5",
+          "title": "Files after a crash",
+          "needs": "Players and editors the maintainer uses, for example VLC and DaVinci Resolve",
+          "steps": [
+            "Record in H.264, ProRes and HAP with the crash-safe option on and end the program with the task manager.",
+            "Open every file in a player and in the editor.",
+            "Repeat with the crash-safe option off and note the difference."
+          ],
+          "measure": "Whether the file opens, how much of it plays, how long the editor needs to open it",
+          "criteria": "Proposed: with the option on, everything recorded up to a few seconds before the crash plays."
+        }
+      ]
+    },
+    {
       "id": "camera",
       "title": "Cameras and capture cards",
       "platforms": {

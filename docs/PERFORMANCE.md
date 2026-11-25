@@ -209,6 +209,15 @@ Command line: `--scene-selftest FOLDER` draws the test models through the real r
 - **What this does not show.** A software renderer needs about 320 ms for a frame at 1920 x 1080 here (95th percentile 696 ms), so every one of the 940 frames was over the 16.7 ms budget and the frame time numbers say nothing about a real graphics card. The memory rose by about 20 MiB in five minutes: that is within what caches filling look like, and five minutes cannot tell it from a slow leak. A three hour run on real hardware is the open manual test `M-SOAK-1`.
 - **Not measured:** a real graphics card, the memory of the graphics driver (the soak run reports the program's own estimate), latency, VRChat running next to the program, and everything on Windows.
 
+## What is new in 0.35.0: recording
+
+[ADR 0028](adr/0028-live-recording.md), [RECORDING.md](RECORDING.md). On the render thread a recording costs one scaled copy on the graphics card (`glBlitFramebuffer`) and the start of an asynchronous read back (`glReadPixels` into one of three pixel buffers, with a fence that is polled without waiting). The colour conversion, the encoding and the writing run on one thread at background priority. A recording that does not run costs nothing.
+
+- **Measured (`--bench-record all:90`)**, Linux, 2 processor cores, Mesa llvmpipe, 1920 x 1080, look "Neon Club", 90 frames per format, 60 frames per second grid, quality 70. The frame time without recording is 173.8 ms on average. With recording: H.264 199.9 ms (+26 ms, no frame dropped), Motion JPEG 193.3 ms, HAP 202.9 ms, HAP Alpha 209.7 ms, HAP Q 207.2 ms, VP9 220.2 ms, FFV1 231.9 ms, ProRes 4444 252.4 ms (34 of 90 frames dropped) and ProRes 422 HQ 262.0 ms (13 of 90 dropped). The full table is in [RECORDING.md](RECORDING.md).
+- **What these numbers are.** The graphics work of the copy is done by the processor in a software renderer, on the same two cores as the encoder thread, so the capture call takes about 20 to 34 ms here. On a graphics card the call only queues work. These numbers show that every format runs to the end, which formats the encoder cannot keep up with (the pool fills up and frames are dropped and counted) and that the render loop never waits; they do not show the cost on a real graphics card.
+- **Independent of the graphics card (`--record-selftest`):** against an encoder that needs 250 ms per frame, 90 frames pass the render loop in about 7 ms in total, the slowest capture call is below 1 ms, and about 80 frames are dropped and counted.
+- **Not measured:** a real graphics card (the cost of the copy, the fences and the read back with real drivers), the hardware encoders, VRChat running next to the program, a recording at 4K, and everything on Windows.
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

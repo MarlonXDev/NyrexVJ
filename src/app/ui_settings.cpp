@@ -32,6 +32,8 @@ const char* settingsPageTitle(int page) {
         return tr("Audio");
     case SettingsOutput:
         return tr("Output");
+    case SettingsRecording:
+        return tr("Recording");
     case SettingsControl:
         return tr("Control");
     case SettingsStage:
@@ -61,6 +63,8 @@ const char* settingsPageHint(int page) {
         return tr("Audio source, level and beat detection.");
     case SettingsOutput:
         return tr("Output window, resolution and Spout.");
+    case SettingsRecording:
+        return tr("Record the final picture to a video file.");
     case SettingsControl:
         return tr("Play NyrexVJ with OSC and MIDI.");
     case SettingsStage:
@@ -323,6 +327,8 @@ void App::drawSettingsPage(int page) {
         drawFrameRateLimit();
         drawSpoutControls();
         drawNdiControls();
+    } else if (page == SettingsRecording) {
+        drawRecordingPage();
     } else if (page == SettingsControl) {
         drawControlPage();
     } else if (page == SettingsStage) {
@@ -372,6 +378,7 @@ void App::drawSettingsPage(int page) {
         ImGui::SeparatorText(tr("Window"));
         ImGui::BulletText("%s", tr("F11  output window fullscreen"));
         ImGui::BulletText("%s", tr("Ctrl + ,  open settings"));
+        ImGui::BulletText("%s", tr("Ctrl + Shift + R  start or stop recording"));
         ImGui::BulletText("%s", tr("Right click a slider  reset effect value"));
     } else {
         ImGui::Text("NyrexVJ %s", NYREXVJ_VERSION);
@@ -796,6 +803,7 @@ void App::drawStatusBar() {
             ImGui::SameLine();
             ImGui::TextDisabled("%s", audioSourceLabel().c_str());
         }
+        drawRecordingStatusBar();
         if (spout_.active()) {
             ImGui::SameLine();
             ImGui::TextDisabled("|");

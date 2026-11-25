@@ -3,6 +3,7 @@
 #include "app/creator.hpp"
 #include "app/engine_host.hpp"
 #include "app/generator_dialog.hpp"
+#include "app/shader_editor_dialog.hpp"
 #include "app/manual_view.hpp"
 #include "app/node_editor.hpp"
 #include "app/pack_dialog.hpp"
@@ -83,6 +84,8 @@ struct StartOptions {
     int packageTab = -1;
     int generatorTab = -1;
     std::string generatorSelect;
+    bool shaderEditor = false;
+    std::string shaderEditorFile;
     int gpuParticles = -1;
     int chainTarget = -1;
     std::string chainSelect;
@@ -117,6 +120,9 @@ class App {
 public:
     bool init(GLFWwindow* window, const StartOptions& options);
     void frame(double dt);
+    void startShaderEditorTest();
+    int tickShaderEditorTest();
+    std::string shaderEditorTestReport() const;
     void applyPendingFonts();
     void shutdown();
     Engine& engine() { return engine_; }
@@ -214,6 +220,9 @@ private:
     void drawCommunityPackages();
     void openGeneratorStudio(int tab, const std::string& name);
     void drawGeneratorStudio();
+    void openShaderEditor(const std::string& fileName);
+    void drawShaderEditor();
+    void buildShaderEditorTest();
     void drawGeneratorTextTab();
     void drawGeneratorParticleTab();
     void drawGeneratorClipInfo(const ClipDef& def, int clip);
@@ -340,6 +349,8 @@ private:
     ShowDialog showDialog_;
     PackDialog packDialog_;
     GeneratorDialog generatorDialog_;
+    ShaderEditorDialog shaderEditor_;
+    ShaderEditorUiTest shaderEditorTest_;
     ChainDialog chainDialog_;
     bool manualFocus_ = false;
     ManualView manualView_;

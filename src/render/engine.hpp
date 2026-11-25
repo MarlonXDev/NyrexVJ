@@ -6,6 +6,7 @@
 #include "core/gpu_diag.hpp"
 #include "core/launch_quantizer.hpp"
 #include "core/settings.hpp"
+#include "core/shader_editor.hpp"
 #include "render/clip_library.hpp"
 #include "render/dmx_strip.hpp"
 #include "render/gl_util.hpp"
@@ -18,6 +19,7 @@
 #include "render/spout_input.hpp"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -26,6 +28,31 @@
 #include <vector>
 
 namespace nvj {
+
+struct ShaderPlaygroundStatus {
+    bool active = false;
+    bool hasWorking = false;
+    bool compiling = false;
+    bool parallelCompile = false;
+    bool filter = false;
+    bool alpha = false;
+    bool paused = false;
+    bool throttled = false;
+    int interval = 1;
+    double previewMs = 0.0;
+    double lastCompileMs = 0.0;
+    std::string error;
+    std::string runtimeError;
+    std::string note;
+    bool shadertoy = false;
+    bool advanced = false;
+    int passCount = 1;
+    std::uint64_t workingRevision = 0;
+    std::uint64_t attemptedRevision = 0;
+    unsigned long long compiles = 0;
+    unsigned long long failures = 0;
+    unsigned long long frames = 0;
+};
 
 struct GpuMemory {
     size_t targets = 0;
@@ -156,6 +183,15 @@ public:
     std::string shaderRuntimeError(int clip) const;
     size_t shaderBufferBytes() const;
     void setShaderBufferBudget(unsigned long long bytes);
+    void requestShaderPlayground(double clock);
+    void submitShaderPlayground(const std::string& text, std::uint64_t revision);
+    void restartShaderPlayground();
+    void resumeShaderPlayground();
+    void releaseShaderPlayground();
+    const ShaderPlaygroundStatus& shaderPlayground() const { return playground_.status; }
+    GLuint shaderPlaygroundTexture() const { return playground_.hasFrame ? playground_.target.texture : 0; }
+    int shaderPlaygroundWidth() const { return playground_.target.width; }
+    int shaderPlaygroundHeight() const { return playground_.target.height; }
     void setVideoSettings(VideoDecodeMode mode, bool hapDirect, bool gpuConversion = true);
     VideoDecodeMode videoDecodeMode() const { return videoMode_; }
     bool hapDirect() const { return hapDirect_; }
@@ -379,6 +415,13 @@ private:
     void releaseClipProgram(ClipProgram& clip);
     bool buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& clip);
     bool buildPlanPasses(const ShaderPlan& plan, bool shadertoy, const std::string& name, std::vector<PassProgram>& passes, std::string& errors);
+    PassProgram passProgramFor(GLuint program, const ShaderPlan& plan) const;
+    void servicePlayground();
+    void startPlaygroundBuild();
+    bool pollPlaygroundBuild();
+    void finishPlaygroundBuild(bool success, const std::string& errors);
+    void drawPlayground();
+    void destroyPlaygroundBuild();
     RenderTarget* runPlanEffect(size_t effectIndex, int stateKey, const EffectSlot& slot, const std::array<float, kParamCount>& params, float mixAmount, RenderTarget* in, RenderTarget* out);
     bool allocateShaderState(ShaderPassState& state, size_t clipIndex, const ShaderPlan& plan, int width, int height, std::string& error, std::string& note);
     void drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target, const ShaderValues& stored);
@@ -406,8 +449,43 @@ private:
     static size_t liveIndex(LiveKind kind, int slot) { return static_cast<size_t>(kind == LiveKind::Ndi ? 0 : (kind == LiveKind::Camera ? kLiveInputSlots : kLiveInputSlots * 2)) + static_cast<size_t>(slot); }
     void blit(const RenderTarget& source, const RenderTarget& target);
 
+    struct PlaygroundPending {
+        GLuint program = 0;
+        GLuint vs = 0;
+        GLuint fs = 0;
+        std::string label;
+    };
+
+    struct Playground {
+        bool wanted = false;
+        bool hasFrame = false;
+        bool restart = false;
+        bool building = false;
+        bool buildSucceeded = false;
+        bool queued = false;
+        double clock = 0.0;
+        std::string queuedText;
+        std::uint64_t queuedRevision = 0;
+        std::uint64_t buildRevision = 0;
+        std::shared_ptr<const ShaderPlan> buildPlan;
+        bool buildShadertoy = false;
+        std::vector<PlaygroundPending> pending;
+        std::chrono::steady_clock::time_point buildStarted;
+        std::shared_ptr<const ShaderPlan> plan;
+        ClipProgram clip;
+        ShaderPassState state;
+        RenderTarget target;
+        shaderedit::PreviewGovernor governor;
+        std::array<GLuint, 2> queries{};
+        std::array<bool, 2> queryPending{};
+        std::array<bool, 2> queryStale{};
+        int querySlot = 0;
+        ShaderPlaygroundStatus status;
+    };
+
     std::vector<ClipProgram> clips_;
     std::map<int, ShaderPassState> shaderStates_;
+    Playground playground_;
     std::array<GLuint, 4> channelSamplers_{};
     GLuint blackTexture_ = 0;
     unsigned long long shaderBudget_ = kShaderBufferBudgetBytes;

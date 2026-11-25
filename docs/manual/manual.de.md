@@ -80,7 +80,7 @@ Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Han
 | Audio | Audioquelle wählen: Aus, Demo-Signal, Systemaudio, Eingang, und Geräte aktualisieren |
 | Zeitleiste | Zeitleiste ausführen, Fenster der Show-Zeitleiste anzeigen, Abspielen, Pause, Stopp, Handeingriffe freigeben |
 | Einstellungen | Öffnet das Einstellungsfenster |
-| Creator | Clip Creator öffnen, Neue 3D-Szene, Vorlagen, der Node-Effekt-Editor, Text und Partikel, Effektketten |
+| Creator | Clip Creator öffnen, Neue 3D-Szene, Vorlagen, der Node-Effekt-Editor, Text und Partikel, Effektketten, Shader-Editor |
 | Hilfe | Handbuch, Was ist neu, Links, Sprache, Nach Updates suchen |
 
 ![Das Hauptfenster von NyrexVJ mit dem Clip-Raster oben, Ausgabe und Vorschau links und Master, Clip und Browser unten](main-window.webp)
@@ -608,6 +608,22 @@ ISF-Dateien, das Format von VDMX und anderen mit einem Kopf zwischen `/*{` und `
 Ein Shader kann mit `#pragma nyrexvj param` eigene Regler und Schalter anmelden. Sie erscheinen im Clip-Fenster unter Shader-Regler. Ein Rechtsklick setzt einen Regler auf den Standardwert der Datei zurück, und Regler zurücksetzen setzt alle zurück.
 
 > Hinweis: Shader-Dateien sind Programme für deine Grafikkarte. Ein kaputter Shader kann das Bild ausbremsen. NyrexVJ begrenzt die Zeit, die ein Shader brauchen darf, und schaltet einen zu langsamen ab.
+
+## Der Shader-Editor {#shader-editor}
+
+Creator, Shader-Editor öffnet ein Fenster mit einem Texteditor links, einer Live-Vorschau rechts und einer Liste der Probleme unter dem Text. Im Clip-Fenster einer Shader-Datei öffnet Im Shader-Editor bearbeiten genau diese Datei. Neu beginnt mit einer von vier Vorlagen, Öffnen listet die Dateien des Ordners shaders, und die Schaltflächen Speichern, Speichern unter, Von Festplatte neu laden, Rückgängig, Wiederherstellen und Jetzt kompilieren tun, was draufsteht. Live-Vorschau schaltet die Vorschau und das Kompilieren aus.
+
+- Der Text hat Zeilennummern und Farben für Schlüsselwörter, Typen, eingebaute Funktionen, die NyrexVJ-Namen, `#pragma nyrexvj`-Zeilen, Zahlen und Kommentare. Strg+Z und Strg+Y machen rückgängig und stellen wieder her, Tab und Umschalt+Tab rücken ein, Strg+/ kommentiert eine Zeile, Strg+S speichert und F5 kompiliert sofort.
+- Ein Fehler wird in seiner Zeile rot markiert, die Meldung steht als Tooltip an der Markierung am Rand und in der Liste unter dem Text. Ein Klick auf einen Eintrag der Liste setzt den Cursor in diese Zeile.
+- Der Shader wird einen Moment nach dem Tippen kompiliert, nie während du tippst. Die Vorschau ist von deinen Clips getrennt: Sie verändert nie einen Clip, der gerade läuft, und ein Shader, der sich nicht kompilieren lässt, lässt das letzte funktionierende Bild stehen und zeigt die Meldung daneben. Gezeigte Version sagt, von welchem Text das Bild stammt.
+- Ein sehr langsamer Shader wird in der Vorschau nur jedes paar Bilder gezeichnet, und einer, der viel zu langsam ist, wird angehalten, bis du Fortsetzen drückst. Bildfilter werden in der Vorschau nicht gezeigt, und Bilder und Videos als Kanäle sind dort leer.
+- Speichern schreibt die Datei in einem Schritt in den Ordner shaders, und ein Clip, der die Datei nutzt, lädt sich von selbst neu, wie oben beschrieben. Der Name darf Buchstaben, Ziffern, Leerzeichen und `- _ . ( )` enthalten, bis zu 64 Zeichen, und muss auf `.glsl`, `.frag` oder `.fs` enden. Eine vorhandene Datei wird nur ersetzt, wenn du zustimmst. Hat ein anderes Programm die Datei geändert oder gelöscht, während du bearbeitest, fragt der Editor, ob du deine Version behalten, die Version von der Festplatte laden oder eine Kopie speichern willst.
+
+Der Editor hat keine Suche, keine mehreren offenen Dateien, keine Autovervollständigung und keinen Debugger. Text über 256 KiB wird abgelehnt.
+
+> Warnung: Ein Shader, der nie endet, kann den Grafiktreiber einfrieren, in der Vorschau wie in einem Clip, weil sich eine begonnene Zeichnung nicht abbrechen lässt. Probiere Schleifen zuerst mit kleinen Zählern aus.
+
+> Tipp: Lass den Editor neben dem Ausgabefenster offen, während du an einem Shader arbeitest. Beim Schließen wird alles freigegeben, was die Vorschau benutzt hat.
 
 # 3D-Modelle {#models}
 
@@ -1343,6 +1359,9 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--generator-selftest` | Text- und Partikel-Clips in der echten Engine prüfen und beenden, mit einer Bilderzahl dahinter für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--settings IDX` | Die Einstellungen auf Seite IDX öffnen, ab 0 gezählt in der Reihenfolge der Seitenliste |
 | `--check-shaders` | Jeden Shader kompilieren und beenden |
+| `--shader-editor [DATEI]` | Den Shader-Editor beim Start öffnen, mit einer Datei aus dem Ordner shaders, wenn du eine angibst, sonst mit einer Vorlage |
+| `--shader-editor-selftest [BILDER]` | Den Shader-Editor in der echten Engine prüfen und beenden, mit einer Bilderzahl danach für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
+| `--shader-editor-uitest` | Den Shader-Editor mit echten Tasten- und Mausereignissen bedienen, prüfen, was er enthält, und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis |
 
 ## Tests und Messungen {#cli-tests}
 

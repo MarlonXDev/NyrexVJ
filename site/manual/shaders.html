@@ -68,7 +68,7 @@
 <li><a href="video.html">Video and image clips</a>
 </li>
 <li><a href="shaders.html" aria-current="page">Your own shaders</a>
-<ul><li><a href="#shader-clip">Making a shader clip</a></li><li><a href="#shader-styles">Two styles</a></li><li><a href="#shader-passes">Transparency and several passes</a></li><li><a href="#isf">ISF files</a></li><li><a href="#shader-controls">Controls for your shader</a></li></ul>
+<ul><li><a href="#shader-clip">Making a shader clip</a></li><li><a href="#shader-styles">Two styles</a></li><li><a href="#shader-passes">Transparency and several passes</a></li><li><a href="#isf">ISF files</a></li><li><a href="#shader-controls">Controls for your shader</a></li><li><a href="#shader-editor">The shader editor</a></li></ul>
 </li>
 <li><a href="models.html">3D models</a>
 </li>
@@ -158,7 +158,7 @@
 <li><a href="video.html">Video and image clips</a>
 </li>
 <li><a href="shaders.html" aria-current="page">Your own shaders</a>
-<ul><li><a href="#shader-clip">Making a shader clip</a></li><li><a href="#shader-styles">Two styles</a></li><li><a href="#shader-passes">Transparency and several passes</a></li><li><a href="#isf">ISF files</a></li><li><a href="#shader-controls">Controls for your shader</a></li></ul>
+<ul><li><a href="#shader-clip">Making a shader clip</a></li><li><a href="#shader-styles">Two styles</a></li><li><a href="#shader-passes">Transparency and several passes</a></li><li><a href="#isf">ISF files</a></li><li><a href="#shader-controls">Controls for your shader</a></li><li><a href="#shader-editor">The shader editor</a></li></ul>
 </li>
 <li><a href="models.html">3D models</a>
 </li>
@@ -209,8 +209,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Your own content</p>
 <h1>Your own shaders</h1>
-<p class="meta">Chapter 16 of 36 &middot; 2 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#shader-clip">Making a shader clip</a><a href="#shader-styles">Two styles</a><a href="#shader-passes">Transparency and several passes</a><a href="#isf">ISF files</a><a href="#shader-controls">Controls for your shader</a></nav>
+<p class="meta">Chapter 16 of 36 &middot; 4 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#shader-clip">Making a shader clip</a><a href="#shader-styles">Two styles</a><a href="#shader-passes">Transparency and several passes</a><a href="#isf">ISF files</a><a href="#shader-controls">Controls for your shader</a><a href="#shader-editor">The shader editor</a></nav>
 <h2 id="shader-clip"><a class="anchor" href="#shader-clip" aria-label="Link">#</a>Making a shader clip</h2>
 <p>Any fragment shader can become a clip. Put a <code>.glsl</code>, <code>.frag</code> or <code>.fs</code> file into the shaders folder, or drag the file onto the window. It shows up in the Library as Shader: file name, under the filter Shaders. It works like every other clip: Speed, Scale, colours, effects, audio, LFOs and macros all apply.</p>
 <p>NyrexVJ looks at the folder once a second. A saved change reloads the shader while it plays, so you can edit the file in any text editor. If the shader does not compile, the Clip window shows the message with the line number of your file and the last working version keeps running. Library, Create example shader writes a small shader to start from.</p>
@@ -224,6 +224,12 @@
 <h2 id="shader-controls"><a class="anchor" href="#shader-controls" aria-label="Link">#</a>Controls for your shader</h2>
 <p>A shader can declare its own sliders and switches with <code>#pragma nyrexvj param</code>. They appear in the Clip window under Shader controls. A right click resets a control to the default of the file, and Reset controls resets all of them.</p>
 <aside class="note note"><strong class="note-label">Note</strong><p>Shader files are programs for your graphics card. A broken shader can slow the picture down. NyrexVJ limits the time a shader may take and switches off one that is too slow.</p></aside>
+<h2 id="shader-editor"><a class="anchor" href="#shader-editor" aria-label="Link">#</a>The shader editor</h2>
+<p>Creator, Shader editor opens a window with a text editor on the left, a live preview on the right and a list of problems below the text. In the Clip window of a shader file, Edit in shader editor opens that file. New starts from one of four templates, Open lists the files of the shaders folder, and the buttons Save, Save as, Reload from disk, Undo, Redo and Compile now do what they say. Live preview switches the preview and the compiling off.</p>
+<ul><li>The text has line numbers and colours for keywords, types, built-in functions, the NyrexVJ names, <code>#pragma nyrexvj</code> lines, numbers and comments. Ctrl+Z and Ctrl+Y undo and redo, Tab and Shift+Tab indent, Ctrl+/ comments a line, Ctrl+S saves and F5 compiles at once.</li><li>A mistake is marked on its line in red, with the message as a tooltip on the mark in the margin, and listed below the text. A click on an entry of the list moves the cursor to that line.</li><li>The shader is compiled a moment after you stop typing, never while you type. The preview is separate from your clips: it never changes a clip that is playing, and a shader that does not compile leaves the last working picture on screen with the message beside it. Shown version says which text the picture comes from.</li><li>A shader that is very slow is drawn only every few frames in the preview, and one that is far too slow is stopped until you press Resume. Image filters are not shown in the preview, and images and videos used as channels are empty there.</li><li>Save writes the file into the shaders folder in one step, and a clip that uses the file reloads by itself, as described above. The name may use letters, digits, space and <code>- _ . ( )</code>, up to 64 characters, and must end in <code>.glsl</code>, <code>.frag</code> or <code>.fs</code>. An existing file is replaced only after you agree. If another program changed or deleted the file while you were editing, the editor asks whether to keep your version, load the disk version or save a copy.</li></ul>
+<p>The editor does not have a search, several open files, autocompletion or a debugger. Text over 256 KiB is refused.</p>
+<aside class="note warning"><strong class="note-label">Warning</strong><p>A shader that never ends can freeze the graphics driver, in the preview as in a clip, because a drawing that has started cannot be stopped. Try loops with small counts first.</p></aside>
+<aside class="note tip"><strong class="note-label">Tip</strong><p>Keep the editor open next to the Output window while you work on a shader. Closing it releases everything the preview used.</p></aside>
 <nav class="pager" aria-label="Pager"><a class="prev" href="video.html"><small>Previous</small><span>Video and image clips</span></a><a class="next" href="models.html"><small>Next</small><span>3D models</span></a></nav>
 <p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
 </main>

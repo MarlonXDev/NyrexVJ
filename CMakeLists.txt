@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.45.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.46.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -176,6 +176,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/particles.cpp
     src/core/gpu_particles.cpp
     src/core/gpu_diag.cpp
+    src/core/shader_editor.cpp
     src/core/effect_json.cpp
     src/core/effect_chain.cpp
     src/core/show_workflow.cpp
@@ -351,6 +352,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/generator_selftest.cpp
     src/app/gpu_particle_selftest.cpp
     src/app/gpu_diag_selftest.cpp
+    src/app/shader_editor_selftest.cpp
     src/app/scene_selftest.cpp
     src/app/theme.cpp
     src/app/ui_browser.cpp
@@ -372,6 +374,8 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_show.cpp
     src/app/ui_packs.cpp
     src/app/ui_generators.cpp
+    src/app/ui_shader_editor.cpp
+    src/app/shader_editor_uitest.cpp
     src/app/pack_cli.cpp
     src/render/engine.cpp
     src/render/gpu_profiler.cpp
@@ -394,6 +398,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/scene_player.cpp
     src/render/media_player.cpp
     src/render/video_gpu.cpp
+    src/render/shader_playground.cpp
     src/render/live_input.cpp
     src/render/stb_impl.cpp
 )
@@ -562,6 +567,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_gpudiag_tests PRIVATE nvj_core)
     target_include_directories(nvj_gpudiag_tests PRIVATE tests)
     add_test(NAME nvj_gpudiag_tests COMMAND nvj_gpudiag_tests)
+    add_executable(nvj_shaderedit_tests tests/test_shader_editor.cpp)
+    target_link_libraries(nvj_shaderedit_tests PRIVATE nvj_core)
+    target_include_directories(nvj_shaderedit_tests PRIVATE tests)
+    add_test(NAME nvj_shaderedit_tests COMMAND nvj_shaderedit_tests)
     add_executable(nvj_workflow_tests tests/test_workflow.cpp)
     target_link_libraries(nvj_workflow_tests PRIVATE nvj_core)
     target_include_directories(nvj_workflow_tests PRIVATE tests)

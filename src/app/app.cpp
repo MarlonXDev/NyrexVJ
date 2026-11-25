@@ -323,6 +323,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.generatorTab >= 0) {
         openGeneratorStudio(options.generatorTab, options.generatorSelect);
     }
+    if (options.shaderEditor) {
+        openShaderEditor(options.shaderEditorFile);
+    }
     if (options.chainTarget >= 0) {
         openChainLibrary(options.chainTarget);
         chainDialog_.selected = options.chainSelect;
@@ -796,6 +799,7 @@ void App::frame(double dt) {
     drawShowPackages();
     drawCommunityPackages();
     drawGeneratorStudio();
+    drawShaderEditor();
     drawChainLibrary();
     drawSettingsWindow();
     drawUpdateCard();
@@ -1092,6 +1096,13 @@ void App::drawMenuBar() {
             ImGui::EndMenu();
         }
         ImGui::Separator();
+        if (ImGui::MenuItem(tr("Shader editor..."), nullptr, shaderEditor_.open)) {
+            if (shaderEditor_.open) {
+                shaderEditor_.open = false;
+            } else {
+                openShaderEditor(std::string());
+            }
+        }
         if (ImGui::MenuItem(tr("Text and particles..."), nullptr, generatorDialog_.open)) {
             if (generatorDialog_.open) {
                 generatorDialog_.open = false;

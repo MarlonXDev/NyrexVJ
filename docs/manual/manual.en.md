@@ -80,7 +80,7 @@ This chapter names every part of the main window, so the rest of the manual can 
 | Audio | Choose the audio source: Off, Demo signal, System audio, Input, and Refresh devices |
 | Timeline | Run the timeline, Show the timeline window, Play, Pause, Stop, Release hand moves |
 | Settings | Opens the Settings window |
-| Creator | Open the Clip Creator, New 3D scene, templates, the node effect editor, Text and particles, Effect chains |
+| Creator | Open the Clip Creator, New 3D scene, templates, the node effect editor, Text and particles, Effect chains, Shader editor |
 | Help | User manual, What's new, links, Language, Check for updates |
 
 ![The main window of NyrexVJ with the clip grid on top, Output and Preview on the left and Master, Clip and Browser at the bottom](main-window.webp)
@@ -608,6 +608,22 @@ ISF files, the format of VDMX and others with a header between `/*{` and `}*/`, 
 A shader can declare its own sliders and switches with `#pragma nyrexvj param`. They appear in the Clip window under Shader controls. A right click resets a control to the default of the file, and Reset controls resets all of them.
 
 > Note: Shader files are programs for your graphics card. A broken shader can slow the picture down. NyrexVJ limits the time a shader may take and switches off one that is too slow.
+
+## The shader editor {#shader-editor}
+
+Creator, Shader editor opens a window with a text editor on the left, a live preview on the right and a list of problems below the text. In the Clip window of a shader file, Edit in shader editor opens that file. New starts from one of four templates, Open lists the files of the shaders folder, and the buttons Save, Save as, Reload from disk, Undo, Redo and Compile now do what they say. Live preview switches the preview and the compiling off.
+
+- The text has line numbers and colours for keywords, types, built-in functions, the NyrexVJ names, `#pragma nyrexvj` lines, numbers and comments. Ctrl+Z and Ctrl+Y undo and redo, Tab and Shift+Tab indent, Ctrl+/ comments a line, Ctrl+S saves and F5 compiles at once.
+- A mistake is marked on its line in red, with the message as a tooltip on the mark in the margin, and listed below the text. A click on an entry of the list moves the cursor to that line.
+- The shader is compiled a moment after you stop typing, never while you type. The preview is separate from your clips: it never changes a clip that is playing, and a shader that does not compile leaves the last working picture on screen with the message beside it. Shown version says which text the picture comes from.
+- A shader that is very slow is drawn only every few frames in the preview, and one that is far too slow is stopped until you press Resume. Image filters are not shown in the preview, and images and videos used as channels are empty there.
+- Save writes the file into the shaders folder in one step, and a clip that uses the file reloads by itself, as described above. The name may use letters, digits, space and `- _ . ( )`, up to 64 characters, and must end in `.glsl`, `.frag` or `.fs`. An existing file is replaced only after you agree. If another program changed or deleted the file while you were editing, the editor asks whether to keep your version, load the disk version or save a copy.
+
+The editor does not have a search, several open files, autocompletion or a debugger. Text over 256 KiB is refused.
+
+> Warning: A shader that never ends can freeze the graphics driver, in the preview as in a clip, because a drawing that has started cannot be stopped. Try loops with small counts first.
+
+> Tip: Keep the editor open next to the Output window while you work on a shader. Closing it releases everything the preview used.
 
 # 3D models {#models}
 
@@ -1343,6 +1359,9 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--generator-selftest` | Check text and particle clips in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--settings IDX` | Open Settings on page IDX, counted from 0 in the order of the page list |
 | `--check-shaders` | Compile every shader and exit |
+| `--shader-editor [FILE]` | Open the shader editor on start, with a file of the shaders folder if you give one, otherwise with a template |
+| `--shader-editor-selftest [FRAMES]` | Check the shader editor in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
+| `--shader-editor-uitest` | Drive the shader editor with real key and mouse events, check what it holds and exit with code 0 or 1, with `--bench-out FILE.json` for the result |
 
 ## Tests and measurements {#cli-tests}
 

@@ -1381,6 +1381,100 @@
           "criteria": "Proposed: every button and checkbox does what its text says, a dropped .nyxclip is not taken for a show package, and no text is cut off at the default window size and at 125 and 150 percent scale."
         }
       ]
+    },
+    {
+      "id": "community-packages",
+      "title": "Community packages: .nyxpack, versioned manifest, dependencies, conflicts, plugin consent, update, removal and rollback, the Community packages window",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/PACKAGES.md",
+        "docs/PLUGINS.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0035-community-packages.md"
+      ],
+      "sources": [
+        "src/core/show_package.cpp",
+        "src/core/pack_workflow.cpp",
+        "src/app/pack_dialog.hpp",
+        "src/app/ui_packs.cpp",
+        "src/app/pack_cli.cpp",
+        "src/app/app.cpp",
+        "tests/test_pack.cpp",
+        "tests/test_show_package.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-CP-1",
+          "kind": "ctest",
+          "name": "nvj_pack_tests"
+        },
+        {
+          "id": "A-CP-2",
+          "kind": "ctest",
+          "name": "nvj_show_tests"
+        },
+        {
+          "id": "A-CP-3",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the Community packages window and every message of the package code has a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-CP-4",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --community-packages 1 --frames 40",
+          "note": "opens the Community packages window on the Install tab and runs 40 frames through a real OpenGL context; a smoke test of the window, not a test of its use"
+        },
+        {
+          "id": "A-CP-5",
+          "kind": "cli",
+          "command": "NyrexVJ --pack-build FOLDER FILE, --pack-info FILE, --pack-install FILE (twice), --pack-remove ID",
+          "note": "builds a package from a folder, shows it, installs it, installs it again unchanged and removes it in a scratch data folder; checks exit codes and that the files appear and move to package_backups"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-CP-1",
+          "title": "A real plugin installed from a package on Windows: consent, left off, switched on by hand, update and removal",
+          "needs": "A Windows computer with NyrexVJ, the example plugin from plugins/example built as a .dll and packed with plugin.json into a .nyxpack, and a second version of the same package",
+          "steps": [
+            "Open the package, read the warning for a native plugin, try to install without the tick and then with it.",
+            "Open Settings, Plugins and check that the plugin is listed and switched off, then switch it on and use one of its sources.",
+            "Install the second version while the plugin is on, then switch it off and install again, and remove the package.",
+            "Let the plugin crash on purpose, restart, and install the package again."
+          ],
+          "measure": "Whether any step switched the plugin on by itself, the state of plugins/config.json and plugins/disabled.json before and after each step, whether the old library was moved to package_backups, and what the window said at each refusal",
+          "criteria": "Proposed: the plugin is never on after an install, config.json and disabled.json are unchanged by every install, update and removal, an update with the plugin on is refused with a clear message, and a plugin in safe mode stays in safe mode."
+        },
+        {
+          "id": "M-CP-2",
+          "title": "The window used with a mouse on a real data folder with own files",
+          "needs": "A computer with NyrexVJ and a data folder with own presets, shaders and node effects, and two packages by other people (one with files of the same names as your own, one that needs the other)",
+          "steps": [
+            "Install the dependent package first and read the message, then the other one, then the dependent one.",
+            "Install the package with the same file names and try Keep my files, then Replace my files, and look in package_backups.",
+            "Edit a shader that came from a package, update the package and remove it, and read what was kept.",
+            "Drop a .nyxpack file and a .nyxshow file on the window."
+          ],
+          "measure": "Whether every message can be understood without reading the manual, whether any file of yours changed without being asked, what package_backups holds, and how long Check package takes on a package of 200 MiB",
+          "criteria": "Proposed: no file of yours is changed or lost without the choice Replace, the file you edited is kept on removal and named, a show package is refused with a message that says it is a show package, and the window stays responsive while a package is read."
+        },
+        {
+          "id": "M-CP-3",
+          "title": "Packages from a USB stick and a network drive, cancelled and interrupted",
+          "needs": "A package of about 200 MiB on a USB stick and on a network drive",
+          "steps": [
+            "Check and install from each.",
+            "Cancel one install half way and pull the stick during another.",
+            "Look at the plugins, presets, shaders and package_backups folders and the packages folder afterwards."
+          ],
+          "measure": "Seconds for each step, leftover temporary files, and whether the record exists for a package that was not completely installed",
+          "criteria": "Proposed: a cancelled or interrupted install leaves the folders as they were and no record, and the window says so."
+        }
+      ]
     }
   ]
 }

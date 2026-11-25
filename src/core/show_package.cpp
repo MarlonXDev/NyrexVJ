@@ -19,6 +19,8 @@ namespace {
 
 constexpr char kHeaderMagic[8] = {'N', 'Y', 'X', 'S', 'H', 'O', 'W', '\0'};
 constexpr char kFooterMagic[8] = {'N', 'Y', 'X', 'S', 'H', 'E', 'N', 'D'};
+constexpr char kPackHeaderMagic[8] = {'N', 'Y', 'X', 'P', 'A', 'C', 'K', '\0'};
+constexpr char kPackFooterMagic[8] = {'N', 'Y', 'X', 'P', 'K', 'E', 'N', 'D'};
 constexpr char kClipMagic[8] = {'N', 'Y', 'X', 'C', 'L', 'I', 'P', '1'};
 constexpr size_t kChunkBytes = 1024u * 1024u;
 
@@ -28,21 +30,28 @@ struct KindInfo {
     const char* fixedName;
     std::vector<std::string> extensions;
     unsigned long long maxBytes;
+    unsigned formats;
 };
+
+constexpr unsigned kInShow = 1;
+constexpr unsigned kInPack = 2;
 
 const std::vector<KindInfo>& kindTable() {
     static const std::vector<KindInfo> table = {
-        {Kind::Composition, "composition", "composition.json", {}, 8ull * 1024 * 1024},
-        {Kind::Preset, "preset", "", {".json"}, 8ull * 1024 * 1024},
-        {Kind::Media, "media", "", {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".gif", ".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}, 4096ull * 1024 * 1024},
-        {Kind::Model, "model", "", {".glb", ".gltf", ".bin", ".png", ".jpg", ".jpeg"}, 512ull * 1024 * 1024},
-        {Kind::ScenePack, "scenepack", "", {".nyxclip"}, 256ull * 1024 * 1024},
-        {Kind::Shader, "shader", "", {".glsl", ".frag", ".fs"}, 256ull * 1024},
-        {Kind::Node, "node", "", {".nyxfx"}, 256ull * 1024},
-        {Kind::Venue, "venue", "", {".json"}, 2ull * 1024 * 1024},
-        {Kind::Mask, "mask", "", {".png", ".jpg", ".jpeg", ".bmp", ".tga"}, 16ull * 1024 * 1024},
-        {Kind::Cues, "cues", "cues.json", {}, 8ull * 1024 * 1024},
-        {Kind::Timeline, "timeline", "timeline.json", {}, 4ull * 1024 * 1024},
+        {Kind::Composition, "composition", "composition.json", {}, 8ull * 1024 * 1024, kInShow},
+        {Kind::Preset, "preset", "", {".json"}, 8ull * 1024 * 1024, kInShow | kInPack},
+        {Kind::Media, "media", "", {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".gif", ".mp4", ".mov", ".m4v", ".mkv", ".avi", ".webm"}, 4096ull * 1024 * 1024, kInShow},
+        {Kind::Model, "model", "", {".glb", ".gltf", ".bin", ".png", ".jpg", ".jpeg"}, 512ull * 1024 * 1024, kInShow},
+        {Kind::ScenePack, "scenepack", "", {".nyxclip"}, 256ull * 1024 * 1024, kInShow},
+        {Kind::Shader, "shader", "", {".glsl", ".frag", ".fs"}, 256ull * 1024, kInShow | kInPack},
+        {Kind::Node, "node", "", {".nyxfx"}, 256ull * 1024, kInShow | kInPack},
+        {Kind::Venue, "venue", "", {".json"}, 2ull * 1024 * 1024, kInShow | kInPack},
+        {Kind::Mask, "mask", "", {".png", ".jpg", ".jpeg", ".bmp", ".tga"}, 16ull * 1024 * 1024, kInShow | kInPack},
+        {Kind::Cues, "cues", "cues.json", {}, 8ull * 1024 * 1024, kInShow},
+        {Kind::Timeline, "timeline", "timeline.json", {}, 4ull * 1024 * 1024, kInShow},
+        {Kind::Plugin, "plugin", "", {".json", ".dll", ".so"}, 128ull * 1024 * 1024, kInPack},
+        {Kind::Preview, "preview", "", {".png", ".jpg", ".jpeg"}, 1024ull * 1024, kInPack},
+        {Kind::License, "license", "LICENSE.txt", {}, 64ull * 1024, kInPack},
     };
     return table;
 }
@@ -208,6 +217,24 @@ fs::path temporaryFor(const fs::path& destination) {
 
 }
 
+const char* formatName(Format format) {
+    return format == Format::Pack ? kPackFormatName : kFormatName;
+}
+
+bool kindAllowedIn(Format format, Kind kind) {
+    const unsigned mask = format == Format::Pack ? kInPack : kInShow;
+    return (infoFor(kind).formats & mask) != 0;
+}
+
+Limits Limits::forPack() {
+    Limits limits;
+    limits.maxTotalBytes = 256ull * 1024ull * 1024ull;
+    limits.maxEntries = 256;
+    limits.maxManifestBytes = 256u * 1024u;
+    limits.maxJsonDepth = 12;
+    return limits;
+}
+
 const char* kindName(Kind kind) {
     const size_t index = static_cast<size_t>(kind);
     return index < kindTable().size() ? kindTable()[index].name : "media";
@@ -288,18 +315,43 @@ bool isSafeItemName(Kind kind, const std::string& name, std::string* reason) {
     if (std::find(info.extensions.begin(), info.extensions.end(), extension) == info.extensions.end()) {
         return fail("The file extension is not allowed for this kind of file");
     }
+    if (kind == Kind::Plugin && extension == ".json" && name != "plugin.json") {
+        return fail("The name is not the one this kind of file must have");
+    }
     return true;
 }
 
 std::string manifestToJson(const Manifest& manifest) {
     nlohmann::json doc;
-    doc["format"] = kFormatName;
+    doc["format"] = formatName(manifest.format);
     doc["version"] = manifest.version;
     doc["app"] = "NyrexVJ";
     doc["appVersion"] = manifest.appVersion;
     doc["name"] = manifest.name;
     doc["created"] = manifest.created;
     doc["notes"] = manifest.notes;
+    if (manifest.format == Format::Pack) {
+        const PackMeta& meta = manifest.meta;
+        doc["id"] = meta.id;
+        doc["packageVersion"] = meta.version;
+        doc["author"] = meta.author;
+        doc["description"] = meta.description;
+        doc["license"] = meta.license;
+        doc["homepage"] = meta.homepage;
+        nlohmann::json range;
+        range["min"] = meta.minApp;
+        range["max"] = meta.maxApp;
+        doc["nyrexvj"] = range;
+        nlohmann::json dependencies = nlohmann::json::array();
+        for (const PackDependency& dependency : meta.dependencies) {
+            nlohmann::json entry;
+            entry["id"] = dependency.id;
+            entry["min"] = dependency.min;
+            dependencies.push_back(entry);
+        }
+        doc["dependencies"] = dependencies;
+        doc["preview"] = meta.preview;
+    }
     nlohmann::json files = nlohmann::json::array();
     for (const Item& item : manifest.items) {
         nlohmann::json entry;
@@ -357,7 +409,7 @@ void listField(const nlohmann::json& object, const char* key, std::vector<std::s
 
 }
 
-bool manifestFromJson(const std::string& text, const Limits& limits, Manifest& manifest, std::vector<std::string>& warnings, std::string& error) {
+bool manifestFromJson(const std::string& text, const Limits& limits, Manifest& manifest, std::vector<std::string>& warnings, std::string& error, Format expected) {
     if (text.size() > limits.maxManifestBytes) {
         error = "The list of files in the package is too large";
         return false;
@@ -371,41 +423,87 @@ bool manifestFromJson(const std::string& text, const Limits& limits, Manifest& m
         error = "The list of files in the package cannot be read";
         return false;
     }
-    if (doc.value("format", std::string()) != kFormatName) {
-        error = "This is not a show package";
+    if (doc.value("format", std::string()) != formatName(expected)) {
+        error = expected == Format::Pack ? "This is not a community package" : "This is not a show package";
         return false;
     }
     auto versionField = doc.find("version");
     if (versionField == doc.end() || !versionField->is_number_integer()) {
-        error = "The show package has no valid version";
+        error = "The package has no valid version";
         return false;
     }
     const long long version = versionField->get<long long>();
     if (version < 1) {
-        error = "The show package has no valid version";
+        error = "The package has no valid version";
         return false;
     }
     if (version > kFormatVersion) {
-        error = "The show package was made by a newer version of NyrexVJ";
+        error = "The package was made by a newer version of NyrexVJ";
         return false;
     }
     Manifest result;
+    result.format = expected;
     result.version = static_cast<int>(version);
     result.appVersion = stringField(doc, "appVersion", 40);
     result.name = stringField(doc, "name", kMaxShowNameBytes);
     result.created = stringField(doc, "created", 40);
     result.notes = stringField(doc, "notes", kMaxNotesBytes);
     if (!validUtf8(result.name) || !validUtf8(result.notes)) {
-        error = "The show package has text that is not valid";
+        error = "The package has text that is not valid";
         return false;
+    }
+    if (expected == Format::Pack) {
+        PackMeta& meta = result.meta;
+        meta.id = stringField(doc, "id", kMaxPackShortBytes);
+        meta.version = stringField(doc, "packageVersion", 40);
+        meta.author = stringField(doc, "author", kMaxPackShortBytes);
+        meta.description = stringField(doc, "description", kMaxPackTextBytes);
+        meta.license = stringField(doc, "license", kMaxPackShortBytes);
+        meta.homepage = stringField(doc, "homepage", 200);
+        meta.preview = stringField(doc, "preview", kMaxNameBytes);
+        auto range = doc.find("nyrexvj");
+        if (range != doc.end() && range->is_object()) {
+            meta.minApp = stringField(*range, "min", 40);
+            meta.maxApp = stringField(*range, "max", 40);
+        }
+        auto dependencies = doc.find("dependencies");
+        if (dependencies != doc.end() && dependencies->is_array()) {
+            if (dependencies->size() > kMaxPackDependencies) {
+                error = "The package lists too many dependencies";
+                return false;
+            }
+            for (const nlohmann::json& entry : *dependencies) {
+                if (!entry.is_object()) {
+                    error = "The package has a dependency that cannot be read";
+                    return false;
+                }
+                PackDependency dependency;
+                dependency.id = stringField(entry, "id", kMaxPackShortBytes);
+                dependency.min = stringField(entry, "min", 40);
+                meta.dependencies.push_back(dependency);
+            }
+        }
+        const std::string* texts[] = {&meta.id, &meta.version, &meta.author, &meta.description, &meta.license, &meta.homepage, &meta.preview, &meta.minApp, &meta.maxApp};
+        for (const std::string* text : texts) {
+            if (!validUtf8(*text)) {
+                error = "The package has text that is not valid";
+                return false;
+            }
+        }
+        for (const PackDependency& dependency : meta.dependencies) {
+            if (!validUtf8(dependency.id) || !validUtf8(dependency.min)) {
+                error = "The package has text that is not valid";
+                return false;
+            }
+        }
     }
     auto files = doc.find("files");
     if (files == doc.end() || !files->is_array()) {
-        error = "The show package has no list of files";
+        error = "The package has no list of files";
         return false;
     }
     if (files->size() > limits.maxEntries) {
-        error = "The show package lists too many files";
+        error = "The package lists too many files";
         return false;
     }
     std::set<std::string> seen;
@@ -416,7 +514,7 @@ bool manifestFromJson(const std::string& text, const Limits& limits, Manifest& m
         }
         const std::string kindText = stringField(entry, "kind", 40);
         Kind kind = Kind::Media;
-        if (!kindFromName(kindText, kind)) {
+        if (!kindFromName(kindText, kind) || !kindAllowedIn(expected, kind)) {
             warnings.push_back("A file of the kind '" + clampUtf8(kindText, 40) + "' is not known to this version and was ignored");
             continue;
         }
@@ -478,14 +576,16 @@ WriteResult writePackage(const WriteRequest& request, const fs::path& destinatio
     WriteResult result;
     std::error_code ec;
     if (request.items.size() > limits.maxEntries) {
-        result.error = "The show has too many files";
+        result.error = "The package has too many files";
         return result;
     }
     if (!validUtf8(request.name) || request.name.size() > kMaxShowNameBytes) {
-        result.error = "The name of the show is too long or not valid text";
+        result.error = "The name of the package is too long or not valid text";
         return result;
     }
     Manifest manifest;
+    manifest.format = request.format;
+    manifest.meta = request.meta;
     manifest.appVersion = clampUtf8(request.appVersion, 40);
     manifest.name = request.name;
     manifest.created = clampUtf8(request.created, 40);
@@ -502,12 +602,16 @@ WriteResult writePackage(const WriteRequest& request, const fs::path& destinatio
     std::vector<Prepared> prepared;
     for (const SourceItem& source : request.items) {
         std::string reason;
+        if (!kindAllowedIn(request.format, source.kind)) {
+            result.error = "This kind of file cannot be put into this package: " + source.name;
+            return result;
+        }
         if (!isSafeItemName(source.kind, source.name, &reason)) {
             result.error = "This file name cannot be used in a package: " + reason;
             return result;
         }
         if (!seen.insert(duplicateKey(source.kind, source.name)).second) {
-            result.error = "The show lists the same file twice: " + source.name;
+            result.error = "The package lists the same file twice: " + source.name;
             return result;
         }
         Item item;
@@ -533,13 +637,13 @@ WriteResult writePackage(const WriteRequest& request, const fs::path& destinatio
             }
         }
         if (!item.missing && item.size > limits.maxBytesFor(source.kind)) {
-            result.error = "The file is larger than a show package may hold: " + source.name;
+            result.error = "The file is larger than a package may hold: " + source.name;
             return result;
         }
         if (item.included) {
             total += item.size;
             if (total > limits.maxTotalBytes) {
-                result.error = "The files of the show are larger than a show package may hold";
+                result.error = "The files are larger than a package may hold";
                 return result;
             }
         }
@@ -586,7 +690,7 @@ WriteResult writePackage(const WriteRequest& request, const fs::path& destinatio
     };
 
     std::string header;
-    header.append(kHeaderMagic, 8);
+    header.append(request.format == Format::Pack ? kPackHeaderMagic : kHeaderMagic, 8);
     put32(header, static_cast<uint32_t>(kFormatVersion));
     put32(header, 0);
     out.write(header.data(), static_cast<std::streamsize>(header.size()));
@@ -675,7 +779,7 @@ WriteResult writePackage(const WriteRequest& request, const fs::path& destinatio
     }
     const std::string manifestText = manifestToJson(manifest);
     if (manifestText.size() > limits.maxManifestBytes) {
-        return fail("The list of files of the show is too large");
+        return fail("The list of files of the package is too large");
     }
     const unsigned long long manifestOffset = position;
     out.write(manifestText.data(), static_cast<std::streamsize>(manifestText.size()));
@@ -685,7 +789,7 @@ WriteResult writePackage(const WriteRequest& request, const fs::path& destinatio
     put32(footer, archive::crc32Update(0, reinterpret_cast<const unsigned char*>(manifestText.data()), manifestText.size()));
     put32(footer, static_cast<uint32_t>(kFormatVersion));
     put32(footer, 0);
-    footer.append(kFooterMagic, 8);
+    footer.append(request.format == Format::Pack ? kPackFooterMagic : kFooterMagic, 8);
     out.write(footer.data(), static_cast<std::streamsize>(footer.size()));
     out.flush();
     if (!out) {
@@ -707,7 +811,7 @@ WriteResult writePackage(const WriteRequest& request, const fs::path& destinatio
     return result;
 }
 
-Inspection inspectPackage(const fs::path& file, const Limits& limits) {
+Inspection inspectPackage(const fs::path& file, const Limits& limits, Format expected) {
     Inspection result;
     std::error_code ec;
     if (!fs::is_regular_file(file, ec)) {
@@ -727,37 +831,42 @@ Inspection inspectPackage(const fs::path& file, const Limits& limits) {
     }
     unsigned char header[kHeaderBytes] = {};
     in.read(reinterpret_cast<char*>(header), static_cast<std::streamsize>(kHeaderBytes));
+    const bool wantPack = expected == Format::Pack;
     if (static_cast<size_t>(in.gcount()) < 8) {
-        result.error = "This is not a show package";
+        result.error = wantPack ? "This is not a community package" : "This is not a show package";
         return result;
     }
     if (std::memcmp(header, kClipMagic, 8) == 0) {
-        result.error = "This is a scene pack (.nyxclip), not a show package";
+        result.error = wantPack ? "This is a scene pack (.nyxclip), not a community package" : "This is a scene pack (.nyxclip), not a show package";
         return result;
     }
-    if (std::memcmp(header, kHeaderMagic, 8) != 0) {
-        result.error = "This is not a show package";
+    if (std::memcmp(header, wantPack ? kHeaderMagic : kPackHeaderMagic, 8) == 0) {
+        result.error = wantPack ? "This is a show package (.nyxshow), not a community package" : "This is a community package (.nyxpack), not a show package";
+        return result;
+    }
+    if (std::memcmp(header, wantPack ? kPackHeaderMagic : kHeaderMagic, 8) != 0) {
+        result.error = wantPack ? "This is not a community package" : "This is not a show package";
         return result;
     }
     if (result.fileBytes < kHeaderBytes + kFooterBytes) {
-        result.error = "The show package is cut off";
+        result.error = "The package is cut off";
         return result;
     }
     const uint32_t headerVersion = get32(header + 8);
     if (headerVersion < 1) {
-        result.error = "The show package has no valid version";
+        result.error = "The package has no valid version";
         return result;
     }
     if (headerVersion > static_cast<uint32_t>(kFormatVersion)) {
-        result.error = "The show package was made by a newer version of NyrexVJ";
+        result.error = "The package was made by a newer version of NyrexVJ";
         return result;
     }
 
     unsigned char footer[kFooterBytes] = {};
     in.seekg(static_cast<std::streamoff>(result.fileBytes - kFooterBytes));
     in.read(reinterpret_cast<char*>(footer), static_cast<std::streamsize>(kFooterBytes));
-    if (static_cast<size_t>(in.gcount()) != kFooterBytes || std::memcmp(footer + 24, kFooterMagic, 8) != 0) {
-        result.error = "The show package is cut off or damaged";
+    if (static_cast<size_t>(in.gcount()) != kFooterBytes || std::memcmp(footer + 24, wantPack ? kPackFooterMagic : kFooterMagic, 8) != 0) {
+        result.error = "The package is cut off or damaged";
         return result;
     }
     const uint64_t manifestOffset = get64(footer);
@@ -765,18 +874,18 @@ Inspection inspectPackage(const fs::path& file, const Limits& limits) {
     const uint32_t manifestCrc = get32(footer + 12);
     const uint32_t footerVersion = get32(footer + 16);
     if (footerVersion != headerVersion) {
-        result.error = "The show package is damaged";
+        result.error = "The package is damaged";
         return result;
     }
     if (manifestSize == 0 || manifestSize > limits.maxManifestBytes || manifestOffset < kHeaderBytes || manifestOffset + manifestSize + kFooterBytes != result.fileBytes) {
-        result.error = "The show package is damaged";
+        result.error = "The package is damaged";
         return result;
     }
     std::string manifestText(manifestSize, '\0');
     in.seekg(static_cast<std::streamoff>(manifestOffset));
     in.read(manifestText.data(), static_cast<std::streamsize>(manifestSize));
     if (static_cast<size_t>(in.gcount()) != manifestSize) {
-        result.error = "The show package is cut off";
+        result.error = "The package is cut off";
         return result;
     }
     if (archive::crc32Update(0, reinterpret_cast<const unsigned char*>(manifestText.data()), manifestText.size()) != manifestCrc) {
@@ -784,11 +893,11 @@ Inspection inspectPackage(const fs::path& file, const Limits& limits) {
         return result;
     }
     Manifest manifest;
-    if (!manifestFromJson(manifestText, limits, manifest, result.warnings, result.error)) {
+    if (!manifestFromJson(manifestText, limits, manifest, result.warnings, result.error, expected)) {
         return result;
     }
     if (manifest.version != static_cast<int>(headerVersion)) {
-        result.error = "The show package is damaged";
+        result.error = "The package is damaged";
         return result;
     }
 

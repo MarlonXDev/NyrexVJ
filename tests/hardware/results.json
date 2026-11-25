@@ -767,6 +767,71 @@
       "test": "A-SP-4",
       "command": "NyrexVJ --fresh --show-packages 0 --frames 40",
       "notes": "opened the window on the Export tab and saved a screenshot, exit 0 on llvmpipe"
+    },
+    {
+      "area": "community-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.42.0 (branch feature/community-packages, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-CP-1",
+      "command": "ctest -R nvj_pack_tests",
+      "notes": "365 checks (versions, metadata, dependencies, version conflicts, update and downgrade, rollback, file paths, plugin consent, damaged packages); whole suite 39 of 39 passed"
+    },
+    {
+      "area": "community-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.42.0 (branch feature/community-packages, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-CP-2",
+      "command": "ctest -R nvj_show_tests",
+      "notes": "214 checks, the container tests for both formats; whole suite 39 of 39 passed"
+    },
+    {
+      "area": "community-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.42.0 (branch feature/community-packages, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-CP-3",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "All 2109 translation keys are covered"
+    },
+    {
+      "area": "community-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.42.0 (branch feature/community-packages, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-CP-4",
+      "command": "NyrexVJ --fresh --community-packages 1 --frames 40",
+      "notes": "exit 0, window opened on the Install tab and drawn for 40 frames, looked at in English and German screenshots"
+    },
+    {
+      "area": "community-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.42.0 (branch feature/community-packages, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-CP-5",
+      "command": "NyrexVJ --pack-build, --pack-info, --pack-install (twice), --pack-remove",
+      "notes": "build wrote 3 files, info and install exit 0, second install reported same-version, remove moved the files to package_backups; a package with one changed byte was refused with exit 1 and left presets, shaders and packages untouched"
     }
   ]
 }

@@ -398,6 +398,50 @@ Ist der Import fertig, siehst du, wie viele Dateien hinzugefügt, umbenannt, ers
 
 ![Das Fenster Show-Paket](show-packages.webp)
 
+## Community-Pakete {#community-packages}
+
+Ein Community-Paket ist eine einzelne Datei, die auf `.nyxpack` endet. Jemand hat Presets, Shader, Node-Effekte, Masken, Venue-Setups oder ein Plugin gemacht und in diese Datei gepackt, damit du sie in einem Schritt installieren, später aktualisieren und wieder entfernen kannst. Es ist nicht dasselbe wie ein Show-Paket: Ein Show-Paket bringt deine eigene Show auf einen anderen Computer, ein Community-Paket installierst du von jemand anderem.
+
+**Ein Paket installieren.** Datei, Community-Paket installieren öffnet das Fenster Community-Pakete im Tab Installieren. Du kannst auch eine `.nyxpack`-Datei auf das NyrexVJ-Fenster ziehen.
+
+1. Tipp oder füge den Pfad der Datei ein und drück Paket prüfen.
+2. Lies den oberen Teil der Seite: Name und Version, das Bild, das der Autor dazugelegt hat, wer es gemacht hat, die Lizenz, für welche NyrexVJ-Versionen es gemacht wurde und den Fingerabdruck der Datei. Wenn der Autor einen Fingerabdruck veröffentlicht hat, vergleiche ihn. Ein anderer Wert heißt: Die Datei ist nicht die, die der Autor gemacht hat.
+3. Öffne Lizenztext, um die Lizenz zu lesen, die der Autor aufgeschrieben hat.
+4. Unter Was passieren wird siehst du jede Datei und was damit geschehen würde: wird hinzugefügt, wird aktualisiert, schon installiert und unverändert, du hast diese Datei schon oder eine andere Datei mit demselben Namen. Noch wird nichts geändert.
+5. Lies die Hinweise über der Tabelle. Rote Hinweise stoppen die Installation und sagen, was zu tun ist. Gelbe Hinweise brauchen deine Zustimmung oder sind gut zu wissen.
+6. Drück Paket installieren. Ein Fortschrittsbalken zeigt die Arbeit, und Abbrechen stoppt sie.
+
+**Was eine Installation stoppen kann.** Ein Paket, das für andere NyrexVJ-Versionen gemacht wurde, ein Paket, das ein anderes Paket braucht, das du nicht installiert hast, ein Paket, das eine neuere Version eines anderen Pakets braucht, als du hast, ein Paket, das ein schon installiertes Paket kaputt machen würde, eine Datei, die einem anderen Paket gehört, und ein Ordner, der dort liegt, wo eine Datei hin soll. Jedes davon wird im Fenster in einfachen Worten erklärt, und installiert wird erst, wenn es gelöst ist.
+
+**Dateien, die sich unterscheiden.** Hast du schon eine Datei mit demselben Namen, aber anderem Inhalt, geht die Installation nicht weiter, bis du dich entscheidest. Meine Dateien behalten, den Rest installieren lässt deine in Ruhe und installiert die Kopie aus dem Paket nicht. Meine Dateien ersetzen, meine werden vorher gesichert verschiebt deine in den Ordner `package_backups` und legt dann die neue an ihren Platz. Eine Datei, die genau gleich ist, bleibt unberührt.
+
+**Ältere Versionen und Updates.** Ist schon eine neuere Version des Pakets installiert, sagt das Fenster es und bittet dich, Die ältere Version trotzdem installieren anzuhaken. Installierst du eine neuere Version, ist das ein Update: Die alten Dateien des Pakets, die die neue Version nicht mehr hat, wandern in die Sicherung, und Dateien, die du selbst geändert hast, bleiben, wo sie sind. Geht mittendrin etwas schief, wird alles so zurückgelegt, wie es war, und das Fenster sagt es.
+
+**Shader.** Ein Shader ist ein kleines Programm, das auf deiner Grafikkarte läuft. Ein fehlerhafter kann das Bild ruckeln oder einfrieren lassen. Das Fenster sagt dir, wie viele Shader-Dateien ein Paket hat. Installiere Shader nur von Autoren, denen du vertraust.
+
+**Plugins.** Ein Paket kann ein Plugin enthalten. Ein Plugin ist ein Programm, das innerhalb von NyrexVJ mit denselben Rechten wie NyrexVJ läuft, deshalb bittet dich das Fenster, Ich vertraue dem Autor und will dieses Plugin installieren anzuhaken, und geht ohne das nicht weiter. Selbst dann wird das Plugin nur kopiert. Es bleibt ausgeschaltet, bis du es selbst in Einstellungen, Plugins einschaltest, wo die üblichen Schutzregeln gelten: das Zeitbudget, die Absturzmarkierung und der abgesicherte Modus. Ein Paket kann ein Plugin nie einschalten, und ein Plugin, das wegen eines Absturzes gestoppt wurde, bleibt gestoppt. Ein Plugin muss ausgeschaltet sein, bevor du es aktualisierst oder entfernst. `--no-plugins` schaltet für einen Start weiterhin alle Plugins aus.
+
+**Sehen und entfernen, was installiert ist.** Der Tab Installiert listet die Pakete mit Version, Autor und Lizenz und den Dateien, die zu jedem gehören. Entfernen... verschiebt die Dateien eines Pakets in den Ordner `package_backups`, statt sie zu löschen. Eine Datei, die du nach der Installation geändert hast, bleibt. Ein Paket, das ein anderes Paket braucht, lässt sich nicht entfernen. Sicherungsordner öffnen zeigt, was verschoben wurde.
+
+**Ein Paket erstellen.** Der Tab Erstellen packt einen Ordner. Der Ordner braucht eine `pack.json` mit Kennung, Name, Version und Lizenz und kann die Ordner `presets`, `shaders`, `nodes`, `masks`, `venues` und `plugin`, eine `preview.png` und eine `LICENSE.txt` haben. Die Kennung besteht aus Kleinbuchstaben, Ziffern und `-`, `_` oder `.`, die Version hat bis zu vier Zahlen wie `1.2`. Bei den Abhängigkeiten stehen die Kennungen und die älteste Version anderer Pakete, die das Paket braucht. Trag den Ordner ein und wohin das Paket gespeichert werden soll, hak Datei ersetzen, falls sie existiert an, wenn schon ein Paket mit diesem Namen da ist, und drück Paket erstellen. Probleme im Ordner werden aufgelistet, und geschrieben wird erst, wenn sie behoben sind. Videos, Modelle und Szenenpakete kommen nicht in ein Community-Paket, nimm dafür ein Show-Paket.
+
+```json
+{
+  "id": "neon-starter",
+  "version": "1.2",
+  "name": "Neon Starter Pack",
+  "author": "Dein Name",
+  "description": "Ein paar Presets und ein Glow-Shader.",
+  "license": "MIT",
+  "nyrexvj": { "min": "0.40", "max": "" },
+  "dependencies": []
+}
+```
+
+**Sicherheit.** Ein Paket sind nur Daten. Jede Datei hat eine Prüfsumme, die geprüft wird, bevor etwas an seinen Platz kommt. Dateinamen müssen einfache Namen ohne Ordner sein und der Ordner richtet sich nach der Art der Datei, ein Paket kann also nicht außerhalb des Datenordners schreiben. Dateien werden ohne Kompression gespeichert und jede Art hat eine Größengrenze, ein kleines Paket kann sich also nicht zu etwas Riesigem entpacken. Ein Paket, das abgeschnitten, verändert, zu groß, in einem neueren Format oder im falschen Format ist, wird abgelehnt und auf deinem Computer ändert sich nichts. Pakete sind nicht signiert: Der Fingerabdruck zeigt, dass eine Datei die ist, die jemand veröffentlicht hat, nicht, dass ihr Inhalt sicher ist. Einen Online-Katalog gibt es nicht, du bekommst ein Paket von jemandem und installierst es selbst.
+
+![Das Fenster Community-Pakete](community-packages.webp)
+
 ## Rückgängig und Wiederherstellen {#undo}
 
 Bearbeiten, Rückgängig und Wiederherstellen, oder `Strg+Z` und `Strg+Y` (auch `Strg+Umschalt+Z` stellt wieder her), gehen durch deine Änderungen an Reglern, Clips, Effekten und Decks. Einen Clip abspielen, eine Spalte starten und die Makro-Regler bewegen sind Performance-Aktionen und gehören nicht zu Rückgängig. In der Zeitleiste und im Node-Editor wirken dieselben Tasten auf ihren eigenen Verlauf, solange diese Fenster den Fokus haben.
@@ -946,7 +990,7 @@ Ein Plugin ist eine Bibliothek mit einer kleinen C-Schnittstelle, die Modulation
 
 ## Plugins aktivieren {#plugin-enable}
 
-Plugins sind aus, bis du sie anhakst. Einstellungen, Plugins listet die Plugin-Ordner auf, die im Ordner plugins des Datenordners gefunden werden. Ein Ordner braucht eine Datei `plugin.json`. Hak Aktivieren für ein Plugin an und wähl dann seine Quelle für Plugin 1 bis Plugin 8 oder für einen der vier Bild-Slots. Jede Quelle hat bis zu vier Parameter. Die Startoption `--no-plugins` schaltet alle Plugins für einen Lauf ab.
+Plugins sind aus, bis du sie anhakst. Einstellungen, Plugins listet die Plugin-Ordner auf, die im Ordner plugins des Datenordners gefunden werden. Ein Ordner braucht eine Datei `plugin.json`. Hak Aktivieren für ein Plugin an und wähl dann seine Quelle für Plugin 1 bis Plugin 8 oder für einen der vier Bild-Slots. Jede Quelle hat bis zu vier Parameter. Die Startoption `--no-plugins` schaltet alle Plugins für einen Lauf ab. Ein Plugin kann auch in einem Community-Paket kommen, das es hierher kopiert und ausgeschaltet lässt, siehe [Community-Pakete](#presets/community-packages).
 
 ## Sicherheit {#plugin-safety}
 
@@ -1069,6 +1113,8 @@ NyrexVJ legt alles in seinem Datenordner ab. Unter Windows ist das `%APPDATA%\Ny
 | `presets` | Deine eigenen Presets |
 | `shows` | Der Ort, den das Exportfenster für Show-Pakete vorschlägt |
 | `show_backups` | Deine eigenen Dateien, die ein Import eines Show-Pakets ersetzt hat, ein Ordner pro Import |
+| `packages` | Ein Eintrag für jedes installierte Community-Paket und eine Kopie seines Lizenztextes |
+| `package_backups` | Dateien, die ein Update, ein Ersetzen oder ein Entfernen eines Community-Pakets weggeräumt hat, jedes Mal ein Ordner |
 | `shaders` | Deine eigenen Shader-Dateien |
 | `models` | Deine eigenen 3D-Modelle |
 | `media` | Bilder und Videos |
@@ -1151,6 +1197,11 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--manual` | Dieses Handbuch beim Start öffnen, auf Wunsch bei einem Kapitel, zum Beispiel `--manual outputs` |
 | `--timeline` | Das Fenster der Show-Zeitleiste beim Start öffnen |
 | `--show-packages` | Das Fenster Show-Paket beim Start öffnen, im Tab Exportieren, oder mit `--show-packages 1` im Tab Importieren |
+| `--community-packages` | Das Fenster Community-Pakete beim Start öffnen, im Tab Installiert, mit `--community-packages 1` im Tab Installieren oder mit `2` im Tab Erstellen |
+| `--pack-build ORDNER DATEI` | Ein Community-Paket aus einem Ordner bauen und beenden, mit `--pack-overwrite`, um eine vorhandene Datei zu ersetzen |
+| `--pack-info DATEI` | Zeigen, was ein Community-Paket enthält und ob es sich installieren ließe, und beenden |
+| `--pack-install DATEI` | Ein Community-Paket installieren und beenden, mit `--pack-accept-plugin`, `--pack-allow-downgrade`, `--pack-keep-mine` oder `--pack-replace`, wo sie nötig sind |
+| `--pack-remove KENNUNG` | Ein installiertes Community-Paket entfernen und beenden |
 | `--settings IDX` | Die Einstellungen auf Seite IDX öffnen, ab 0 gezählt in der Reihenfolge der Seitenliste |
 | `--check-shaders` | Jeden Shader kompilieren und beenden |
 

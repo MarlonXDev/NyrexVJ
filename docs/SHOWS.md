@@ -2,6 +2,8 @@
 
 Added in 0.41.0 ([ADR 0034](adr/0034-show-packages.md)). A show package is one file with the ending `.nyxshow` that holds the current show and every file it uses. File, Export show package makes one, File, Import show package (or dropping the file on the window) opens one. Nothing changes until you use it, and nothing is changed on import before you press Import.
 
+A `.nyxpack` file is a different thing: a community package that somebody else made and that you install, update and remove (see [PACKAGES.md](PACKAGES.md)). The two formats refuse each other's files.
+
 ## What a package holds
 
 | Kind | Where it comes from | Where it goes on import | Allowed endings | Largest file |

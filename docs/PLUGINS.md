@@ -22,6 +22,8 @@ Because of this, plugins are **off by default**. NyrexVJ lists what it finds, bu
 5. In the section *Image sources*, pick a plugin source for a slot. The clip `Plugin Source N` then shows its picture. It is an ordinary live clip: put it on a layer, add effects, use it in a preset.
 6. Each plugin source has up to four parameters. They are sliders from 0 to 1 and are saved in `plugins/config.json`.
 
+A plugin can also come in a community package (`.nyxpack`, [PACKAGES.md](PACKAGES.md)). The installer asks for your consent, copies the folder into `plugins/` and leaves the plugin off. Switching it on stays a step you take here in step 3.
+
 A plugin source only runs while something uses it. A modulation source that nobody has read for 3 seconds is stopped and starts again at the next read. An image source runs while its clip is on a layer.
 
 Plugin bands are not available in the stage (3D scene) source list, which is a fixed list.

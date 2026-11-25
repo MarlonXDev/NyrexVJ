@@ -116,6 +116,9 @@ const char* kindLabel(show::Kind kind) {
         case show::Kind::Mask: return tr("Mask picture");
         case show::Kind::Cues: return tr("Cue list");
         case show::Kind::Timeline: return tr("Timeline");
+        case show::Kind::Plugin:
+        case show::Kind::Preview:
+        case show::Kind::License: break;
     }
     return "";
 }

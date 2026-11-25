@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import ctypes
+import json
 import os
 import shutil
 import subprocess
@@ -27,6 +28,7 @@ NODES = (178, 68, 1244, 764)
 TIMELINE = (208, 278, 1184, 562)
 MANUAL = (280, 98, 1042, 704)
 SHOWPKG = (416, 124, 770, 420)
+PACKS = (406, 118, 788, 672)
 
 RUNS = {
     "main": ["--column", "1"],
@@ -46,9 +48,11 @@ RUNS = {
     "timeline": ["--timeline"],
     "manual": ["--manual", "first-show"],
     "shows": ["--show-packages", "0"],
+    "packs": ["--community-packages", "1"],
 }
 
 SEEDED = {"nodes", "timeline"}
+PACKED = {"packs"}
 
 FIGURES = [
     ("main-window", "main", WIN),
@@ -71,6 +75,7 @@ FIGURES = [
     ("timeline", "timeline", TIMELINE),
     ("manual-window", "manual", MANUAL),
     ("show-packages", "shows", SHOWPKG),
+    ("community-packages", "packs", PACKS),
 ]
 
 CARDS = [
@@ -99,6 +104,41 @@ def move_pointer_away(display):
         pass
 
 
+def build_demo_pack(binary, work, env):
+    folder = work / "pack-demo"
+    if folder.exists():
+        shutil.rmtree(folder)
+    (folder / "presets").mkdir(parents=True)
+    (folder / "shaders").mkdir()
+    manifest = {
+        "id": "neon-starter",
+        "version": "1.2",
+        "name": "Neon Starter Pack",
+        "author": "Marlon",
+        "description": "A few presets and a glow shader to get started.",
+        "license": "MIT",
+        "homepage": "https://example.invalid/neon",
+        "nyrexvj": {"min": "0.40", "max": ""},
+        "dependencies": [],
+    }
+    (folder / "pack.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (folder / "LICENSE.txt").write_text("MIT License\n\nA demonstration package.\n", encoding="utf-8")
+    (folder / "presets" / "Neon Pulse.json").write_text(json.dumps({"name": "Neon Pulse"}), encoding="utf-8")
+    (folder / "shaders" / "glow.frag").write_text("void main() {}\n", encoding="utf-8")
+    preview = Image.new("RGB", (260, 146))
+    pixels = preview.load()
+    for y in range(146):
+        for x in range(260):
+            pixels[x, y] = (40 + x // 3, 20 + y, 120 + (x + y) // 4)
+    preview.save(folder / "preview.png")
+    target = work / "neon-starter.nyxpack"
+    result = subprocess.run([str(binary), "--pack-build", str(folder), str(target), "--pack-overwrite"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+    if result.returncode != 0 or not target.is_file():
+        print(result.stdout.decode(errors="replace")[-600:], file=sys.stderr)
+        raise SystemExit("the demonstration package could not be built")
+    return target
+
+
 def run_app(binary, lang, key, work):
     data = work / f"data-{lang}-{key}"
     if data.exists():
@@ -111,7 +151,10 @@ def run_app(binary, lang, key, work):
     env["NYREXVJ_DATA_DIR"] = str(data)
     env["LIBGL_ALWAYS_SOFTWARE"] = "1"
     move_pointer_away(env.get("DISPLAY", ":0"))
-    command = [str(binary), *COMMON, "--lang", lang, *RUNS[key], "--screenshot", str(target)]
+    extra = []
+    if key in PACKED:
+        extra = ["--pack-file", str(build_demo_pack(binary, work, env))]
+    command = [str(binary), *COMMON, "--lang", lang, *RUNS[key], *extra, "--screenshot", str(target)]
     result = subprocess.run(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=300)
     if result.returncode != 0 or not target.is_file():
         print(result.stdout.decode(errors="replace")[-600:], file=sys.stderr)

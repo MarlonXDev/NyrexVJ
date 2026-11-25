@@ -82,6 +82,10 @@ struct Settings {
     int djLinkPlayer = 0;
     std::string ltcDevice;
     bool cuesEnabled = true;
+    bool timelineEnabled = false;
+    std::string timelineSource = "auto";
+    std::string timelineLost = "hold";
+    std::string timelineOverride = "segment";
     bool outputFrameLock = true;
     std::string recordProfile = "h264";
     int recordWidth = 0;

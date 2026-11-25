@@ -79,6 +79,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     oscOverridePort_ = options.oscPort;
     control_.loadBindings();
     sync_.loadCues();
+    timeline_.load();
     control_.refreshMidiDevices();
     loadUserLanguages(userLanguageDirectory());
     setLanguage(languageFromCode(options.language.empty() ? settings_.language : options.language));
@@ -300,6 +301,10 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     }
     if (options.openNodes) {
         openNodeEditor(options.nodeEffect);
+    }
+    if (options.openTimeline) {
+        timelineOpen_ = true;
+        timelineFocus_ = true;
     }
     if (options.openCreator) {
         if (options.creator.empty()) {
@@ -654,6 +659,7 @@ void App::frame(double dt) {
     api_.configure(api);
     api_.update(dt, ImGui::GetIO().Framerate);
     updateSync(dt);
+    updateTimeline(dt);
     updateAudio(dt);
     serviceLiveBrowse();
     engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);
@@ -741,6 +747,7 @@ void App::frame(double dt) {
     creatorHasFocus_ = false;
     drawCreator();
     drawNodeEditor();
+    drawTimeline();
     drawSettingsWindow();
     drawUpdateCard();
     drawConversionCards();
@@ -809,7 +816,7 @@ void App::handleShortcuts() {
             }
         }
     }
-    if (io.KeyCtrl && !creatorHasFocus_ && !nodesHasFocus_) {
+    if (io.KeyCtrl && !creatorHasFocus_ && !nodesHasFocus_ && !timelineHasFocus_) {
         if (ImGui::IsKeyPressed(ImGuiKey_Z, false)) {
             if (io.KeyShift) {
                 redoEdit();
@@ -836,7 +843,7 @@ void App::handleShortcuts() {
     if (ImGui::IsKeyPressed(ImGuiKey_PageUp, false)) {
         switchDeckTo(nextUsedDeck(engine_.comp, engine_.comp.activeDeck, -1));
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) {
+    if (ImGui::IsKeyPressed(ImGuiKey_Space, false) && !timelineHasFocus_) {
         engine_.tap();
     }
     if (ImGui::IsKeyPressed(ImGuiKey_B, false)) {
@@ -955,6 +962,29 @@ void App::drawMenuBar() {
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Refresh devices"))) {
             audio_.refreshDevices();
+        }
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu(trId("Timeline", "menuTimeline"))) {
+        if (ImGui::MenuItem(tr("Run the timeline"), nullptr, settings_.timelineEnabled)) {
+            settings_.timelineEnabled = !settings_.timelineEnabled;
+            saveSettings(settings_);
+        }
+        if (ImGui::MenuItem(tr("Show timeline window"), nullptr, timelineOpen_)) {
+            timelineOpen_ = !timelineOpen_;
+            timelineFocus_ = timelineOpen_;
+        }
+        ImGui::Separator();
+        const bool canDrive = settings_.timelineEnabled;
+        const bool playingNow = timeline_.runner().state() == TimelineState::Playing;
+        if (ImGui::MenuItem(playingNow ? tr("Pause the timeline") : tr("Play the timeline"), nullptr, false, canDrive)) {
+            timeline_.runner().toggle();
+        }
+        if (ImGui::MenuItem(tr("Stop the timeline"), nullptr, false, canDrive)) {
+            timeline_.runner().stop();
+        }
+        if (ImGui::MenuItem(tr("Release hand moves"), nullptr, false, canDrive && timeline_.runner().overriddenCount() > 0)) {
+            timeline_.runner().releaseAll();
         }
         ImGui::EndMenu();
     }

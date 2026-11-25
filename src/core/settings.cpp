@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <initializer_list>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -237,6 +238,23 @@ bool loadSettings(Settings& settings) {
         result.ltcDevice = ltcDevice->get<std::string>().substr(0, 256);
     }
     result.cuesEnabled = boolean("cuesEnabled", true);
+    result.timelineEnabled = boolean("timelineEnabled", false);
+    const auto choice = [&doc](const char* key, std::initializer_list<const char*> allowed, const char* fallback) {
+        auto it = doc.find(key);
+        if (it == doc.end() || !it->is_string()) {
+            return std::string(fallback);
+        }
+        const std::string value = it->get<std::string>();
+        for (const char* name : allowed) {
+            if (value == name) {
+                return value;
+            }
+        }
+        return std::string(fallback);
+    };
+    result.timelineSource = choice("timelineSource", {"auto", "timecode", "transport"}, "auto");
+    result.timelineLost = choice("timelineLost", {"hold", "continue"}, "hold");
+    result.timelineOverride = choice("timelineOverride", {"segment", "released"}, "segment");
     result.outputFrameLock = boolean("outputFrameLock", true);
     auto recordProfile = doc.find("recordProfile");
     if (recordProfile != doc.end() && recordProfile->is_string() && findRecordProfile(recordProfile->get<std::string>()) != nullptr) {
@@ -334,6 +352,10 @@ bool saveSettings(const Settings& settings) {
     doc["djLinkPlayer"] = settings.djLinkPlayer;
     doc["ltcDevice"] = settings.ltcDevice;
     doc["cuesEnabled"] = settings.cuesEnabled;
+    doc["timelineEnabled"] = settings.timelineEnabled;
+    doc["timelineSource"] = settings.timelineSource;
+    doc["timelineLost"] = settings.timelineLost;
+    doc["timelineOverride"] = settings.timelineOverride;
     doc["outputFrameLock"] = settings.outputFrameLock;
     doc["recordProfile"] = settings.recordProfile;
     doc["recordWidth"] = settings.recordWidth;

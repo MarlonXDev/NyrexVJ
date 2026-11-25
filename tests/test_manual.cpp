@@ -102,7 +102,8 @@ void testBlocks() {
         CHECK(text.find("Ä, ö und ß") != std::string::npos);
     }
 
-    const std::string expected = readFile(std::string(NVJ_MANUAL_FIXTURES) + "/manual_fixture.outline.txt");
+    std::string expected = readFile(std::string(NVJ_MANUAL_FIXTURES) + "/manual_fixture.outline.txt");
+    expected.erase(std::remove(expected.begin(), expected.end(), '\r'), expected.end());
     CHECK(!expected.empty());
     CHECK(nvj::manualOutline(m) == expected);
 }

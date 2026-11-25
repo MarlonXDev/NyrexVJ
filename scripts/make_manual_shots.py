@@ -26,6 +26,7 @@ CREATOR = (138, 58, 1324, 784)
 NODES = (178, 68, 1244, 764)
 TIMELINE = (208, 278, 1184, 562)
 MANUAL = (280, 98, 1042, 704)
+SHOWPKG = (416, 124, 770, 420)
 
 RUNS = {
     "main": ["--column", "1"],
@@ -44,6 +45,7 @@ RUNS = {
     "nodes": ["--node-editor", "Wavy Rainbow"],
     "timeline": ["--timeline"],
     "manual": ["--manual", "first-show"],
+    "shows": ["--show-packages", "0"],
 }
 
 SEEDED = {"nodes", "timeline"}
@@ -68,6 +70,7 @@ FIGURES = [
     ("node-editor", "nodes", NODES),
     ("timeline", "timeline", TIMELINE),
     ("manual-window", "manual", MANUAL),
+    ("show-packages", "shows", SHOWPKG),
 ]
 
 CARDS = [

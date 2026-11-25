@@ -362,6 +362,42 @@ File, Save as preset does the same from the menu. Presets are small files in the
 
 Besides presets, NyrexVJ keeps a session: the state of the program as you left it. On the next start it opens exactly like that, unless you turn off Restore last session on start in Settings, General. The session is saved every 30 seconds when something changed, and a rotating set of the last ten autosaves is kept in the recovery folder.
 
+## Show packages {#show-packages}
+
+A show package is one file that holds your current show and every file it uses, so you can take it to another computer on a USB stick. It ends in `.nyxshow`. Use it when you play at a venue, when you move to a new computer or when a friend should open the same show. Presets and sessions alone only remember clips by name; a package brings the clips themselves.
+
+**Making a package.** File, Export show package opens the Show package window on the Export tab.
+
+1. Give the show a name and, if you like, notes for whoever opens it.
+2. Choose where to save. The button Suggest a place fills in a file in the shows folder of the data folder. The ending `.nyxshow` is added if it is missing.
+3. Open Presets to pack too and Venue setups to pack too and tick what should travel with the show. Pack the cue list and Pack the timeline add those two files.
+4. Press Check what goes in. NyrexVJ looks through the show, finds every clip and effect it uses and lists the files: the kind, the size, what needs the file and a field for a note.
+5. Press Create the package. A progress bar shows the work and Cancel stops it, leaving no half written file.
+
+Files that are missing, too large for a package or have a name that cannot be used are listed and left out, and you see why. Nothing is replaced behind your back, and built-in clips and effects are not packed because every NyrexVJ has them.
+
+**Source and licence.** NyrexVJ cannot know whether you may pass a file on. Write where a file comes from or its licence in the last column. The note is stored in the package and shown to whoever imports it, and the window tells you how many media files have none.
+
+**What is never in a package.** Plugins are never put into a package. The package only lists their names, and the other computer must have them installed. This way opening a package can never start code that came from the package. Live sources such as Spout, NDI and cameras are listed too, but they come from the other computer.
+
+**Opening a package.** Use File, Import show package, or drop a `.nyxshow` file on the NyrexVJ window. The window opens on the Import tab and checks the package. It tells you, file by file, what would happen: will be added, already here and the same, you have a different file, not in the package, or the name cannot be used. Nothing is changed until you press Import.
+
+If a file with the same name is already on your computer you choose what happens:
+
+- Keep mine leaves your file alone. This is the default.
+- Keep both copies the new file under a name such as `loop (2).mp4` and changes the show to use it.
+- Replace mine, save it first copies your file to the `show_backups` folder and then replaces it.
+
+Two more ticks, Also replace my cue list and Also replace my timeline, are off by default. A replaced cue list or timeline is used after the next start of NyrexVJ.
+
+When the import is done you see how many files were added, renamed, replaced and kept. Open the show makes it the current show, and Open the folder with the saved files shows your old files if you chose Replace. If anything goes wrong halfway, everything is put back as it was and the window says so.
+
+**Clips that are missing.** If a clip or effect of the show is not in the package and not on your computer, its cell stays empty and the window lists it. NyrexVJ never puts a different clip there. If the files are on a drive you have, use Find missing files: point to a folder, for example the original media drive, and NyrexVJ searches it. Only files that are exactly the same as the ones the package knew are ticked. A file that only has the same name is shown, not ticked, and marked that its content cannot be checked, so you decide. Press Copy the ticked files to bring them in.
+
+**Safety.** A package is only data. Every file in it has a checksum that is checked before anything is moved into place. File names must be plain names without folders, and the folder is chosen by the kind of file, so a package cannot write outside the data folder. Only the usual file endings of each kind are accepted, every kind has a size limit, and files are stored without compression, so a small package cannot unpack into something huge. A package from a newer version of NyrexVJ, a package that is cut off or damaged and a package with anything that does not add up is refused, and nothing on your computer is changed.
+
+![The Show package window](show-packages.webp)
+
 ## Undo and redo {#undo}
 
 Edit, Undo and Redo, or `Ctrl+Z` and `Ctrl+Y` (`Ctrl+Shift+Z` also redoes), step through your changes to sliders, clips, effects and decks. Playing a clip, triggering a column and moving the macro knobs are performance actions and are not part of undo. In the timeline and the node editor the same keys work on their own history while those windows have the focus.
@@ -1031,6 +1067,8 @@ NyrexVJ stores everything in its data folder. On Windows that is `%APPDATA%\Nyre
 | `timeline.json` | The lanes of the show timeline |
 | `autosave.json` and `recovery` | The last session and a rotating set of autosaves |
 | `presets` | Your own presets |
+| `shows` | The place the export window suggests for show packages |
+| `show_backups` | Your own files that a show package import replaced, one folder for each import |
 | `shaders` | Your own shader files |
 | `models` | Your own 3D models |
 | `media` | Images and videos |
@@ -1045,7 +1083,7 @@ NyrexVJ stores everything in its data folder. On Windows that is `%APPDATA%\Nyre
 
 ## Backing up and moving {#data-backup}
 
-Copy the data folder to a safe place to back up everything. To move to another computer copy it into the same place there. Presets and sessions remember clips by name, so keep the file names of your shaders, models and media when you move them.
+Copy the data folder to a safe place to back up everything. To move to another computer copy it into the same place there. Presets and sessions remember clips by name, so keep the file names of your shaders, models and media when you move them. To move one show with everything it uses, a show package is easier than copying the folder, see [Show packages](#presets/show-packages).
 
 The token of the web interface is kept in a separate file in the folder. Do not share it.
 
@@ -1112,6 +1150,7 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--welcome` and `--no-welcome` | Force or skip the welcome screen |
 | `--manual` | Open this manual on start, optionally at a chapter, for example `--manual outputs` |
 | `--timeline` | Open the show timeline window on start |
+| `--show-packages` | Open the Show package window on start, on the Export tab, or on the Import tab with `--show-packages 1` |
 | `--settings IDX` | Open Settings on page IDX, counted from 0 in the order of the page list |
 | `--check-shaders` | Compile every shader and exit |
 

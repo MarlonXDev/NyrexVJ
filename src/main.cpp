@@ -259,6 +259,11 @@ Options parseOptions(int argc, char** argv) {
             if (hasValue && argv[i + 1][0] != '-') {
                 options.start.manualChapter = argv[++i];
             }
+        } else if (arg == "--show-packages") {
+            options.start.showPackageTab = 0;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.start.showPackageTab = std::atoi(argv[++i]) > 0 ? 1 : 0;
+            }
         } else if (arg == "--spout-test-pattern") {
             nvj::SpoutInput::setTestPattern(true);
         } else if (arg == "--welcome") {

@@ -715,6 +715,58 @@
       "test": "A-LW-2",
       "command": "python3 scripts/check_i18n.py",
       "notes": "All 1807 translation keys are covered"
+    },
+    {
+      "area": "show-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.41.0 (branch feature/portable-shows, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-SP-1",
+      "command": "ctest -R nvj_show_tests",
+      "notes": "203 checks; whole suite 38 of 38 passed"
+    },
+    {
+      "area": "show-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.41.0 (branch feature/portable-shows, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-SP-2",
+      "command": "ctest -R nvj_show_workflow_tests",
+      "notes": "342 checks; whole suite 38 of 38 passed"
+    },
+    {
+      "area": "show-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.41.0 (branch feature/portable-shows, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-SP-3",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "All 1970 translation keys are covered"
+    },
+    {
+      "area": "show-packages",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.41.0 (branch feature/portable-shows, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-SP-4",
+      "command": "NyrexVJ --fresh --show-packages 0 --frames 40",
+      "notes": "opened the window on the Export tab and saved a screenshot, exit 0 on llvmpipe"
     }
   ]
 }

@@ -54,7 +54,7 @@
 <li><a href="library.html">The Library</a>
 </li>
 <li><a href="presets.html" aria-current="page">Presets and sessions</a>
-<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#undo">Undo and redo</a></li></ul>
+<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#show-packages">Show packages</a></li><li><a href="#undo">Undo and redo</a></li></ul>
 </li>
 <li><a href="master.html">The Master window</a>
 </li>
@@ -142,7 +142,7 @@
 <li><a href="library.html">The Library</a>
 </li>
 <li><a href="presets.html" aria-current="page">Presets and sessions</a>
-<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#undo">Undo and redo</a></li></ul>
+<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#show-packages">Show packages</a></li><li><a href="#undo">Undo and redo</a></li></ul>
 </li>
 <li><a href="master.html">The Master window</a>
 </li>
@@ -205,8 +205,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Playing visuals</p>
 <h1>Presets and sessions</h1>
-<p class="meta">Chapter 11 of 35 &middot; 2 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#factory-looks">Factory looks</a><a href="#own-presets">Your own presets</a><a href="#session">The session</a><a href="#undo">Undo and redo</a></nav>
+<p class="meta">Chapter 11 of 35 &middot; 6 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#factory-looks">Factory looks</a><a href="#own-presets">Your own presets</a><a href="#session">The session</a><a href="#show-packages">Show packages</a><a href="#undo">Undo and redo</a></nav>
 <h2 id="factory-looks"><a class="anchor" href="#factory-looks" aria-label="Link">#</a>Factory looks</h2>
 <p>The Presets tab starts with the factory looks. A click loads the look into the current deck, a right click lets you load it into another deck. There are 18: Neon Club, Milky Red, Crystal Cavern, Crystal Lines, Acid Rainbow, Deep Space, Synthwave Night, Laser Show, Minimal Mono, 3D Showcase, Warp Tunnel, Audio Reactor, Fractal Dream, Cyber Rain, Inferno, 3D Worlds, Crystal Cube and Pop Art.</p>
 <p>The button Fill the decks with factory looks puts 16 looks into the 16 decks, a quick way to have something for every mood.</p>
@@ -216,6 +216,21 @@
 <p>File, Save as preset does the same from the menu. Presets are small files in the presets folder, so you can copy them to another computer.</p>
 <h2 id="session"><a class="anchor" href="#session" aria-label="Link">#</a>The session</h2>
 <p>Besides presets, NyrexVJ keeps a session: the state of the program as you left it. On the next start it opens exactly like that, unless you turn off Restore last session on start in Settings, General. The session is saved every 30 seconds when something changed, and a rotating set of the last ten autosaves is kept in the recovery folder.</p>
+<h2 id="show-packages"><a class="anchor" href="#show-packages" aria-label="Link">#</a>Show packages</h2>
+<p>A show package is one file that holds your current show and every file it uses, so you can take it to another computer on a USB stick. It ends in <code>.nyxshow</code>. Use it when you play at a venue, when you move to a new computer or when a friend should open the same show. Presets and sessions alone only remember clips by name; a package brings the clips themselves.</p>
+<p><strong>Making a package.</strong> File, Export show package opens the Show package window on the Export tab.</p>
+<ol><li>Give the show a name and, if you like, notes for whoever opens it.</li><li>Choose where to save. The button Suggest a place fills in a file in the shows folder of the data folder. The ending <code>.nyxshow</code> is added if it is missing.</li><li>Open Presets to pack too and Venue setups to pack too and tick what should travel with the show. Pack the cue list and Pack the timeline add those two files.</li><li>Press Check what goes in. NyrexVJ looks through the show, finds every clip and effect it uses and lists the files: the kind, the size, what needs the file and a field for a note.</li><li>Press Create the package. A progress bar shows the work and Cancel stops it, leaving no half written file.</li></ol>
+<p>Files that are missing, too large for a package or have a name that cannot be used are listed and left out, and you see why. Nothing is replaced behind your back, and built-in clips and effects are not packed because every NyrexVJ has them.</p>
+<p><strong>Source and licence.</strong> NyrexVJ cannot know whether you may pass a file on. Write where a file comes from or its licence in the last column. The note is stored in the package and shown to whoever imports it, and the window tells you how many media files have none.</p>
+<p><strong>What is never in a package.</strong> Plugins are never put into a package. The package only lists their names, and the other computer must have them installed. This way opening a package can never start code that came from the package. Live sources such as Spout, NDI and cameras are listed too, but they come from the other computer.</p>
+<p><strong>Opening a package.</strong> Use File, Import show package, or drop a <code>.nyxshow</code> file on the NyrexVJ window. The window opens on the Import tab and checks the package. It tells you, file by file, what would happen: will be added, already here and the same, you have a different file, not in the package, or the name cannot be used. Nothing is changed until you press Import.</p>
+<p>If a file with the same name is already on your computer you choose what happens:</p>
+<ul><li>Keep mine leaves your file alone. This is the default.</li><li>Keep both copies the new file under a name such as <code>loop (2).mp4</code> and changes the show to use it.</li><li>Replace mine, save it first copies your file to the <code>show_backups</code> folder and then replaces it.</li></ul>
+<p>Two more ticks, Also replace my cue list and Also replace my timeline, are off by default. A replaced cue list or timeline is used after the next start of NyrexVJ.</p>
+<p>When the import is done you see how many files were added, renamed, replaced and kept. Open the show makes it the current show, and Open the folder with the saved files shows your old files if you chose Replace. If anything goes wrong halfway, everything is put back as it was and the window says so.</p>
+<p><strong>Clips that are missing.</strong> If a clip or effect of the show is not in the package and not on your computer, its cell stays empty and the window lists it. NyrexVJ never puts a different clip there. If the files are on a drive you have, use Find missing files: point to a folder, for example the original media drive, and NyrexVJ searches it. Only files that are exactly the same as the ones the package knew are ticked. A file that only has the same name is shown, not ticked, and marked that its content cannot be checked, so you decide. Press Copy the ticked files to bring them in.</p>
+<p><strong>Safety.</strong> A package is only data. Every file in it has a checksum that is checked before anything is moved into place. File names must be plain names without folders, and the folder is chosen by the kind of file, so a package cannot write outside the data folder. Only the usual file endings of each kind are accepted, every kind has a size limit, and files are stored without compression, so a small package cannot unpack into something huge. A package from a newer version of NyrexVJ, a package that is cut off or damaged and a package with anything that does not add up is refused, and nothing on your computer is changed.</p>
+<figure class="shot"><a href="../assets/manual/en/show-packages.webp"><img src="../assets/manual/en/show-packages.webp" width="770" height="420" loading="lazy" alt="The Show package window"></a><figcaption>The Show package window</figcaption></figure>
 <h2 id="undo"><a class="anchor" href="#undo" aria-label="Link">#</a>Undo and redo</h2>
 <p>Edit, Undo and Redo, or <code>Ctrl+Z</code> and <code>Ctrl+Y</code> (<code>Ctrl+Shift+Z</code> also redoes), step through your changes to sliders, clips, effects and decks. Playing a clip, triggering a column and moving the macro knobs are performance actions and are not part of undo. In the timeline and the node editor the same keys work on their own history while those windows have the focus.</p>
 <nav class="pager" aria-label="Pager"><a class="prev" href="library.html"><small>Previous</small><span>The Library</span></a><a class="next" href="master.html"><small>Next</small><span>The Master window</span></a></nav>

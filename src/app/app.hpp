@@ -4,6 +4,7 @@
 #include "app/engine_host.hpp"
 #include "app/manual_view.hpp"
 #include "app/node_editor.hpp"
+#include "app/show_dialog.hpp"
 #include "app/timeline_view.hpp"
 #include "audio/audio_system.hpp"
 #include "app/api_system.hpp"
@@ -36,6 +37,7 @@
 #include <imgui.h>
 
 #include <array>
+#include <functional>
 #include <future>
 #include <memory>
 #include <string>
@@ -75,6 +77,7 @@ struct StartOptions {
     bool openNodes = false;
     bool openTimeline = false;
     bool openManual = false;
+    int showPackageTab = -1;
     std::string manualChapter;
     float transitionSeconds = -1.0f;
     int column = -1;
@@ -197,6 +200,16 @@ private:
     void updateTimeline(double dt);
     void drawTimeline();
     void drawManual();
+    void drawShowPackages();
+    void drawShowExport();
+    void drawShowImport();
+    void drawShowProgress();
+    void buildShowPlan();
+    void startShowCheck();
+    void startShowJob(ShowJobKind kind, const std::function<void(ShowJobResult&, const show::ProgressFn&)>& body);
+    void serviceShowJob();
+    void openShowPackages(int tab);
+    void importShowPackage(const std::string& path);
     void openManual(const std::string& target);
     void manualGo(size_t chapter, const std::string& section, bool remember);
     void drawTimelineToolbar();
@@ -294,6 +307,7 @@ private:
     bool timelineFocus_ = false;
     bool timelineHasFocus_ = false;
     bool manualOpen_ = false;
+    ShowDialog showDialog_;
     bool manualFocus_ = false;
     ManualView manualView_;
     int ltcDeviceListedFrame_ = -1;

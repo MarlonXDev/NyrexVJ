@@ -86,7 +86,7 @@
 </ul>
 <h4>Live-Steuerung und Shows</h4><ul>
 <li><a href="control.html" aria-current="page">Steuerung: MIDI, OSC und die Webseite</a>
-<ul><li><a href="#control-where">Wo es liegt</a></li><li><a href="#midi">MIDI</a></li><li><a href="#osc">OSC-Eingang</a></li><li><a href="#osc-out">OSC-Ausgang</a></li><li><a href="#web">Die Web-Oberfläche</a></li></ul>
+<ul><li><a href="#control-where">Wo es liegt</a></li><li><a href="#midi">MIDI</a></li><li><a href="#midi-feedback">Rückmeldung an den Controller</a></li><li><a href="#midi-profiles">Controller-Profile</a></li><li><a href="#osc">OSC-Eingang</a></li><li><a href="#osc-out">OSC-Ausgang</a></li><li><a href="#web">Die Web-Oberfläche</a></li></ul>
 </li>
 <li><a href="sync.html">Show-Sync und Timecode</a>
 </li>
@@ -174,7 +174,7 @@
 </ul>
 <h4>Live-Steuerung und Shows</h4><ul>
 <li><a href="control.html" aria-current="page">Steuerung: MIDI, OSC und die Webseite</a>
-<ul><li><a href="#control-where">Wo es liegt</a></li><li><a href="#midi">MIDI</a></li><li><a href="#osc">OSC-Eingang</a></li><li><a href="#osc-out">OSC-Ausgang</a></li><li><a href="#web">Die Web-Oberfläche</a></li></ul>
+<ul><li><a href="#control-where">Wo es liegt</a></li><li><a href="#midi">MIDI</a></li><li><a href="#midi-feedback">Rückmeldung an den Controller</a></li><li><a href="#midi-profiles">Controller-Profile</a></li><li><a href="#osc">OSC-Eingang</a></li><li><a href="#osc-out">OSC-Ausgang</a></li><li><a href="#web">Die Web-Oberfläche</a></li></ul>
 </li>
 <li><a href="sync.html">Show-Sync und Timecode</a>
 </li>
@@ -205,8 +205,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Live-Steuerung und Shows</p>
 <h1>Steuerung: MIDI, OSC und die Webseite</h1>
-<p class="meta">Kapitel 23 von 35 &middot; 3 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#control-where">Wo es liegt</a><a href="#midi">MIDI</a><a href="#osc">OSC-Eingang</a><a href="#osc-out">OSC-Ausgang</a><a href="#web">Die Web-Oberfläche</a></nav>
+<p class="meta">Kapitel 23 von 35 &middot; 5 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#control-where">Wo es liegt</a><a href="#midi">MIDI</a><a href="#midi-feedback">Rückmeldung an den Controller</a><a href="#midi-profiles">Controller-Profile</a><a href="#osc">OSC-Eingang</a><a href="#osc-out">OSC-Ausgang</a><a href="#web">Die Web-Oberfläche</a></nav>
 <h2 id="control-where"><a class="anchor" href="#control-where" aria-label="Link">#</a>Wo es liegt</h2>
 <p>Alles steht unter Einstellungen, Steuerung. Die Zuordnungen und Adressen beziehen sich auf das Arbeits-Deck, also das, das du im Clip-Raster siehst.</p>
 <figure class="shot"><a href="../../assets/manual/de/settings-control.webp"><img src="../../assets/manual/de/settings-control.webp" width="874" height="584" loading="lazy" alt="Die Seite Steuerung in den Einstellungen"></a><figcaption>Die Seite Steuerung in den Einstellungen</figcaption></figure>
@@ -214,6 +214,14 @@
 <p>MIDI funktioniert unter Windows und unter Linux. Unter Linux muss der Controller als ALSA-Sequencer-Port auftauchen, <code>aconnect -l</code> listet sie auf. Wähl deinen Controller unter Gerät, drück Zuordnung hinzufügen, such aus, was er steuern soll, und dreh dann an einem Regler oder drück eine Taste am Controller. Die beiden sind ab diesem Moment verbunden.</p>
 <p>Regler und Fader (CC) setzen Werte. Tasten (Noten) lösen Trigger aus oder schalten etwas ein, solange sie gehalten werden. Hak Invertieren an, um einen Fader umzudrehen, drück Lernen, um einer Zeile einen neuen Regler zu geben, und Entfernen, um sie zu löschen. Die Zuordnungen werden in <code>controls.json</code> im Datenordner gespeichert. Ein Controller, den ein anderes Programm exklusiv geöffnet hat, lässt sich nicht von zwei Programmen gleichzeitig nutzen.</p>
 <aside class="note tip"><strong class="note-label">Tipp</strong><p>Leg den Blackout-Schalter zuerst auf ein großes Pad. Er ist der Regler, den du am meisten willst, wenn etwas schiefgeht.</p></aside>
+<h2 id="midi-feedback"><a class="anchor" href="#midi-feedback" aria-label="Link">#</a>Rückmeldung an den Controller</h2>
+<p>Viele Controller haben leuchtende Pads oder Motor-Fader, die zeigen können, was NyrexVJ gerade tut. Hak unter dem MIDI-Gerät Rückmeldung an den Controller senden an und wähl das Rückmelde-Gerät, das oft denselben Namen wie der Eingang hat, aber für sich aufgelistet ist. Geräte aktualisieren sucht neu, nachdem du eins angesteckt hast.</p>
+<p>NyrexVJ antwortet dann auf jede Zuordnung mit derselben Note oder demselben Control Change, auf die es hört. Ein Pad leuchtet (Wert 127), solange sein Clip auf seinem Layer spielt, solange seine Spalte einen spielenden Clip hat, solange sein Deck das Arbeits-Deck ist oder solange sein Schalter (Blackout, Bypass, Solo, Effekt an oder aus) eingeschaltet ist, und ist sonst dunkel (0). Ein Fader oder Regler, der auf einen Wert gelegt ist, folgt diesem Wert innerhalb seines unteren und oberen Bereichs. Es werden nur Änderungen gesendet, nie derselbe Wert zweimal, und höchstens 64 Nachrichten pro Bild.</p>
+<p>Während du selbst an einem Regler drehst, sendet NyrexVJ keine Fader-Werte, bis eine Drittelsekunde nach der letzten Bewegung vergangen ist, damit der Controller nicht gegen deine Hand arbeitet. Pads werden nicht zurückgehalten. Antwortet das Gerät nicht mehr, zeigt die Seite die Meldung, die Rückmeldung hört auf und das Programm läuft weiter. Die Rückmeldung funktioniert unter Windows. Unter Linux gibt es das Rückmelde-Gerät in dieser Version noch nicht, und die Seite sagt das.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Nicht jeder Controller leuchtet gleich. Manche wollen für eine Farbe einen anderen Notenwert oder eine besondere Startnachricht. NyrexVJ sendet einfache Noten- und Control-Change-Nachrichten mit den Werten 0 und 127, und mit echten Pads wurde noch nichts probiert.</p></aside>
+<h2 id="midi-profiles"><a class="anchor" href="#midi-profiles" aria-label="Link">#</a>Controller-Profile</h2>
+<p>Ein Profil speichert alle deine Zuordnungen unter einem Namen. Tipp neben Profilname einen Namen und drück Profil speichern. Die Liste zeigt deine Profile, und Laden ersetzt die aktuellen Zuordnungen durch das gewählte Profil. Nimm ein Profil für jeden Controller oder jede Art von Show und wechsle, bevor du anfängst.</p>
+<p>Profile sind einfache Dateien im Ordner <code>midi_profiles</code> im Datenordner, du kannst eins also auf einen anderen Computer kopieren oder einem Freund schicken. Eine Datei, die zu groß ist, beschädigt ist, kein Profil ist oder von einer neueren Version stammt, wird mit einer Meldung abgelehnt, und deine aktuellen Zuordnungen bleiben, wie sie waren. Namen dürfen Buchstaben, Zahlen, Leerzeichen, Punkte, Bindestriche und Unterstriche enthalten.</p>
 <h2 id="osc"><a class="anchor" href="#osc" aria-label="Link">#</a>OSC-Eingang</h2>
 <p>Hak OSC-Nachrichten empfangen an. OSC ist standardmäßig aus und hört auf Port 9010, weil VRChat 9000 nutzt und die beiden sich nicht in die Quere kommen sollen. Nur dieser Computer darf senden, außer du hakst Nachrichten von anderen Computern annehmen an, dann kann jeder in deinem Netzwerk NyrexVJ steuern.</p>
 <p>Schick eine Zahl an eine Adresse. Fließkommazahlen, ganze Zahlen und wahr oder falsch werden akzeptiert und als 0 bis 1 gelesen. Eine Nachricht ohne Wert löst einen Trigger aus oder kippt einen Schalter. Die Einstellungsseite listet jede Adresse, und ein Klick darauf kopiert sie.</p>

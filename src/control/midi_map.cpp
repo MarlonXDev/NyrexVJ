@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 
 namespace nvj {
 
@@ -124,6 +125,85 @@ bool bindingsFromJson(const std::string& text, std::vector<MidiBinding>& binding
         result.push_back(binding);
     }
     bindings = result;
+    return true;
+}
+
+std::string sanitizeProfileName(const std::string& name) {
+    std::string out;
+    for (char c : name) {
+        const unsigned char u = static_cast<unsigned char>(c);
+        const bool allowed = (u >= '0' && u <= '9') || (u >= 'a' && u <= 'z') || (u >= 'A' && u <= 'Z') || u >= 0x80 || c == '_' || c == '-' || c == '.' || c == ' ';
+        if (allowed) {
+            out.push_back(c);
+        }
+    }
+    size_t begin = 0;
+    while (begin < out.size() && (out[begin] == ' ' || out[begin] == '.')) {
+        ++begin;
+    }
+    size_t end = out.size();
+    while (end > begin && (out[end - 1] == ' ' || out[end - 1] == '.')) {
+        --end;
+    }
+    out = out.substr(begin, end - begin);
+    if (out.size() > 48) {
+        size_t cut = 48;
+        while (cut > 0 && (static_cast<unsigned char>(out[cut]) & 0xC0) == 0x80) {
+            --cut;
+        }
+        out.resize(cut);
+    }
+    std::string upper = out;
+    for (char& c : upper) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    const size_t dot = upper.find('.');
+    const std::string stem = dot == std::string::npos ? upper : upper.substr(0, dot);
+    static const char* const reserved[] = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+    for (const char* word : reserved) {
+        if (stem == word) {
+            return std::string();
+        }
+    }
+    return out;
+}
+
+std::string profileToJson(const std::string& name, const std::vector<MidiBinding>& bindings) {
+    nlohmann::json doc = nlohmann::json::parse(bindingsToJson(bindings));
+    doc["format"] = "nyrexvj-midi-profile";
+    doc["name"] = name;
+    return doc.dump(2);
+}
+
+bool profileFromJson(const std::string& text, std::vector<MidiBinding>& bindings, std::string& error) {
+    if (text.size() > kMaxProfileBytes) {
+        error = "The profile file is too large";
+        return false;
+    }
+    const nlohmann::json doc = nlohmann::json::parse(text, nullptr, false);
+    if (doc.is_discarded() || !doc.is_object() || doc.value("format", std::string()) != "nyrexvj-midi-profile") {
+        error = "This is not a controller profile";
+        return false;
+    }
+    const int version = doc.value("version", 0);
+    if (version < 1) {
+        error = "The profile has no valid version";
+        return false;
+    }
+    if (version > 1) {
+        error = "The profile was written by a newer version of NyrexVJ";
+        return false;
+    }
+    std::vector<MidiBinding> parsed;
+    if (!bindingsFromJson(text, parsed)) {
+        error = "The profile has no list of mappings";
+        return false;
+    }
+    if (parsed.size() > kMaxProfileBindings) {
+        error = "The profile has too many mappings";
+        return false;
+    }
+    bindings = parsed;
     return true;
 }
 

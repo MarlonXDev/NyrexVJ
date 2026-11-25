@@ -239,6 +239,11 @@ bool loadSettings(Settings& settings) {
     }
     result.cuesEnabled = boolean("cuesEnabled", true);
     result.timelineEnabled = boolean("timelineEnabled", false);
+    result.midiFeedback = boolean("midiFeedback", false);
+    auto midiOut = doc.find("midiOutDevice");
+    if (midiOut != doc.end() && midiOut->is_string()) {
+        result.midiOutDevice = midiOut->get<std::string>().substr(0, 256);
+    }
     const auto choice = [&doc](const char* key, std::initializer_list<const char*> allowed, const char* fallback) {
         auto it = doc.find(key);
         if (it == doc.end() || !it->is_string()) {
@@ -252,6 +257,7 @@ bool loadSettings(Settings& settings) {
         }
         return std::string(fallback);
     };
+    result.launchQuantize = choice("launchQuantize", {"off", "beat", "bar", "2bars", "4bars"}, "off");
     result.timelineSource = choice("timelineSource", {"auto", "timecode", "transport"}, "auto");
     result.timelineLost = choice("timelineLost", {"hold", "continue"}, "hold");
     result.timelineOverride = choice("timelineOverride", {"segment", "released"}, "segment");
@@ -345,6 +351,9 @@ bool saveSettings(const Settings& settings) {
     doc["apiPort"] = settings.apiPort;
     doc["apiAllowRemote"] = settings.apiAllowRemote;
     doc["midiDevice"] = settings.midiDevice;
+    doc["launchQuantize"] = settings.launchQuantize;
+    doc["midiFeedback"] = settings.midiFeedback;
+    doc["midiOutDevice"] = settings.midiOutDevice;
     doc["syncMode"] = settings.syncMode;
     doc["syncLatencyMs"] = settings.syncLatencyMs;
     doc["syncBarAlign"] = settings.syncBarAlign;

@@ -1,11 +1,14 @@
 #pragma once
 
 #include "control/control_targets.hpp"
+#include "control/midi_feedback.hpp"
 #include "control/midi_input.hpp"
+#include "control/midi_output.hpp"
 #include "control/midi_map.hpp"
 #include "control/osc.hpp"
 #include "control/udp_socket.hpp"
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,6 +20,8 @@ struct ControlConfig {
     int oscPort = 9010;
     bool oscAllowRemote = false;
     std::string midiDevice;
+    bool midiFeedback = false;
+    std::string midiOutDevice;
 };
 
 class ControlSystem {
@@ -30,6 +35,8 @@ public:
     void takeSyncMessages(std::vector<MidiMessage>& out);
     bool fireTarget(const std::string& id, float value);
     void refreshMidiDevices();
+    void refreshMidiOutDevices();
+    void useMidiOutput(std::unique_ptr<MidiOutput> output);
 
     bool handleOsc(const OscMessage& message);
     const ControlRouter& router() const { return router_; }
@@ -45,6 +52,16 @@ public:
     const std::string& midiError() const { return midiError_; }
     unsigned long long midiCount() const { return midiCount_; }
     const std::string& lastMidi() const { return lastMidi_; }
+    const std::vector<std::string>& midiOutDevices() const { return midiOutDevices_; }
+    bool midiOutOpen() const { return output_->isOpen(); }
+    bool midiOutSupported() const { return output_->supported(); }
+    const std::string& midiOutError() const { return midiOutError_; }
+    unsigned long long feedbackSent() const { return feedbackSent_; }
+
+    static std::filesystem::path profileDirectory();
+    std::vector<std::string> listProfiles() const;
+    bool saveProfile(const std::string& name, std::string& error);
+    bool loadProfile(const std::string& name, std::string& error);
 
     std::vector<MidiBinding>& bindings() { return bindings_; }
     const std::vector<MidiBinding>& bindings() const { return bindings_; }
@@ -65,6 +82,13 @@ private:
     ControlConfig config_;
     UdpSocket socket_;
     std::unique_ptr<MidiInput> midi_;
+    std::unique_ptr<MidiOutput> output_;
+    MidiFeedback feedback_;
+    std::vector<std::string> midiOutDevices_;
+    std::string midiOutError_;
+    std::string appliedOutDevice_;
+    double quietFor_ = 1.0;
+    unsigned long long feedbackSent_ = 0;
     std::vector<std::string> midiDevices_;
     std::vector<MidiBinding> bindings_;
     std::vector<MidiMessage> injected_;

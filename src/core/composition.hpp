@@ -261,6 +261,8 @@ int nextUsedDeck(const Composition& comp, int from, int direction);
 int usedDeckCount(const Composition& comp);
 float transitionSeconds(const DeckSettings& settings, float bpm);
 
+int replaceClipEverywhere(Composition& comp, int from, int to, bool keepPlayback);
+
 int resolutionIndexFor(int width, int height);
 
 }

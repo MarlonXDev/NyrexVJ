@@ -1218,6 +1218,84 @@
           "criteria": "Proposed: every step works as written, or the chapter says that it was not tried."
         }
       ]
+    },
+    {
+      "id": "live-workflow",
+      "title": "Live workflow: launch quantize, favorites and tags, replace everywhere, MIDI feedback, controller profiles",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/WORKFLOW.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0033-live-workflow.md"
+      ],
+      "sources": [
+        "src/core/launch_quantizer.cpp",
+        "src/core/library_meta.cpp",
+        "src/core/composition.cpp",
+        "src/control/midi_feedback.cpp",
+        "src/control/midi_output_win.cpp",
+        "src/control/midi_map.cpp",
+        "src/control/control_system.cpp",
+        "src/render/engine.cpp",
+        "src/app/ui_deck.cpp",
+        "src/app/ui_browser.cpp",
+        "src/app/ui_control.cpp",
+        "tests/test_workflow.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-LW-1",
+          "kind": "ctest",
+          "name": "nvj_workflow_tests"
+        },
+        {
+          "id": "A-LW-2",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every new text of the quantize menu, the library popups and the MIDI feedback and profile page has a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-LW-1",
+          "title": "MIDI feedback to a real pad controller on Windows",
+          "needs": "A MIDI controller with lit pads or motor faders that has an output port, Windows, and a mapping of clips, a column, a deck, blackout and one fader",
+          "steps": [
+            "Tick Send feedback to the controller, choose the output with the name of the controller and start clips, a column and a deck; watch the pads.",
+            "Switch blackout, bypass and solo from the program and from the controller, and move the mapped fader by hand and by the program.",
+            "Unplug the controller while feedback is on, then plug it in and press Refresh devices."
+          ],
+          "measure": "Which pads light and go dark correctly, the delay between a change and the light in milliseconds (a phone camera at 240 frames a second is enough), whether a motor fader fights a moving hand, and what the page shows after the unplug",
+          "criteria": "Proposed: pads follow the state within two frames, a fader does not fight the hand, no message loop or crash after the unplug, and the page shows the error. Colour or note values that a specific controller needs for other colours are written down, not guessed."
+        },
+        {
+          "id": "M-LW-2",
+          "title": "Launch quantize against a real beat in a real show",
+          "needs": "A beat source (a DJ player with Pro DJ Link, MIDI clock or audio with a steady beat), a screen or an output on a projector, and a deck with a column of clips",
+          "steps": [
+            "Set Quantize to Beat, then Bar, press cells and a column a little before and after the beat, and film the screen and the speaker together.",
+            "Remove the beat source while clips are waiting, and look at the counter and the launches.",
+            "Hold the program paused and press a cell."
+          ],
+          "measure": "Time between the grid line and the first frame of the new clip in milliseconds, launches that start at a wrong time, behaviour when the beat source disappears",
+          "criteria": "Proposed: a launch starts within one frame of its grid line, launches never wait for a beat that is not coming, and a pause or a lost clock starts them at once."
+        },
+        {
+          "id": "M-LW-3",
+          "title": "Favorites, tags and replace everywhere with a real library",
+          "needs": "A library with at least 500 clips and media files, and a show with several decks that use the same video in many cells",
+          "steps": [
+            "Mark favorites, add tags to 50 clips, search with a word, with tag: and with is:fav, and restart the program.",
+            "Replace one video that plays in many cells of several decks with another, with and without keeping the playback settings, then undo.",
+            "Copy a controller profile to another computer and load it there."
+          ],
+          "measure": "Whether the search feels instant with 500 clips, whether every cell of every deck changed, whether the undo restored all of them, and whether the profile loaded on the other computer",
+          "criteria": "Proposed: search needs no visible wait, no cell keeps the old clip, one undo restores all of them, and the profile loads with every mapping."
+        }
+      ]
     }
   ]
 }

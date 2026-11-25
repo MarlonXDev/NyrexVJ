@@ -1717,6 +1717,13 @@ void Engine::update(double dt) {
     beatClock_.advance(dt, !paused);
     beat_ = beatClock_.beat();
     pullClockTempo();
+    if (quantizer_.pending() > 0) {
+        std::vector<LaunchRequest> due;
+        quantizer_.update(quantizeClock(), clock_, due);
+        for (const LaunchRequest& request : due) {
+            runLaunch(request);
+        }
+    }
     if (transition_.active) {
         transition_.elapsed += static_cast<float>(dt);
         if (transition_.elapsed >= transition_.duration) {
@@ -1917,6 +1924,67 @@ void Engine::triggerColumn(int column) {
             trigger(l, column);
         }
     }
+}
+
+QuantizeClock Engine::quantizeClock() const {
+    const LockState state = beatClock_.state();
+    QuantizeClock clock;
+    clock.beat = beat_;
+    clock.bpm = beatClock_.bpm();
+    clock.beatsPerBar = comp.beatsPerBar;
+    clock.usable = !paused && (state == LockState::Locked || state == LockState::Free);
+    return clock;
+}
+
+void Engine::setQuantizeGrid(QuantizeGrid grid) {
+    quantizer_.setGrid(grid);
+}
+
+void Engine::runLaunch(const LaunchRequest& request) {
+    switch (request.kind) {
+    case LaunchKind::Clip:
+        trigger(request.a, request.b);
+        break;
+    case LaunchKind::Column:
+        triggerColumn(request.a);
+        break;
+    case LaunchKind::Deck:
+        switchDeck(request.a);
+        break;
+    }
+}
+
+void Engine::requestTrigger(int layer, int column) {
+    std::vector<LaunchRequest> now;
+    quantizer_.request({LaunchKind::Clip, layer, column}, quantizeClock(), clock_, now);
+    for (const LaunchRequest& request : now) {
+        runLaunch(request);
+    }
+}
+
+void Engine::requestTriggerColumn(int column) {
+    std::vector<LaunchRequest> now;
+    quantizer_.request({LaunchKind::Column, column, 0}, quantizeClock(), clock_, now);
+    for (const LaunchRequest& request : now) {
+        runLaunch(request);
+    }
+}
+
+bool Engine::requestSwitchDeck(int index) {
+    if (index < 0 || index >= kDeckCount || index == comp.activeDeck) {
+        return false;
+    }
+    std::vector<LaunchRequest> now;
+    const bool queued = quantizer_.request({LaunchKind::Deck, index, 0}, quantizeClock(), clock_, now);
+    if (queued) {
+        return true;
+    }
+    bool switched = false;
+    for (const LaunchRequest& request : now) {
+        runLaunch(request);
+        switched = true;
+    }
+    return switched;
 }
 
 void Engine::clearLayer(int layer) {

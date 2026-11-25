@@ -689,6 +689,32 @@
       "test": "A-MN-4",
       "command": "NyrexVJ --fresh --no-update-check --no-welcome --manual outputs --lang de --frames 60",
       "notes": "exit code 0; a separate screenshot run with --manual outputs/slices --lang de showed the German chapter Ausgänge, Mapping und OBS opened at the section Slices und Bildausschnitt"
+    },
+    {
+      "area": "live-workflow",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.40.0 (branch feature/live-workflow, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-LW-1",
+      "command": "ctest -R nvj_workflow_tests",
+      "notes": "346 checks; whole suite 36 of 36 passed"
+    },
+    {
+      "area": "live-workflow",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.40.0 (branch feature/live-workflow, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-LW-2",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "All 1807 translation keys are covered"
     }
   ]
 }

@@ -42,7 +42,7 @@
 </ul>
 <h4>Visuals spielen</h4><ul>
 <li><a href="clip-grid.html" aria-current="page">Das Clip-Raster</a>
-<ul><li><a href="#cells">Zellen, Zeilen und Spalten</a></li><li><a href="#filling">Das Raster füllen</a></li><li><a href="#playing">Abspielen und Vorschau</a></li><li><a href="#layer-row">Layer-Regler im Raster</a></li></ul>
+<ul><li><a href="#cells">Zellen, Zeilen und Spalten</a></li><li><a href="#filling">Das Raster füllen</a></li><li><a href="#playing">Abspielen und Vorschau</a></li><li><a href="#layer-row">Layer-Regler im Raster</a></li><li><a href="#quantize">Auf den Takt starten</a></li></ul>
 </li>
 <li><a href="decks.html">Decks und Übergänge</a>
 </li>
@@ -130,7 +130,7 @@
 </ul>
 <h4>Visuals spielen</h4><ul>
 <li><a href="clip-grid.html" aria-current="page">Das Clip-Raster</a>
-<ul><li><a href="#cells">Zellen, Zeilen und Spalten</a></li><li><a href="#filling">Das Raster füllen</a></li><li><a href="#playing">Abspielen und Vorschau</a></li><li><a href="#layer-row">Layer-Regler im Raster</a></li></ul>
+<ul><li><a href="#cells">Zellen, Zeilen und Spalten</a></li><li><a href="#filling">Das Raster füllen</a></li><li><a href="#playing">Abspielen und Vorschau</a></li><li><a href="#layer-row">Layer-Regler im Raster</a></li><li><a href="#quantize">Auf den Takt starten</a></li></ul>
 </li>
 <li><a href="decks.html">Decks und Übergänge</a>
 </li>
@@ -205,8 +205,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Visuals spielen</p>
 <h1>Das Clip-Raster</h1>
-<p class="meta">Kapitel 5 von 35 &middot; 2 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#cells">Zellen, Zeilen und Spalten</a><a href="#filling">Das Raster füllen</a><a href="#playing">Abspielen und Vorschau</a><a href="#layer-row">Layer-Regler im Raster</a></nav>
+<p class="meta">Kapitel 5 von 35 &middot; 3 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#cells">Zellen, Zeilen und Spalten</a><a href="#filling">Das Raster füllen</a><a href="#playing">Abspielen und Vorschau</a><a href="#layer-row">Layer-Regler im Raster</a><a href="#quantize">Auf den Takt starten</a></nav>
 <h2 id="cells"><a class="anchor" href="#cells" aria-label="Link">#</a>Zellen, Zeilen und Spalten</h2>
 <p>Jedes Deck hat ein Raster aus 4 Layern mal 8 Spalten. Eine Zelle enthält einen Clip. Ein Klick auf eine Zelle spielt ihren Clip auf ihrem Layer ab, und der Layer spielt ihn weiter, bis du eine andere Zelle desselben Layers abspielst oder den Layer stoppst. Layer 1 ist der unterste Layer und Layer 4 der oberste, höhere Layer werden also über niedrigere gezeichnet.</p>
 <p>Eine Spalte ist ein Satz Zellen, eine pro Layer. Ein Klick auf den Spaltenkopf oder die Taste <code>1</code> bis <code>8</code> spielt alle Zellen dieser Spalte auf einmal ab. So wechselst du einen ganzen Look mit einer Taste: Bau Looks als Spalten.</p>
@@ -219,6 +219,11 @@
 <h2 id="layer-row"><a class="anchor" href="#layer-row" aria-label="Link">#</a>Layer-Regler im Raster</h2>
 <p>Am Anfang jeder Zeile siehst du den Namen des Layers, seinen Deckkraft-Regler, seinen Mischmodus und drei kleine Knöpfe. B schaltet den Layer auf Bypass, er wird dann komplett übersprungen. S schaltet ihn solo, es wird nur dieser Layer gezeigt. X stoppt den Layer und leert, was er spielt. Klick auf den Layer-Namen, um den Layer zu wählen, das Layer-Fenster arbeitet dann an ihm.</p>
 <aside class="note tip"><strong class="note-label">Tipp</strong><p>Mit Rechtsklick auf einen Regler setzt du ihn auf seinen Standardwert zurück. Das geht bei den meisten Reglern im Programm.</p></aside>
+<h2 id="quantize"><a class="anchor" href="#quantize" aria-label="Link">#</a>Auf den Takt starten</h2>
+<p>Das Menü Quantisierung in der Transportleiste über dem Raster bestimmt, wann ein Start passiert. Aus startet alles sofort, wie bisher. Beat, Takt, 2 Takte und 4 Takte halten einen Start bis zum nächsten Beat, Takt, zweiten oder vierten Takt der Beat-Uhr zurück, sodass ein Clip oder eine ganze Spalte genau auf dem Raster einsetzt, auch wenn du ein bisschen zu früh oder zu spät drückst.</p>
+<p>Es gilt für jeden Weg, etwas zu starten: Klick auf eine Zelle oder einen Spaltenkopf, die Tasten <code>1</code> bis <code>8</code>, einen Deck-Knopf, MIDI, OSC, die Weboberfläche, Cues und die Zeitleiste. Jetzt abspielen im Vorschaufenster, einen Clip aus der Bibliothek in eine Zelle legen und der Start von der Befehlszeile bleiben sofort, weil du dort den Clip ausdrücklich jetzt wolltest. Ein kleiner Zähler neben dem Menü zeigt, wie viele Starts warten. Startest du denselben Layer oder dieselbe Spalte vor dem Beat zweimal, zählt nur der letzte.</p>
+<p>Geht die Beat-Uhr verloren oder ist die Show pausiert, wartet nichts auf einen Beat, der nicht kommt: Starts passieren sofort, und die Uhr rastet von selbst wieder ein, wenn der Beat zurückkehrt. Höchstens 32 Starts können warten, der 33. startet sofort. Die Einstellung wird mit deinen anderen Einstellungen gespeichert.</p>
+<aside class="note tip"><strong class="note-label">Tipp</strong><p>Nimm Takt, solange du mit einem Controller spielst, und Aus beim Proben. Du kannst sie jederzeit mit der Maus umschalten, ein Neustart ist nicht nötig.</p></aside>
 <nav class="pager" aria-label="Pager"><a class="prev" href="first-show.html"><small>Zurück</small><span>Deine erste Show in fünf Minuten</span></a><a class="next" href="decks.html"><small>Weiter</small><span>Decks und Übergänge</span></a></nav>
 <p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
 </main>

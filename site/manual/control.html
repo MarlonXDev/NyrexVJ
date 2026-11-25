@@ -86,7 +86,7 @@
 </ul>
 <h4>Live control and shows</h4><ul>
 <li><a href="control.html" aria-current="page">Control: MIDI, OSC and the web page</a>
-<ul><li><a href="#control-where">Where it lives</a></li><li><a href="#midi">MIDI</a></li><li><a href="#osc">OSC input</a></li><li><a href="#osc-out">OSC output</a></li><li><a href="#web">The web interface</a></li></ul>
+<ul><li><a href="#control-where">Where it lives</a></li><li><a href="#midi">MIDI</a></li><li><a href="#midi-feedback">Feedback to the controller</a></li><li><a href="#midi-profiles">Controller profiles</a></li><li><a href="#osc">OSC input</a></li><li><a href="#osc-out">OSC output</a></li><li><a href="#web">The web interface</a></li></ul>
 </li>
 <li><a href="sync.html">Show sync and timecode</a>
 </li>
@@ -174,7 +174,7 @@
 </ul>
 <h4>Live control and shows</h4><ul>
 <li><a href="control.html" aria-current="page">Control: MIDI, OSC and the web page</a>
-<ul><li><a href="#control-where">Where it lives</a></li><li><a href="#midi">MIDI</a></li><li><a href="#osc">OSC input</a></li><li><a href="#osc-out">OSC output</a></li><li><a href="#web">The web interface</a></li></ul>
+<ul><li><a href="#control-where">Where it lives</a></li><li><a href="#midi">MIDI</a></li><li><a href="#midi-feedback">Feedback to the controller</a></li><li><a href="#midi-profiles">Controller profiles</a></li><li><a href="#osc">OSC input</a></li><li><a href="#osc-out">OSC output</a></li><li><a href="#web">The web interface</a></li></ul>
 </li>
 <li><a href="sync.html">Show sync and timecode</a>
 </li>
@@ -205,8 +205,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Live control and shows</p>
 <h1>Control: MIDI, OSC and the web page</h1>
-<p class="meta">Chapter 23 of 35 &middot; 4 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#control-where">Where it lives</a><a href="#midi">MIDI</a><a href="#osc">OSC input</a><a href="#osc-out">OSC output</a><a href="#web">The web interface</a></nav>
+<p class="meta">Chapter 23 of 35 &middot; 6 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#control-where">Where it lives</a><a href="#midi">MIDI</a><a href="#midi-feedback">Feedback to the controller</a><a href="#midi-profiles">Controller profiles</a><a href="#osc">OSC input</a><a href="#osc-out">OSC output</a><a href="#web">The web interface</a></nav>
 <h2 id="control-where"><a class="anchor" href="#control-where" aria-label="Link">#</a>Where it lives</h2>
 <p>Everything is under Settings, Control. The mappings and addresses refer to the working deck, the one you see in the clip grid.</p>
 <figure class="shot"><a href="../assets/manual/en/settings-control.webp"><img src="../assets/manual/en/settings-control.webp" width="874" height="584" loading="lazy" alt="The Control page of the settings"></a><figcaption>The Control page of the settings</figcaption></figure>
@@ -214,6 +214,14 @@
 <p>MIDI works on Windows and on Linux. On Linux the controller must show up as an ALSA sequencer port, and <code>aconnect -l</code> lists them. Pick your controller under Device, press Add mapping, choose what it should control and then move a knob or press a key on the controller. The two are linked from that moment on.</p>
 <p>Knobs and faders (CC) set values. Keys (notes) fire triggers or switch things on while held. Tick Invert to flip a fader, press Learn to give a row a new knob and Remove to delete it. Mappings are saved in <code>controls.json</code> in the data folder. A controller that another program has opened exclusively cannot be used by two programs at once.</p>
 <aside class="note tip"><strong class="note-label">Tip</strong><p>Map the Blackout switch to a big pad first. It is the control you will want most when something goes wrong.</p></aside>
+<h2 id="midi-feedback"><a class="anchor" href="#midi-feedback" aria-label="Link">#</a>Feedback to the controller</h2>
+<p>Many controllers have lit pads or motor faders that can show what NyrexVJ is doing. Tick Send feedback to the controller under the MIDI device and choose the Feedback device, which is often the same name as the input but listed on its own. Refresh devices looks again after you plug one in.</p>
+<p>NyrexVJ then answers each mapping with the same note or control change it listens to. A pad is lit (value 127) while its clip is playing on its layer, while its column has a clip playing, while its deck is the working deck, or while its switch (blackout, bypass, solo, effect on or off) is on, and dark (0) otherwise. A fader or knob mapped to a value follows that value inside its low and high range. Only changes are sent, never the same value twice, and at most 64 messages per frame.</p>
+<p>While you are moving a knob yourself, NyrexVJ stops sending fader values until a third of a second after the last movement, so the controller does not fight your hand. Pads are not held back. If the device stops answering, the page shows the message, feedback stops and the program carries on. Feedback works on Windows. On Linux the feedback device is not yet available and the page says so.</p>
+<aside class="note warning"><strong class="note-label">Warning</strong><p>Not every controller lights the same way. Some wait for a different note value for a colour, or want a special start message. NyrexVJ sends plain note and control change messages with the values 0 and 127, and nothing has been tried with real pads yet.</p></aside>
+<h2 id="midi-profiles"><a class="anchor" href="#midi-profiles" aria-label="Link">#</a>Controller profiles</h2>
+<p>A profile saves all your mappings under a name. Type a name next to Profile name and press Save profile. The list shows your profiles, and Load replaces the current mappings with the chosen profile. Use one profile for each controller or each kind of show, and switch before you start.</p>
+<p>Profiles are plain files in the folder <code>midi_profiles</code> in the data folder, so you can copy one to another computer or send it to a friend. A file that is too large, damaged, not a profile, or written by a newer version is refused with a message and your current mappings stay as they were. Names can use letters, numbers, spaces, dots, dashes and underscores.</p>
 <h2 id="osc"><a class="anchor" href="#osc" aria-label="Link">#</a>OSC input</h2>
 <p>Tick Receive OSC messages. OSC is off by default and listens on port 9010, because VRChat uses 9000 and the two should not collide. Only this computer can send to it unless you tick Accept messages from other computers, which lets anyone on your network control NyrexVJ.</p>
 <p>Send one number to an address. Floats, integers and true or false are accepted and are read as 0 to 1. A message without a value fires a trigger or flips a switch. The Settings page lists every address and a click on one copies it.</p>

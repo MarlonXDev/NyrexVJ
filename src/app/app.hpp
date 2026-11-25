@@ -15,6 +15,7 @@
 #include "core/edit_history.hpp"
 #include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
+#include "core/library_meta.hpp"
 #include "core/plugin_host.hpp"
 #include "core/recovery.hpp"
 #include "core/settings.hpp"
@@ -136,6 +137,9 @@ private:
     void queueDroppedFiles(const std::vector<std::string>& paths);
     void serviceImports();
     void drawClipTile(int index, const ImVec2& size);
+    void loadLibraryMeta();
+    void saveLibraryMeta();
+    void drawLibraryPopups();
     void drawLibraryClips();
     void drawLibraryEffects();
     void drawLibraryAssets();
@@ -207,6 +211,7 @@ private:
     void loadFromApi(const Composition& comp, const std::string& name);
     void drawOscOutSection();
     void drawMidiSection();
+    void drawProfilesSection();
     void drawBindingsSection();
     void drawAudioSource();
     void drawUpdateCard();
@@ -346,6 +351,15 @@ private:
     int selectedLibraryClip_ = -1;
     int selectedLibraryEffect_ = -1;
     char libraryFilter_[64] = {};
+    LibraryMeta libraryMeta_;
+    int libraryPopup_ = 0;
+    int libraryPopupClip_ = -1;
+    bool replaceKeepPlayback_ = true;
+    char replaceFilter_[64] = {};
+    char tagInput_[40] = {};
+    char profileName_[64] = {};
+    std::string profileMessage_;
+    bool profileMessageGood_ = true;
     char effectPickFilter_[64] = {};
     int focusTab_ = -1;
     int selectedOutput_ = 0;

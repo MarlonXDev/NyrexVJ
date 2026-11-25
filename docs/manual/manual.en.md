@@ -161,6 +161,16 @@ At the start of each row you see the name of the layer, its opacity slider, its 
 
 > Tip: Right click a slider to put it back to its default value. This works for most sliders in the program.
 
+## Starting on the beat {#quantize}
+
+The Quantize menu in the transport bar above the grid decides when a launch happens. Off starts everything at once, as before. Beat, Bar, 2 bars and 4 bars hold a launch back until the next beat, bar, two bars or four bars of the beat clock, so a clip or a whole column comes in exactly on the grid, even if you press a little early or late.
+
+It applies to every way of starting something: a click on a cell or a column header, the keys `1` to `8`, a deck button, MIDI, OSC, the web interface, cues and the timeline. Play now in the Preview window, putting a clip into a cell from the Library, and starting from the command line stay immediate, because there you asked for the clip right now. A small counter next to the menu shows how many launches are waiting. If you start the same layer or column twice before the beat, only the last one counts.
+
+If the beat clock is lost, or the show is paused, nothing waits for a beat that will not come: launches start at once, and the clock locks again by itself when the beat returns. At most 32 launches can wait, and a 33rd starts at once. The setting is saved with your other settings.
+
+> Tip: Use Bar while you play with a controller and Off while you rehearse. Switch it with the mouse at any time, no restart is needed.
+
 # Decks and transitions {#decks}
 
 ## Sixteen decks {#sixteen}
@@ -308,10 +318,25 @@ In the Clips view a row of filters narrows the list: All, 2D, 3D, Models, Scenes
 | Media | Your images and videos |
 | Shaders | Your own shader files and ISF generators |
 | Live | NDI input and camera clips |
+| Favorites | The clips you marked with a star, from all of the above |
 
 ## Using a clip {#using-clips}
 
 A click on a clip puts it into the selected cell and plays it. You can also drag it onto any cell, or onto a column header to put it into the selected layer of that column. A right click offers Put into the selected cell, Put into the next free cell of a layer, and for scenes Edit in the Clip Creator.
+
+## Favorites and tags {#favorites-tags}
+
+Right click a clip and choose Add to favorites. Favorites show a small diamond in the list and are all in the Favorites filter. Edit tags opens a small window where you type a word and press Enter to add it as a tag, for example `intro` or `red`. A clip can have 8 tags of up to 24 characters, and the window lists the tags that your library already uses so you can click one instead of typing it again.
+
+The search field understands tags: a word finds clips by name and by tag, `tag:red` finds only clips with that tag, and `is:fav` finds only favorites. You can combine them, for example `is:fav tag:intro`.
+
+Favorites and tags are saved in `library_meta.json` in the data folder, next to your own files, and not inside presets. They belong to the name of the clip. If you rename a file, the new name starts without a star and without tags. A file that cannot be read is kept as `library_meta.json.damaged` and you start with an empty list.
+
+## Replacing a clip everywhere {#replace-clip}
+
+If you swap a video for a better version, you do not have to touch every cell. Right click the clip in the Library and choose Replace this clip everywhere, then pick the new clip. Every cell of every deck that plays the old clip then plays the new one. Layer, effect and mixing settings stay.
+
+Tick Keep the playback settings of the cells if you want the speed, loop and start of each cell to stay as they are. The message afterwards says how many cells were changed. Undo (`Ctrl+Z`) takes the whole replacement back in one step.
 
 ## Files and folders {#library-files}
 
@@ -732,6 +757,22 @@ MIDI works on Windows and on Linux. On Linux the controller must show up as an A
 Knobs and faders (CC) set values. Keys (notes) fire triggers or switch things on while held. Tick Invert to flip a fader, press Learn to give a row a new knob and Remove to delete it. Mappings are saved in `controls.json` in the data folder. A controller that another program has opened exclusively cannot be used by two programs at once.
 
 > Tip: Map the Blackout switch to a big pad first. It is the control you will want most when something goes wrong.
+
+## Feedback to the controller {#midi-feedback}
+
+Many controllers have lit pads or motor faders that can show what NyrexVJ is doing. Tick Send feedback to the controller under the MIDI device and choose the Feedback device, which is often the same name as the input but listed on its own. Refresh devices looks again after you plug one in.
+
+NyrexVJ then answers each mapping with the same note or control change it listens to. A pad is lit (value 127) while its clip is playing on its layer, while its column has a clip playing, while its deck is the working deck, or while its switch (blackout, bypass, solo, effect on or off) is on, and dark (0) otherwise. A fader or knob mapped to a value follows that value inside its low and high range. Only changes are sent, never the same value twice, and at most 64 messages per frame.
+
+While you are moving a knob yourself, NyrexVJ stops sending fader values until a third of a second after the last movement, so the controller does not fight your hand. Pads are not held back. If the device stops answering, the page shows the message, feedback stops and the program carries on. Feedback works on Windows. On Linux the feedback device is not yet available and the page says so.
+
+> Warning: Not every controller lights the same way. Some wait for a different note value for a colour, or want a special start message. NyrexVJ sends plain note and control change messages with the values 0 and 127, and nothing has been tried with real pads yet.
+
+## Controller profiles {#midi-profiles}
+
+A profile saves all your mappings under a name. Type a name next to Profile name and press Save profile. The list shows your profiles, and Load replaces the current mappings with the chosen profile. Use one profile for each controller or each kind of show, and switch before you start.
+
+Profiles are plain files in the folder `midi_profiles` in the data folder, so you can copy one to another computer or send it to a friend. A file that is too large, damaged, not a profile, or written by a newer version is refused with a message and your current mappings stay as they were. Names can use letters, numbers, spaces, dots, dashes and underscores.
 
 ## OSC input {#osc}
 

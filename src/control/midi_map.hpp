@@ -42,6 +42,13 @@ std::string describeMidi(const MidiMessage& message);
 
 bool applyMidi(const std::vector<MidiBinding>& bindings, const MidiEvent& event, ControlRouter& router);
 
+constexpr size_t kMaxProfileBytes = 256u * 1024u;
+constexpr size_t kMaxProfileBindings = 1024;
+
+std::string sanitizeProfileName(const std::string& name);
+std::string profileToJson(const std::string& name, const std::vector<MidiBinding>& bindings);
+bool profileFromJson(const std::string& text, std::vector<MidiBinding>& bindings, std::string& error);
+
 std::string bindingsToJson(const std::vector<MidiBinding>& bindings);
 bool bindingsFromJson(const std::string& text, std::vector<MidiBinding>& bindings);
 

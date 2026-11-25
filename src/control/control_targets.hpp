@@ -69,6 +69,7 @@ public:
     bool set(int target, float value, bool edgeOnly);
     bool toggle(int target);
     bool state(int target) const;
+    bool lit(int target) const;
     float value(int target) const;
 
 private:

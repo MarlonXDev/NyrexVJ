@@ -179,6 +179,34 @@ bool ControlRouter::state(int index) const {
     }
 }
 
+bool ControlRouter::lit(int index) const {
+    const auto& targets = controlTargets();
+    if (index < 0 || index >= static_cast<int>(targets.size())) {
+        return false;
+    }
+    const ControlTarget& target = targets[static_cast<size_t>(index)];
+    switch (target.item) {
+    case ControlItem::ClipTrigger: {
+        const Layer& layer = comp_.layers[static_cast<size_t>(std::clamp(target.layer, 0, kLayerCount - 1))];
+        const int column = std::clamp(target.index, 0, kColumnCount - 1);
+        return layer.activeColumn == column && layer.cells[static_cast<size_t>(column)] >= 0;
+    }
+    case ControlItem::ColumnTrigger: {
+        const int column = std::clamp(target.index, 0, kColumnCount - 1);
+        for (const Layer& layer : comp_.layers) {
+            if (layer.activeColumn == column && layer.cells[static_cast<size_t>(column)] >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+    case ControlItem::DeckSelect:
+        return comp_.activeDeck == target.index;
+    default:
+        return target.kind == ControlKind::Toggle && state(index);
+    }
+}
+
 float ControlRouter::value(int index) const {
     const auto& targets = controlTargets();
     if (index < 0 || index >= static_cast<int>(targets.size())) {

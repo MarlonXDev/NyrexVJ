@@ -1,0 +1,45 @@
+# ADR 0036: Text clips, a limited particle system and effect chains
+
+- **Status:** Accepted for the local part (requested by MarlonXDev as prompt 15). Issue [#100](https://github.com/MarlonXDev/NyrexVJ/issues/100). A **GPU particle system, text shaping, right to left text, chains in show and community packages and a node based geometry editor are not built** and stay Proposed or belong to other prompts.
+- **Date:** 2026-11-25
+- **Owners:** Maintainers (pending assignment)
+- **Related:** [GENERATORS.md](../GENERATORS.md), [PERFORMANCE.md](../PERFORMANCE.md), [INTERFACES.md](../INTERFACES.md), [ADR 0017](0017-node-effect-editor.md), [ADR 0022](0022-glsl-shader-2.md), [ADR 0033](0033-live-workflow.md), [ADR 0034](0034-show-packages.md)
+
+## Context
+A VJ needs names, logos and sparkle. NyrexVJ could only play generative shaders, images, video and 3D, and effect chains lived inside presets where they could not be reused, searched or shared on their own. The task asked for an analysis of what exists, a text generator with fonts, Unicode as far as the font pipeline allows, alignment, animation and transparency, a limited particle system with audio and beat as modulation and a fixed upper limit, chains as reusable presets with search, preview and safe import and export, and no second effect engine.
+
+## Findings (what existed before)
+- A clip is an index into `clipLibrary()` and `Engine::drawLayerSource` draws it into a layer target; the four effect slots then run on that picture. Anything that is a clip is therefore already mixed, blended, delayed, recorded and sent to every output.
+- The effect slots (`EffectSlot`) and their JSON lines were private to the preset code.
+- Dear ImGui bundles `imstb_truetype.h`, so a font rasteriser is already in the build. There was no atlas, no text layout and no UTF-8 decoder for rendering.
+- There was no particle code. Shader clips can fake particles in a fragment shader, but not with a count limit, an emitter or a beat burst.
+
+## Decision
+1. **Text and particles are clips, not a new layer type.** `ClipKind::TextFile` and `ClipKind::ParticleClip` are files in `texts/` and `particles/` and become clips named `Text: <name>` and `Particles: <name>`, plus six built-in particle clips. They are drawn by `GeneratorPlayer` objects that the engine owns in an array parallel to the other clip kinds, premultiplied, with a transparent background. Everything after the clip (effects, blend modes, audio reaction, decks, transitions, recording, outputs) is unchanged and therefore tested by what already exists.
+2. **Chains reuse the four slots.** A chain file is the JSON the preset code already wrote for the slots, moved to `effect_json.*` so both use one implementation (and old presets read as before). Apply replaces the slots of one layer or of the master and is one undo step. There is no second engine and no new effect type.
+3. **Text: layout in the core, rasterising behind a limit.** `text_layout` (UTF-8 decode with replacement, line breaking, alignment, tracking, kerning) has no OpenGL and is tested without a graphics card. `text_font` reads TrueType and OpenType files through `imstb_truetype.h`, after checking the table directory, point and composite limits itself, and bakes the characters of one text into a single 8 bit atlas of at most 2048 x 2048 and 1024 characters. The bake runs on a worker thread so a long text never stalls a frame. The player draws one textured quad per character as one draw call. Fonts come from the data folder, the system and a short list of CJK fonts; a missing glyph is a question mark with a note.
+4. **Particles: processor simulation, one instanced draw.** A fixed time step of 1/60 s (at most 8 steps in a frame, 256 spawns in a step, 500 in a burst) and an own random number generator make the system deterministic: same file, seed, clock and audio give the same state, which a hash test checks. Drawing is one `glDrawArraysInstanced` of soft sprites from one buffer that is re-specified at the size of the limit for every draw (so the driver never waits for the previous frame). This needs OpenGL 3.3 and no extension. Beat clock bursts and the audio level modulate rate, size and speed; with no audio nothing else changes.
+5. **Hard limits that a file cannot raise:** the particle limit is a setting (64 to 16,384, default 2048), applied to every player at once, 24 bytes of graphics memory per particle, at most 16 playing places for a clip; a text atlas is at most 4 MiB; documents are at most 32 KiB, 64 files of a kind are read and names are 64 bytes. These numbers are in `gpuMemory().generators` and in the memory page of Settings.
+6. **Errors stay local.** A file that fails to parse is listed with a message and never becomes a clip; a clip that fails shows nothing and carries its message; the shader pair for text and particles compiles once and, if it fails, makes only these clips empty and is tried again. `prepareAll` (and with it `--check-shaders`) waits for text atlases so the check is not racy.
+7. **A self test in the real engine.** `--generator-selftest` runs the 24 checks of [GENERATORS.md](../GENERATORS.md) against OpenGL (transparency over a layer, audio and beat modulation, determinism by picture hash, limits, damaged files, a broken shader) and optionally a benchmark. It runs in CI with Mesa and restores the data folder, the composition and the particle limit when it is done, so running it on a real installation leaves no trace.
+8. **No new dependency, one new setting pair.** `generatorClips` (show the clips in the library, default on) and `particleLimit`. Text, particle and chain windows are one window each and every text has a translation in all seven languages.
+
+## Alternatives considered
+- **A text layer type beside clips.** Would need its own mixing, preset, control and output path. A clip gets all of it for free.
+- **Text as a signed distance field.** Sharper at any scale, but needs a generator step, a larger atlas and more memory. A bake at the output height is enough for a VJ text and simpler to verify. Left as an option if text must scale a lot.
+- **FreeType and HarfBuzz.** Would give shaping, ligatures, colour emoji and right to left text, and would add two libraries to build on two systems and a bigger attack surface for fonts. Not wanted without a request; the limits are written down instead.
+- **GPU particles with transform feedback or compute.** Cheaper at hundreds of thousands of particles, but not at the 16,384 that this limit allows, and compute needs OpenGL 4.3 while the program targets 3.3. That belongs to the separate GPU particle task and its own decision.
+- **Chains as new effect types in the library.** Would turn four slots into a tree and break the preset format. A chain stays a recipe.
+- **Putting chains and generator files into show packages now.** Needs new kinds in the container, limits and a policy for name conflicts, which is a change to ADR 0034 that the maintainer should decide. The plan of an export lists the clips so the other computer is told.
+
+## Consequences
+- Every new clip kind has to be handled in `-Wswitch` places; the build shows them.
+- `Engine::gpuMemory().generators` grows with the atlas of every loaded text and the buffers of every playing particle clip.
+- The effect JSON moved out of `preset.cpp`. A change to the effect lines now changes presets and chains together, which is what is wanted.
+- The text pipeline reads fonts from the user and the system. `imstb_truetype.h` is not written for hostile files; the pre checks and tests with damaged and hostile fonts reduce the risk and do not remove it. Only use fonts you trust.
+- New files: `docs/GENERATORS.md`, `src/core/{text_font,text_layout,text_doc,particles,effect_chain,effect_json,generator_files}.*`, `src/render/generators.*`, `src/app/{generator_dialog.hpp,ui_generators.cpp,generator_selftest.*}`, `tests/test_creative.cpp`. New data folders `texts/`, `particles/`, `chains/`, `fonts/`. New start options `--generators`, `--chains`, `--chain-select`, `--generator-selftest`.
+
+## Validation / open questions
+- Done here, on Linux with the Mesa software renderer: `nvj_creative_tests` (380 checks), the 24 checks of `--generator-selftest`, the whole suite (40 groups), the translation check, `--check-shaders`, and screenshots of the windows, a text clip in a layer, particle clips and a chain preview.
+- **Not done:** a real graphics card (the benchmark in [GENERATORS.md](../GENERATORS.md) is software rendering and only shows how cost grows), Windows beyond the CI build, a mouse and keyboard test of the windows, fonts of many kinds (only the fonts of the test machine), right to left and complex scripts (not built).
+- **Open for the maintainer:** a default particle limit other than 2048, whether chains and generator files belong into show and community packages, whether text needs signed distance fields for very large sizes, whether a bundled font should ship so that every computer shows the same text, and when GPU particles (a separate task) should be taken on.

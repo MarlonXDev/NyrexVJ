@@ -80,7 +80,7 @@ Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Han
 | Audio | Audioquelle wählen: Aus, Demo-Signal, Systemaudio, Eingang, und Geräte aktualisieren |
 | Zeitleiste | Zeitleiste ausführen, Fenster der Show-Zeitleiste anzeigen, Abspielen, Pause, Stopp, Handeingriffe freigeben |
 | Einstellungen | Öffnet das Einstellungsfenster |
-| Creator | Clip Creator öffnen, Neue 3D-Szene, Vorlagen, der Node-Effekt-Editor |
+| Creator | Clip Creator öffnen, Neue 3D-Szene, Vorlagen, der Node-Effekt-Editor, Text und Partikel, Effektketten |
 | Hilfe | Handbuch, Was ist neu, Links, Sprache, Nach Updates suchen |
 
 ![Das Hauptfenster von NyrexVJ mit dem Clip-Raster oben, Ausgabe und Vorschau links und Master, Clip und Browser unten](main-window.webp)
@@ -294,7 +294,7 @@ Mit Gate baust du schnell ein Stroboskop oder einen Glitch, der nur auf den Beat
 
 ## Eigene Effekte {#own-effects}
 
-Neben den eingebauten Effekten gibt es Effekte, die du selbst baust oder installierst: Node-Effekte aus dem Node-Editor (angezeigt als Node: Name) und ISF-Filter aus deinem Shader-Ordner (angezeigt als ISF: Name). Sie funktionieren in den Slots wie jeder andere Effekt. Siehe [Der Node-Effekt-Editor](#nodes) und [Deine eigenen Shader](#shaders).
+Neben den eingebauten Effekten gibt es Effekte, die du selbst baust oder installierst: Node-Effekte aus dem Node-Editor (angezeigt als Node: Name) und ISF-Filter aus deinem Shader-Ordner (angezeigt als ISF: Name). Sie funktionieren in den Slots wie jeder andere Effekt. Siehe [Der Node-Effekt-Editor](#nodes) und [Deine eigenen Shader](#shaders). Um vier Effekte zusammenzuhalten, speichere sie als Kette, siehe [Effektketten](#generators/effect-chains).
 
 # Die Bibliothek {#library}
 
@@ -306,7 +306,7 @@ Der Tab Bibliothek im Browser hat drei Ansichten. Clips listet alles auf, was du
 
 ## Clips filtern {#filters}
 
-In der Ansicht Clips grenzt eine Reihe von Filtern die Liste ein: Alle, 2D, 3D, Modelle, Szenen, Spout, Medien, Shader und Live. Clips, die in der aktuellen Version neu dazugekommen sind, tragen eine kleine Markierung, die mit der nächsten Nebenversion verschwindet.
+In der Ansicht Clips grenzt eine Reihe von Filtern die Liste ein: Alle, 2D, 3D, Modelle, Szenen, Spout, Medien, Shader, Generatoren und Live. Clips, die in der aktuellen Version neu dazugekommen sind, tragen eine kleine Markierung, die mit der nächsten Nebenversion verschwindet.
 
 | Filter | Was er zeigt |
 | --- | --- |
@@ -317,6 +317,7 @@ In der Ansicht Clips grenzt eine Reihe von Filtern die Liste ein: Alle, 2D, 3D, 
 | Spout | Die vier Spout-Eingangs-Clips |
 | Medien | Deine Bilder und Videos |
 | Shader | Deine eigenen Shader-Dateien und ISF-Generatoren |
+| Generatoren | Text-Clips und Partikel-Clips, auch die eingebauten Partikel-Clips |
 | Live | NDI-Eingangs- und Kamera-Clips |
 | Favoriten | Die Clips, die du mit einem Stern markiert hast, aus allen oben genannten |
 
@@ -664,6 +665,100 @@ Eine Szene kann bis zu acht Kameras enthalten. Wähl die, die spielt, oder lass 
 Starte mit einer Vorlage (Menü Creator, Mit einer Vorlage starten, oder Öffnen im Fenster) oder mit einer leeren Szene über Neu. Speichern schreibt eine `.nyxclip`-Datei in den Ordner clips. Sie enthält die Szenenbeschreibung und als Kopien die .glb-Modelle und die PNG- oder JPEG-Texturen, die die Szene nutzt, bis zu 200 MiB, eine Datei reicht also, um eine Szene weiterzugeben. Sie erscheint dann in der Bibliothek unter Szenen als Scene: Name. Als Clip nutzen legt sie außerdem in die gewählte Zelle des Decks. Kopie speichern speichert die Szene unter einem neuen Namen.
 
 In einer Szene lassen sich nur .glb-Modelle speichern. Eine .gltf-Datei, die getrennte Dateien braucht, steht in der Ansicht Dateien, lässt sich aber nicht nutzen. Rückgängig und Wiederherstellen funktionieren im Creator, solange er den Fokus hat. Eine ungespeicherte Szene liegt im Ordner recovery, falls das Programm unerwartet schließt.
+
+# Text, Partikel und Effektketten {#generators}
+
+Drei Werkzeuge, mit denen du eigene Inhalte ohne Shader machst: Text-Clips für Namen und Botschaften, Partikel-Clips für Funkeln, Schnee und Konfetti und Effektketten, die die Effekte einer Ebene speichern, damit du sie wieder verwenden kannst. Text und Partikel sind ganz normale Clips. Du legst sie in eine Zelle, spielst sie auf jeder Ebene, fügst Effekte hinzu, mischst sie über andere Ebenen und schickst sie wie jeden anderen Clip an alle Ausgänge.
+
+## Das Fenster {#generators-window}
+
+Creator, Text und Partikel... öffnet ein Fenster mit zwei Tabs, Text und Partikel. Creator, Effektketten... öffnet das Fenster für Ketten, und dasselbe Fenster öffnet sich über die Schaltfläche Effektketten... unter den Effekt-Slots einer Ebene oder des Masters.
+
+- Oben im Tab Text öffnest du einen gespeicherten Text oder beginnst einen neuen, und oben im Tab Partikel beginnst du mit einem der eingebauten Clips oder einer Datei, die du gespeichert hast. Darunter sind die Einstellungen, daneben eine Live-Vorschau, die auf die laufende Musik reagiert.
+- Als Clip speichern schreibt die Datei und legt den Clip kurz darauf in der Bibliothek unter dem Filter Generatoren ab. Läuft der Clip schon auf einer Ebene, wechselt er beim Spielen zur gespeicherten Fassung.
+- Löschen entfernt eine Datei nach einer Rückfrage, und Ordner öffnen zeigt den Ordner mit deinen Dateien.
+
+![Der Tab Text im Fenster Text und Partikel mit einer Vorschau](generators.webp)
+
+## Text-Clips {#text-clips}
+
+Ein Text-Clip zeigt einen Text mit durchsichtigem Hintergrund, die Ebene darunter bleibt also um die Buchstaben herum sichtbar. Er wird als kleine Datei im Ordner `texts` gespeichert und erscheint in der Bibliothek als Text: Name.
+
+| Einstellung | Was sie tut |
+| --- | --- |
+| Das Textfeld | Bis zu 1000 Zeichen und 40 Zeilen. Zeilenumbrüche bleiben, wo du sie setzt |
+| Schrift | Die Schriften, die NyrexVJ gefunden hat, und deine eigenen Schriften aus dem Schriften-Ordner |
+| Größe | Wie hoch der Text ist, als Anteil der Bildhöhe |
+| Waagerechte und senkrechte Ausrichtung | Links, Mitte, Rechts und Oben, Mitte, Unten |
+| Zeilenabstand, Buchstabenabstand, Paarweises Kerning | Abstand zwischen Zeilen, zwischen Buchstaben und das feine Einpassen von Buchstabenpaaren |
+| Umbruchbreite | Zeilen brechen bei dieser Breite um. Bei 0 wird der Text nicht umbrochen |
+| Position X und Y, Schatten | Wo der Text sitzt und wie stark der Schatten ist |
+| Farbe | Die Farben der Ebene, Weiß oder Regenbogen |
+| Animation, Animationstempo, Animationsstärke | Keine Animation, Schreibmaschine, Einblenden, Nach oben gleiten, Welle, Pulsieren, Dem Audiopegel folgen oder Hüpfen, und wie schnell und wie stark |
+
+Die Animationen laufen nach der Uhr von NyrexVJ, bleiben also im Takt des Beats. Dem Audiopegel folgen lässt den Text mit der Musik wachsen.
+
+> Tip: Mach einen Text nur mit einem Namen, leg ihn auf die oberste Ebene und passe ihn mit der Deckkraft und dem Mischmodus dieser Ebene ins Bild ein. Alles, was die Ebene bietet, geht auch für Text.
+
+## Schriften und Zeichen {#text-fonts}
+
+Leg deine eigenen `.ttf`-, `.otf`- oder `.ttc`-Dateien in den Ordner `fonts` (die Schaltfläche Schriften-Ordner öffnen zeigt ihn). NyrexVJ nutzt außerdem die Schriften deines Systems. Text wird als Unicode gelesen, Umlaute, Akzente, Symbole wie eine Musiknote, Griechisch, Kyrillisch und japanische oder chinesische Zeichen sind also möglich, solange die gewählte Schrift sie enthält.
+
+> Note: Ein Zeichen, das die Schrift nicht hat, erscheint als Fragezeichen, und das Fenster sagt es dir. Wechsle zu einer anderen Schrift oder füge eine hinzu, die das Zeichen hat. NyrexVJ macht keinen Textsatz: Ligaturen, arabische und indische Schriften, Schrift von rechts nach links und farbige Emojis werden nicht unterstützt. Schriften liest eine kleine Bibliothek, die nicht für feindliche Dateien geschrieben ist, also nimm nur Schriften, denen du vertraust.
+
+## Partikel-Clips {#particle-clips}
+
+Ein Partikel-Clip zeigt viele kleine weiche Punkte, die an einem Ort entstehen, sich bewegen und verblassen. Sechs Clips kommen mit dem Programm (Sparks, Snow, Embers, Fountain, Confetti und Bubbles). Deine eigenen werden im Ordner `particles` gespeichert und erscheinen in der Bibliothek als Particles: Name.
+
+| Gruppe | Einstellungen |
+| --- | --- |
+| Ausstoß | Partikel pro Sekunde, Stoß bei jedem Beat, Lebensdauer und ihre Abweichung |
+| Bewegung | Geschwindigkeit und ihre Abweichung, Richtung, Streuung, Schwerkraft, Luftwiderstand, Turbulenz |
+| Look | Größe, Größe am Ende, Größen-Abweichung, Einblenden, Weichheit, Farbe, Licht addieren (Leuchten) |
+| Quelle | Form (Punkt, Reihe, Ring, Rechteck), Ursprung X und Y, Ausdehnung |
+| Musik | Pegel fügt Partikel hinzu, Pegel vergrößert Partikel, Pegel beschleunigt Partikel |
+| Weiteres | Zufallswert, Neustart, Abspielen |
+
+Der Beat löst den Stoß aus, auch wenn Partikel pro Sekunde auf 0 steht, und die Lautstärke der Musik steuert die drei Pegel-Regler. Mit derselben Datei und demselben Zufallswert bekommst du jedes Mal dieselbe Bewegung, praktisch, wenn ein Look sich wiederholen soll.
+
+## Grenzen, die die Show schützen {#generator-limits}
+
+Text und Partikel können den Rechner nie übernehmen. Eine Datei kann keine dieser Grenzen anheben, und ein Clip, der auf keiner Ebene liegt, kostet nichts.
+
+| Was | Grenze |
+| --- | --- |
+| Gleichzeitig lebende Partikel | Einstellungen, Leistung, Text und Partikel, Partikel-Obergrenze pro Ebene: 64 bis 16.384, Voreinstellung 2048. Bei je 24 Byte sind 16.384 Partikel 384 KiB Grafikspeicher |
+| Neuere Partikel, wenn die Grenze erreicht ist | Werden verworfen, und das Fenster zeigt, wie viele, damit das Bild flüssig bleibt |
+| Ein Text | Bis zu 1000 Zeichen, 40 Zeilen und ein Bild der Buchstaben von höchstens 4 MiB, im Hintergrund gemacht, damit ein langer Text die Show nie anhält |
+| Dateien | je 32 KiB, 64 je Art, Namen bis 64 Byte |
+
+> Warning: Ist eine Text- oder Partikeldatei beschädigt oder lässt sich die Schrift nicht lesen, bleibt nur dieser Clip leer und sagt warum. Die Ebenen darunter spielen weiter. Einstellungen, Leistung, Text und Partikel können alle diese Clips aus der Bibliothek ausblenden.
+
+## Effektketten {#effect-chains}
+
+Eine Kette sind die vier Effekte einer Ebene oder des Masters, gespeichert mit ihren Einstellungen und ihrer Reaktion auf die Musik. Sie ist ein Rezept für die vier Effekt-Slots, die es schon gibt, keine neue Art von Effekt.
+
+1. Stell die Effekte einer Ebene ein und drück dann Effektketten... unter den Effekt-Slots.
+2. Gib unter Aktuelle Effekte als Kette speichern einen Namen und eine Kurzbeschreibung ein und drück Kette speichern.
+3. Um eine Kette später zu nutzen, wähl unter Gilt für die Ebene oder den Master, wähl die Kette aus und drück Anwenden. Sie ersetzt die vier Slots dieser Ebene, und Strg+Z macht es rückgängig.
+4. Nach Name, Beschreibung oder Effekt suchen findet Ketten, und die Vorschau zeigt die gewählte Kette auf einem Testbild, bevor du sie anwendest. Löschen fragt vorher nach.
+
+Exportieren kopiert eine Kette an einen Pfad, den du eintippst, und Importieren liest eine `.nyxchain`-Datei von einem Pfad. Benutzt eine Kette einen Effekt, den es auf deinem Rechner nicht gibt, zum Beispiel einen Node-Effekt von jemand anderem, nennt das Fenster ihn, behält die anderen Effekte und lässt den Slot leer. Eine Kettendatei sind Daten: Sie wird beim Lesen geprüft, und nichts darin wird je ausgeführt.
+
+![Das Fenster Effektketten mit der Liste, der Suche und der Vorschau](effect-chains.webp)
+
+## Dateien und Weitergeben {#generator-files}
+
+Alles in diesem Kapitel ist eine kleine Textdatei im Datenordner. Du kannst sie auf einen anderen Rechner kopieren oder einem Freund schicken.
+
+| Datei | Ordner | Was sie enthält |
+| --- | --- | --- |
+| `.nyxtext` | `texts` | Einen Text-Clip |
+| `.nyxpart` | `particles` | Einen Partikel-Clip |
+| `.nyxchain` | `chains` | Eine Kette aus vier Effekten |
+| `.ttf`, `.otf`, `.ttc` | `fonts` | Deine eigenen Schriften |
+
+Show-Pakete packen diese Dateien noch nicht ein. Der Plan eines Exports nennt Text- und Partikel-Clips als Clips, die der andere Rechner haben muss, kopiere die Dateien also von Hand.
 
 # Der Node-Effekt-Editor {#nodes}
 
@@ -1018,7 +1113,7 @@ Der C-Header, ein Beispiel-Plugin und die vollständige Referenz stehen in docs/
 | Sync | Clock-Quelle, Timecode, MIDI-Clock, Pro DJ Link, die Cue-Liste |
 | Updates | Update-Kanal, automatische Prüfungen und Downloads, der Update-Status |
 | Tastenkürzel | Die Liste der Tastenkürzel |
-| Leistung | Bildratenbegrenzung, Bildzeit-Budget, Renderqualität, gemessene Bildzeiten, Speicher, Video und FFmpeg, DXV-Umwandlung |
+| Leistung | Bildratenbegrenzung, Bildzeit-Budget, Renderqualität, Text und Partikel, gemessene Bildzeiten, Speicher, Video und FFmpeg, DXV-Umwandlung |
 | Plugins | Installierte Plugins und ihre Quellen |
 | Info | Version, Links, der Datenordner |
 
@@ -1083,6 +1178,10 @@ Die Bildratenbegrenzung begrenzt, wie oft das Programm ein Bild zeichnet, mit od
 
 Die Layer-Auflösung zeichnet die Layer und ihre Effekte in kleinerer Größe und skaliert sie hoch, wenn sie gemischt werden. Volle Qualität ändert nichts, Ausgewogen zeichnet mit 75 Prozent, Leistung mit 50 Prozent. Automatisch senkt die Auflösung in kleinen Schritten nur, solange ein Bild länger als das Budget braucht, und hebt sie wieder an, wenn Platz ist. Master-Effekte und jeder Ausgang bleiben in voller Auflösung.
 
+## Text und Partikel {#perf-generators}
+
+Partikel-Obergrenze pro Ebene ist die größte Zahl an Partikeln, die ein Partikel-Clip gleichzeitig am Leben haben darf, von 64 bis 16.384, am Anfang 2048. Ist die Grenze erreicht, werden neuere Partikel verworfen und das Bild bleibt flüssig. Jedes Partikel kostet 24 Byte Grafikspeicher. Text- und Partikel-Clips in der Bibliothek zeigen blendet sie alle aus der Bibliothek aus. Siehe [Text, Partikel und Effektketten](#generators/generator-limits).
+
 ## Was Zeit kostet {#perf-cost}
 
 - Ein Layer mit Deckkraft null wird nicht gezeichnet, verborgene Layer kosten also nichts.
@@ -1116,6 +1215,10 @@ NyrexVJ legt alles in seinem Datenordner ab. Unter Windows ist das `%APPDATA%\Ny
 | `packages` | Ein Eintrag für jedes installierte Community-Paket und eine Kopie seines Lizenztextes |
 | `package_backups` | Dateien, die ein Update, ein Ersetzen oder ein Entfernen eines Community-Pakets weggeräumt hat, jedes Mal ein Ordner |
 | `shaders` | Deine eigenen Shader-Dateien |
+| `texts` | Deine eigenen Text-Clips, siehe [Text, Partikel und Effektketten](#generators) |
+| `particles` | Deine eigenen Partikel-Clips |
+| `chains` | Deine eigenen Effektketten |
+| `fonts` | Deine eigenen Schriften für Text-Clips |
 | `models` | Deine eigenen 3D-Modelle |
 | `media` | Bilder und Videos |
 | `clips` | Mit dem Clip Creator gespeicherte Szenen |
@@ -1202,6 +1305,9 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--pack-info DATEI` | Zeigen, was ein Community-Paket enthält und ob es sich installieren ließe, und beenden |
 | `--pack-install DATEI` | Ein Community-Paket installieren und beenden, mit `--pack-accept-plugin`, `--pack-allow-downgrade`, `--pack-keep-mine` oder `--pack-replace`, wo sie nötig sind |
 | `--pack-remove KENNUNG` | Ein installiertes Community-Paket entfernen und beenden |
+| `--generators` | Das Fenster Text und Partikel beim Start öffnen, im Tab Text, oder mit `--generators 1` im Tab Partikel |
+| `--chains` | Das Fenster Effektketten beim Start für Ebene 1 öffnen, für Ebene 2 bis 4 mit `--chains 1` bis `--chains 3` und für den Master mit `--chains 4`; `--chain-select NAME` wählt eine Kette aus |
+| `--generator-selftest` | Text- und Partikel-Clips in der echten Engine prüfen und beenden, mit einer Bilderzahl dahinter für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--settings IDX` | Die Einstellungen auf Seite IDX öffnen, ab 0 gezählt in der Reihenfolge der Seitenliste |
 | `--check-shaders` | Jeden Shader kompilieren und beenden |
 

@@ -73,6 +73,8 @@
 </li>
 <li><a href="creator.html">Der Clip Creator</a>
 </li>
+<li><a href="generators.html">Text, Partikel und Effektketten</a>
+</li>
 <li><a href="nodes.html">Der Node-Effekt-Editor</a>
 </li>
 <li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
@@ -102,7 +104,7 @@
 <li><a href="shortcuts.html">Tastenkürzel und Maus</a>
 </li>
 <li><a href="performance.html" aria-current="page">Leistung</a>
-<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
+<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-generators">Text und Partikel</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
 </li>
 <li><a href="files.html">Dateien und der Datenordner</a>
 </li>
@@ -161,6 +163,8 @@
 </li>
 <li><a href="creator.html">Der Clip Creator</a>
 </li>
+<li><a href="generators.html">Text, Partikel und Effektketten</a>
+</li>
 <li><a href="nodes.html">Der Node-Effekt-Editor</a>
 </li>
 <li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
@@ -190,7 +194,7 @@
 <li><a href="shortcuts.html">Tastenkürzel und Maus</a>
 </li>
 <li><a href="performance.html" aria-current="page">Leistung</a>
-<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
+<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-generators">Text und Partikel</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
 </li>
 <li><a href="files.html">Dateien und der Datenordner</a>
 </li>
@@ -205,8 +209,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Nachschlagen und Hilfe</p>
 <h1>Leistung</h1>
-<p class="meta">Kapitel 30 von 35 &middot; 2 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#perf-why">Warum sie wichtig ist</a><a href="#perf-frame">Bildrate und Budget</a><a href="#perf-quality">Renderqualität</a><a href="#perf-cost">Was Zeit kostet</a></nav>
+<p class="meta">Kapitel 31 von 36 &middot; 2 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#perf-why">Warum sie wichtig ist</a><a href="#perf-frame">Bildrate und Budget</a><a href="#perf-quality">Renderqualität</a><a href="#perf-generators">Text und Partikel</a><a href="#perf-cost">Was Zeit kostet</a></nav>
 <h2 id="perf-why"><a class="anchor" href="#perf-why" aria-label="Link">#</a>Warum sie wichtig ist</h2>
 <p>Eine Live-Show braucht eine gleichmäßige Bildrate. NyrexVJ ist leicht, aber viele Layer, schwere Effekte, große Videos und 3D-Modelle summieren sich. Einstellungen, Leistung zeigt, was die Zeit braucht, und die Statusleiste kann die Zeiten zeigen, wenn du Zeiten in der Statusleiste zeigen anhakst.</p>
 <figure class="shot"><a href="../../assets/manual/de/settings-performance.webp"><img src="../../assets/manual/de/settings-performance.webp" width="874" height="584" loading="lazy" alt="Die Seite Leistung in den Einstellungen"></a><figcaption>Die Seite Leistung in den Einstellungen</figcaption></figure>
@@ -214,6 +218,8 @@
 <p>Die Bildratenbegrenzung begrenzt, wie oft das Programm ein Bild zeichnet, mit oder ohne VSync. Eine niedrigere Grenze lässt auf demselben Computer mehr Grafik- und Prozessorzeit für VRChat. Das Bildzeit-Budget ist die Zeit, die ein Bild brauchen darf, abgeleitet aus deiner Ziel-Bildrate. Bilder darüber zählen als zu langsam, und die Seite zeigt, wie viele Bilder im Budget blieben, den Durchschnitt, die langsamsten fünf Prozent und das schlechteste Bild.</p>
 <h2 id="perf-quality"><a class="anchor" href="#perf-quality" aria-label="Link">#</a>Renderqualität</h2>
 <p>Die Layer-Auflösung zeichnet die Layer und ihre Effekte in kleinerer Größe und skaliert sie hoch, wenn sie gemischt werden. Volle Qualität ändert nichts, Ausgewogen zeichnet mit 75 Prozent, Leistung mit 50 Prozent. Automatisch senkt die Auflösung in kleinen Schritten nur, solange ein Bild länger als das Budget braucht, und hebt sie wieder an, wenn Platz ist. Master-Effekte und jeder Ausgang bleiben in voller Auflösung.</p>
+<h2 id="perf-generators"><a class="anchor" href="#perf-generators" aria-label="Link">#</a>Text und Partikel</h2>
+<p>Partikel-Obergrenze pro Ebene ist die größte Zahl an Partikeln, die ein Partikel-Clip gleichzeitig am Leben haben darf, von 64 bis 16.384, am Anfang 2048. Ist die Grenze erreicht, werden neuere Partikel verworfen und das Bild bleibt flüssig. Jedes Partikel kostet 24 Byte Grafikspeicher. Text- und Partikel-Clips in der Bibliothek zeigen blendet sie alle aus der Bibliothek aus. Siehe <a href="generators.html#generator-limits">Text, Partikel und Effektketten</a>.</p>
 <h2 id="perf-cost"><a class="anchor" href="#perf-cost" aria-label="Link">#</a>Was Zeit kostet</h2>
 <ul><li>Ein Layer mit Deckkraft null wird nicht gezeichnet, verborgene Layer kosten also nichts.</li><li>Jeder Effekt ist ein weiterer Durchgang über das Bild. Ersetze einen Stapel Effekte durch einen Node-Effekt, wenn es geht.</li><li>Große Videos kosten Dekodierzeit. HAP-Videos kosten fast nichts am Prozessor, siehe <a href="video.html">Video- und Bild-Clips</a>.</li><li>Live-Quellen werden drei Sekunden nach der letzten Nutzung geschlossen.</li><li>3D-Modelle und -Szenen kosten Grafikzeit entsprechend ihrer Dreieckszahl.</li></ul>
 <p>Die Seite zeigt auch den Speicher: eine Schätzung des Grafikspeichers, den Videospeicher und den Programmspeicher, und welcher Clip oder Effekt die Zeit braucht. Gemessene Zahlen und Grenzen stehen in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PERFORMANCE.md" target="_blank" rel="noopener noreferrer">docs/PERFORMANCE.md</a> des Projekts.</p>

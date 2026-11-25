@@ -478,8 +478,70 @@ void testManualObservationAndPause() {
     CHECK(paused.pending() != 0.0);
 }
 
+void testNetworkSource() {
+    BeatClock clock;
+    clock.setTempo(100.0);
+    const double masterBpm = 126.0;
+    double masterBeat = 40.0;
+    auto driveNetwork = [&](double seconds, bool report) {
+        const int frames = static_cast<int>(std::round(seconds / kFrame));
+        for (int i = 0; i < frames; ++i) {
+            clock.advance(kFrame, true);
+            masterBeat += kFrame * masterBpm / 60.0;
+            if (report && i % 6 == 0) {
+                SyncObservation o;
+                o.source = SyncSource::Network;
+                o.hasPhase = true;
+                o.beat = masterBeat;
+                o.modulus = 0;
+                o.hasTempo = true;
+                o.bpm = masterBpm;
+                clock.report(o);
+            }
+        }
+    };
+    driveNetwork(0.2, true);
+    CHECK(clock.active() == SyncSource::Network);
+    CHECK(clock.jumps() == 1);
+    driveNetwork(6.0, true);
+    CHECK(near(clock.bpm(), masterBpm, 0.01));
+    CHECK(near(clock.beat(), masterBeat, 0.05));
+    CHECK(clock.locked());
+    BeatSource link;
+    link.source = SyncSource::DjLink;
+    link.bpm = 140.0;
+    drive(clock, link, 1.0);
+    CHECK(clock.present(SyncSource::DjLink));
+    driveNetwork(0.5, true);
+    CHECK(clock.active() == SyncSource::Network);
+    const double bpmBeforeLoss = clock.bpm();
+    const double beatBeforeLoss = clock.beat();
+    driveNetwork(2.5, false);
+    CHECK(clock.active() != SyncSource::Network);
+    CHECK(near(clock.bpm(), bpmBeforeLoss, 1.0e-9));
+    CHECK(clock.beat() > beatBeforeLoss + 1.0);
+    driveNetwork(1.0, true);
+    CHECK(clock.active() == SyncSource::Network);
+    masterBeat += 25.0;
+    driveNetwork(0.2, true);
+    CHECK(near(clock.beat(), masterBeat, 0.05));
+    CHECK(clock.jumps() >= 2);
+    BeatClock forced;
+    forced.setMode(SyncMode::Network);
+    CHECK(forced.state() == LockState::Searching);
+    SyncObservation o;
+    o.source = SyncSource::Network;
+    o.hasPhase = true;
+    o.beat = 8.0;
+    o.hasTempo = true;
+    o.bpm = 100.0;
+    forced.advance(0.01, true);
+    forced.report(o);
+    CHECK(forced.active() == SyncSource::Network);
+}
+
 void testNames() {
-    for (int i = 0; i <= static_cast<int>(SyncMode::DjLink); ++i) {
+    for (int i = 0; i <= static_cast<int>(SyncMode::Network); ++i) {
         const SyncMode mode = static_cast<SyncMode>(i);
         CHECK(nvj::syncModeFromName(nvj::syncModeName(mode)) == mode);
     }
@@ -487,6 +549,9 @@ void testNames() {
     CHECK(nvj::syncModeFromName(nullptr) == SyncMode::Auto);
     CHECK(nvj::modeSource(SyncMode::Auto) == SyncSource::Manual);
     CHECK(nvj::modeSource(SyncMode::DjLink) == SyncSource::DjLink);
+    CHECK(nvj::modeSource(SyncMode::Network) == SyncSource::Network);
+    CHECK(std::string(nvj::syncModeName(SyncMode::Network)) == "network");
+    CHECK(std::string(nvj::syncSourceName(SyncSource::Network)) == "Network");
     CHECK(std::string(nvj::syncSourceName(SyncSource::MidiClock)) == "MIDI clock");
 }
 
@@ -506,6 +571,7 @@ int main() {
     testAbsolutePosition();
     testLatencyOffset();
     testObservationAge();
+    testNetworkSource();
     testManualObservationAndPause();
     testNames();
     return testing::finish();

@@ -17,6 +17,8 @@ bool parseBearer(const std::string& header, std::string& token);
 std::string tokenPath();
 bool loadToken(std::string& token);
 bool saveToken(const std::string& token);
+bool loadSecretFile(const std::string& path, std::string& text);
+bool saveSecretFile(const std::string& path, const std::string& text);
 
 bool hostAllowed(const std::string& hostHeader, int port, bool allowRemote);
 bool originAllowed(const std::string* origin, const std::string* fetchSite, const std::string& hostHeader);

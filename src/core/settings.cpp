@@ -253,7 +253,7 @@ bool loadSettings(Settings& settings) {
     auto syncMode = doc.find("syncMode");
     if (syncMode != doc.end() && syncMode->is_string()) {
         const std::string mode = syncMode->get<std::string>();
-        if (mode == "auto" || mode == "manual" || mode == "audio" || mode == "midiclock" || mode == "timecode" || mode == "djlink") {
+        if (mode == "auto" || mode == "manual" || mode == "audio" || mode == "midiclock" || mode == "timecode" || mode == "djlink" || mode == "network") {
             result.syncMode = mode;
         }
     }
@@ -264,6 +264,29 @@ bool loadSettings(Settings& settings) {
     if (djPlayer != doc.end() && djPlayer->is_number_integer()) {
         result.djLinkPlayer = std::clamp(djPlayer->get<int>(), 0, 6);
     }
+    auto netRole = doc.find("netSyncRole");
+    if (netRole != doc.end() && netRole->is_string()) {
+        const std::string role = netRole->get<std::string>();
+        if (role == "off" || role == "master" || role == "follower") {
+            result.netSyncRole = role;
+        }
+    }
+    auto netPort = doc.find("netSyncPort");
+    if (netPort != doc.end() && netPort->is_number_integer()) {
+        result.netSyncPort = std::clamp(netPort->get<int>(), 1024, 65535);
+    }
+    result.netSyncAllowRemote = boolean("netSyncAllowRemote", false);
+    auto netHost = doc.find("netSyncHost");
+    if (netHost != doc.end() && netHost->is_string() && !netHost->get<std::string>().empty()) {
+        result.netSyncHost = netHost->get<std::string>().substr(0, 64);
+    }
+    auto netName = doc.find("netSyncName");
+    if (netName != doc.end() && netName->is_string()) {
+        result.netSyncName = netName->get<std::string>().substr(0, 60);
+    }
+    result.netSyncFollowControls = boolean("netSyncFollowControls", true);
+    result.netSyncFollowClips = boolean("netSyncFollowClips", true);
+    result.netSyncFollowClock = boolean("netSyncFollowClock", true);
     auto ltcDevice = doc.find("ltcDevice");
     if (ltcDevice != doc.end() && ltcDevice->is_string()) {
         result.ltcDevice = ltcDevice->get<std::string>().substr(0, 256);
@@ -413,6 +436,14 @@ bool saveSettings(const Settings& settings) {
     doc["djLinkEnabled"] = settings.djLinkEnabled;
     doc["djLinkPlayer"] = settings.djLinkPlayer;
     doc["ltcDevice"] = settings.ltcDevice;
+    doc["netSyncRole"] = settings.netSyncRole;
+    doc["netSyncPort"] = settings.netSyncPort;
+    doc["netSyncAllowRemote"] = settings.netSyncAllowRemote;
+    doc["netSyncHost"] = settings.netSyncHost;
+    doc["netSyncName"] = settings.netSyncName;
+    doc["netSyncFollowControls"] = settings.netSyncFollowControls;
+    doc["netSyncFollowClips"] = settings.netSyncFollowClips;
+    doc["netSyncFollowClock"] = settings.netSyncFollowClock;
     doc["cuesEnabled"] = settings.cuesEnabled;
     doc["timelineEnabled"] = settings.timelineEnabled;
     doc["timelineSource"] = settings.timelineSource;

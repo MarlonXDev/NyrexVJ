@@ -1063,6 +1063,25 @@ MIDI-Clock, Start, Stopp und Song-Position werden verfolgt. Das MIDI-Gerät wäh
 
 Hak Auf Pro-DJ-Link-Beats hören an, um den Beat-Paketen von DJ-Playern zu folgen, die Pro DJ Link nutzen, in deinem lokalen Netzwerk. NyrexVJ öffnet dazu einen UDP-Listener auf Port 50001. Es meldet sich nie als Player an und sendet nichts, es gibt also keinen Wiedergabe-Zustand und kein Master-Flag, nur die Beats. Wähl, welchem Player gefolgt wird.
 
+## Netzwerk-Sync: mehrere PCs {#sync-network}
+
+Zwei oder mehr PCs mit NyrexVJ können einem Master folgen: dem Beat, dem Tempo, Wiedergabe und Pause, dem Timecode, den Pegeln, Farben, Effekten, Makros und dem Blackout, dem Deck und dem Clip, der auf jeder Ebene läuft. Nutze es für einen zweiten Ausgang, für einen zweiten Rechner, der eine schwere Ebene trägt, oder für ein Backup, das warm bleiben soll. Es ist **standardmäßig aus**. Öffne Einstellungen, Sync und such den Block Netzwerk-Sync.
+
+1. **Am Master-PC** wählst du die Rolle Master. Hak Andere PCs im Netzwerk zulassen an, wenn die Follower andere Rechner sind; für zwei Programme auf einem PC lässt du es aus. Drück Schlüssel kopieren.
+2. **Auf jedem Follower-PC** wählst du die Rolle Follower, tippst die IPv4-Adresse des Masters ein (zum Beispiel `192.168.1.20`, oder `127.0.0.1` für zwei Programme auf einem PC) und denselben Port wie am Master (am Anfang 9030), fügst den Schlüssel ein und drückst Diesen Schlüssel benutzen.
+3. **Vergleiche den Prüfcode des Schlüssels** auf beiden Seiten. Er ist ein kurzer Code aus dem Schlüssel, kann ohne Gefahr vorgelesen werden und muss auf jedem PC gleich sein.
+4. **Erlaube den UDP-Port** in der Firewall des Master-PCs.
+
+Der Status des Followers geht von Verbinde über Show-Zustand wird geholt zu Synchron. Die Seite zeigt Versatz, Hin und zurück und Jitter der Uhr, das Tempo und wie viele Regler, Clips und Deck-Wechsel angewendet wurden. Drei Haken bestimmen, was ein Follower übernimmt: Reglern folgen, Decks und Clips folgen und Takt, Tempo und Timecode folgen. Solange ein Follower den Reglern folgt, pausieren seine eigene Timeline und seine Cue-Liste, weil sie sonst gegen den Master arbeiten würden.
+
+> Hinweis: Mediendateien werden nie gesendet. Jeder PC braucht seine eigene Kopie der Bilder, Videos, Modelle und Shader. Ein Show-Paket (Datei, Show-Paket exportieren) ist ein guter Weg, dieselben Dateien auf jeden PC zu bringen. Der Master sendet die Namen seiner Decks und Clips, und ein Follower listet auf, was hier anders ist: ein Clip, den nur der Master hat, eine Zelle mit einem anderen Clip, ein Deck, das nicht benutzt wird. Ein Clip, dessen Name abweicht, wird nicht gestartet, so läuft nie versehentlich ein falsches Bild.
+
+Bricht die Verbindung ab, meldet der Follower Master verloren, letzter Zustand wird gehalten: Er behält die letzten Werte, das Tempo läuft mit dem letzten Wert weiter, seine Timeline und seine Cues bleiben pausiert, und er verbindet sich von selbst neu. Danach wird nur angewendet, was sich auf dem Master inzwischen geändert hat; was du am Follower geändert hast und was sich am Master nicht geändert hat, bleibt, wie du es gelassen hast. Sind die beiden Programme verschiedene Versionen und passen ihre Regler nicht zusammen, zeigt der Follower Nur Takt (andere Version) und folgt allein dem Beat.
+
+> Warnung: Der Netzwerk-Sync ist signiert und nicht verschlüsselt. Nur ein PC mit dem Schlüssel kann beitreten oder senden, und ein Fremder kann die Show nicht ändern, aber jemand in deinem Netzwerk kann sie mitlesen. Nutze ihn in einem Netzwerk, dem du vertraust, halte den Schlüssel privat, zeige ihn nicht im Stream und drück Neuer Schlüssel, wenn er herausgekommen ist. Ein neuer Schlüssel trennt jeden Follower, bis er den neuen Schlüssel hat.
+
+> Hinweis: Das folgt Takt, Tempo und Show-Zustand über das Netzwerk. Es ist keine Hardware-Bildsynchronisation: Jeder PC zeichnet in seiner eigenen Bildzeit, zwei Ausgaben können also um etwa ein Bild abweichen, und Grafikkarten, Displays und Projektoren bringen ihre eigene Verzögerung mit. Ein Master bedient bis zu 8 Follower. PCs automatisch zu finden, Verschlüsselung, IPv6 und eine gemeinsame Timeline sind nicht gebaut, und getestet wurde auf einem Rechner und mit simulierten Netzwerken, noch nicht in einem echten Netzwerk mit echten PCs.
+
 ## Die Cue-Liste {#cues}
 
 Die Cue-Liste löst zu einer Zeit des Timecodes ein beliebiges Steuerziel aus: einen Clip, eine Spalte, ein Deck oder einen Wert. Cue hinzufügen legt einen Cue beim aktuellen Timecode an, oder hinter dem letzten, wenn es keinen Timecode gibt. Jeder Cue hat eine Zeit, eine Aktion und bei Werten einen Wert. Test löst ihn sofort aus. Cues ausführen schaltet die Liste ein, und jeder Cue löst einmal aus, wenn der Timecode seine Zeit passiert. Nach großen Sprüngen lösen Cues nicht aus, ein Springen durch den Timecode löst also nicht alles dazwischen aus.
@@ -1273,6 +1292,7 @@ NyrexVJ legt alles in seinem Datenordner ab. Unter Windows ist das `%APPDATA%\Ny
 | `settings.json` | Deine Programm-Einstellungen, einschließlich Ausgänge, Bühne und Sync |
 | `controls.json` | MIDI-Zuordnungen |
 | `cues.json` | Die Cue-Liste |
+| `netsync_key` | Der Schlüssel des Netzwerk-Syncs (privat halten, steht in keinem Paket) |
 | `timeline.json` | Die Spuren der Show-Zeitleiste |
 | `autosave.json` und `recovery` | Die letzte Sitzung und eine rotierende Reihe von Autosaves |
 | `presets` | Deine eigenen Presets |
@@ -1381,6 +1401,9 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--shader-editor-uitest` | Den Shader-Editor mit echten Tasten- und Mausereignissen bedienen, prüfen, was er enthält, und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis |
 | `--routing-selftest [BILDER]` | Das Video-Routing in der echten Engine prüfen und beenden, mit einer Bildanzahl dahinter für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--routing-demo` | Ein kleines Beispiel mit Routing-Clips aufbauen und das Fenster Video-Routing öffnen, für Screenshots |
+| `--netsync-selftest` | Den Netzwerk-Sync in der echten Engine in beiden Rollen mit einem verlustbehafteten Relais prüfen und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis; er ersetzt die Schlüsseldatei für den Lauf und legt sie zurück, nutze also `NYREXVJ_DATA_DIR` |
+| `--netsync-report DATEI` | Beim Beenden einen JSON-Bericht über den Netzwerk-Sync schreiben: Rolle, Zustand, Zähler, Uhr, jeder synchronisierte Regler und eine Beat-Probe pro Bild |
+| `--run-seconds N` | Das Programm nach N Sekunden Echtzeit schließen, für Tests |
 
 ## Tests und Messungen {#cli-tests}
 

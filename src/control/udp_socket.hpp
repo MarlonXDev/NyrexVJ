@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -14,6 +15,11 @@ public:
 
     bool open(int port, bool allowRemote, std::string& error);
     bool openShared(int port, std::string& error);
+    bool openExclusive(int port, bool allowRemote, std::string& error);
+    int localPort() const;
+    int receiveFrom(unsigned char* buffer, int capacity, std::uint32_t& address, std::uint16_t& port);
+    bool sendTo(std::uint32_t address, std::uint16_t port, const unsigned char* data, int size);
+    static bool parseIpv4(const std::string& host, std::uint32_t& address);
     void close();
     bool isOpen() const;
     int receive(unsigned char* buffer, int capacity);

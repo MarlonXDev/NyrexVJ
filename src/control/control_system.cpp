@@ -123,6 +123,10 @@ void ControlSystem::takeSyncMessages(std::vector<MidiMessage>& out) {
     sync_.clear();
 }
 
+bool ControlSystem::setTarget(int target, float value) {
+    return router_.set(target, value, false);
+}
+
 bool ControlSystem::fireTarget(const std::string& id, float value) {
     const int target = controlTargetIndex(id);
     if (target < 0) {

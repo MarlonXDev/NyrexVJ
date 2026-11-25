@@ -7,11 +7,13 @@
 #include "app/routing_selftest.hpp"
 #include "app/shader_editor_selftest.hpp"
 #include "app/gpu_particle_selftest.hpp"
+#include "app/netsync_selftest.hpp"
 #include "app/output_selftest.hpp"
 #include "app/pack_cli.hpp"
 #include "app/record_selftest.hpp"
 #include "app/scene_selftest.hpp"
 #include "app/shader_selftest.hpp"
+#include "control/netsync_show.hpp"
 #include "core/frame_pacer.hpp"
 #include "core/frame_stats.hpp"
 #include "core/log.hpp"
@@ -32,7 +34,9 @@
 #include <cstdio>
 #include <algorithm>
 #include <cstdlib>
+#include <chrono>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
@@ -69,6 +73,9 @@ struct Options {
     int gpuParticleSelfTestBench = 0;
     bool gpuDiagSelfTest = false;
     bool routingSelfTest = false;
+    bool netSyncSelfTest = false;
+    double runSeconds = 0.0;
+    std::string netSyncReport;
     bool routingDemo = false;
     int routingSelfTestBench = 0;
     int gpuDiagSelfTestBench = 0;
@@ -175,6 +182,12 @@ Options parseOptions(int argc, char** argv) {
             if (i + 1 < argc && argv[i + 1][0] != '-') {
                 options.gpuDiagSelfTestBench = std::max(0, std::atoi(argv[++i]));
             }
+        } else if (arg == "--netsync-selftest") {
+            options.netSyncSelfTest = true;
+        } else if (arg == "--netsync-report" && hasValue) {
+            options.netSyncReport = argv[++i];
+        } else if (arg == "--run-seconds" && hasValue) {
+            options.runSeconds = std::max(0.0, std::atof(argv[++i]));
         } else if (arg == "--routing-demo") {
             options.routingDemo = true;
         } else if (arg == "--routing-selftest") {
@@ -505,7 +518,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.netSyncSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -530,6 +543,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runGpuParticleSelfTest(app.engine(), options.gpuParticleSelfTestBench, options.benchOut);
         } else if (options.gpuDiagSelfTest) {
             benchExit = nvj::runGpuDiagSelfTest(app.engine(), options.gpuDiagSelfTestBench, options.benchOut);
+        } else if (options.netSyncSelfTest) {
+            benchExit = nvj::runNetSyncSelfTest(app, options.benchOut);
         } else if (options.routingSelfTest) {
             benchExit = nvj::runRoutingSelfTest(app.engine(), options.routingSelfTestBench, options.benchOut);
         } else if (options.shaderEditorSelfTest) {
@@ -592,6 +607,8 @@ int main(int argc, char** argv) {
     nvj::FrameStats reportStats(200000);
     const double reportStart = glfwGetTime();
     double reportLast = -1.0;
+    const double loopStart = glfwGetTime();
+    app.netSync().recordSamples(!options.netSyncReport.empty());
     double reportSlept = 0.0;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -703,6 +720,10 @@ int main(int argc, char** argv) {
             }
         }
 
+        if (options.runSeconds > 0.0 && glfwGetTime() - loopStart >= options.runSeconds) {
+            break;
+        }
+
         if (options.frameReport > 0.0) {
             const double stamp = glfwGetTime();
             if (reportLast >= 0.0) {
@@ -719,6 +740,30 @@ int main(int argc, char** argv) {
                 break;
             }
         }
+    }
+
+    if (!options.netSyncReport.empty()) {
+        nlohmann::json report = app.netSync().report();
+        nlohmann::json controls = nlohmann::json::object();
+        const nvj::netsync::ShowLayout& show = nvj::netsync::ShowLayout::get();
+        for (size_t i = 0; i < show.targets.size(); ++i) {
+            controls[show.ids[i + 1]] = app.control().router().value(show.targets[i]);
+        }
+        report["controls"] = controls;
+        report["activeDeck"] = app.engine().comp.activeDeck;
+        nlohmann::json columns = nlohmann::json::array();
+        nlohmann::json triggers = nlohmann::json::array();
+        for (int layer = 0; layer < nvj::kLayerCount; ++layer) {
+            columns.push_back(app.engine().comp.layers[static_cast<size_t>(layer)].activeColumn);
+            triggers.push_back(app.engine().triggerCount(layer));
+        }
+        report["activeColumns"] = columns;
+        report["triggerCounts"] = triggers;
+        report["blackout"] = app.engine().blackout;
+        report["paused"] = app.engine().paused;
+        report["samples"] = app.netSync().samples();
+        std::ofstream file(options.netSyncReport);
+        file << report.dump(1) << '\n';
     }
 
     app.shutdown();

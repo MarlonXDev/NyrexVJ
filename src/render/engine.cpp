@@ -2494,6 +2494,7 @@ void Engine::trigger(int layer, int column) {
         return;
     }
     l.activeColumn = column;
+    ++triggerCounts_[static_cast<size_t>(layer)];
     layerClock_[static_cast<size_t>(layer)] = 0.0;
     restartShaderLayer(layer);
 }

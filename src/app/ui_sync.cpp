@@ -26,9 +26,9 @@ const ImVec4 kWarn(1.0f, 0.65f, 0.2f, 1.0f);
 constexpr float kLabelColumn = 170.0f;
 constexpr float kFieldWidth = 220.0f;
 
-const SyncMode kModes[] = {SyncMode::Auto, SyncMode::Manual, SyncMode::Audio, SyncMode::MidiClock, SyncMode::Timecode, SyncMode::DjLink};
+const SyncMode kModes[] = {SyncMode::Auto, SyncMode::Manual, SyncMode::Audio, SyncMode::MidiClock, SyncMode::Timecode, SyncMode::DjLink, SyncMode::Network};
 
-const SyncSource kRealSources[] = {SyncSource::DjLink, SyncSource::Timecode, SyncSource::MidiClock, SyncSource::Audio};
+const SyncSource kRealSources[] = {SyncSource::Network, SyncSource::DjLink, SyncSource::Timecode, SyncSource::MidiClock, SyncSource::Audio};
 
 const char* sourceLabel(SyncSource source) {
     switch (source) {
@@ -40,6 +40,8 @@ const char* sourceLabel(SyncSource source) {
         return tr("Timecode");
     case SyncSource::DjLink:
         return "Pro DJ Link";
+    case SyncSource::Network:
+        return tr("Network");
     default:
         return tr("Manual");
     }
@@ -145,6 +147,9 @@ void App::drawSyncPage() {
     ImGui::SeparatorText("Pro DJ Link");
     drawSyncDjLinkSection();
     ImGui::Spacing();
+    ImGui::SeparatorText(tr("Network sync"));
+    drawSyncNetworkSection();
+    ImGui::Spacing();
     ImGui::SeparatorText(tr("Cue list"));
     drawSyncCueSection();
 }
@@ -238,7 +243,7 @@ void App::drawSyncTimecodeSection() {
     ImGui::PopFont();
     ImGui::SameLine();
     if (sync_.timecodeActive()) {
-        const char* kind = sync_.timecodeSource() == TimecodeSource::Ltc ? "LTC" : "MTC";
+        const char* kind = sync_.timecodeSource() == TimecodeSource::Ltc ? "LTC" : sync_.timecodeSource() == TimecodeSource::Network ? tr("Network") : "MTC";
         const std::string text = std::string(kind) + "  " + rateText(sync_.timecode().rate);
         ImGui::AlignTextToFramePadding();
         ImGui::TextColored(kGood, "%s", text.c_str());
@@ -372,6 +377,247 @@ void App::drawSyncDjLinkSection() {
     ImGui::TextDisabled("%s", tr("Only the beat packets are used. NyrexVJ never announces itself as a player and gets no play state."));
 }
 
+void App::drawSyncNetworkSection() {
+    auto persist = [this]() { saveSettings(settings_); };
+    if (!netTextsReady_) {
+        std::snprintf(netHostText_, sizeof(netHostText_), "%s", settings_.netSyncHost.c_str());
+        std::snprintf(netNameText_, sizeof(netNameText_), "%s", settings_.netSyncName.c_str());
+        netTextsReady_ = true;
+    }
+    const netsync::Role current = netsync::roleFromName(settings_.netSyncRole);
+    const char* roleLabels[] = {tr("Off"), tr("Master"), tr("Follower")};
+    const netsync::Role roles[] = {netsync::Role::Off, netsync::Role::Master, netsync::Role::Follower};
+    int selected = 0;
+    for (int i = 0; i < 3; ++i) {
+        if (roles[i] == current) {
+            selected = i;
+        }
+    }
+    rowLabel(tr("Role"));
+    ImGui::SetNextItemWidth(kFieldWidth);
+    if (ImGui::BeginCombo("##netRole", roleLabels[selected])) {
+        for (int i = 0; i < 3; ++i) {
+            if (ImGui::Selectable(roleLabels[i], i == selected)) {
+                settings_.netSyncRole = netsync::roleName(roles[i]);
+                persist();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("The master sends beat, tempo, timecode and the show state. A follower takes them over. Media files are never sent: every PC needs its own copy."));
+
+    if (current == netsync::Role::Off) {
+        ImGui::TextDisabled("%s", tr("Off. NyrexVJ does not open a network port for the sync."));
+        return;
+    }
+
+    rowLabel(tr("Name of this PC"));
+    ImGui::SetNextItemWidth(kFieldWidth);
+    ImGui::InputTextWithHint("##netName", "NyrexVJ", netNameText_, sizeof(netNameText_));
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        settings_.netSyncName = netNameText_;
+        persist();
+    }
+
+    if (current == netsync::Role::Follower) {
+        rowLabel(tr("Address of the master"));
+        ImGui::SetNextItemWidth(kFieldWidth);
+        ImGui::InputTextWithHint("##netHost", "192.168.1.20", netHostText_, sizeof(netHostText_));
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            settings_.netSyncHost = netHostText_;
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("The IPv4 address of the master PC, for example 192.168.1.20. For two programs on one PC use 127.0.0.1."));
+    }
+
+    rowLabel(tr("Port"));
+    int port = settings_.netSyncPort;
+    ImGui::SetNextItemWidth(120.0f);
+    ImGui::InputInt("##netPort", &port, 0, 0);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        settings_.netSyncPort = std::clamp(port, 1024, 65535);
+        persist();
+    }
+
+    if (current == netsync::Role::Master) {
+        if (ImGui::Checkbox(trId("Allow other PCs in the network", "netAllowRemote"), &settings_.netSyncAllowRemote)) {
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("Off: only programs on this PC can connect. On: PCs in your network that have the key can connect."));
+        if (settings_.netSyncAllowRemote) {
+            warnText(tr("The port is open to your network. Only PCs with the key can take part, but the traffic is signed, not encrypted. Use it in a network you trust."));
+        }
+    } else {
+        if (ImGui::Checkbox(trId("Follow the controls", "netFollowControls"), &settings_.netSyncFollowControls)) {
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("Levels, colour, effects, macros and blackout of the master. The timeline and the cue list of this PC are paused while this is on."));
+        if (ImGui::Checkbox(trId("Follow decks and clips", "netFollowClips"), &settings_.netSyncFollowClips)) {
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("Starts the same clips and switches to the same deck as the master, when this PC has them."));
+        if (ImGui::Checkbox(trId("Follow beat, tempo and timecode", "netFollowClock"), &settings_.netSyncFollowClock)) {
+            persist();
+        }
+        ImGui::SetItemTooltip("%s", tr("Takes the beat clock and the timecode from the master and mirrors its play and pause."));
+    }
+
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    const ImGuiID showId = ImGui::GetID("netShowKey");
+    const bool showKey = storage->GetBool(showId, false);
+    const std::string fingerprint = netSync_.keyFingerprint();
+    rowLabel(tr("Key"));
+    if (current == netsync::Role::Master) {
+        char keyText[96] = {};
+        std::snprintf(keyText, sizeof(keyText), "%s", netSync_.keyHex().c_str());
+        ImGui::SetNextItemWidth(260.0f);
+        ImGui::InputText("##netKey", keyText, sizeof(keyText), ImGuiInputTextFlags_ReadOnly | (showKey ? 0 : ImGuiInputTextFlags_Password));
+        ImGui::SameLine();
+        if (ImGui::Button(showKey ? trId("Hide", "netKeyHide") : trId("Show", "netKeyShow"))) {
+            storage->SetBool(showId, !showKey);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(trId("Copy key", "netKeyCopy"))) {
+            ImGui::SetClipboardText(netSync_.keyHex().c_str());
+            toast(tr("Copied"));
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(trId("New key", "netKeyNew"))) {
+            netSync_.regenerateKey();
+        }
+        ImGui::SetItemTooltip("%s", tr("A new key disconnects every follower until it gets the new key."));
+        ImGui::TextDisabled("%s", tr("Copy the key to every follower PC. Do not share it or show it on a stream."));
+    } else {
+        ImGui::SetNextItemWidth(260.0f);
+        ImGui::InputTextWithHint("##netKeyPaste", tr("Paste the key of the master"), netKeyText_, sizeof(netKeyText_), ImGuiInputTextFlags_Password);
+        ImGui::SameLine();
+        if (ImGui::Button(trId("Use this key", "netKeyUse"))) {
+            if (netSync_.importKey(netKeyText_)) {
+                toast(tr("Key saved"));
+                std::memset(netKeyText_, 0, sizeof(netKeyText_));
+            } else {
+                toast(tr("This is not a valid key"));
+            }
+        }
+    }
+    if (!fingerprint.empty()) {
+        valueRow(tr("Key check code"), fingerprint.c_str());
+        ImGui::SetItemTooltip("%s", tr("Both PCs must show the same code. It is not the key and is safe to read out loud."));
+    } else if (current == netsync::Role::Follower) {
+        warnText(tr("No key yet. Paste the key of the master and press the button."));
+    }
+
+    if (!netSync_.error().empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, kBad);
+        ImGui::TextWrapped("%s", trMessage(netSync_.error()).c_str());
+        ImGui::PopStyleColor();
+    }
+    if (!netSync_.warning().empty()) {
+        warnText(trMessage(netSync_.warning()).c_str());
+    }
+    if (!netSync_.running()) {
+        return;
+    }
+
+    const ImVec4 good = kGood;
+    const ImVec4 warn = kWarn;
+    const ImVec4 bad = kBad;
+    if (current == netsync::Role::Master) {
+        const netsync::Master* master = netSync_.master();
+        const std::string listening = std::string(tr("Listening on port ")) + std::to_string(netSync_.localPort());
+        valueRow(tr("Status"), listening.c_str(), &good);
+        const std::vector<netsync::FollowerInfo> followers = master != nullptr ? master->followers() : std::vector<netsync::FollowerInfo>{};
+        valueRow(tr("Followers"), std::to_string(followers.size()).c_str());
+        for (const netsync::FollowerInfo& info : followers) {
+            std::string state = info.compat == netsync::Compat::ClockOnly ? tr("Clock only (other version)") : info.live ? tr("In sync") : tr("Connecting");
+            state += "   " + fixed(info.rtt * 1000.0, 1) + " ms";
+            const std::string label = info.name.empty() ? std::string("?") : info.name;
+            const ImVec4& color = info.compat == netsync::Compat::ClockOnly ? warn : info.live ? good : warn;
+            valueRow(label.c_str(), state.c_str(), &color);
+        }
+        if (master != nullptr) {
+            const netsync::Stats& s = master->stats();
+            const std::string counts = number(s.received) + " " + tr("received") + "   " + number(s.sent) + " " + tr("sent") + "   " + number(s.badAuth + s.malformed + s.replays) + " " + tr("refused");
+            valueRow(tr("Packets"), counts.c_str());
+        }
+        ImGui::TextDisabled("%s", tr("Followers cannot change the show on the master. They only send greetings, time pings and requests to resend."));
+    } else {
+        const netsync::Follower* follower = netSync_.follower();
+        if (follower == nullptr) {
+            return;
+        }
+        const netsync::FollowerPhase phase = follower->phase();
+        const char* phaseText = tr("Connecting");
+        const ImVec4* phaseColor = &warn;
+        if (phase == netsync::FollowerPhase::Live) {
+            phaseText = follower->compat() == netsync::Compat::ClockOnly ? tr("Clock only") : tr("In sync");
+            phaseColor = follower->compat() == netsync::Compat::ClockOnly ? &warn : &good;
+        } else if (phase == netsync::FollowerPhase::Syncing) {
+            phaseText = tr("Getting the show state");
+        } else if (phase == netsync::FollowerPhase::Lost) {
+            phaseText = tr("Master lost, holding the last state");
+            phaseColor = &bad;
+        }
+        valueRow(tr("Status"), phaseText, phaseColor);
+        if (follower->lastReject() == netsync::RejectCode::Version) {
+            warnText(tr("The master speaks a different protocol version. Update the older program."));
+        } else if (follower->lastReject() == netsync::RejectCode::Full) {
+            warnText(tr("The master has no free place for another follower."));
+        }
+        if (!follower->masterName().empty()) {
+            const std::string master = follower->masterName() + "  (" + follower->masterVersion() + ")";
+            valueRow(tr("Master"), master.c_str());
+        }
+        if (phase == netsync::FollowerPhase::Live && follower->compat() == netsync::Compat::ClockOnly) {
+            warnText(tr("The master has a different program version with another show layout. Only the beat clock is followed, controls and clips are not."));
+        }
+        const netsync::ClockView view = netSync_.followingClock() ? follower->clock(steadyNowSeconds()) : netsync::ClockView{};
+        if (view.valid) {
+            valueRow(tr("Clock"), view.locked ? tr("Locked") : tr("Adjusting"), view.locked ? &good : &warn);
+            const std::string detail = fixed(view.offset * 1000.0, 1) + " ms " + tr("offset") + "   " + fixed(view.roundTrip * 1000.0, 1) + " ms " + tr("round trip") + "   " + fixed(view.jitter * 1000.0, 1) + " ms " + tr("jitter") + "   " + fixed(view.driftPpm, 0) + " ppm";
+            valueRow(tr("Measured"), detail.c_str());
+            valueRow(tr("Tempo"), (fixed(view.bpm, 2) + " BPM" + (view.running ? "" : std::string("  ") + tr("paused"))).c_str());
+        } else if (settings_.netSyncFollowClock && phase == netsync::FollowerPhase::Live) {
+            valueRow(tr("Clock"), tr("Waiting for the clock of the master"), &warn);
+        }
+        const SyncMode mode = syncModeFromName(settings_.syncMode.c_str());
+        if (settings_.netSyncFollowClock && mode != SyncMode::Auto && mode != SyncMode::Manual && mode != SyncMode::Network) {
+            warnText(tr("The clock source of this PC is set to something else, so the network clock is not used. Choose Automatic or Network as clock source."));
+        }
+        const netsync::ApplyStats& applied = netSync_.applyStats();
+        const std::string counts = number(applied.controls) + " " + tr("controls") + "   " + number(applied.clipsStarted) + " " + tr("clips") + "   " + number(applied.decksSwitched) + " " + tr("deck switches");
+        valueRow(tr("Applied"), counts.c_str());
+        const std::vector<netsync::Mismatch>& mismatches = netSync_.mismatches();
+        if (!mismatches.empty()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, kWarn);
+            const std::string title = std::string(tr("Different from the master")) + " (" + std::to_string(mismatches.size()) + ")";
+            ImGui::TextUnformatted(title.c_str());
+            ImGui::PopStyleColor();
+            ImGui::SetItemTooltip("%s", tr("These clips and decks are not the same on this PC. Clips that do not match are not started."));
+            int shown = 0;
+            for (const netsync::Mismatch& mismatch : mismatches) {
+                if (shown++ >= 10) {
+                    break;
+                }
+                std::string line;
+                if (mismatch.kind == netsync::MismatchKind::MissingDeck || mismatch.kind == netsync::MismatchKind::DifferentDeck) {
+                    line = std::string(tr("Deck ")) + std::to_string(mismatch.deck + 1) + ": " + mismatch.name + " " + (mismatch.kind == netsync::MismatchKind::MissingDeck ? tr("is not in use here") : tr("has another name here"));
+                } else {
+                    line = std::string(tr("Layer ")) + std::to_string(mismatch.layer + 1) + " / " + tr("column ") + std::to_string(mismatch.column + 1) + ": " + mismatch.name + " " + (mismatch.kind == netsync::MismatchKind::MissingClip ? tr("is missing on this PC") : tr("is another clip here"));
+                }
+                ImGui::BulletText("%s", line.c_str());
+            }
+            if (mismatches.size() > 10) {
+                ImGui::TextDisabled("+ %zu", mismatches.size() - 10);
+            }
+        }
+        if (phase == netsync::FollowerPhase::Lost) {
+            ImGui::TextDisabled("%s", tr("The tempo keeps running at the last value. Local timeline and cues stay paused. It reconnects on its own."));
+        }
+    }
+    ImGui::TextDisabled("%s", tr("This follows beat, tempo and show state over the network. It is not a hardware frame lock: two outputs can differ by about one frame."));
+}
+
 void App::drawSyncCueSection() {
     auto persist = [this]() { saveSettings(settings_); };
     std::vector<Cue>& cues = sync_.cues();
@@ -394,7 +640,9 @@ void App::drawSyncCueSection() {
     }
 
     FrameRate rate = FrameRate::Fps25;
-    if (sync_.timecodeSource() == TimecodeSource::Ltc) {
+    if (sync_.timecodeSource() == TimecodeSource::Network) {
+        rate = sync_.networkTracker().rate();
+    } else if (sync_.timecodeSource() == TimecodeSource::Ltc) {
         rate = sync_.ltcTracker().rate();
     } else if (sync_.timecodeSource() == TimecodeSource::Mtc) {
         rate = sync_.mtcTracker().rate();

@@ -1131,6 +1131,84 @@
       "test": "A-VR-4",
       "command": "NyrexVJ --fresh --no-welcome --audio-demo --routing-demo --frames 120 --screenshot routing.png",
       "notes": "the window opened in a real OpenGL context at 1700 x 1000 and showed the eight sources with live previews (layer 1 with two copies for the feedback layer, 15.9 MB), the status of the layer that plays Layers 1-2 (Working) and of the layer that plays Feedback: Layer 1 (Feedback, one frame late), the three sender choices (Spout set to Layer 1, not running) and 24.2 MB in 2 copies; looked at by the AI assistant in the screenshot, not by a person"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.48.0 (branch feature/multi-pc-sync, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "multi-pc-sync",
+      "test": "A-MS-1",
+      "command": "ctest -R nvj_netsync_tests",
+      "notes": "10,370 checks passed, including the clock estimator that no longer invents a drift from noise"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.48.0 (branch feature/multi-pc-sync, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "multi-pc-sync",
+      "test": "A-MS-2",
+      "command": "ctest -R nvj_netsync_show_tests",
+      "notes": "passed in the full run of 47 of 47 tests"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.48.0 (branch feature/multi-pc-sync, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "multi-pc-sync",
+      "test": "A-MS-3",
+      "command": "ctest -R nvj_netsync_transport_tests",
+      "notes": "passed in the full run of 47 of 47 tests, over real UDP sockets on the loopback interface"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.48.0 (branch feature/multi-pc-sync, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "multi-pc-sync",
+      "test": "A-MS-4",
+      "command": "NYREXVJ_DATA_DIR=/tmp/nvj-final/d1 NyrexVJ --fresh --no-update-check --no-welcome --netsync-selftest --bench-out result.json",
+      "notes": "64 checks passed, 0 failed; the relay dropped 57 packets; the follower beat was 5.3 ms mean and 5.6 ms worst from the master over 971 samples, 3.1 ms mean and 3.3 ms worst from the peer master; the update step cost 11.4 microseconds on average on a follower and 17.6 on a master; one follower took 1.09 kB/s idle and 2.94 kB/s with three faders moving; the missing clip of the master was listed in the mismatches"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.48.0 (branch feature/multi-pc-sync, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "multi-pc-sync",
+      "test": "A-MS-5",
+      "command": "xvfb-run -a python3 scripts/test_netsync_two_instances.py build/NyrexVJ --output result.json --seed 21",
+      "notes": "27 checks passed in 66 s with two real programs at 960 x 540 (about 135 to 145 ms a frame, software rendering); the beat error was 4.8 ms mean and 15.3 ms worst in the calm phase, 3.9 and 19.5 ms with 25 percent loss and jitter, 5.3 and 15.4 ms after a 6 s outage; the same test also passed with the seeds 11 and 12 earlier in the work"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.48.0 (branch feature/multi-pc-sync, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "multi-pc-sync",
+      "test": "A-MS-6",
+      "command": "python3 scripts/check_i18n.py",
+      "notes": "all 2491 translation keys covered, 69 of them new for network sync"
     }
   ]
 }

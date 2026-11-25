@@ -385,6 +385,7 @@ void App::shutdown() {
         return;
     }
     shutDown_ = true;
+    netSync_.shutdown(steadyNowSeconds());
     api_.shutdown();
     if (!recoveryPending()) {
         saveSession(engine_.comp);
@@ -632,7 +633,7 @@ void App::updateAudio(double dt) {
     audio_.update(dt, engine_.comp.bpm);
     const AudioFeatures& features = audio_.features();
     engine_.setAudio(features);
-    const SyncMode syncMode = syncModeFromName(settings_.syncMode.c_str());
+    const SyncMode syncMode = netSync_.effectiveSyncMode(syncModeFromName(settings_.syncMode.c_str()));
     const bool audioFollow = settings_.audioSyncBpm || syncMode == SyncMode::Audio;
     if (audioFollow && features.active) {
         SyncObservation presence;
@@ -655,13 +656,13 @@ void App::updateAudio(double dt) {
 void App::updateSync(double dt) {
     engine_.setQuantizeGrid(quantizeGridFromName(settings_.launchQuantize.c_str()));
     SyncConfig config;
-    config.mode = syncModeFromName(settings_.syncMode.c_str());
+    config.mode = netSync_.effectiveSyncMode(syncModeFromName(settings_.syncMode.c_str()));
     config.latencyMs = settings_.syncLatencyMs;
     config.barAlign = settings_.syncBarAlign;
     config.djLink = settings_.djLinkEnabled;
     config.djPlayer = settings_.djLinkPlayer;
     config.ltcDevice = settings_.ltcDevice;
-    config.cues = settings_.cuesEnabled;
+    config.cues = settings_.cuesEnabled && !netSync_.suppressesAutomation();
     sync_.configure(config);
     std::vector<MidiMessage> midi;
     control_.takeSyncMessages(midi);
@@ -670,6 +671,7 @@ void App::updateSync(double dt) {
     for (const Cue& cue : sync_.firedCues()) {
         control_.fireTarget(cue.target, cue.value);
     }
+    netSync_.noteCues(sync_.firedCues().size());
 }
 
 void App::frame(double dt) {
@@ -695,6 +697,17 @@ void App::frame(double dt) {
     api.allowRemote = settings_.apiAllowRemote;
     api_.configure(api);
     api_.update(dt, ImGui::GetIO().Framerate);
+    NetSyncSettings netSync;
+    netSync.role = netsync::roleFromName(settings_.netSyncRole);
+    netSync.port = settings_.netSyncPort;
+    netSync.allowRemote = settings_.netSyncAllowRemote;
+    netSync.host = settings_.netSyncHost;
+    netSync.name = settings_.netSyncName;
+    netSync.follow.controls = settings_.netSyncFollowControls;
+    netSync.follow.clips = settings_.netSyncFollowClips;
+    netSync.follow.clock = settings_.netSyncFollowClock;
+    netSync_.configure(netSync);
+    netSync_.update(dt, steadyNowSeconds());
     updateSync(dt);
     updateTimeline(dt);
     updateAudio(dt);
@@ -708,6 +721,7 @@ void App::frame(double dt) {
     memoryPolicy.lowerQuality = settings_.gpuMemoryLowerQuality;
     engine_.setMemoryPolicy(memoryPolicy);
     engine_.update(dt);
+    netSync_.afterEngineUpdate(steadyNowSeconds(), dt);
     updatePlugins();
     engine_.configureSpout(settings_.spoutInputs, spout_.active() ? std::string(spoutName_) : std::string(), settings_.spoutInputFlip);
     CameraMode cameraMode;

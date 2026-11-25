@@ -1063,6 +1063,25 @@ MIDI clock, start, stop and song position are followed. The MIDI device is chose
 
 Tick Listen for Pro DJ Link beats to follow the beat packets of DJ players that use Pro DJ Link in your local network. NyrexVJ opens a UDP listener on port 50001. It never announces itself as a player and sends nothing, so there is no play state and no master flag, only the beats. Choose which player to follow.
 
+## Network sync: several PCs {#sync-network}
+
+Two or more PCs that run NyrexVJ can follow one master: the beat, the tempo, play and pause, the timecode, the levels, colours, effects, macros and blackout, the deck and the clip that plays on each layer. Use it for a second output, for a second computer that carries a heavy layer, or for a backup that should stay warm. It is **off by default**. Open Settings, Sync and look for the block Network sync.
+
+1. **On the master PC** choose the role Master. Tick Allow other PCs in the network if the followers are other computers; leave it off for two programs on one PC. Press Copy key.
+2. **On each follower PC** choose the role Follower, type the IPv4 address of the master (for example `192.168.1.20`, or `127.0.0.1` for two programs on one PC) and the same port as on the master (9030 at the start), paste the key and press Use this key.
+3. **Compare the Key check code** on both pages. It is a short code made from the key, it is safe to read out loud and it must be the same on every PC.
+4. **Allow the UDP port** in the firewall of the master PC.
+
+The status of the follower goes from Connecting through Getting the show state to In sync. The page shows the offset, the round trip and the jitter of the clock, the tempo and how many controls, clips and deck switches were applied. Three ticks decide what a follower takes over: Follow the controls, Follow decks and clips, and Follow beat, tempo and timecode. While a follower follows the controls, its own timeline and cue list are paused, because they would fight the master.
+
+> Note: Media files are never sent. Every PC needs its own copy of the images, videos, models and shaders. A show package (File, Export show package) is a good way to put the same files on every PC. The master sends the names of its decks and clips, and a follower lists what is different here: a clip that only the master has, a cell that holds another clip, a deck that is not in use. A clip whose name differs is not started, so a wrong picture never plays by mistake.
+
+If the connection drops, the follower says Master lost, holding the last state: it keeps the last values, the tempo keeps running at the last value, its timeline and cues stay paused, and it reconnects on its own. After that only what changed on the master meanwhile is applied; something you edited on the follower that did not change on the master stays as you left it. If the two programs are different versions and their controls do not match, the follower shows Clock only (other version) and follows the beat alone.
+
+> Warning: Network sync is signed and not encrypted. Only a PC with the key can join or send, and a stranger cannot change the show, but someone in your network can read it. Use it in a network you trust, keep the key private, do not show it on a stream and press New key if it got out. A new key disconnects every follower until it has the new key.
+
+> Note: This follows beat, tempo and show state over the network. It is not a hardware frame lock: each PC draws at its own frame time, so two outputs can differ by about one frame, and graphics cards, displays and projectors add their own delay. A master serves up to 8 followers. Finding PCs automatically, encryption, IPv6 and a shared timeline are not built, and it was tested on one computer and with simulated networks, not yet on a real network with real PCs.
+
 ## The cue list {#cues}
 
 The cue list fires any control target at a time of the timecode: a clip, a column, a deck or a value. Add cue creates a cue at the current timecode, or after the last one if there is no timecode. Each cue has a time, an action and, for values, a value. Test fires it at once. Run cues turns the list on, and each cue fires once when the timecode passes its time. Cues do not fire after large jumps, so skipping through the timecode does not fire everything in between.
@@ -1273,6 +1292,7 @@ NyrexVJ stores everything in its data folder. On Windows that is `%APPDATA%\Nyre
 | `settings.json` | Your program settings, including outputs, stage and sync |
 | `controls.json` | MIDI mappings |
 | `cues.json` | The cue list |
+| `netsync_key` | The key of the network sync (keep it private, it is not in any package) |
 | `timeline.json` | The lanes of the show timeline |
 | `autosave.json` and `recovery` | The last session and a rotating set of autosaves |
 | `presets` | Your own presets |
@@ -1381,6 +1401,9 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--shader-editor-uitest` | Drive the shader editor with real key and mouse events, check what it holds and exit with code 0 or 1, with `--bench-out FILE.json` for the result |
 | `--routing-selftest [FRAMES]` | Check video routing in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--routing-demo` | Build a small example with route clips and open the Video routing window, for screenshots |
+| `--netsync-selftest` | Check the network sync in the real engine in both roles with a lossy relay and exit with code 0 or 1, with `--bench-out FILE.json` for the result; it replaces the key file for the run and puts it back, so use `NYREXVJ_DATA_DIR` |
+| `--netsync-report FILE` | Write a JSON report of the network sync when the program ends: role, state, counters, clock, every synced control and a beat sample per frame |
+| `--run-seconds N` | Close the program after N seconds of real time, for tests |
 
 ## Tests and measurements {#cli-tests}
 

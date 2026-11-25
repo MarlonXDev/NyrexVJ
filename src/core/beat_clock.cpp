@@ -30,9 +30,10 @@ constexpr std::array<Tuning, kSyncSourceCount> kTuning = {{
     {1.0, 0.1, 0.3},
     {0.5, 0.5, 1.0},
     {2.0, 0.5, 0.5},
+    {2.0, 0.5, 1.0},
 }};
 
-constexpr std::array<SyncSource, 4> kAutoOrder = {SyncSource::DjLink, SyncSource::Timecode, SyncSource::MidiClock, SyncSource::Audio};
+constexpr std::array<SyncSource, 5> kAutoOrder = {SyncSource::Network, SyncSource::DjLink, SyncSource::Timecode, SyncSource::MidiClock, SyncSource::Audio};
 
 int index(SyncSource source) {
     return static_cast<int>(source);
@@ -60,6 +61,8 @@ SyncSource modeSource(SyncMode mode) {
         return SyncSource::Timecode;
     case SyncMode::DjLink:
         return SyncSource::DjLink;
+    case SyncMode::Network:
+        return SyncSource::Network;
     default:
         return SyncSource::Manual;
     }
@@ -75,6 +78,8 @@ const char* syncSourceName(SyncSource source) {
         return "Timecode";
     case SyncSource::DjLink:
         return "Pro DJ Link";
+    case SyncSource::Network:
+        return "Network";
     default:
         return "Manual";
     }
@@ -92,6 +97,8 @@ const char* syncModeName(SyncMode mode) {
         return "timecode";
     case SyncMode::DjLink:
         return "djlink";
+    case SyncMode::Network:
+        return "network";
     default:
         return "auto";
     }
@@ -101,7 +108,7 @@ SyncMode syncModeFromName(const char* name) {
     if (name == nullptr) {
         return SyncMode::Auto;
     }
-    for (int i = 0; i <= static_cast<int>(SyncMode::DjLink); ++i) {
+    for (int i = 0; i <= static_cast<int>(SyncMode::Network); ++i) {
         const SyncMode mode = static_cast<SyncMode>(i);
         if (std::strcmp(name, syncModeName(mode)) == 0) {
             return mode;

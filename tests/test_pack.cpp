@@ -317,7 +317,7 @@ void testBuilderRejects(const fs::path& base) {
     Spec spec;
     spec.presets["ok.json"] = "{}";
     folder = makeFolder(base, spec);
-    writeBytes(folder / "presets" / "bad name?.json", "{}");
+    writeBytes(folder / "presets" / (std::string(120, 'a') + ".json"), "{}");
     BuildResult result = buildPackFromFolder(folder, destination, true, "0.42.0", "now");
     CHECK(!result.ok);
     CHECK(!result.problems.empty());

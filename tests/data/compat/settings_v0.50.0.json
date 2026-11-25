@@ -1,0 +1,459 @@
+{
+  "apiAllowRemote": false,
+  "apiEnabled": false,
+  "apiPort": 9020,
+  "audioBeatSensitivity": 0.5,
+  "audioDevice": "",
+  "audioGain": 1.0,
+  "audioSmoothing": 0.5,
+  "audioSyncBpm": false,
+  "autoInstall": true,
+  "cameraFps": 30,
+  "cameraHeight": 720,
+  "cameraInputs": [
+    "",
+    "",
+    "",
+    ""
+  ],
+  "cameraWidth": 1280,
+  "channel": "nightly",
+  "checkUpdates": false,
+  "convertCacheMb": 4096,
+  "convertFormat": "auto",
+  "convertMode": "automatic",
+  "cuesEnabled": true,
+  "design": 1,
+  "diagDroppedPerMinute": 5,
+  "diagMemoryPercent": 85,
+  "diagP99Percent": 150,
+  "diagWarnings": true,
+  "djLinkEnabled": false,
+  "djLinkPlayer": 0,
+  "dmx": {
+    "artnetEnabled": false,
+    "artnetFirstUniverse": 0,
+    "artnetHost": "127.0.0.1",
+    "artnetNet": 0,
+    "artnetPort": 6454,
+    "artnetRate": 30,
+    "lanes": [],
+    "stripAtTop": true,
+    "stripEnabled": false,
+    "stripPadUniverses": false
+  },
+  "failoverAutoTakeover": false,
+  "failoverEnabled": false,
+  "failoverHoldOutputs": true,
+  "failoverLeaderPort": 0,
+  "failoverLostAfter": 5.0,
+  "ffmpegHintDismissed": false,
+  "fpsLimit": 60,
+  "generatorClips": true,
+  "gpuMemoryBudgetMb": 0,
+  "gpuMemoryLowerQuality": false,
+  "gpuMemoryTrim": true,
+  "gpuParticleBudgetMb": 64,
+  "gpuParticles": false,
+  "hapDirect": true,
+  "language": "en",
+  "lastSeenVersion": "",
+  "launchQuantize": "off",
+  "ltcDevice": "",
+  "midiDevice": "",
+  "midiFeedback": false,
+  "midiOutDevice": "",
+  "ndiEnabled": false,
+  "ndiInputs": [
+    "",
+    "",
+    "",
+    ""
+  ],
+  "ndiName": "NyrexVJ",
+  "netSyncAllowRemote": false,
+  "netSyncFollowClips": true,
+  "netSyncFollowClock": true,
+  "netSyncFollowControls": true,
+  "netSyncHost": "127.0.0.1",
+  "netSyncName": "",
+  "netSyncPort": 9030,
+  "netSyncRole": "off",
+  "openOutputOnStart": false,
+  "oscAllowRemote": false,
+  "oscEnabled": false,
+  "oscOutEnabled": false,
+  "oscOutHost": "127.0.0.1",
+  "oscOutParams": [],
+  "oscOutPort": 9011,
+  "oscOutRate": 60,
+  "oscOutSpectrum": true,
+  "oscPort": 9010,
+  "outputFrameLock": true,
+  "outputMonitor": 0,
+  "outputs": [
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.0,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 1.0
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": true,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": false,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 0,
+      "name": "Output 1",
+      "slice": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    },
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.0,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 1.0
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": false,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": false,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 1,
+      "name": "Output 2",
+      "slice": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    },
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.0,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 1.0
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": false,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": false,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 2,
+      "name": "Output 3",
+      "slice": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    },
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.0,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 1.0
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": false,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": false,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 3,
+      "name": "Output 4",
+      "slice": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    }
+  ],
+  "particleLimit": 4096,
+  "perfBudgetFps": 60,
+  "prewarmNext": true,
+  "recordAudio": true,
+  "recordCrashSafe": true,
+  "recordFolder": "",
+  "recordFps": 60,
+  "recordHeight": 0,
+  "recordProfile": "h264",
+  "recordQuality": 70,
+  "recordWidth": 0,
+  "renderQuality": 0,
+  "restoreSession": true,
+  "showStatusBar": false,
+  "showTimings": true,
+  "spoutEnabled": false,
+  "spoutInputFlip": false,
+  "spoutInputs": [
+    "",
+    "",
+    "",
+    ""
+  ],
+  "spoutName": "NyrexVJ",
+  "syncBarAlign": true,
+  "syncLatencyMs": 0.0,
+  "syncMode": "manual",
+  "theme": "studio",
+  "timelineEnabled": false,
+  "timelineLost": "hold",
+  "timelineOverride": "segment",
+  "timelineSource": "auto",
+  "uiScale": 1.0,
+  "videoDecoder": "auto",
+  "videoGpuConvert": true,
+  "vrchat": {
+    "enabled": false,
+    "host": "127.0.0.1",
+    "params": [],
+    "port": 9000,
+    "rate": 30
+  },
+  "vsync": false
+}

@@ -15,12 +15,17 @@ struct SoakPlan {
     int lookEvery = 20;
     int deckEvery = 7;
     int qualityEvery = 11;
+    bool media = false;
+    int mediaEvery = 2;
+    int clearEvery = 9;
 };
 
 struct SoakEvents {
     bool look = false;
     bool deck = false;
     bool quality = false;
+    bool media = false;
+    bool clear = false;
 };
 
 bool parseSoakSpec(const std::string& text, SoakPlan& plan, std::string& error);

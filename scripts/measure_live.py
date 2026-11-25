@@ -265,8 +265,20 @@ def series(samples, getter):
     return values
 
 
+def live_conditions(args):
+    return {
+        "system": getattr(args, "system", "") or "",
+        "driver": getattr(args, "driver", "") or "",
+        "build": getattr(args, "build", "") or "",
+        "resolution": getattr(args, "resolution", "") or "",
+        "clips": getattr(args, "clips", "") or "",
+        "effects": getattr(args, "effects", "") or "",
+        "durationSeconds": args.seconds,
+    }
+
+
 def build_report(args, mode, samples):
-    report = {"tool": "measure_live.py", "platform": sys.platform, "gpu_mode": mode, "seconds": args.seconds, "interval": args.interval, "samples": samples, "summary": {}}
+    report = {"schema": "nyrexvj-live-report", "tool": "measure_live.py", "platform": sys.platform, "gpu_mode": mode, "seconds": args.seconds, "interval": args.interval, "conditions": live_conditions(args), "samples": samples, "summary": {}}
     for name in args.process:
         cpu = series(samples, lambda e: e["processes"][name]["cpu_percent_of_one_core"])
         rss = series(samples, lambda e: e["processes"][name]["rss_mib"])
@@ -292,6 +304,12 @@ def main():
     parser.add_argument("--process", action="append", default=None)
     parser.add_argument("--gpu", choices=["auto", "nvidia", "amd", "windows", "none"], default="auto")
     parser.add_argument("--out", default="")
+    parser.add_argument("--system", default="")
+    parser.add_argument("--driver", default="")
+    parser.add_argument("--build", default="")
+    parser.add_argument("--resolution", default="")
+    parser.add_argument("--clips", default="")
+    parser.add_argument("--effects", default="")
     args = parser.parse_args()
     if args.process is None:
         args.process = ["NyrexVJ"]

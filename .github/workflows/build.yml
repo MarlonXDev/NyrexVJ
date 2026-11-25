@@ -47,6 +47,9 @@ jobs:
           python scripts/check_test_matrix.py
           python scripts/build_manual_site.py --check
           python scripts/test_measure_live.py
+          python scripts/check_release.py
+          python scripts/test_release_gate.py
+          python scripts/test_check_release.py
 
       - name: Get the FFmpeg headers and libraries
         shell: pwsh
@@ -136,6 +139,9 @@ jobs:
           python3 scripts/check_test_matrix.py
           python3 scripts/build_manual_site.py --check
           python3 scripts/test_measure_live.py
+          python3 scripts/check_release.py
+          python3 scripts/test_release_gate.py
+          python3 scripts/test_check_release.py
 
       - name: Install build and test packages
         run: |
@@ -224,12 +230,53 @@ jobs:
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data
           fi
-          build/NyrexVJ --fresh --no-update-check --no-welcome --soak 6 --bench-out "$RUNNER_TEMP/soak.json"
-          test -s "$RUNNER_TEMP/soak.json"
           bash scripts/test_restart.sh build/NyrexVJ
           build/NyrexVJ --bench-nodes 5
           build/NyrexVJ --frames 30 --fresh --no-update-check --screenshot "$RUNNER_TEMP/smoke.png"
           test -s "$RUNNER_TEMP/smoke.png"
+
+      - name: Soak smoke tests through the release gate (software OpenGL only)
+        run: |
+          if [ -n "${FFMPEG_SDK:-}" ]; then
+            export LD_LIBRARY_PATH="$PWD/build/ffmpeg"
+          fi
+          gates="$RUNNER_TEMP/gates"
+          media="$RUNNER_TEMP/soak-media"
+          mkdir -p "$gates" "$media"
+          cp tests/data/models/morph_cube.glb tests/data/models/skin_arm.glb tests/data/test_alpha.png "$media/"
+          if [ -n "${FFMPEG_SDK:-}" ]; then
+            cp tests/data/test_h264.mp4 tests/data/test_hap.mov tests/data/test_odd_size.avi "$media/"
+          fi
+          {
+            echo "## Soak smoke tests"
+            echo
+            echo "These runs use Mesa llvmpipe, a software renderer, on a virtual display. They show that the program starts, runs, changes clips and ends without a crash or an OpenGL error. They say nothing about a real graphics card, a projector, a driver or VRChat running next to it. Real hardware results are recorded by hand in tests/hardware/results.json."
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          set +e
+          NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-soak" build/NyrexVJ --fresh --no-update-check --no-welcome --soak 6 --bench-out "$gates/soak.json"
+          soak_code=$?
+          NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-soakmedia" build/NyrexVJ --fresh --no-update-check --no-welcome --soak 20 --soak-media "$media" --bench-out "$gates/soak-media.json"
+          media_code=$?
+          set -e
+          test -s "$gates/soak.json"
+          test -s "$gates/soak-media.json"
+          failed=0
+          python3 scripts/release_gate.py "$gates/soak.json" --profile smoke --exit-code "$soak_code" --json "$gates/gate-soak.json" --summary "$GITHUB_STEP_SUMMARY" || failed=1
+          python3 scripts/release_gate.py "$gates/soak-media.json" --profile smoke --exit-code "$media_code" --json "$gates/gate-soak-media.json" --summary "$GITHUB_STEP_SUMMARY" || failed=1
+          exit $failed
+
+      - name: Keep the soak reports (software OpenGL)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-software-gl
+          path: ${{ runner.temp }}/gates
+          if-no-files-found: ignore
+
+      - name: Check the release state (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 scripts/check_release.py --release
 
       - name: Check the dependencies of the program
         run: scripts/check_linux_deps.sh build/NyrexVJ 2.35

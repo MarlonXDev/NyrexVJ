@@ -1,0 +1,20 @@
+{
+  "cues": [
+    {
+      "seconds": 1.5,
+      "target": "master/level",
+      "value": 0.5
+    },
+    {
+      "seconds": 10.0,
+      "target": "deck/next",
+      "value": 1.0
+    },
+    {
+      "seconds": 20.25,
+      "target": "master/blackout",
+      "value": 0.0
+    }
+  ],
+  "version": 1
+}

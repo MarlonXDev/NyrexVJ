@@ -1,0 +1,327 @@
+{
+  "format": "nyrexvj-venue",
+  "name": "Fixture Venue",
+  "outputs": [
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.0,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 1.0
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": true,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": false,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 0,
+      "name": "Output 1",
+      "slice": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    },
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.10000000149011612,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 0.800000011920929
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": true,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": true,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 2,
+      "name": "Left wall",
+      "slice": [
+        0.0,
+        0.0,
+        0.550000011920929,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    },
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.0,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 1.0
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": false,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": false,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 2,
+      "name": "Output 3",
+      "slice": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    },
+    {
+      "blend": {
+        "blackLevel": 0.0,
+        "bottom": 0.0,
+        "gamma": 2.200000047683716,
+        "left": 0.0,
+        "power": 2.0,
+        "right": 0.0,
+        "top": 0.0
+      },
+      "brightness": 1.0,
+      "color": {
+        "black": 0.0,
+        "blue": 1.0,
+        "contrast": 1.0,
+        "gamma": 1.0,
+        "green": 1.0,
+        "red": 1.0,
+        "saturation": 1.0
+      },
+      "corners": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "delayFrames": 0,
+      "enabled": false,
+      "fill": false,
+      "flipX": false,
+      "flipY": false,
+      "fullscreen": false,
+      "mask": {
+        "enabled": false,
+        "feather": 0.0,
+        "invert": false,
+        "points": []
+      },
+      "monitor": 3,
+      "name": "Output 4",
+      "slice": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "slices": [],
+      "warp": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "warpColumns": 2,
+      "warpRows": 2
+    }
+  ],
+  "version": 1
+}

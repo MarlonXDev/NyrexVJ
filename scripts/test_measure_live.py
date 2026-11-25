@@ -153,6 +153,17 @@ class LinuxLive(unittest.TestCase):
         self.assertFalse(gone["seen_running"])
         self.assertEqual(gone["cpu_percent_of_one_core"], {"count": 0})
         self.assertEqual(report["summary"]["gpu_cards"], {})
+        self.assertEqual(report["schema"], "nyrexvj-live-report")
+        self.assertEqual(report["conditions"]["durationSeconds"], 2.2)
+        self.assertEqual(report["conditions"]["clips"], "")
+
+    def test_conditions_are_carried_into_the_report(self):
+        args = argparse.Namespace(seconds=5.0, interval=1.0, process=["x"], gpu="none", out="", system="Windows 11", driver="555.00", build="0.50.0", resolution="1920x1080", clips="Plasma", effects="Glow")
+        conditions = m.live_conditions(args)
+        self.assertEqual(conditions["system"], "Windows 11")
+        self.assertEqual(conditions["driver"], "555.00")
+        self.assertEqual(conditions["resolution"], "1920x1080")
+        self.assertEqual(conditions["effects"], "Glow")
 
 
 if __name__ == "__main__":

@@ -284,6 +284,15 @@ Off by default; with Use hot standby off the failover system does nothing, and a
 - **Measured here.** `NyrexVJ --failover-selftest --bench-out result.json` on a software renderer (Mesa llvmpipe, two cores, two runs after the last change): the update step took 12.6 and 13.1 microseconds on average, the worst single call 647 and 131 microseconds. Detection of a lost primary 3.02 s with the lost-after time set to 3 s; the leader answered a probe follower 0.035 s after the decision in the self test and 0.08 to 0.13 s in real programs. These are the numbers of a loopback network and software rendering at 8 to 13 frames per second.
 - **Not measured.** A real network, two real PCs, 60 frames a second with a full show, a graphics card, Windows, the cost next to VRChat and the cost of the readiness report with a very large show (the fingerprint walks the used decks and their cells once a second).
 
+## What is new in 0.50.0: release gates and the media churn run
+
+[ADR 0043](adr/0043-release-quality-gates.md), [RELEASE.md](RELEASE.md). The limits for frame times that the soak run never had are written down in `tests/hardware/gates.json` and judged by `scripts/release_gate.py`. Nothing here changes the render loop.
+
+- **Where the cost goes.** A normal run builds the `conditions` block once at the start and once at the end (a few string reads and a call for the system information). A media run (`--soak-media`) imports the files of its folder before the run, launches and clears clips on a timer, and once a second counts the layers whose clip has failed. Nothing is added to a frame.
+- **Measured here.** A 30 s media run on a software renderer (Mesa llvmpipe, two cores, 1920 x 1080, six files: two 3D models, an image and three videos): 417 frames, 335 of them over the budget of one frame period, which is what a software renderer does and says nothing about a card; 14 launches, 3 clears, no clip failed, no OpenGL error. A 20 s media run with an image and two 3D models also passed.
+- **Limits proposed for a real card** (60 fps target, period 16.7 ms): P95 of the work time within one period, P99 within 1.5 periods, longest frame 100 ms, at most 2 percent of frames over a period, at most 0.5 percent missed frames, at least 97 percent of the target frame rate. They are starting points, not results.
+- **Not measured.** Any graphics card, any frame time against these limits, VRAM growth against the card (`scripts/measure_live.py` against `nvidia-smi` or the Windows counters), a run on Windows, a long media run with video decoding through a hardware decoder.
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

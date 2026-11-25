@@ -1,0 +1,45 @@
+{
+  "schema": "nyrexvj-release-gates",
+  "schemaVersion": 1,
+  "status": "Proposed limits. The maintainer decides the real ones. Nothing here has been measured on a real graphics card.",
+  "profiles": {
+    "smoke": {
+      "title": "Every change in CI: a short run on software OpenGL",
+      "minSeconds": 5,
+      "judgeGrowth": false,
+      "frameTimes": "sanity",
+      "requireClass": null
+    },
+    "soak": {
+      "title": "A long run on any renderer: crash freedom, growth and a stall check",
+      "minSeconds": 600,
+      "judgeGrowth": true,
+      "frameTimes": "sanity",
+      "requireClass": null
+    },
+    "hardware-release": {
+      "title": "A release on a real graphics card: crash freedom, growth and frame times",
+      "minSeconds": 1800,
+      "judgeGrowth": true,
+      "frameTimes": "performance",
+      "requireClass": "gpu-reported"
+    }
+  },
+  "sanity": {
+    "maxWorstIntervalMs": 10000,
+    "maxP99ToP50": 20.0,
+    "minAchievedFps": 0.5
+  },
+  "performance": {
+    "p95PeriodFactor": 1.0,
+    "p99PeriodFactor": 1.5,
+    "maxOverBudgetFraction": 0.02,
+    "maxMissedFraction": 0.005,
+    "maxWorkMs": 100.0,
+    "minFpsFactor": 0.97
+  },
+  "live": {
+    "requiredConditions": ["build", "resolution", "clips", "effects"],
+    "maxLiveRssGrowthJudged": true
+  }
+}

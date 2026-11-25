@@ -618,6 +618,66 @@ size_t processMemoryBytes() {
     return static_cast<size_t>(counters.WorkingSetSize);
 }
 
+namespace {
+
+std::string narrowText(const std::wstring& text) {
+    if (text.empty()) {
+        return {};
+    }
+    const int size = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
+    if (size <= 0) {
+        return {};
+    }
+    std::string out(static_cast<size_t>(size), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), out.data(), size, nullptr, nullptr);
+    return out;
+}
+
+}
+
+SystemInfo systemInfo() {
+    SystemInfo info;
+    info.os = "Windows";
+    SYSTEM_INFO system{};
+    GetNativeSystemInfo(&system);
+    info.logicalCores = static_cast<int>(system.dwNumberOfProcessors);
+    switch (system.wProcessorArchitecture) {
+    case PROCESSOR_ARCHITECTURE_AMD64:
+        info.architecture = "x86_64";
+        break;
+    case PROCESSOR_ARCHITECTURE_ARM64:
+        info.architecture = "arm64";
+        break;
+    case PROCESSOR_ARCHITECTURE_INTEL:
+        info.architecture = "x86";
+        break;
+    default:
+        info.architecture = "unknown";
+        break;
+    }
+    MEMORYSTATUSEX memory{};
+    memory.dwLength = sizeof(memory);
+    if (GlobalMemoryStatusEx(&memory)) {
+        info.memoryBytes = memory.ullTotalPhys;
+    }
+    wchar_t name[256] = {};
+    DWORD size = sizeof(name);
+    if (RegGetValueW(HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", L"ProcessorNameString", RRF_RT_REG_SZ, nullptr, name, &size) == ERROR_SUCCESS) {
+        info.cpuName = narrowText(name);
+    }
+    using VersionFn = LONG(WINAPI*)(OSVERSIONINFOEXW*);
+    const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    const auto versionFn = ntdll != nullptr ? reinterpret_cast<VersionFn>(reinterpret_cast<void*>(GetProcAddress(ntdll, "RtlGetVersion"))) : nullptr;
+    if (versionFn != nullptr) {
+        OSVERSIONINFOEXW version{};
+        version.dwOSVersionInfoSize = sizeof(version);
+        if (versionFn(&version) == 0) {
+            info.osVersion = std::to_string(version.dwMajorVersion) + "." + std::to_string(version.dwMinorVersion) + "." + std::to_string(version.dwBuildNumber);
+        }
+    }
+    return info;
+}
+
 int processThreadCount() {
     const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
     if (snapshot == INVALID_HANDLE_VALUE) {

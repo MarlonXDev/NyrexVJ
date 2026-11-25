@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <thread>
 #include <sys/resource.h>
+#include <sys/utsname.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -96,6 +97,40 @@ double processCpuSeconds() {
     }
     const auto seconds = [](const timeval& value) { return static_cast<double>(value.tv_sec) + static_cast<double>(value.tv_usec) * 1.0e-6; };
     return seconds(usage.ru_utime) + seconds(usage.ru_stime);
+}
+
+SystemInfo systemInfo() {
+    SystemInfo info;
+    struct utsname name{};
+    if (uname(&name) == 0) {
+        info.os = name.sysname;
+        info.osVersion = name.release;
+        info.architecture = name.machine;
+    }
+    info.logicalCores = static_cast<int>(std::thread::hardware_concurrency());
+    const long pages = sysconf(_SC_PHYS_PAGES);
+    const long pageSize = sysconf(_SC_PAGESIZE);
+    if (pages > 0 && pageSize > 0) {
+        info.memoryBytes = static_cast<unsigned long long>(pages) * static_cast<unsigned long long>(pageSize);
+    }
+#ifdef __linux__
+    std::ifstream cpu("/proc/cpuinfo");
+    std::string line;
+    while (std::getline(cpu, line)) {
+        if (line.rfind("model name", 0) == 0) {
+            const size_t colon = line.find(':');
+            if (colon != std::string::npos) {
+                size_t begin = colon + 1;
+                while (begin < line.size() && (line[begin] == ' ' || line[begin] == '\t')) {
+                    ++begin;
+                }
+                info.cpuName = line.substr(begin);
+            }
+            break;
+        }
+    }
+#endif
+    return info;
 }
 
 int processThreadCount() {

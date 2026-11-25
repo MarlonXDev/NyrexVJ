@@ -2208,6 +2208,136 @@
           "criteria": "Proposed: the self test passes, the leader port can be opened and the takeover works in both directions."
         }
       ]
+    },
+    {
+      "id": "release-quality",
+      "title": "Release quality: gates for crash freedom, growth and frame times, the compatibility matrix, old and new file formats, and the release checklist",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/RELEASE.md",
+        "docs/COMPATIBILITY.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/TESTING.md",
+        "docs/PERFORMANCE.md",
+        "docs/adr/0043-release-quality-gates.md"
+      ],
+      "sources": [
+        "src/core/run_conditions.cpp",
+        "src/app/soak.cpp",
+        "src/core/soak_plan.cpp",
+        "src/platform/platform_other.cpp",
+        "src/platform/platform_win.cpp",
+        "scripts/release_gate.py",
+        "scripts/check_release.py",
+        "scripts/measure_live.py",
+        "tests/test_release.cpp",
+        "tests/test_compat.cpp",
+        "tests/hardware/gates.json"
+      ],
+      "automated": [
+        {
+          "id": "A-RQ-1",
+          "kind": "ctest",
+          "name": "nvj_release_tests",
+          "note": "which renderer counts as software, virtual or reported, the vendor of the card, the conditions block of a report (system, build, driver, resolution, clips, effects, duration) and the plan of the media churn run"
+        },
+        {
+          "id": "A-RQ-2",
+          "kind": "ctest",
+          "name": "nvj_compat_tests",
+          "note": "frozen files written by release 0.50.0 (preset, settings, venue, cues, timeline, controller profile) load and are written again unchanged, older shapes written by hand load with defaults, a newer venue setup or controller profile is refused with a message"
+        },
+        {
+          "id": "A-RQ-3",
+          "kind": "cli",
+          "command": "NYREXVJ_DATA_DIR=dir NyrexVJ --fresh --no-update-check --no-welcome --soak 30 --soak-media media-folder --bench-out result.json",
+          "note": "media churn: clips from a folder are imported, launched and cleared on a timer, no playing clip may fail, the report says soak-media and names the clips; on software OpenGL it proves the flow, not the speed"
+        },
+        {
+          "id": "A-RQ-4",
+          "kind": "script",
+          "command": "python3 scripts/test_release_gate.py",
+          "note": "the release gate with made-up good and bad reports: crash exit code, cut-off report, growth, frame time percentiles, missing conditions, and that a software renderer can never pass the hardware profile"
+        },
+        {
+          "id": "A-RQ-5",
+          "kind": "script",
+          "command": "python3 scripts/release_gate.py result.json --profile smoke --exit-code 0",
+          "note": "the gate on a real software OpenGL run in the continuous build; it writes the summary that says no real graphics card or projector was involved"
+        },
+        {
+          "id": "A-RQ-6",
+          "kind": "script",
+          "command": "python3 scripts/check_release.py",
+          "note": "version in CMakeLists.txt, both changelogs, both READMEs, every decision file in the decision table, every command line option in a document, every script a workflow names, the release documents"
+        },
+        {
+          "id": "A-RQ-7",
+          "kind": "script",
+          "command": "python3 scripts/test_check_release.py",
+          "note": "the consistency check with trees that drift on purpose"
+        },
+        {
+          "id": "A-RQ-8",
+          "kind": "script",
+          "command": "python3 scripts/test_measure_live.py",
+          "note": "the outside measurement now writes a schema and its conditions into the report"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-RQ-1",
+          "title": "Release soak on a real graphics card with the hardware gate",
+          "needs": "A PC with a real graphics card and its driver, the output resolution of the show, an idle desktop, a folder with at least six clips of the codecs the show uses",
+          "steps": [
+            "Note the system, the driver version, the resolution, the clips and the effects of the show in a copy of docs/templates/measurement-report.json.",
+            "Run NyrexVJ --fresh --no-update-check --no-welcome --soak 1800 --soak-media FOLDER --bench-out soak.json, and in a second window scripts/measure_live.py --seconds 1800 --out device.json with the same conditions given as options.",
+            "Run python3 scripts/release_gate.py soak.json --profile hardware-release --exit-code CODE --live device.json and keep the output.",
+            "Record the run in tests/hardware/results.json with the conditions block."
+          ],
+          "measure": "every gate of the hardware-release profile, VRAM curve of the card in device.json",
+          "criteria": "Proposed: all gates pass, class gpu-reported, no leak verdict, P95 inside one frame period, P99 inside 1.5 frame periods, at most 2 percent of frames over the period."
+        },
+        {
+          "id": "M-RQ-2",
+          "title": "Compatibility pass for one graphics card vendor and one operating system",
+          "needs": "One PC per vendor and operating system to be covered (NVIDIA, AMD or Intel; Windows or Linux)",
+          "steps": [
+            "Install the release candidate and start it with --fresh once.",
+            "Run the manual tests M-RENDER-1, M-DISP-1, M-MIDI-1, M-RECORD-1 and M-SOAK-1 and the test above.",
+            "Fill in docs/templates/test-log.md for the machine and add the results to tests/hardware/results.json."
+          ],
+          "measure": "the results of the named tests and the log",
+          "criteria": "Proposed: every named test passed on this card and this operating system before the cell in docs/COMPATIBILITY.md is called tested."
+        },
+        {
+          "id": "M-RQ-3",
+          "title": "Driver reset during a show (Windows)",
+          "needs": "A Windows PC with a real graphics card, a show running with a Spout or NDI output and a recording",
+          "steps": [
+            "Start a show with at least two layers and an output window, and note the frame counter.",
+            "Press Win+Ctrl+Shift+B once to make Windows restart the graphics driver.",
+            "Watch the output window, the status bar and the log file for one minute, then try to trigger a clip."
+          ],
+          "measure": "whether the program keeps running, whether the picture returns, the lines in the log, the time the output stayed black",
+          "criteria": "Proposed: the program must not freeze without a message. The behaviour is not known today; the source has no handling for a lost graphics context, so a crash or a black output is possible and must be written down as it happens."
+        },
+        {
+          "id": "M-RQ-4",
+          "title": "Video memory almost full",
+          "needs": "A PC with a real graphics card whose memory use can be watched, a second program or test tool that can fill video memory, and many large clips",
+          "steps": [
+            "Fill video memory with the second program until about 500 MB remain free.",
+            "Start NyrexVJ and load clips and 3D models until it reports a problem.",
+            "Free the memory again and trigger the same clips."
+          ],
+          "measure": "the messages the program shows, the log, whether clips recover when memory is free again",
+          "criteria": "Proposed: no crash, a message that names video memory, and the clips play again after the memory is free. The program refuses some allocations with a message; it is not tested what a driver does when it silently falls back to system memory."
+        }
+      ]
     }
   ]
 }

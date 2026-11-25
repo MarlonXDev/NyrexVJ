@@ -1,0 +1,607 @@
+{
+  "app": "NyrexVJ",
+  "beatsPerBar": 3,
+  "bpm": 132.0,
+  "decks": {
+    "active": 0,
+    "settings": {
+      "autoCycle": false,
+      "beats": 4,
+      "cycleBeats": 16,
+      "seconds": 1.5,
+      "syncBeats": false,
+      "transition": "Fade"
+    },
+    "slots": [
+      {
+        "name": "",
+        "slot": 0
+      }
+    ]
+  },
+  "format": 2,
+  "layers": [
+    {
+      "active": 0,
+      "blend": "Normal",
+      "bypass": false,
+      "cells": [
+        "Plasma",
+        "Tunnel",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "colorA": [
+        1.0,
+        0.44999998807907104,
+        0.0
+      ],
+      "colorB": [
+        0.0,
+        0.800000011920929,
+        1.0
+      ],
+      "fx": [
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        }
+      ],
+      "grade": {
+        "brightness": 0.0,
+        "contrast": 1.0,
+        "hue": 0.0,
+        "saturation": 1.0
+      },
+      "mods": [
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        },
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        }
+      ],
+      "opacity": 0.75,
+      "rainbow": false,
+      "scale": 1.0,
+      "solo": false,
+      "speed": 1.0
+    },
+    {
+      "active": -1,
+      "blend": "Normal",
+      "bypass": true,
+      "cells": [
+        "Kaleido",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "colorA": [
+        1.0,
+        0.44999998807907104,
+        0.0
+      ],
+      "colorB": [
+        0.0,
+        0.800000011920929,
+        1.0
+      ],
+      "fx": [
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        }
+      ],
+      "grade": {
+        "brightness": 0.0,
+        "contrast": 1.0,
+        "hue": 0.0,
+        "saturation": 1.0
+      },
+      "mods": [
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        },
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        }
+      ],
+      "opacity": 1.0,
+      "rainbow": false,
+      "scale": 1.0,
+      "solo": false,
+      "speed": 1.0
+    },
+    {
+      "active": -1,
+      "blend": "Normal",
+      "bypass": false,
+      "cells": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "colorA": [
+        1.0,
+        0.44999998807907104,
+        0.0
+      ],
+      "colorB": [
+        0.0,
+        0.800000011920929,
+        1.0
+      ],
+      "fx": [
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        }
+      ],
+      "grade": {
+        "brightness": 0.0,
+        "contrast": 1.0,
+        "hue": 0.0,
+        "saturation": 1.0
+      },
+      "mods": [
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        },
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        }
+      ],
+      "opacity": 1.0,
+      "rainbow": false,
+      "scale": 1.0,
+      "solo": false,
+      "speed": 1.0
+    },
+    {
+      "active": -1,
+      "blend": "Normal",
+      "bypass": false,
+      "cells": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "colorA": [
+        1.0,
+        0.44999998807907104,
+        0.0
+      ],
+      "colorB": [
+        0.0,
+        0.800000011920929,
+        1.0
+      ],
+      "fx": [
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        },
+        {
+          "effect": null,
+          "enabled": true,
+          "params": [
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "react": {
+            "amount": 0.5,
+            "band": "Off",
+            "mode": "Parameter",
+            "param": 0
+          }
+        }
+      ],
+      "grade": {
+        "brightness": 0.0,
+        "contrast": 1.0,
+        "hue": 0.0,
+        "saturation": 1.0
+      },
+      "mods": [
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        },
+        {
+          "amount": 0.5,
+          "band": "Off",
+          "target": "Opacity"
+        }
+      ],
+      "opacity": 1.0,
+      "rainbow": false,
+      "scale": 1.0,
+      "solo": false,
+      "speed": 1.0
+    }
+  ],
+  "master": {
+    "fx": [
+      {
+        "effect": null,
+        "enabled": true,
+        "params": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "react": {
+          "amount": 0.5,
+          "band": "Off",
+          "mode": "Parameter",
+          "param": 0
+        }
+      },
+      {
+        "effect": null,
+        "enabled": true,
+        "params": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "react": {
+          "amount": 0.5,
+          "band": "Off",
+          "mode": "Parameter",
+          "param": 0
+        }
+      },
+      {
+        "effect": null,
+        "enabled": true,
+        "params": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "react": {
+          "amount": 0.5,
+          "band": "Off",
+          "mode": "Parameter",
+          "param": 0
+        }
+      },
+      {
+        "effect": null,
+        "enabled": true,
+        "params": [
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "react": {
+          "amount": 0.5,
+          "band": "Off",
+          "mode": "Parameter",
+          "param": 0
+        }
+      }
+    ],
+    "grade": {
+      "brightness": 0.0,
+      "contrast": 1.0,
+      "hue": 0.0,
+      "saturation": 1.0
+    },
+    "level": 1.0,
+    "mods": [
+      {
+        "amount": 0.5,
+        "band": "Off",
+        "target": "Opacity"
+      },
+      {
+        "amount": 0.5,
+        "band": "Off",
+        "target": "Opacity"
+      }
+    ]
+  },
+  "modulators": {
+    "lfos": [
+      {
+        "phase": 0.0,
+        "rate": 4,
+        "shape": "Sine"
+      },
+      {
+        "phase": 0.0,
+        "rate": 4,
+        "shape": "Sine"
+      },
+      {
+        "phase": 0.0,
+        "rate": 4,
+        "shape": "Sine"
+      },
+      {
+        "phase": 0.0,
+        "rate": 4,
+        "shape": "Sine"
+      }
+    ],
+    "macros": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "name": "Compat Fixture",
+  "resolution": [
+    1920,
+    1080
+  ]
+}

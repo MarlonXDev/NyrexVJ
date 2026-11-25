@@ -852,6 +852,85 @@
           "criteria": "Proposed: no crash, no frozen program, the clip reports the problem and plays again after reconnecting."
         }
       ]
+    },
+    {
+      "id": "rest-api",
+      "title": "Web interface and REST API",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/API.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0029-rest-api.md"
+      ],
+      "sources": [
+        "src/control/api_server.cpp",
+        "src/control/api_router.cpp",
+        "src/control/api_hub.cpp",
+        "src/control/api_security.cpp",
+        "src/core/http_message.cpp",
+        "src/app/api_system.cpp",
+        "src/app/api_selftest.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-API-1",
+          "kind": "ctest",
+          "name": "nvj_api_tests"
+        },
+        {
+          "id": "A-API-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --api-selftest",
+          "note": "the interface through the real engine: off by default, token file, reads and writes, presets, stalled main thread, rate limit, lockout, new token, closed port"
+        },
+        {
+          "id": "A-API-3",
+          "kind": "cli",
+          "command": "NyrexVJ --bench-api 240",
+          "note": "frame time with the interface off, idle, with polling clients and under a flood"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-API-1",
+          "title": "Control from a phone on the same network",
+          "needs": "A phone or tablet and a computer in the same Wi-Fi, the operating system firewall asking about the port",
+          "steps": [
+            "Turn on the web interface and Allow other devices on the network.",
+            "Open the address with the IP address of the computer on the phone and paste the token.",
+            "Trigger clips, move the master and opacity sliders, load a look and press blackout while the show runs."
+          ],
+          "measure": "Whether every control reaches the program, the delay to the picture, touch behaviour of the sliders, the frame time of NyrexVJ with and without the phone connected",
+          "criteria": "Proposed: all controls work, the delay is below 300 ms, and the frame time rises by less than 0.2 ms."
+        },
+        {
+          "id": "M-API-2",
+          "title": "Windows sockets and the exclusive port",
+          "needs": "A Windows computer and a second program that tries to listen on the same port",
+          "steps": [
+            "Turn on the web interface and open it in a browser on the same computer.",
+            "Start a second program that binds the same port and check that it fails.",
+            "Turn the interface off and on again several times and check the port is released."
+          ],
+          "measure": "Whether the page and the API answer, the error shown when the port is taken, whether the port is free after turning off",
+          "criteria": "Proposed: the page works, the second program cannot bind and the port is released at once."
+        },
+        {
+          "id": "M-API-3",
+          "title": "Hours of polling next to VRChat",
+          "needs": "A computer that runs VRChat and a second device that keeps the page open",
+          "steps": [
+            "Start VRChat and NyrexVJ, turn on the web interface and open the page on a second device.",
+            "Run a --soak or a normal show for one hour with the page open and sliders moved now and then.",
+            "Compare the VRChat frame time and the memory of NyrexVJ with a run without the page."
+          ],
+          "measure": "VRChat frame time, NyrexVJ frame time, memory and handle growth, requests refused",
+          "criteria": "Proposed: no change in the VRChat frame time and no growth beyond the soak limits."
+        }
+      ]
     }
   ]
 }

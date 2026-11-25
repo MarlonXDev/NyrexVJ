@@ -349,6 +349,7 @@ void App::shutdown() {
         return;
     }
     shutDown_ = true;
+    api_.shutdown();
     if (!recoveryPending()) {
         saveSession(engine_.comp);
     }
@@ -539,6 +540,10 @@ void App::loadComposition(const Composition& comp, const std::string& message) {
     toast(message);
 }
 
+void App::loadFromApi(const Composition& comp, const std::string& name) {
+    loadComposition(comp, std::string(tr("Loaded ")) + name);
+}
+
 void App::saveCurrentPreset() {
     std::string error;
     std::string name = sanitizePresetName(presetName_);
@@ -638,6 +643,12 @@ void App::frame(double dt) {
     control.midiDevice = settings_.midiDevice;
     control_.configure(control);
     control_.update(dt);
+    ApiConfig api;
+    api.enabled = settings_.apiEnabled;
+    api.port = settings_.apiPort;
+    api.allowRemote = settings_.apiAllowRemote;
+    api_.configure(api);
+    api_.update(dt, ImGui::GetIO().Framerate);
     updateSync(dt);
     updateAudio(dt);
     serviceLiveBrowse();

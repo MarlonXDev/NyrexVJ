@@ -4,6 +4,7 @@
 #include "app/engine_host.hpp"
 #include "app/node_editor.hpp"
 #include "audio/audio_system.hpp"
+#include "app/api_system.hpp"
 #include "control/control_system.hpp"
 #include "control/osc_out.hpp"
 #include "control/stage_out.hpp"
@@ -101,6 +102,7 @@ public:
     void shutdown();
     Engine& engine() { return engine_; }
     ControlSystem& control() { return control_; }
+    ApiSystem& api() { return api_; }
     bool wantsRestart() const { return restart_; }
     int dumpOutputs(const std::string& prefix);
     bool wantsVsync() const { return settings_.vsync; }
@@ -183,6 +185,8 @@ private:
     void drawSyncCueSection();
     void updateSync(double dt);
     void drawOscSection();
+    void drawApiSection();
+    void loadFromApi(const Composition& comp, const std::string& name);
     void drawOscOutSection();
     void drawMidiSection();
     void drawBindingsSection();
@@ -271,6 +275,7 @@ private:
     Settings settings_;
     Updater updater_;
     OutputManager outputs_;
+    ApiSystem api_{engine_, control_, outputs_, [this](const Composition& comp, const std::string& name) { loadFromApi(comp, name); }};
     AudioSystem audio_;
     SpoutOutput spout_;
     NdiOutput ndi_;

@@ -556,17 +556,28 @@ bool saveUserPreset(const Composition& comp, const std::string& name, std::strin
     return true;
 }
 
-bool loadUserPreset(const std::string& name, Composition& comp, std::string& error) {
-    std::string text;
+bool readUserPresetText(const std::string& name, std::string& text, std::string& error) {
     if (!readTextFile(presetPath(name), text)) {
         error = "Could not read the preset file";
         return false;
     }
+    return true;
+}
+
+bool parseUserPreset(const std::string& name, const std::string& text, Composition& comp, std::string& error) {
     if (!compositionFromJson(text, comp, error)) {
         return false;
     }
     comp.name = sanitizePresetName(name);
     return true;
+}
+
+bool loadUserPreset(const std::string& name, Composition& comp, std::string& error) {
+    std::string text;
+    if (!readUserPresetText(name, text, error)) {
+        return false;
+    }
+    return parseUserPreset(name, text, comp, error);
 }
 
 bool deleteUserPreset(const std::string& name) {

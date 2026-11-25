@@ -1,6 +1,7 @@
 #include "platform/platform.hpp"
 
 #include <cerrno>
+#include <fcntl.h>
 #include <chrono>
 #include <csignal>
 #include <fstream>
@@ -156,6 +157,30 @@ bool processAlive(unsigned long pid) {
         return false;
     }
     return kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM;
+}
+
+bool secureRandomBytes(unsigned char* out, size_t size) {
+    if (out == nullptr || size == 0) {
+        return false;
+    }
+    const int descriptor = ::open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+    if (descriptor < 0) {
+        return false;
+    }
+    size_t done = 0;
+    while (done < size) {
+        const ssize_t got = ::read(descriptor, out + done, size - done);
+        if (got < 0 && errno == EINTR) {
+            continue;
+        }
+        if (got <= 0) {
+            ::close(descriptor);
+            return false;
+        }
+        done += static_cast<size_t>(got);
+    }
+    ::close(descriptor);
+    return true;
 }
 
 }

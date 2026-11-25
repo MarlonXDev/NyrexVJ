@@ -494,6 +494,45 @@
       "test": "A-RECORD-3",
       "command": "NyrexVJ --bench-record all:90",
       "notes": "every format that opens here finished cleanly, drops only where the encoder is slower than the frame interval; hardware formats refused cleanly (no card); capture times are software OpenGL and say nothing about a graphics card"
+    },
+    {
+      "area": "rest-api",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.36.0 (branch feature/rest-api, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-API-1",
+      "command": "ctest -R nvj_api_tests",
+      "notes": "21016 checks, 0 failed; also 0 failed under AddressSanitizer and UndefinedBehaviorSanitizer and under ThreadSanitizer with no warning"
+    },
+    {
+      "area": "rest-api",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.36.0 (branch feature/rest-api, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-API-2",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --api-selftest",
+      "notes": "59 checks, 0 failed on llvmpipe; the same run under ThreadSanitizer passed all 59 checks, and its four warnings are inside Mesa (libgallium) at engine start and window close, none in the interface code"
+    },
+    {
+      "area": "rest-api",
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.36.0 (branch feature/rest-api, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL), no graphics card",
+      "test": "A-API-3",
+      "command": "NyrexVJ --bench-api 240",
+      "notes": "960x540, 240 frames per phase at 60 fps pacing: frame average 43.9 ms off, 42.5 ms idle, 43.4 ms with 3 polling clients, 82.6 ms under a flood of 36454 requests a second (the six load threads share the two cores with the software renderer), 41.6 ms off again; software OpenGL, says nothing about a graphics card"
     }
   ]
 }

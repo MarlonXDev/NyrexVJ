@@ -56,6 +56,9 @@ struct Settings {
     bool oscEnabled = false;
     int oscPort = 9010;
     bool oscAllowRemote = false;
+    bool apiEnabled = false;
+    int apiPort = 9020;
+    bool apiAllowRemote = false;
     std::string midiDevice;
     bool oscOutEnabled = false;
     std::string oscOutHost = "127.0.0.1";

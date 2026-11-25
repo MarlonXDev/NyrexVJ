@@ -46,6 +46,7 @@ void sleepPrecise(double seconds);
 void setCurrentThreadBackground(bool background);
 unsigned long currentProcessId();
 bool processAlive(unsigned long pid);
+bool secureRandomBytes(unsigned char* out, size_t size);
 
 #ifdef __linux__
 void setCurlLibraryForTesting(const std::string& path);

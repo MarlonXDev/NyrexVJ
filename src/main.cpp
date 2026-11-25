@@ -356,13 +356,13 @@ Options parseOptions(int argc, char** argv) {
             }
         } else if (arg == "--shader-editor-uitest") {
             options.shaderEditorUiTest = true;
+            options.start.shaderEditor = true;
         } else if (arg == "--interface-uitest") {
             options.interfaceUiTest = true;
         } else if (arg == "--reset-layout") {
             options.start.resetLayout = true;
         } else if (arg == "--reset-interface") {
             options.start.resetInterface = true;
-            options.start.shaderEditor = true;
         } else if (arg == "--shader-editor") {
             options.start.shaderEditor = true;
             if (hasValue && argv[i + 1][0] != '-') {

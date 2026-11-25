@@ -25,7 +25,7 @@ void warnText(const char* text) {
 
 bool sourceCombo(const char* id, int& source) {
     bool changed = false;
-    ImGui::SetNextItemWidth(110.0f);
+    ImGui::SetNextItemWidth(ui::px(110.0f));
     if (ImGui::BeginCombo(id, source == 0 ? tr("Fixed") : tr(audioBandName(source)))) {
         if (ImGui::Selectable(tr("Fixed"), source == 0)) {
             source = 0;
@@ -47,14 +47,14 @@ bool bindingEditor(SourceBinding& binding) {
     changed |= sourceCombo("##source", binding.source);
     ImGui::SameLine();
     if (binding.source == 0) {
-        ImGui::SetNextItemWidth(150.0f);
+        ImGui::SetNextItemWidth(ui::px(150.0f));
         changed |= ui::sliderFloat("##fixed", &binding.fixed, 0.0f, 1.0f, "%.2f");
     } else {
-        ImGui::SetNextItemWidth(70.0f);
+        ImGui::SetNextItemWidth(ui::px(70.0f));
         changed |= ImGui::DragFloat("##low", &binding.low, 0.005f, 0.0f, 1.0f, "%.2f");
         ImGui::SetItemTooltip("%s", tr("Value when the source is at 0"));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(70.0f);
+        ImGui::SetNextItemWidth(ui::px(70.0f));
         changed |= ImGui::DragFloat("##high", &binding.high, 0.005f, 0.0f, 1.0f, "%.2f");
         ImGui::SetItemTooltip("%s", tr("Value when the source is at 1"));
         ImGui::SameLine();
@@ -92,20 +92,20 @@ void App::drawStagePage() {
     }
     ImGui::SameLine();
     ImGui::TextUnformatted(tr("Address"));
-    ImGui::SetNextItemWidth(110.0f);
+    ImGui::SetNextItemWidth(ui::px(110.0f));
     if (ImGui::InputInt(trId("Port", "dmxPort"), &dmx.artnetPort, 0, 0)) {
         persist();
     }
-    ImGui::SetNextItemWidth(110.0f);
+    ImGui::SetNextItemWidth(ui::px(110.0f));
     if (ImGui::InputInt(trId("Net", "dmxNet"), &dmx.artnetNet, 0, 0)) {
         persist();
     }
-    ImGui::SetNextItemWidth(110.0f);
+    ImGui::SetNextItemWidth(ui::px(110.0f));
     if (ImGui::InputInt(trId("First universe", "dmxFirst"), &dmx.artnetFirstUniverse, 0, 0)) {
         persist();
     }
     ImGui::SetItemTooltip("%s", tr("Universe 1 of this program is sent as this Art-Net universe, the next ones follow."));
-    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SetNextItemWidth(ui::px(160.0f));
     if (ui::sliderInt(trId("Packets per second", "dmxRate"), &dmx.artnetRate, 1, 44)) {
         persist();
     }
@@ -129,7 +129,7 @@ void App::drawStagePage() {
         persist();
     }
     ImGui::BeginDisabled(!dmx.stripEnabled);
-    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SetNextItemWidth(ui::px(160.0f));
     if (ImGui::BeginCombo(trId("Position", "dmxStripPos"), dmx.stripAtTop ? tr("Top edge") : tr("Bottom edge"))) {
         if (ImGui::Selectable(tr("Top edge"), dmx.stripAtTop)) {
             dmx.stripAtTop = true;
@@ -141,7 +141,7 @@ void App::drawStagePage() {
         }
         ImGui::EndCombo();
     }
-    ImGui::SetNextItemWidth(300.0f);
+    ImGui::SetNextItemWidth(ui::px(300.0f));
     if (ImGui::BeginCombo(trId("Channel layout", "dmxStripLayout"), dmx.stripPadUniverses ? tr("40 columns per universe (520 cells)") : tr("Universes back to back (512 cells)"))) {
         if (ImGui::Selectable(tr("Universes back to back (512 cells)"), !dmx.stripPadUniverses)) {
             dmx.stripPadUniverses = false;
@@ -200,11 +200,11 @@ void App::drawStagePage() {
             changed |= textField("##name", lane.name, 48, 110.0f);
             ImGui::SetItemTooltip("%s", tr("Name"));
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(48.0f);
+            ImGui::SetNextItemWidth(ui::px(48.0f));
             changed |= ImGui::DragInt("##universe", &lane.universe, 0.1f, 1, kDmxUniverses, "U%d");
             ImGui::SetItemTooltip("%s", tr("Universe"));
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(58.0f);
+            ImGui::SetNextItemWidth(ui::px(58.0f));
             changed |= ImGui::DragInt("##channel", &lane.channel, 0.3f, 1, kDmxChannels, "%d");
             ImGui::SetItemTooltip("%s", tr("Channel"));
             ImGui::SameLine();
@@ -261,11 +261,11 @@ void App::drawStagePage() {
     }
     ImGui::SameLine();
     ImGui::TextUnformatted(tr("Address"));
-    ImGui::SetNextItemWidth(110.0f);
+    ImGui::SetNextItemWidth(ui::px(110.0f));
     if (ImGui::InputInt(trId("Port", "vrcPort"), &vrchat.port, 0, 0)) {
         persist();
     }
-    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SetNextItemWidth(ui::px(160.0f));
     if (ui::sliderInt(trId("Updates per second", "vrcRate"), &vrchat.rate, 1, 60)) {
         persist();
     }
@@ -292,7 +292,7 @@ void App::drawStagePage() {
             changed |= textField("##pname", param.name, 64, 150.0f);
             ImGui::SetItemTooltip("%s", tr("Parameter name in the avatar"));
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(70.0f);
+            ImGui::SetNextItemWidth(ui::px(70.0f));
             const char* typeNames[] = {"Float", "Bool", "Int"};
             int type = static_cast<int>(param.type);
             if (ImGui::Combo("##ptype", &type, typeNames, 3)) {

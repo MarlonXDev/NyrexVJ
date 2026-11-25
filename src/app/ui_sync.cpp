@@ -432,7 +432,7 @@ void App::drawSyncNetworkSection() {
 
     rowLabel(tr("Port"));
     int port = settings_.netSyncPort;
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(ui::px(120.0f));
     ImGui::InputInt("##netPort", &port, 0, 0);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         settings_.netSyncPort = std::clamp(port, 1024, 65535);
@@ -470,7 +470,7 @@ void App::drawSyncNetworkSection() {
     if (current == netsync::Role::Master) {
         char keyText[96] = {};
         std::snprintf(keyText, sizeof(keyText), "%s", netSync_.keyHex().c_str());
-        ImGui::SetNextItemWidth(260.0f);
+        ImGui::SetNextItemWidth(ui::px(260.0f));
         ImGui::InputText("##netKey", keyText, sizeof(keyText), ImGuiInputTextFlags_ReadOnly | (showKey ? 0 : ImGuiInputTextFlags_Password));
         ImGui::SameLine();
         if (ImGui::Button(showKey ? trId("Hide", "netKeyHide") : trId("Show", "netKeyShow"))) {
@@ -488,7 +488,7 @@ void App::drawSyncNetworkSection() {
         ImGui::SetItemTooltip("%s", tr("A new key disconnects every follower until it gets the new key."));
         ImGui::TextDisabled("%s", tr("Copy the key to every follower PC. Do not share it or show it on a stream."));
     } else {
-        ImGui::SetNextItemWidth(260.0f);
+        ImGui::SetNextItemWidth(ui::px(260.0f));
         ImGui::InputTextWithHint("##netKeyPaste", tr("Paste the key of the master"), netKeyText_, sizeof(netKeyText_), ImGuiInputTextFlags_Password);
         ImGui::SameLine();
         if (ImGui::Button(trId("Use this key", "netKeyUse"))) {
@@ -767,7 +767,7 @@ void App::drawSyncCueSection() {
     if (openPicker) {
         ImGui::OpenPopup("##pickCueTarget");
     }
-    ImGui::SetNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_Appearing);
+    ui::setNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_Appearing);
     if (ImGui::BeginPopup("##pickCueTarget")) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Choose what the cue does"));
         ImGui::SetNextItemWidth(-FLT_MIN);

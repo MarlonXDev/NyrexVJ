@@ -10,6 +10,9 @@
 
 namespace nvj {
 
+constexpr float kNodeZoomMin = 0.4f;
+constexpr float kNodeZoomMax = 2.5f;
+
 struct NodeEditorState {
     bool hasGraph = false;
     std::string stem;
@@ -27,6 +30,9 @@ struct NodeEditorState {
     double statusUntil = 0.0;
 
     ImVec2 pan{24.0f, 24.0f};
+    float zoom = 1.0f;
+    ImVec2 canvasSize{0.0f, 0.0f};
+    ImVec2 canvasOrigin{0.0f, 0.0f};
     std::vector<int> order;
     int selected = -1;
 

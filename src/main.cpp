@@ -86,6 +86,7 @@ struct Options {
     int gpuDiagSelfTestBench = 0;
     bool shaderEditorSelfTest = false;
     bool shaderEditorUiTest = false;
+    bool interfaceUiTest = false;
     int shaderEditorSelfTestBench = 0;
     int shaderSelfTestBench = 0;
     std::string pluginSelfTest;
@@ -356,6 +357,12 @@ Options parseOptions(int argc, char** argv) {
         } else if (arg == "--shader-editor-uitest") {
             options.shaderEditorUiTest = true;
             options.start.shaderEditor = true;
+        } else if (arg == "--interface-uitest") {
+            options.interfaceUiTest = true;
+        } else if (arg == "--reset-layout") {
+            options.start.resetLayout = true;
+        } else if (arg == "--reset-interface") {
+            options.start.resetInterface = true;
         } else if (arg == "--shader-editor") {
             options.start.shaderEditor = true;
             if (hasValue && argv[i + 1][0] != '-') {
@@ -680,6 +687,22 @@ int main(int argc, char** argv) {
         ++frameCount;
         if (options.routingDemo && frameCount == 2) {
             app.startRoutingDemo();
+        }
+        if (options.interfaceUiTest) {
+            if (frameCount == 1) {
+                app.startInterfaceTest();
+            }
+            const int state = app.tickInterfaceTest();
+            if (state != 0) {
+                exitCode = state == 1 ? 0 : 1;
+                const std::string report = app.interfaceTestReport();
+                nvj::logLine("Interface UI test result:\n" + report);
+                if (!options.benchOut.empty()) {
+                    std::ofstream out(options.benchOut);
+                    out << report << '\n';
+                }
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }
         }
         if (options.shaderEditorUiTest) {
             if (frameCount == 1) {

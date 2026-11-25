@@ -448,7 +448,7 @@ void App::drawGeneratorParticleTab() {
             ImGui::Checkbox(tr("Run on the graphics card"), &p.gpu);
             ImGui::SetItemTooltip("%s", tr("The graphics card keeps and moves every particle itself, so far more particles are possible. It needs Experimental GPU particles turned on in Settings, Performance. Otherwise, or when the card cannot do it, the clip runs on the processor with fewer particles."));
             if (p.gpu) {
-                ImGui::SetNextItemWidth(220.0f);
+                ImGui::SetNextItemWidth(ui::px(220.0f));
                 ImGui::SliderInt(tr("Particle pool"), &p.gpuCount, particles::kGpuMinCount, particles::kGpuMaxCount, "%d", ImGuiSliderFlags_Logarithmic);
                 ImGui::SetItemTooltip("%s", tr("How many particles the graphics card keeps. When the pool is full, the oldest particles are reused for new ones."));
             }
@@ -484,7 +484,7 @@ void App::drawGeneratorParticleTab() {
             ui::sliderFloat(tr("Origin Y"), &p.originY, -1.0f, 1.0f, "%.2f");
             ui::sliderFloat(tr("Extent"), &p.extent, 0.0f, 1.0f, "%.2f");
             int seed = static_cast<int>(p.seed & 0x7fffffffu);
-            ImGui::SetNextItemWidth(140.0f);
+            ImGui::SetNextItemWidth(ui::px(140.0f));
             if (ImGui::InputInt(tr("Random seed"), &seed)) {
                 p.seed = static_cast<std::uint32_t>(std::max(seed, 0));
             }
@@ -598,8 +598,8 @@ void App::drawGeneratorStudio() {
     }
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(980.0f, viewport->Size.x - 60.0f), std::min(720.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(640.0f, 420.0f), ImVec2(FLT_MAX, FLT_MAX));
+    ui::setNextWindowSize(ImVec2(std::min(980.0f, viewport->Size.x - 60.0f), std::min(720.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
+    ui::setNextWindowSizeConstraints(ImVec2(640.0f, 420.0f), ImVec2(FLT_MAX, FLT_MAX));
     if (d.focus) {
         ImGui::SetNextWindowFocus();
         d.focus = false;
@@ -664,8 +664,8 @@ void App::drawChainLibrary() {
     }
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(860.0f, viewport->Size.x - 60.0f), std::min(700.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(560.0f, 400.0f), ImVec2(FLT_MAX, FLT_MAX));
+    ui::setNextWindowSize(ImVec2(std::min(860.0f, viewport->Size.x - 60.0f), std::min(700.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
+    ui::setNextWindowSizeConstraints(ImVec2(560.0f, 400.0f), ImVec2(FLT_MAX, FLT_MAX));
     if (d.focus) {
         ImGui::SetNextWindowFocus();
         d.focus = false;
@@ -688,7 +688,7 @@ void App::drawChainLibrary() {
     } else {
         std::snprintf(targetLabel, sizeof(targetLabel), "%s %d", tr("Layer"), d.target + 1);
     }
-    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SetNextItemWidth(ui::px(160.0f));
     if (ImGui::BeginCombo(tr("Applies to"), targetLabel)) {
         for (int t = 0; t <= kLayerCount; ++t) {
             char label[64];
@@ -795,7 +795,7 @@ void App::drawChainLibrary() {
                         d.confirmDelete = false;
                     }
                 }
-                ImGui::SetNextItemWidth(-130.0f);
+                ImGui::SetNextItemWidth(ui::px(-130.0f));
                 ImGui::InputTextWithHint("##chainExport", tr("Folder or file ending in .nyxchain"), d.exportPath, sizeof(d.exportPath));
                 ImGui::SameLine();
                 ImGui::BeginDisabled(d.exportPath[0] == '\0' || d.selected.empty());
@@ -846,7 +846,7 @@ void App::drawChainLibrary() {
         }
 
         ImGui::SeparatorText(tr("Import a chain file"));
-        ImGui::SetNextItemWidth(-130.0f);
+        ImGui::SetNextItemWidth(ui::px(-130.0f));
         ImGui::InputTextWithHint("##chainImport", tr("Path of a .nyxchain file"), d.importPath, sizeof(d.importPath));
         ImGui::SameLine();
         ImGui::BeginDisabled(d.importPath[0] == '\0');

@@ -365,8 +365,8 @@ void App::drawManual() {
     }
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(1040.0f, viewport->Size.x - 60.0f), std::min(700.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(520.0f, 340.0f), ImVec2(FLT_MAX, FLT_MAX));
+    ui::setNextWindowSize(ImVec2(std::min(1040.0f, viewport->Size.x - 60.0f), std::min(700.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
+    ui::setNextWindowSizeConstraints(ImVec2(520.0f, 340.0f), ImVec2(FLT_MAX, FLT_MAX));
     if (manualFocus_) {
         ImGui::SetNextWindowFocus();
         manualFocus_ = false;

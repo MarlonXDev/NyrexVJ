@@ -76,6 +76,7 @@ This chapter names every part of the main window, so the rest of the manual can 
 | --- | --- |
 | File | New empty composition, Save as preset, Open data folder, Quit |
 | Edit | Undo and Redo |
+| View | Workspaces, Reset window layout, interface size, High contrast, Keyboard navigation, Show status bar |
 | Output | Open or close the output windows, Fullscreen, Outputs and mapping, Start or stop recording, Recording settings, Send to OBS via Spout, Send via NDI, Video routing |
 | Audio | Choose the audio source: Off, Demo signal, System audio, Input, and Refresh devices |
 | Timeline | Run the timeline, Show the timeline window, Play, Pause, Stop, Release hand moves |
@@ -107,7 +108,7 @@ The bar at the bottom shows the frame rate, the processor and graphics time, the
 
 ## Moving windows around {#layout}
 
-All windows can be dragged by their title, docked next to each other, stacked as tabs or pulled out to float. NyrexVJ remembers the layout. If you lose a window or the layout got messy, use Settings, Appearance, Reset window layout. The size of the whole interface and its colours are in the same place.
+All windows can be dragged by their title, docked next to each other, stacked as tabs or pulled out to float. NyrexVJ remembers the layout. You can keep named layouts as workspaces and switch between them from the View menu. If you lose a window or the layout got messy, use View, Reset window layout. The size of the whole interface, its contrast and its colours are in Settings, Appearance; all of it is explained in [Interface, workspaces and accessibility](#interface).
 
 # Your first show in five minutes {#first-show}
 
@@ -822,6 +823,7 @@ The node editor builds your own effects without code. You connect nodes for pict
 | Delete a node | Select it and press Delete or Backspace |
 | Duplicate | Ctrl+D or right click, Duplicate |
 | Move the view | Middle mouse button, or drag on empty space |
+| Zoom the view | Ctrl and the mouse wheel zooms towards the mouse; `=` and `-` zoom in and out, `0` goes back to 100 percent |
 | Undo and redo | Ctrl+Z and Ctrl+Y |
 | Tidy up | The Arrange button places the nodes in columns from the inputs to the output |
 
@@ -1194,7 +1196,7 @@ Open Settings with the menu Settings or with `Ctrl+,`. The window has a list of 
 | Page | What you find |
 | --- | --- |
 | General | Language, restore the last session, open the output window on start, decks |
-| Appearance | Theme colour, interface size, status bar, reset the window layout |
+| Appearance | Theme colour, interface size and display scale, contrast, keyboard navigation, status bar, reset the window layout and your workspaces |
 | Audio | Audio source, gain, smoothing, beat sensitivity, sync BPM to audio |
 | Output | Quality and resolution, Spout, NDI, up to four output windows with slices, mapping, blending, venue setups and frame lock |
 | Recording | Format, size, frame rate, quality, sound, folder and the record buttons |
@@ -1202,7 +1204,7 @@ Open Settings with the menu Settings or with `Ctrl+,`. The window has a list of 
 | Stage | Art-Net, the DMX strip, VRChat parameters, channels and test patterns |
 | Sync | Clock source, timecode, MIDI clock, Pro DJ Link, the cue list |
 | Updates | Update channel, automatic checks and downloads, the update status |
-| Shortcuts | The list of keyboard shortcuts |
+| Shortcuts | Your keyboard shortcuts: change, clear or reset them |
 | Performance | Frame rate limit, frame budget, render quality, text and particles, measured frame times, memory, video and FFmpeg, DXV conversion |
 | Plugins | Installed plugins and their sources |
 | About | Version, links, the data folder |
@@ -1211,13 +1213,118 @@ Open Settings with the menu Settings or with `Ctrl+,`. The window has a list of 
 
 ## Appearance {#settings-appearance}
 
-The theme colour changes the accent of the whole interface. There are ten themes: Studio (the default, a neutral dark with a red-orange accent), Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono. Interface size scales all windows and text, and Reset sets it back.
+The theme colour changes the accent of the whole interface. There are ten themes: Studio (the default, a neutral dark with a red-orange accent), Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono. Interface size scales all windows and text, and Reset sets it back. The same page holds the display scale, high contrast, keyboard navigation, the reset of the window layout and the workspaces; see [Interface, workspaces and accessibility](#interface).
+
+# Interface, workspaces and accessibility {#interface}
+
+## The View menu {#view-menu}
+
+The View menu sits between Edit and Output. It holds everything in this chapter that you want to reach in a second:
+
+| Entry | What it does |
+| --- | --- |
+| Workspaces | Lists your saved workspaces, lets you save the current layout under a name and opens the place where you manage them |
+| Reset window layout | Puts the seven main panels back into the default arrangement |
+| Larger interface, Smaller interface, Normal interface size | Change the size of the whole interface in steps of ten percentage points (`Ctrl+=`, `Ctrl+-`, `Ctrl+0`) |
+| High contrast | Switches the high contrast look on or off |
+| Keyboard navigation | Lets you move between controls with the keyboard |
+| Show status bar | Shows or hides the bar at the bottom |
+
+## Workspaces {#workspaces}
+
+A workspace remembers where every panel sits and how big it is: which panels are docked next to each other or stacked as tabs, and the position and size of the windows that float. It does not hold clips, decks, presets or settings. Loading a workspace changes the arrangement and nothing else.
+
+To save one, choose View, Workspaces, Save current layout as..., type a name and press Enter. You can also do it in Settings, Appearance, in the block Workspaces, which also lists every workspace with its screen size, a Load button and a Delete button. Delete asks once more (Really delete?) before it removes the file.
+
+- A name is cut to 40 bytes. Characters that a file name cannot hold (`/ \ : * ? " < > |`) turn into spaces and repeated spaces become one. A name that is empty after that, or that Windows reserves (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`), is refused with a message. You can keep up to 32 workspaces.
+- Saving under a name that exists replaces that workspace. Upper and lower case count as the same name.
+- The files are plain text, one per workspace, in the folder `workspaces` of the data folder, for example `workspaces/Projector night.ini`. You can copy one to another PC. The first lines say which program and which window size it was saved at.
+- A file that is damaged, too large or made by a newer version of NyrexVJ is listed as Damaged with the reason and cannot be loaded. The program never deletes or changes it.
+- Docked panels keep their proportions when you load a workspace into a window of another size. Floating windows keep the position they were saved at. If one ends up out of reach, Reset window layout brings the main panels back.
+
+## Interface size and display scale {#interface-size}
+
+Settings, Appearance, Scale has two controls.
+
+- **Interface size** is a slider from 0.70 to 2.50 (70 to 250 percent). It scales the text, the space around it, the rounded corners, the scrollbars and the windows that open at a fixed size. A window never opens larger than the main window. Reset puts it back to 1.00. The View menu and `Ctrl+=`, `Ctrl+-` and `Ctrl+0` do the same in steps.
+- **Match the display scale** is off by default. When it is on, NyrexVJ also follows the scale that your operating system sets for the screen the window is on (125 percent is 1.25), on top of the slider. The current display scale is shown next to the box.
+
+Both settings are saved. Nothing changes until you use them.
+
+## High contrast {#high-contrast}
+
+High contrast is off by default. Settings, Appearance, Contrast (or View, High contrast) switches to a black background with white text, stronger borders and a yellow focus ring. Your theme colour is kept as the accent, lightened so that it stays readable.
+
+The colours were checked by calculation with the contrast formula of the WCAG. In the high contrast look the normal text is at least 7 to 1 against the colour behind it on panels, fields, buttons and menus (4.5 to 1 on hovered and pressed items), and borders, the focus ring and check marks are at least 3 to 1. In the standard look the text is about 11.7 to 1 and the dimmer text about 5.7 to 1; the dim text is slightly lighter than in earlier versions, which was about 4.4 to 1 and below the 4.5 of the WCAG. The check runs for all ten themes. It is a calculation on colour values: it says nothing about how a screen, a projector or a room changes what you see, and nothing about colour blindness.
+
+## Keyboard navigation {#keyboard-nav}
+
+Keyboard navigation is off by default. Settings, Appearance, Keyboard (or View, Keyboard navigation) turns it on.
+
+- `Tab` and `Shift+Tab` move to the next and previous control, the arrow keys move between neighbours.
+- `Enter` or `Space` presses a button or toggles a box.
+- The control that has the keyboard focus gets a visible ring. The ring appears when you use the keyboard and disappears when you click with the mouse.
+- `Esc` leaves the control.
+- While a control has the focus, `Space` presses it. Without a focused control `Space` taps the tempo as before.
+
+The thickness of the ring cannot be changed; its colour can (it is the accent colour, and yellow in high contrast).
+
+## Your own shortcuts {#own-shortcuts}
+
+Settings, Shortcuts lists thirteen actions with their keys. Click the key of an action, press the new combination (for example `Ctrl+K`) and it is saved. `Esc` cancels. Clear removes the key from an action, Default puts the original key back, Reset all shortcuts restores everything.
+
+| Action | Default |
+| --- | --- |
+| Tap tempo | `Space` |
+| Blackout | `B` |
+| Fullscreen output | `F11` |
+| Undo, Redo | `Ctrl+Z`, `Ctrl+Y` |
+| Open settings | `Ctrl+,` |
+| Start or stop recording | `Ctrl+Shift+R` |
+| Open the manual | `F1` |
+| Next deck, Previous deck | `Page Down`, `Page Up` |
+| Larger interface, Smaller interface, Normal interface size | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` |
+
+- A combination that another action already uses is refused and the message names that action. Nothing is taken away silently.
+- These cannot be assigned: the number keys `1` to `8` (they trigger columns and, with `Ctrl`, switch decks), `Ctrl+Shift+Z` (always redo) and `Alt+F4`. Those keys keep working as written in [Keyboard shortcuts and mouse](#shortcuts).
+- The modifier keys must match exactly. `B` does not fire while `Ctrl` is held, and `Ctrl+K` does not fire with `Shift` as well. Before version 0.51.0 some keys, for example `B` and `Space`, also fired with `Ctrl` held.
+- The shortcuts are saved in `shortcuts.json` in the data folder. A shortcut does nothing while you type in a text field or while the program waits for a new key.
+- The editors (Clip Creator, node editor, timeline, shader editor) keep their own keys, such as `Ctrl+Z`, `Delete` and `Space`. These are not part of the table and cannot be changed.
+
+## Zooming the node canvas {#canvas-zoom}
+
+The canvas of the node effect editor can be zoomed. Hold `Ctrl` and turn the mouse wheel: the view zooms towards the mouse, so the spot under the mouse stays where it is. The wheel alone still moves the view. The keys `=` and `-` zoom in and out and `0` goes back to 100 percent while the canvas has the focus. The side panel has a Zoom block with the same three buttons and the current value. The zoom goes from 40 to 250 percent, it is not saved with the effect, and it is separate from the Interface size. It has nothing to do with the Zoom node, which is an effect that zooms the picture.
+
+## If the layout or a setting file is damaged {#interface-recovery}
+
+A power cut or a hand edit can leave a file unreadable. At the start NyrexVJ checks three files in the data folder and never lets one of them block the start.
+
+| File | What happens when it is damaged |
+| --- | --- |
+| `layout_v6.ini` (the window layout) | It is renamed to `layout_v6.ini.bad` and the default layout is built. A layout whose window positions are far outside any screen counts as damaged. |
+| `settings.json` | It is renamed to `settings.json.bad` and the defaults are used. A single wrong value, such as an interface size of 99, does not make the file damaged; that value is brought into its range. |
+| `shortcuts.json` | It is renamed to `shortcuts.json.bad` and the default shortcuts are used. A file that was written by a newer version of NyrexVJ is left alone and the default shortcuts are used. If you then change a shortcut, a copy of the newer file is kept as `shortcuts.json.bad` first. |
+
+A message tells you what happened and stays for about twelve seconds. Workspace files in the `workspaces` folder are never moved or deleted by the start.
+
+If you can no longer use the window at all, start NyrexVJ with an option from a command prompt:
+
+- `NyrexVJ --reset-layout` sets the layout file aside and builds the default layout. Your shortcuts and interface settings stay.
+- `NyrexVJ --reset-interface` does the same and also sets the shortcuts file aside and resets interface size, display scale, contrast and keyboard navigation. Your theme and all other settings stay.
+
+## What this does not cover {#accessibility-limits}
+
+- **Screen readers do not work with NyrexVJ.** The interface library draws everything itself and does not offer the information that a screen reader needs, so there is nothing to switch on. This is listed as a known issue.
+- The size of the focus ring cannot be changed.
+- A few windows and buttons still have a fixed size in pixels and do not grow with the interface size. They stay usable, but they look small next to larger text.
+- Touch input has not been looked at.
+- All checks so far ran in a window on a virtual screen. A real 125, 150 or 200 percent display, a 4K screen, a small laptop screen and working with the keyboard alone have not been tried on real equipment. The test plan lists them as manual tests.
 
 # Keyboard shortcuts and mouse {#shortcuts}
 
 ## Keyboard {#keys}
 
-These keys work everywhere in the main window, except while you type into a text field.
+These are the keys as delivered. Most of them can be changed in Settings, Shortcuts (see [Interface, workspaces and accessibility](#interface)). They work everywhere in the main window, except while you type into a text field.
 
 | Key | Action |
 | --- | --- |
@@ -1231,6 +1338,7 @@ These keys work everywhere in the main window, except while you type into a text
 | `Ctrl+Y` or `Ctrl+Shift+Z` | Redo |
 | `Ctrl+,` | Open Settings |
 | `Ctrl+Shift+R` | Start or stop recording |
+| `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Larger interface, smaller interface, normal interface size |
 | `F1` | Open or close this manual |
 | `F11` | Fullscreen for the output windows |
 | `Esc` | Leave fullscreen |
@@ -1418,6 +1526,9 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--shader-editor [FILE]` | Open the shader editor on start, with a file of the shaders folder if you give one, otherwise with a template |
 | `--shader-editor-selftest [FRAMES]` | Check the shader editor in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--shader-editor-uitest` | Drive the shader editor with real key and mouse events, check what it holds and exit with code 0 or 1, with `--bench-out FILE.json` for the result |
+| `--reset-layout` | Set the saved window layout aside as `layout_v6.ini.bad` and build the default layout, for a window that can no longer be used |
+| `--reset-interface` | Like `--reset-layout`, and also set the shortcuts file aside and reset interface size, display scale, contrast and keyboard navigation |
+| `--interface-uitest` | Drive the interface with real key and mouse events (workspaces, shortcuts, sizes, high contrast, keyboard navigation, node canvas zoom), check the result and exit with code 0 or 1, with `--bench-out FILE.json` for the result; use `NYREXVJ_DATA_DIR` |
 | `--routing-selftest [FRAMES]` | Check video routing in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--routing-demo` | Build a small example with route clips and open the Video routing window, for screenshots |
 | `--netsync-selftest` | Check the network sync in the real engine in both roles with a lossy relay and exit with code 0 or 1, with `--bench-out FILE.json` for the result; it replaces the key file for the run and puts it back, so use `NYREXVJ_DATA_DIR` |

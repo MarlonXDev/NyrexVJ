@@ -4,6 +4,8 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name.
+
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
 Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try the steps of every entry in an area the release touched, correct the entry, and set the version line above.
@@ -80,6 +82,33 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** play `tests/data/test_hdr_pq.mp4`.
 - **Workaround:** convert HDR material to SDR before the show.
 
+### KI-9 Screen readers do not work with the interface
+
+- **Area:** accessibility
+- **Known by:** the documentation of the interface library says that accessibility features are not supported; nothing was run with a screen reader
+- **What happens:** the library draws every control itself and offers no accessibility tree, so a screen reader sees one window and no controls.
+- **Steps:** start a screen reader and open NyrexVJ.
+- **Impact:** people who rely on a screen reader cannot use the program. Keyboard navigation, high contrast and scaling help people who see the screen; they do not replace this.
+- **Workaround:** none. A different toolkit would be a rewrite and is not proposed.
+
+### KI-10 About 80 sizes stay fixed in pixels
+
+- **Area:** interface scaling
+- **Known by:** counted in the source (82 places that write `ImVec2(width, height)` with numbers outside the two helpers and the theme, `grep`, 0.51.0); the self test checks that the seven main panels, the Settings window and the manual window fit at 100, 125, 150 and 200 percent on windows from 1024x600 to 2560x1440, and it has not looked at every other window
+- **What happens:** most spacing follows the Interface size through the style, and windows that open at a fixed size are scaled and kept inside the main window. Some small paddings and button widths are written as pixels and stay the same. At 150 or 200 percent such a button can look small next to the text.
+- **Steps:** set Interface size to 2.00 and open the windows one after another.
+- **Impact:** looks, not function; a very small or very large window may not look balanced.
+- **Workaround:** none needed for use.
+
+### KI-11 The keys inside the editors cannot be changed
+
+- **Area:** shortcuts
+- **Known by:** read from the source: the Clip Creator, node editor, timeline and shader editor read `Ctrl+Z`, `Ctrl+Y`, `Delete`, `Space` and similar keys directly
+- **What happens:** Settings, Shortcuts changes the thirteen global actions only. The keys of the editors and the number keys 1 to 8 stay as they are.
+- **Steps:** try to give the node editor another undo key.
+- **Impact:** a person who needs different keys in an editor cannot have them.
+- **Workaround:** none.
+
 ## Limits of the evidence, not of the program
 
 These are not bugs. They are what the numbers cannot tell you.
@@ -90,4 +119,5 @@ These are not bugs. They are what the numbers cannot tell you.
 - **The renderer class is a guess from a name.** A software renderer whose name is not in the list of `src/core/run_conditions.cpp` would be called `gpu-reported`. A hardware result also needs a named tester and machine for that reason.
 - **The old-format fixtures were written by hand.** They show what the loaders accept today, not what an older release wrote. No file of an older release has been collected.
 - **Codec runs are on a software decoder.** The 20 clips passed on FFmpeg's decoders in software. No hardware decoder was exercised.
+- **The display scale was tested with injected values.** `--interface-uitest` sets 1.25, 1.5 and 2.0 by hand; the value that the operating system reports for a real monitor was never read from a real 125 to 200 percent display, and the high contrast and focus colours were judged by calculation and by screenshots, not by people.
 - **Two real PCs have not been used for sync or hot standby.** The tests use two processes on one PC ([SYNC.md](SYNC.md)).

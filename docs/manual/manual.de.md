@@ -76,6 +76,7 @@ Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Han
 | --- | --- |
 | Datei | Neue leere Komposition, Als Preset speichern, Datenordner öffnen, Beenden |
 | Bearbeiten | Rückgängig und Wiederherstellen |
+| Ansicht | Arbeitsbereiche, Fensteranordnung zurücksetzen, Oberflächengröße, Hoher Kontrast, Tastaturbedienung, Statusleiste zeigen |
 | Ausgabe | Ausgabefenster öffnen oder schließen, Vollbild, Ausgänge und Mapping, Aufnahme starten oder beenden, Aufnahme-Einstellungen, Per Spout an OBS senden, Über NDI senden, Video-Routing |
 | Audio | Audioquelle wählen: Aus, Demo-Signal, Systemaudio, Eingang, und Geräte aktualisieren |
 | Zeitleiste | Zeitleiste ausführen, Fenster der Show-Zeitleiste anzeigen, Abspielen, Pause, Stopp, Handeingriffe freigeben |
@@ -107,7 +108,7 @@ Die Leiste unten zeigt die Bildrate, die Prozessor- und Grafikzeit, die Ausgabeg
 
 ## Fenster verschieben {#layout}
 
-Alle Fenster lassen sich am Titel ziehen, nebeneinander andocken, als Tabs stapeln oder frei schwebend herausziehen. NyrexVJ merkt sich die Anordnung. Wenn du ein Fenster verlierst oder die Anordnung durcheinander ist, nutze Einstellungen, Aussehen, Fensteranordnung zurücksetzen. Die Größe der ganzen Oberfläche und ihre Farben findest du an derselben Stelle.
+Alle Fenster lassen sich am Titel ziehen, nebeneinander andocken, als Tabs stapeln oder frei schwebend herausziehen. NyrexVJ merkt sich die Anordnung. Benannte Anordnungen kannst du als Arbeitsbereiche behalten und im Menü Ansicht wechseln. Wenn du ein Fenster verlierst oder die Anordnung durcheinander ist, nutze Ansicht, Fensteranordnung zurücksetzen. Die Größe der ganzen Oberfläche, ihr Kontrast und ihre Farben stehen unter Einstellungen, Aussehen; alles ist erklärt unter [Oberfläche, Arbeitsbereiche und Barrierefreiheit](#interface).
 
 # Deine erste Show in fünf Minuten {#first-show}
 
@@ -822,6 +823,7 @@ Der Node-Editor baut deine eigenen Effekte ohne Code. Du verbindest Nodes für B
 | Node löschen | Wählen und Entf oder Rücktaste drücken |
 | Duplizieren | Strg+D oder Rechtsklick, Duplizieren |
 | Ansicht verschieben | Mittlere Maustaste, oder auf leerer Fläche ziehen |
+| Ansicht zoomen | Strg und das Mausrad zoomt zur Maus hin; `=` und `-` zoomen hinein und heraus, `0` geht zurück auf 100 Prozent |
 | Rückgängig und Wiederherstellen | Strg+Z und Strg+Y |
 | Aufräumen | Die Schaltfläche Anordnen setzt die Nodes in Spalten von den Eingängen zum Ausgang |
 
@@ -1194,7 +1196,7 @@ Der C-Header, ein Beispiel-Plugin und die vollständige Referenz stehen in docs/
 | Seite | Was du findest |
 | --- | --- |
 | Allgemein | Sprache, letzte Sitzung wiederherstellen, Ausgabefenster beim Start öffnen, Decks |
-| Aussehen | Farbthema, Oberflächengröße, Statusleiste, Fensteranordnung zurücksetzen |
+| Aussehen | Farbthema, Oberflächengröße und Bildschirmskalierung, Kontrast, Tastaturbedienung, Statusleiste, Fensteranordnung zurücksetzen und deine Arbeitsbereiche |
 | Audio | Audioquelle, Verstärkung, Glättung, Beat-Schwelle, BPM mit Audio synchronisieren |
 | Ausgabe | Qualität und Auflösung, Spout, NDI, bis zu vier Ausgabefenster mit Slices, Mapping, Überblendung, Venue-Setups und Frame-Lock |
 | Aufnahme | Format, Größe, Bildrate, Qualität, Ton, Ordner und die Aufnahme-Schaltflächen |
@@ -1202,7 +1204,7 @@ Der C-Header, ein Beispiel-Plugin und die vollständige Referenz stehen in docs/
 | Bühne | Art-Net, der DMX-Streifen, VRChat-Parameter, Kanäle und Testbilder |
 | Sync | Clock-Quelle, Timecode, MIDI-Clock, Pro DJ Link, die Cue-Liste |
 | Updates | Update-Kanal, automatische Prüfungen und Downloads, der Update-Status |
-| Tastenkürzel | Die Liste der Tastenkürzel |
+| Tastenkürzel | Deine Tastenkürzel: ändern, leeren oder zurücksetzen |
 | Leistung | Bildratenbegrenzung, Bildzeit-Budget, Renderqualität, Text und Partikel, gemessene Bildzeiten, Speicher, Video und FFmpeg, DXV-Umwandlung |
 | Plugins | Installierte Plugins und ihre Quellen |
 | Info | Version, Links, der Datenordner |
@@ -1211,13 +1213,118 @@ Der C-Header, ein Beispiel-Plugin und die vollständige Referenz stehen in docs/
 
 ## Aussehen {#settings-appearance}
 
-Das Farbthema ändert den Akzent der ganzen Oberfläche. Es gibt zehn Themen: Studio (der Standard, ein neutrales Dunkel mit rot-orangem Akzent), Orange, Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono. Die Oberflächengröße skaliert alle Fenster und Texte, und Zurücksetzen stellt sie wieder her.
+Das Farbthema ändert den Akzent der ganzen Oberfläche. Es gibt zehn Themen: Studio (der Standard, ein neutrales Dunkel mit rot-orangem Akzent), Orange, Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono. Die Oberflächengröße skaliert alle Fenster und Texte, und Zurücksetzen stellt sie wieder her. Dieselbe Seite hat die Bildschirmskalierung, den hohen Kontrast, die Tastaturbedienung, das Zurücksetzen der Fensteranordnung und die Arbeitsbereiche; siehe [Oberfläche, Arbeitsbereiche und Barrierefreiheit](#interface).
+
+# Oberfläche, Arbeitsbereiche und Barrierefreiheit {#interface}
+
+## Das Menü Ansicht {#view-menu}
+
+Das Menü Ansicht steht zwischen Bearbeiten und Ausgabe. Es hat alles aus diesem Kapitel, das du in einer Sekunde erreichen willst:
+
+| Eintrag | Was er tut |
+| --- | --- |
+| Arbeitsbereiche | Listet deine gespeicherten Arbeitsbereiche, speichert die aktuelle Anordnung unter einem Namen und öffnet den Ort, an dem du sie verwaltest |
+| Fensteranordnung zurücksetzen | Stellt die sieben Hauptfenster wieder in der Standardanordnung auf |
+| Größere Oberfläche, Kleinere Oberfläche, Normale Oberflächengröße | Ändern die Größe der ganzen Oberfläche in Schritten von zehn Prozentpunkten (`Strg+=`, `Strg+-`, `Strg+0`) |
+| Hoher Kontrast | Schaltet den Look mit hohem Kontrast an oder aus |
+| Tastaturbedienung | Lässt dich mit der Tastatur zwischen den Bedienelementen wechseln |
+| Statusleiste zeigen | Zeigt oder versteckt die Leiste unten |
+
+## Arbeitsbereiche {#workspaces}
+
+Ein Arbeitsbereich merkt sich, wo jedes Fenster sitzt und wie groß es ist: welche Fenster nebeneinander angedockt oder als Tabs gestapelt sind und Position und Größe der schwebenden Fenster. Er enthält keine Clips, Decks, Presets oder Einstellungen. Das Laden eines Arbeitsbereichs ändert die Anordnung und sonst nichts.
+
+Zum Speichern wählst du Ansicht, Arbeitsbereiche, Aktuelle Anordnung speichern unter..., tippst einen Namen und drückst Enter. Du kannst es auch unter Einstellungen, Aussehen im Block Arbeitsbereiche tun, der außerdem jeden Arbeitsbereich mit seiner Bildschirmgröße, einer Laden-Schaltfläche und einer Löschen-Schaltfläche zeigt. Löschen fragt noch einmal nach (Wirklich löschen?), bevor die Datei entfernt wird.
+
+- Ein Name wird auf 40 Byte gekürzt. Zeichen, die ein Dateiname nicht haben kann (`/ \ : * ? " < > |`), werden zu Leerzeichen, und mehrere Leerzeichen werden eins. Ein Name, der danach leer ist oder den Windows reserviert (`CON`, `PRN`, `AUX`, `NUL`, `COM1` bis `COM9`, `LPT1` bis `LPT9`), wird mit einer Meldung abgelehnt. Du kannst bis zu 32 Arbeitsbereiche behalten.
+- Speichern unter einem vorhandenen Namen ersetzt diesen Arbeitsbereich. Groß- und Kleinschreibung zählen als derselbe Name.
+- Die Dateien sind einfacher Text, eine je Arbeitsbereich, im Ordner `workspaces` des Datenordners, zum Beispiel `workspaces/Projektor-Abend.ini`. Du kannst eine auf einen anderen PC kopieren. Die ersten Zeilen sagen, von welchem Programm und mit welcher Fenstergröße sie gespeichert wurde.
+- Eine Datei, die beschädigt oder zu groß ist oder von einer neueren Version von NyrexVJ stammt, steht als Beschädigt mit dem Grund in der Liste und lässt sich nicht laden. Das Programm löscht oder ändert sie nie.
+- Angedockte Fenster behalten ihre Proportionen, wenn du einen Arbeitsbereich in ein Fenster anderer Größe lädst. Schwebende Fenster behalten die Position, mit der sie gespeichert wurden. Liegt eines außer Reichweite, holt Fensteranordnung zurücksetzen die Hauptfenster zurück.
+
+## Oberflächengröße und Bildschirmskalierung {#interface-size}
+
+Einstellungen, Aussehen, Skalierung hat zwei Bedienelemente.
+
+- **Oberflächengröße** ist ein Regler von 0,70 bis 2,50 (70 bis 250 Prozent). Er skaliert den Text, den Abstand darum, die abgerundeten Ecken, die Scrollbalken und die Fenster, die in fester Größe aufgehen. Ein Fenster geht nie größer auf als das Hauptfenster. Zurücksetzen stellt 1,00 wieder her. Das Menü Ansicht und `Strg+=`, `Strg+-` und `Strg+0` tun dasselbe in Schritten.
+- **Bildschirmskalierung übernehmen** ist standardmäßig aus. Wenn es an ist, folgt NyrexVJ zusätzlich der Skalierung, die dein Betriebssystem für den Bildschirm des Fensters einstellt (125 Prozent sind 1,25), zusätzlich zum Regler. Die aktuelle Bildschirmskalierung steht neben dem Kästchen.
+
+Beide Einstellungen werden gespeichert. Es ändert sich nichts, bevor du sie benutzt.
+
+## Hoher Kontrast {#high-contrast}
+
+Hoher Kontrast ist standardmäßig aus. Einstellungen, Aussehen, Kontrast (oder Ansicht, Hoher Kontrast) schaltet auf einen schwarzen Hintergrund mit weißem Text, kräftigere Ränder und einen gelben Fokusring um. Deine Themenfarbe bleibt als Akzent erhalten, aufgehellt, damit sie lesbar bleibt.
+
+Die Farben wurden mit der Kontrastformel der WCAG berechnet. Im Look mit hohem Kontrast ist der normale Text auf Fenstern, Feldern, Schaltflächen und Menüs mindestens 7 zu 1 gegen die Farbe dahinter (4,5 zu 1 bei überfahrenen und gedrückten Einträgen), und Ränder, Fokusring und Häkchen sind mindestens 3 zu 1. Im Standard-Look liegt der Text bei etwa 11,7 zu 1 und der blassere Text bei etwa 5,7 zu 1; der blasse Text ist etwas heller als in früheren Versionen, wo er bei etwa 4,4 zu 1 lag und damit unter den 4,5 der WCAG. Die Prüfung läuft für alle zehn Themen. Es ist eine Rechnung mit Farbwerten: Sie sagt nichts darüber, wie ein Bildschirm, ein Projektor oder ein Raum das Gesehene verändert, und nichts über Farbfehlsichtigkeit.
+
+## Tastaturbedienung {#keyboard-nav}
+
+Die Tastaturbedienung ist standardmäßig aus. Einstellungen, Aussehen, Tastatur (oder Ansicht, Tastaturbedienung) schaltet sie ein.
+
+- `Tab` und `Umschalt+Tab` gehen zum nächsten und vorherigen Bedienelement, die Pfeiltasten wechseln zwischen Nachbarn.
+- `Enter` oder `Leertaste` drückt eine Schaltfläche oder schaltet ein Kästchen um.
+- Das Bedienelement mit dem Tastaturfokus bekommt einen sichtbaren Ring. Der Ring erscheint, wenn du die Tastatur benutzt, und verschwindet, wenn du mit der Maus klickst.
+- `Esc` verlässt das Bedienelement.
+- Solange ein Bedienelement den Fokus hat, drückt die `Leertaste` es. Ohne fokussiertes Bedienelement tippt die `Leertaste` wie bisher das Tempo.
+
+Die Dicke des Rings lässt sich nicht ändern; seine Farbe schon (es ist die Akzentfarbe, bei hohem Kontrast gelb).
+
+## Eigene Tastenkürzel {#own-shortcuts}
+
+Einstellungen, Tastenkürzel listet dreizehn Aktionen mit ihren Tasten. Klicke auf die Taste einer Aktion, drücke die neue Kombination (zum Beispiel `Strg+K`) und sie ist gespeichert. `Esc` bricht ab. Leeren nimmt einer Aktion die Taste weg, Standard stellt die ursprüngliche Taste wieder her, Alle Tastenkürzel zurücksetzen stellt alles wieder her.
+
+| Aktion | Standard |
+| --- | --- |
+| Tap-Tempo | `Leertaste` |
+| Blackout | `B` |
+| Ausgabe im Vollbild | `F11` |
+| Rückgängig, Wiederherstellen | `Strg+Z`, `Strg+Y` |
+| Einstellungen öffnen | `Strg+,` |
+| Aufnahme starten oder beenden | `Strg+Umschalt+R` |
+| Handbuch öffnen | `F1` |
+| Nächstes Deck, Vorheriges Deck | `Bild ab`, `Bild auf` |
+| Größere Oberfläche, Kleinere Oberfläche, Normale Oberflächengröße | `Strg+=`, `Strg+-`, `Strg+0` |
+
+- Eine Kombination, die schon eine andere Aktion benutzt, wird abgelehnt, und die Meldung nennt diese Aktion. Es wird nichts stillschweigend weggenommen.
+- Nicht vergeben lassen sich die Zifferntasten `1` bis `8` (sie starten Spalten und wechseln mit `Strg` die Decks), `Strg+Umschalt+Z` (immer Wiederherstellen) und `Alt+F4`. Diese Tasten funktionieren weiter, wie unter [Tastenkürzel und Maus](#shortcuts) steht.
+- Die Zusatztasten müssen genau passen. `B` löst nicht aus, solange `Strg` gehalten wird, und `Strg+K` löst nicht aus, wenn zusätzlich `Umschalt` gedrückt ist. Vor Version 0.51.0 lösten einige Tasten, zum Beispiel `B` und `Leertaste`, auch mit gehaltener `Strg`-Taste aus.
+- Die Tastenkürzel stehen in `shortcuts.json` im Datenordner. Ein Kürzel tut nichts, solange du in ein Textfeld tippst oder das Programm auf eine neue Taste wartet.
+- Die Editoren (Clip Creator, Node-Editor, Zeitleiste, Shader-Editor) behalten ihre eigenen Tasten, etwa `Strg+Z`, `Entf` und `Leertaste`. Sie gehören nicht zur Tabelle und lassen sich nicht ändern.
+
+## Die Node-Fläche zoomen {#canvas-zoom}
+
+Die Fläche des Node-Effekt-Editors lässt sich zoomen. Halte `Strg` und drehe das Mausrad: Die Ansicht zoomt zur Maus hin, die Stelle unter der Maus bleibt also, wo sie ist. Das Rad allein verschiebt die Ansicht weiter. Die Tasten `=` und `-` zoomen hinein und heraus, und `0` geht zurück auf 100 Prozent, solange die Fläche den Fokus hat. Das Seitenfeld hat einen Block Zoom mit denselben drei Schaltflächen und dem aktuellen Wert. Der Zoom geht von 40 bis 250 Prozent, wird nicht mit dem Effekt gespeichert und ist von der Oberflächengröße getrennt. Mit dem Zoom-Node hat er nichts zu tun; das ist ein Effekt, der das Bild zoomt.
+
+## Wenn Anordnung oder eine Einstellungsdatei beschädigt ist {#interface-recovery}
+
+Ein Stromausfall oder eine Änderung von Hand kann eine Datei unlesbar machen. Beim Start prüft NyrexVJ drei Dateien im Datenordner und lässt nie zu, dass eine davon den Start blockiert.
+
+| Datei | Was bei einer Beschädigung geschieht |
+| --- | --- |
+| `layout_v6.ini` (die Fensteranordnung) | Sie wird in `layout_v6.ini.bad` umbenannt und die Standardanordnung wird aufgebaut. Eine Anordnung mit Fensterpositionen weit außerhalb jedes Bildschirms gilt als beschädigt. |
+| `settings.json` | Sie wird in `settings.json.bad` umbenannt und die Standardwerte gelten. Ein einzelner falscher Wert, etwa eine Oberflächengröße von 99, macht die Datei nicht beschädigt; dieser Wert wird in seinen Bereich geholt. |
+| `shortcuts.json` | Sie wird in `shortcuts.json.bad` umbenannt und die Standardkürzel gelten. Eine Datei, die eine neuere Version von NyrexVJ geschrieben hat, bleibt unberührt, und die Standardkürzel gelten. Änderst du danach ein Kürzel, wird zuerst eine Kopie der neueren Datei als `shortcuts.json.bad` behalten. |
+
+Eine Meldung sagt dir, was geschehen ist, und bleibt etwa zwölf Sekunden stehen. Dateien im Ordner `workspaces` werden beim Start nie verschoben oder gelöscht.
+
+Wenn du das Fenster gar nicht mehr bedienen kannst, starte NyrexVJ aus einer Eingabeaufforderung mit einer Option:
+
+- `NyrexVJ --reset-layout` legt die Anordnungsdatei beiseite und baut die Standardanordnung. Deine Tastenkürzel und Oberflächeneinstellungen bleiben.
+- `NyrexVJ --reset-interface` tut dasselbe, legt außerdem die Kürzeldatei beiseite und setzt Oberflächengröße, Bildschirmskalierung, Kontrast und Tastaturbedienung zurück. Dein Thema und alle anderen Einstellungen bleiben.
+
+## Was davon nicht abgedeckt ist {#accessibility-limits}
+
+- **Screenreader funktionieren mit NyrexVJ nicht.** Die Oberflächenbibliothek zeichnet alles selbst und liefert nicht die Informationen, die ein Screenreader braucht, also gibt es nichts zum Einschalten. Es steht als bekanntes Problem in der Liste.
+- Die Größe des Fokusrings lässt sich nicht ändern.
+- Ein paar Fenster und Schaltflächen haben noch eine feste Größe in Pixeln und wachsen nicht mit der Oberflächengröße. Sie bleiben benutzbar, wirken aber neben größerem Text klein.
+- Touch-Bedienung wurde nicht angesehen.
+- Alle bisherigen Prüfungen liefen in einem Fenster auf einem virtuellen Bildschirm. Ein echtes Display mit 125, 150 oder 200 Prozent, ein 4K-Bildschirm, ein kleiner Laptop-Bildschirm und das Arbeiten nur mit der Tastatur wurden auf echter Ausrüstung nicht ausprobiert. Der Testplan führt sie als manuelle Tests.
 
 # Tastenkürzel und Maus {#shortcuts}
 
 ## Tastatur {#keys}
 
-Diese Tasten funktionieren im Hauptfenster überall, außer wenn du gerade in ein Textfeld tippst.
+Das sind die Tasten, wie sie ausgeliefert werden. Die meisten lassen sich unter Einstellungen, Tastenkürzel ändern (siehe [Oberfläche, Arbeitsbereiche und Barrierefreiheit](#interface)). Sie funktionieren im Hauptfenster überall, außer wenn du gerade in ein Textfeld tippst.
 
 | Taste | Aktion |
 | --- | --- |
@@ -1231,6 +1338,7 @@ Diese Tasten funktionieren im Hauptfenster überall, außer wenn du gerade in ei
 | `Strg+Y` oder `Strg+Umschalt+Z` | Wiederherstellen |
 | `Strg+,` | Einstellungen öffnen |
 | `Strg+Umschalt+R` | Aufnahme starten oder beenden |
+| `Strg+=`, `Strg+-`, `Strg+0` | Größere Oberfläche, kleinere Oberfläche, normale Oberflächengröße |
 | `F1` | Dieses Handbuch öffnen oder schließen |
 | `F11` | Vollbild für die Ausgabefenster |
 | `Esc` | Vollbild verlassen |
@@ -1418,6 +1526,9 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--shader-editor [DATEI]` | Den Shader-Editor beim Start öffnen, mit einer Datei aus dem Ordner shaders, wenn du eine angibst, sonst mit einer Vorlage |
 | `--shader-editor-selftest [BILDER]` | Den Shader-Editor in der echten Engine prüfen und beenden, mit einer Bilderzahl danach für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--shader-editor-uitest` | Den Shader-Editor mit echten Tasten- und Mausereignissen bedienen, prüfen, was er enthält, und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis |
+| `--reset-layout` | Die gespeicherte Fensteranordnung als `layout_v6.ini.bad` beiseitelegen und die Standardanordnung aufbauen, für ein Fenster, das sich nicht mehr bedienen lässt |
+| `--reset-interface` | Wie `--reset-layout`, legt außerdem die Kürzeldatei beiseite und setzt Oberflächengröße, Bildschirmskalierung, Kontrast und Tastaturbedienung zurück |
+| `--interface-uitest` | Die Oberfläche mit echten Tasten- und Mausereignissen bedienen (Arbeitsbereiche, Kürzel, Größen, hoher Kontrast, Tastaturbedienung, Zoom der Node-Fläche), das Ergebnis prüfen und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis; mit `NYREXVJ_DATA_DIR` benutzen |
 | `--routing-selftest [BILDER]` | Das Video-Routing in der echten Engine prüfen und beenden, mit einer Bildanzahl dahinter für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--routing-demo` | Ein kleines Beispiel mit Routing-Clips aufbauen und das Fenster Video-Routing öffnen, für Screenshots |
 | `--netsync-selftest` | Den Netzwerk-Sync in der echten Engine in beiden Rollen mit einem verlustbehafteten Relais prüfen und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis; er ersetzt die Schlüsseldatei für den Lauf und legt sie zurück, nutze also `NYREXVJ_DATA_DIR` |

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interface, workspaces and accessibility - NyrexVJ Manual</title>
+<meta name="description" content="The View menu sits between Edit and Output. It holds everything in this chapter that you want to reach in a second:">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../assets/icon.png">
+<link rel="alternate" hreflang="de" href="../de/handbuch/interface.html">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Overview</a>
+<a href="index.html" aria-current="page">Manual</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Docs</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../de/handbuch/interface.html" hreflang="de" lang="de">Deutsch</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Contents">
+<h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="generators.html">Text, particles and effect chains</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="interface.html" aria-current="page">Interface, workspaces and accessibility</a>
+<ul><li><a href="#view-menu">The View menu</a></li><li><a href="#workspaces">Workspaces</a></li><li><a href="#interface-size">Interface size and display scale</a></li><li><a href="#high-contrast">High contrast</a></li><li><a href="#keyboard-nav">Keyboard navigation</a></li><li><a href="#own-shortcuts">Your own shortcuts</a></li><li><a href="#canvas-zoom">Zooming the node canvas</a></li><li><a href="#interface-recovery">If the layout or a setting file is damaged</a></li><li><a href="#accessibility-limits">What this does not cover</a></li></ul>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul>
+<p class="alllink"><a href="all.html">Read the whole manual on one page</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Contents</summary><h4>Getting started</h4><ul>
+<li><a href="welcome.html">Welcome to NyrexVJ</a>
+</li>
+<li><a href="install.html">Installing and first start</a>
+</li>
+<li><a href="tour.html">The window at a glance</a>
+</li>
+<li><a href="first-show.html">Your first show in five minutes</a>
+</li>
+</ul>
+<h4>Playing visuals</h4><ul>
+<li><a href="clip-grid.html">The clip grid</a>
+</li>
+<li><a href="decks.html">Decks and transitions</a>
+</li>
+<li><a href="layers.html">Layers and blending</a>
+</li>
+<li><a href="clip-window.html">The Clip window</a>
+</li>
+<li><a href="effects.html">Effects</a>
+</li>
+<li><a href="library.html">The Library</a>
+</li>
+<li><a href="presets.html">Presets and sessions</a>
+</li>
+<li><a href="master.html">The Master window</a>
+</li>
+</ul>
+<h4>Music and motion</h4><ul>
+<li><a href="audio.html">Audio and music</a>
+</li>
+<li><a href="modulation.html">Macros, LFOs and the beat grid</a>
+</li>
+</ul>
+<h4>Your own content</h4><ul>
+<li><a href="video.html">Video and image clips</a>
+</li>
+<li><a href="shaders.html">Your own shaders</a>
+</li>
+<li><a href="models.html">3D models</a>
+</li>
+<li><a href="creator.html">The Clip Creator</a>
+</li>
+<li><a href="generators.html">Text, particles and effect chains</a>
+</li>
+<li><a href="nodes.html">The node effect editor</a>
+</li>
+<li><a href="live-sources.html">Live sources: Spout, NDI and cameras</a>
+</li>
+</ul>
+<h4>Output and recording</h4><ul>
+<li><a href="outputs.html">Outputs, mapping and OBS</a>
+</li>
+<li><a href="recording.html">Recording</a>
+</li>
+</ul>
+<h4>Live control and shows</h4><ul>
+<li><a href="control.html">Control: MIDI, OSC and the web page</a>
+</li>
+<li><a href="sync.html">Show sync and timecode</a>
+</li>
+<li><a href="timeline.html">The show timeline</a>
+</li>
+<li><a href="stage.html">Stage: DMX, VRSL and VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Reference and help</h4><ul>
+<li><a href="settings.html">Settings reference</a>
+</li>
+<li><a href="interface.html" aria-current="page">Interface, workspaces and accessibility</a>
+<ul><li><a href="#view-menu">The View menu</a></li><li><a href="#workspaces">Workspaces</a></li><li><a href="#interface-size">Interface size and display scale</a></li><li><a href="#high-contrast">High contrast</a></li><li><a href="#keyboard-nav">Keyboard navigation</a></li><li><a href="#own-shortcuts">Your own shortcuts</a></li><li><a href="#canvas-zoom">Zooming the node canvas</a></li><li><a href="#interface-recovery">If the layout or a setting file is damaged</a></li><li><a href="#accessibility-limits">What this does not cover</a></li></ul>
+</li>
+<li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
+</li>
+<li><a href="performance.html">Performance</a>
+</li>
+<li><a href="files.html">Files and the data folder</a>
+</li>
+<li><a href="troubleshooting.html">Troubleshooting and FAQ</a>
+</li>
+<li><a href="cli.html">The command line</a>
+</li>
+<li><a href="languages.html">Languages</a>
+</li>
+<li><a href="glossary.html">Glossary</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Manual</a> / Reference and help</p>
+<h1>Interface, workspaces and accessibility</h1>
+<p class="meta">Chapter 30 of 37 &middot; 8 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#view-menu">The View menu</a><a href="#workspaces">Workspaces</a><a href="#interface-size">Interface size and display scale</a><a href="#high-contrast">High contrast</a><a href="#keyboard-nav">Keyboard navigation</a><a href="#own-shortcuts">Your own shortcuts</a><a href="#canvas-zoom">Zooming the node canvas</a><a href="#interface-recovery">If the layout or a setting file is damaged</a><a href="#accessibility-limits">What this does not cover</a></nav>
+<h2 id="view-menu"><a class="anchor" href="#view-menu" aria-label="Link">#</a>The View menu</h2>
+<p>The View menu sits between Edit and Output. It holds everything in this chapter that you want to reach in a second:</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Entry</th><th scope="col">What it does</th></tr></thead><tbody><tr><td>Workspaces</td><td>Lists your saved workspaces, lets you save the current layout under a name and opens the place where you manage them</td></tr><tr><td>Reset window layout</td><td>Puts the seven main panels back into the default arrangement</td></tr><tr><td>Larger interface, Smaller interface, Normal interface size</td><td>Change the size of the whole interface in steps of ten percentage points (<code>Ctrl+=</code>, <code>Ctrl+-</code>, <code>Ctrl+0</code>)</td></tr><tr><td>High contrast</td><td>Switches the high contrast look on or off</td></tr><tr><td>Keyboard navigation</td><td>Lets you move between controls with the keyboard</td></tr><tr><td>Show status bar</td><td>Shows or hides the bar at the bottom</td></tr></tbody></table></div>
+<h2 id="workspaces"><a class="anchor" href="#workspaces" aria-label="Link">#</a>Workspaces</h2>
+<p>A workspace remembers where every panel sits and how big it is: which panels are docked next to each other or stacked as tabs, and the position and size of the windows that float. It does not hold clips, decks, presets or settings. Loading a workspace changes the arrangement and nothing else.</p>
+<p>To save one, choose View, Workspaces, Save current layout as..., type a name and press Enter. You can also do it in Settings, Appearance, in the block Workspaces, which also lists every workspace with its screen size, a Load button and a Delete button. Delete asks once more (Really delete?) before it removes the file.</p>
+<ul><li>A name is cut to 40 bytes. Characters that a file name cannot hold (<code>/ \ : * ? " &lt; &gt; |</code>) turn into spaces and repeated spaces become one. A name that is empty after that, or that Windows reserves (<code>CON</code>, <code>PRN</code>, <code>AUX</code>, <code>NUL</code>, <code>COM1</code> to <code>COM9</code>, <code>LPT1</code> to <code>LPT9</code>), is refused with a message. You can keep up to 32 workspaces.</li><li>Saving under a name that exists replaces that workspace. Upper and lower case count as the same name.</li><li>The files are plain text, one per workspace, in the folder <code>workspaces</code> of the data folder, for example <code>workspaces/Projector night.ini</code>. You can copy one to another PC. The first lines say which program and which window size it was saved at.</li><li>A file that is damaged, too large or made by a newer version of NyrexVJ is listed as Damaged with the reason and cannot be loaded. The program never deletes or changes it.</li><li>Docked panels keep their proportions when you load a workspace into a window of another size. Floating windows keep the position they were saved at. If one ends up out of reach, Reset window layout brings the main panels back.</li></ul>
+<h2 id="interface-size"><a class="anchor" href="#interface-size" aria-label="Link">#</a>Interface size and display scale</h2>
+<p>Settings, Appearance, Scale has two controls.</p>
+<ul><li><strong>Interface size</strong> is a slider from 0.70 to 2.50 (70 to 250 percent). It scales the text, the space around it, the rounded corners, the scrollbars and the windows that open at a fixed size. A window never opens larger than the main window. Reset puts it back to 1.00. The View menu and <code>Ctrl+=</code>, <code>Ctrl+-</code> and <code>Ctrl+0</code> do the same in steps.</li><li><strong>Match the display scale</strong> is off by default. When it is on, NyrexVJ also follows the scale that your operating system sets for the screen the window is on (125 percent is 1.25), on top of the slider. The current display scale is shown next to the box.</li></ul>
+<p>Both settings are saved. Nothing changes until you use them.</p>
+<h2 id="high-contrast"><a class="anchor" href="#high-contrast" aria-label="Link">#</a>High contrast</h2>
+<p>High contrast is off by default. Settings, Appearance, Contrast (or View, High contrast) switches to a black background with white text, stronger borders and a yellow focus ring. Your theme colour is kept as the accent, lightened so that it stays readable.</p>
+<p>The colours were checked by calculation with the contrast formula of the WCAG. In the high contrast look the normal text is at least 7 to 1 against the colour behind it on panels, fields, buttons and menus (4.5 to 1 on hovered and pressed items), and borders, the focus ring and check marks are at least 3 to 1. In the standard look the text is about 11.7 to 1 and the dimmer text about 5.7 to 1; the dim text is slightly lighter than in earlier versions, which was about 4.4 to 1 and below the 4.5 of the WCAG. The check runs for all ten themes. It is a calculation on colour values: it says nothing about how a screen, a projector or a room changes what you see, and nothing about colour blindness.</p>
+<h2 id="keyboard-nav"><a class="anchor" href="#keyboard-nav" aria-label="Link">#</a>Keyboard navigation</h2>
+<p>Keyboard navigation is off by default. Settings, Appearance, Keyboard (or View, Keyboard navigation) turns it on.</p>
+<ul><li><code>Tab</code> and <code>Shift+Tab</code> move to the next and previous control, the arrow keys move between neighbours.</li><li><code>Enter</code> or <code>Space</code> presses a button or toggles a box.</li><li>The control that has the keyboard focus gets a visible ring. The ring appears when you use the keyboard and disappears when you click with the mouse.</li><li><code>Esc</code> leaves the control.</li><li>While a control has the focus, <code>Space</code> presses it. Without a focused control <code>Space</code> taps the tempo as before.</li></ul>
+<p>The thickness of the ring cannot be changed; its colour can (it is the accent colour, and yellow in high contrast).</p>
+<h2 id="own-shortcuts"><a class="anchor" href="#own-shortcuts" aria-label="Link">#</a>Your own shortcuts</h2>
+<p>Settings, Shortcuts lists thirteen actions with their keys. Click the key of an action, press the new combination (for example <code>Ctrl+K</code>) and it is saved. <code>Esc</code> cancels. Clear removes the key from an action, Default puts the original key back, Reset all shortcuts restores everything.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">Action</th><th scope="col">Default</th></tr></thead><tbody><tr><td>Tap tempo</td><td><code>Space</code></td></tr><tr><td>Blackout</td><td><code>B</code></td></tr><tr><td>Fullscreen output</td><td><code>F11</code></td></tr><tr><td>Undo, Redo</td><td><code>Ctrl+Z</code>, <code>Ctrl+Y</code></td></tr><tr><td>Open settings</td><td><code>Ctrl+,</code></td></tr><tr><td>Start or stop recording</td><td><code>Ctrl+Shift+R</code></td></tr><tr><td>Open the manual</td><td><code>F1</code></td></tr><tr><td>Next deck, Previous deck</td><td><code>Page Down</code>, <code>Page Up</code></td></tr><tr><td>Larger interface, Smaller interface, Normal interface size</td><td><code>Ctrl+=</code>, <code>Ctrl+-</code>, <code>Ctrl+0</code></td></tr></tbody></table></div>
+<ul><li>A combination that another action already uses is refused and the message names that action. Nothing is taken away silently.</li><li>These cannot be assigned: the number keys <code>1</code> to <code>8</code> (they trigger columns and, with <code>Ctrl</code>, switch decks), <code>Ctrl+Shift+Z</code> (always redo) and <code>Alt+F4</code>. Those keys keep working as written in <a href="shortcuts.html">Keyboard shortcuts and mouse</a>.</li><li>The modifier keys must match exactly. <code>B</code> does not fire while <code>Ctrl</code> is held, and <code>Ctrl+K</code> does not fire with <code>Shift</code> as well. Before version 0.51.0 some keys, for example <code>B</code> and <code>Space</code>, also fired with <code>Ctrl</code> held.</li><li>The shortcuts are saved in <code>shortcuts.json</code> in the data folder. A shortcut does nothing while you type in a text field or while the program waits for a new key.</li><li>The editors (Clip Creator, node editor, timeline, shader editor) keep their own keys, such as <code>Ctrl+Z</code>, <code>Delete</code> and <code>Space</code>. These are not part of the table and cannot be changed.</li></ul>
+<h2 id="canvas-zoom"><a class="anchor" href="#canvas-zoom" aria-label="Link">#</a>Zooming the node canvas</h2>
+<p>The canvas of the node effect editor can be zoomed. Hold <code>Ctrl</code> and turn the mouse wheel: the view zooms towards the mouse, so the spot under the mouse stays where it is. The wheel alone still moves the view. The keys <code>=</code> and <code>-</code> zoom in and out and <code>0</code> goes back to 100 percent while the canvas has the focus. The side panel has a Zoom block with the same three buttons and the current value. The zoom goes from 40 to 250 percent, it is not saved with the effect, and it is separate from the Interface size. It has nothing to do with the Zoom node, which is an effect that zooms the picture.</p>
+<h2 id="interface-recovery"><a class="anchor" href="#interface-recovery" aria-label="Link">#</a>If the layout or a setting file is damaged</h2>
+<p>A power cut or a hand edit can leave a file unreadable. At the start NyrexVJ checks three files in the data folder and never lets one of them block the start.</p>
+<div class="tablewrap"><table><thead><tr><th scope="col">File</th><th scope="col">What happens when it is damaged</th></tr></thead><tbody><tr><td><code>layout_v6.ini</code> (the window layout)</td><td>It is renamed to <code>layout_v6.ini.bad</code> and the default layout is built. A layout whose window positions are far outside any screen counts as damaged.</td></tr><tr><td><code>settings.json</code></td><td>It is renamed to <code>settings.json.bad</code> and the defaults are used. A single wrong value, such as an interface size of 99, does not make the file damaged; that value is brought into its range.</td></tr><tr><td><code>shortcuts.json</code></td><td>It is renamed to <code>shortcuts.json.bad</code> and the default shortcuts are used. A file that was written by a newer version of NyrexVJ is left alone and the default shortcuts are used. If you then change a shortcut, a copy of the newer file is kept as <code>shortcuts.json.bad</code> first.</td></tr></tbody></table></div>
+<p>A message tells you what happened and stays for about twelve seconds. Workspace files in the <code>workspaces</code> folder are never moved or deleted by the start.</p>
+<p>If you can no longer use the window at all, start NyrexVJ with an option from a command prompt:</p>
+<ul><li><code>NyrexVJ --reset-layout</code> sets the layout file aside and builds the default layout. Your shortcuts and interface settings stay.</li><li><code>NyrexVJ --reset-interface</code> does the same and also sets the shortcuts file aside and resets interface size, display scale, contrast and keyboard navigation. Your theme and all other settings stay.</li></ul>
+<h2 id="accessibility-limits"><a class="anchor" href="#accessibility-limits" aria-label="Link">#</a>What this does not cover</h2>
+<ul><li><strong>Screen readers do not work with NyrexVJ.</strong> The interface library draws everything itself and does not offer the information that a screen reader needs, so there is nothing to switch on. This is listed as a known issue.</li><li>The size of the focus ring cannot be changed.</li><li>A few windows and buttons still have a fixed size in pixels and do not grow with the interface size. They stay usable, but they look small next to larger text.</li><li>Touch input has not been looked at.</li><li>All checks so far ran in a window on a virtual screen. A real 125, 150 or 200 percent display, a 4K screen, a small laptop screen and working with the keyboard alone have not been tried on real equipment. The test plan lists them as manual tests.</li></ul>
+<nav class="pager" aria-label="Pager"><a class="prev" href="settings.html"><small>Previous</small><span>Settings reference</span></a><a class="next" href="shortcuts.html"><small>Next</small><span>Keyboard shortcuts and mouse</span></a></nav>
+<p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Overview</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Learn</h4><ul><li><a href="index.html">Manual</a></li><li><a href="first-show.html">Your first show</a></li><li><a href="troubleshooting.html">Troubleshooting</a></li><li><a href="shortcuts.html">Keyboard and mouse</a></li></ul></div>
+<div><h4>Project</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></li></ul></div>
+<div><h4>About</h4><ul><li><a href="../privacy.html">Privacy</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></li><li><a href="../docs.html">All documents</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ is an independent open source project. It is not affiliated with, endorsed by or sponsored by Resolume. Resolume, Arena and Avenue are names of their respective owner.</p>
+</div>
+</footer>
+</body>
+</html>

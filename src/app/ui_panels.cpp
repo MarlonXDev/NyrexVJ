@@ -67,7 +67,7 @@ void App::drawMods(std::array<AudioMod, kModSlots>& mods, bool master) {
         ImGui::PushID(i);
         bandCombo("##band", mod.band, 84.0f, plugins_.get());
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(104.0f);
+        ImGui::SetNextItemWidth(ui::px(104.0f));
         const bool level = master && mod.target == TargetOpacity;
         const char* preview = level ? tr("Level") : tr(modTargetName(mod.target));
         if (ImGui::BeginCombo("##target", preview)) {
@@ -112,7 +112,7 @@ void App::drawModulators(Modulators& modulators) {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("LFO %d", i + 1);
         ImGui::SameLine(52.0f);
-        ImGui::SetNextItemWidth(84.0f);
+        ImGui::SetNextItemWidth(ui::px(84.0f));
         if (ImGui::BeginCombo("##shape", tr(lfoShapeName(lfo.shape)))) {
             for (int s = 0; s < LfoShapeCount; ++s) {
                 if (ImGui::Selectable(tr(lfoShapeName(s)), lfo.shape == s)) {
@@ -122,7 +122,7 @@ void App::drawModulators(Modulators& modulators) {
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(92.0f);
+        ImGui::SetNextItemWidth(ui::px(92.0f));
         if (ImGui::BeginCombo("##rate", tr(lfoRateName(lfo.rate)))) {
             for (int r = 0; r < kLfoRateCount; ++r) {
                 if (ImGui::Selectable(tr(lfoRateName(r)), lfo.rate == r)) {
@@ -132,7 +132,7 @@ void App::drawModulators(Modulators& modulators) {
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(50.0f);
+        ImGui::SetNextItemWidth(ui::px(50.0f));
         ui::sliderFloat("##phase", &lfo.phase, 0.0f, 1.0f, "%.2f");
         ImGui::SetItemTooltip("%s", tr("Phase: where in its cycle the LFO starts"));
         ImGui::SameLine();
@@ -238,7 +238,7 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             bandCombo("##band", slot.reactBand, 78.0f, plugins_.get());
             if (slot.reactBand != BandOff) {
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth(92.0f);
+                ImGui::SetNextItemWidth(ui::px(92.0f));
                 if (ImGui::BeginCombo("##mode", tr(reactModeName(slot.reactMode)))) {
                     for (int m = 0; m < EffectReactModeCount; ++m) {
                         if (ImGui::Selectable(tr(reactModeName(m)), slot.reactMode == m)) {
@@ -611,7 +611,7 @@ void App::drawSpoutInputControls(int slot) {
     std::string& wanted = settings_.spoutInputs[static_cast<size_t>(slot)];
     const std::vector<std::string>& senders = engine_.spoutSenders();
     const std::string preview = wanted.empty() ? std::string(tr("Automatic")) : wanted;
-    ImGui::SetNextItemWidth(-90.0f);
+    ImGui::SetNextItemWidth(ui::px(-90.0f));
     if (ImGui::BeginCombo(trId("Spout sender", "spoutPick"), preview.c_str())) {
         if (ImGui::Selectable(tr("Automatic"), wanted.empty())) {
             wanted.clear();
@@ -664,7 +664,7 @@ void App::drawSpoutControls() {
             spout_.stop();
         }
     }
-    ImGui::SetNextItemWidth(-90.0f);
+    ImGui::SetNextItemWidth(ui::px(-90.0f));
     if (ImGui::InputText(trId("Sender name", "spoutName"), spoutName_, sizeof(spoutName_), ImGuiInputTextFlags_EnterReturnsTrue)) {
         if (spout_.active()) {
             spout_.start(spoutName_);
@@ -697,7 +697,7 @@ void App::drawNdiControls() {
             ndi_.stop();
         }
     }
-    ImGui::SetNextItemWidth(-90.0f);
+    ImGui::SetNextItemWidth(ui::px(-90.0f));
     if (ImGui::InputText(trId("NDI name", "ndiName"), ndiName_, sizeof(ndiName_), ImGuiInputTextFlags_EnterReturnsTrue)) {
         if (ndi_.active()) {
             ndi_.start(ndiName_);

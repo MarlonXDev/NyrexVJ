@@ -229,7 +229,7 @@ bool bindingEditor(std::array<DocBinding, 2>& bindings, bool light, bool camera)
         changed |= ImGui::Checkbox("##on", &b.enabled);
         ImGui::SameLine();
         ImGui::BeginDisabled(!b.enabled);
-        ImGui::SetNextItemWidth(70.0f);
+        ImGui::SetNextItemWidth(ui::px(70.0f));
         int source = static_cast<int>(b.source);
         if (comboList("##source", source, sources, 5)) {
             b.source = static_cast<BindSource>(source);
@@ -239,7 +239,7 @@ bool bindingEditor(std::array<DocBinding, 2>& bindings, bool light, bool camera)
         if (light || camera) {
             ImGui::TextUnformatted(bindTargetLabel(light ? BindTarget::Light : BindTarget::Zoom));
         } else {
-            ImGui::SetNextItemWidth(70.0f);
+            ImGui::SetNextItemWidth(ui::px(70.0f));
             int target = std::clamp(static_cast<int>(b.target), 0, 3);
             if (comboList("##target", target, targets, 4)) {
                 b.target = static_cast<BindTarget>(target);
@@ -560,7 +560,7 @@ void App::drawCreator() {
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowSize(ImVec2(std::min(1320.0f, viewport->WorkSize.x * 0.96f), std::min(780.0f, viewport->WorkSize.y * 0.92f)), ImGuiCond_FirstUseEver);
+    ui::setNextWindowSize(ImVec2(std::min(1320.0f, viewport->WorkSize.x * 0.96f), std::min(780.0f, viewport->WorkSize.y * 0.92f)), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + viewport->WorkSize.y * 0.5f), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
     if (creatorFocus_) {
         ImGui::SetNextWindowFocus();

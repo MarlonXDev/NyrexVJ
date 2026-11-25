@@ -154,7 +154,7 @@ void App::drawApiSection() {
     ImGui::TextUnformatted("Port");
     ImGui::SameLine();
     int port = settings_.apiPort;
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(ui::px(120.0f));
     ImGui::InputInt("##apiPort", &port, 0, 0);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         settings_.apiPort = std::clamp(port, 1024, 65535);
@@ -197,7 +197,7 @@ void App::drawApiSection() {
     ImGui::SameLine();
     char tokenText[96] = {};
     std::snprintf(tokenText, sizeof(tokenText), "%s", api_.token().c_str());
-    ImGui::SetNextItemWidth(260.0f);
+    ImGui::SetNextItemWidth(ui::px(260.0f));
     ImGui::InputText("##apiToken", tokenText, sizeof(tokenText), ImGuiInputTextFlags_ReadOnly | (showToken ? 0 : ImGuiInputTextFlags_Password));
     ImGui::SameLine();
     if (ImGui::Button(showToken ? trId("Hide", "apiHide") : trId("Show", "apiShow"))) {
@@ -236,7 +236,7 @@ void App::drawOscOutSection() {
     ImGui::SameLine();
     char host[64] = {};
     std::snprintf(host, sizeof(host), "%s", settings_.oscOutHost.c_str());
-    ImGui::SetNextItemWidth(150.0f);
+    ImGui::SetNextItemWidth(ui::px(150.0f));
     ImGui::InputText("##oscOutHost", host, sizeof(host));
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         settings_.oscOutHost = host[0] ? host : "127.0.0.1";
@@ -246,14 +246,14 @@ void App::drawOscOutSection() {
     ImGui::TextUnformatted("Port");
     ImGui::SameLine();
     int port = settings_.oscOutPort;
-    ImGui::SetNextItemWidth(90.0f);
+    ImGui::SetNextItemWidth(ui::px(90.0f));
     ImGui::InputInt("##oscOutPort", &port, 0, 0);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         settings_.oscOutPort = std::clamp(port, 1, 65535);
         persist();
     }
     int rate = settings_.oscOutRate;
-    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SetNextItemWidth(ui::px(160.0f));
     if (ui::sliderInt(trId("Updates per second", "oscOutRate"), &rate, 10, 120)) {
         settings_.oscOutRate = rate;
     }
@@ -288,7 +288,7 @@ void App::drawOscOutSection() {
             ImGui::PushID(static_cast<int>(i));
             char name[40] = {};
             std::snprintf(name, sizeof(name), "%s", param.name.c_str());
-            ImGui::SetNextItemWidth(120.0f);
+            ImGui::SetNextItemWidth(ui::px(120.0f));
             ImGui::InputText("##name", name, sizeof(name));
             if (ImGui::IsItemDeactivatedAfterEdit()) {
                 std::string clean;
@@ -326,7 +326,7 @@ void App::drawOscOutSection() {
         }
         ImGui::EndDisabled();
 
-        ImGui::SetNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_Appearing);
+        ui::setNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_Appearing);
         if (ImGui::BeginPopup("##pickOutTarget")) {
             ImGui::TextColored(ui::kAccent, "%s", tr("Choose the value to send"));
             ImGui::SetNextItemWidth(-FLT_MIN);
@@ -377,7 +377,7 @@ void App::drawOscSection() {
     ImGui::TextUnformatted("Port");
     ImGui::SameLine();
     int port = settings_.oscPort;
-    ImGui::SetNextItemWidth(120.0f);
+    ImGui::SetNextItemWidth(ui::px(120.0f));
     ImGui::InputInt("##oscPort", &port, 0, 0);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         settings_.oscPort = std::clamp(port, 1, 65535);
@@ -450,7 +450,7 @@ void App::drawMidiSection() {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(tr("Device"));
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(280.0f);
+    ImGui::SetNextItemWidth(ui::px(280.0f));
     const std::string current = settings_.midiDevice.empty() ? std::string(tr("None")) : settings_.midiDevice;
     if (ImGui::BeginCombo("##midiDevice", current.c_str())) {
         if (ImGui::Selectable(tr("None"), settings_.midiDevice.empty())) {
@@ -499,7 +499,7 @@ void App::drawMidiSection() {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(tr("Feedback device"));
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(280.0f);
+    ImGui::SetNextItemWidth(ui::px(280.0f));
     const std::vector<std::string>& outputs = control_.midiOutDevices();
     const std::string currentOut = settings_.midiOutDevice.empty() ? std::string(tr("None")) : settings_.midiOutDevice;
     if (ImGui::BeginCombo("##midiOutDevice", currentOut.c_str())) {
@@ -535,7 +535,7 @@ void App::drawMidiSection() {
 
 void App::drawProfilesSection() {
     ImGui::TextWrapped("%s", tr("A profile saves all your mappings under a name, so you can switch controllers or share the file. Loading a profile replaces the current mappings."));
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     ImGui::InputTextWithHint("##profileName", tr("Profile name"), profileName_, sizeof(profileName_));
     ImGui::SameLine();
     if (ImGui::Button(trId("Save profile", "profileSave"))) {
@@ -582,7 +582,7 @@ void App::drawBindingsSection() {
         ImGui::OpenPopup("##pickTarget");
     }
 
-    ImGui::SetNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_Appearing);
+    ui::setNextWindowSize(ImVec2(420.0f, 360.0f), ImGuiCond_Appearing);
     if (ImGui::BeginPopup("##pickTarget")) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Choose what to control"));
         ImGui::SetNextItemWidth(-FLT_MIN);

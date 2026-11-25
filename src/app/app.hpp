@@ -25,6 +25,8 @@
 #include "core/plugin_host.hpp"
 #include "core/recovery.hpp"
 #include "core/settings.hpp"
+#include "core/shortcuts.hpp"
+#include "core/workspace.hpp"
 #include "media/camera_capture.hpp"
 #include "media/convert_manager.hpp"
 #include "media/ffmpeg_setup.hpp"
@@ -116,6 +118,8 @@ struct StartOptions {
     bool skipWelcome = false;
     bool crashTest = false;
     bool noPlugins = false;
+    bool resetLayout = false;
+    bool resetInterface = false;
 };
 
 class App {
@@ -123,6 +127,9 @@ public:
     bool init(GLFWwindow* window, const StartOptions& options);
     void frame(double dt);
     void startShaderEditorTest();
+    void startInterfaceTest();
+    int tickInterfaceTest();
+    std::string interfaceTestReport() const;
     void startRoutingDemo();
     int tickShaderEditorTest();
     std::string shaderEditorTestReport() const;
@@ -141,7 +148,26 @@ public:
 
 private:
     void buildLayout(ImGuiID dock);
+    void buildInterfaceTest();
+    void openNodeEditorNew();
     void handleShortcuts();
+    bool shortcutPressed(shortcuts::Action action);
+    bool shortcutBlocked() const;
+    void recoverInterfaceFiles(const StartOptions& options);
+    void loadShortcuts();
+    void saveShortcuts();
+    void updateInterfaceStyle();
+    void applyPendingWorkspace();
+    void refreshWorkspaces();
+    void requestWorkspace(const std::string& name);
+    void saveWorkspaceAs(const std::string& name);
+    void deleteWorkspace(const std::string& name);
+    void resetWindowLayout();
+    void changeInterfaceScale(int direction);
+    void drawViewMenu();
+    void drawWorkspacePanel();
+    void drawShortcutsPage();
+    void drawInterfaceOptions();
     void drawMenuBar();
     void drawDeck();
     void drawOutput();
@@ -368,6 +394,12 @@ private:
     GeneratorDialog generatorDialog_;
     ShaderEditorDialog shaderEditor_;
     ShaderEditorUiTest shaderEditorTest_;
+    ShaderEditorUiTest interfaceTest_;
+    bool blackoutBefore_ = false;
+    bool shortcutsNewerKept_ = false;
+    std::vector<ImGuiID> navSeen_;
+    ImVec2 zoomMouse_{0.0f, 0.0f};
+    ImVec2 zoomPoint_{0.0f, 0.0f};
     ChainDialog chainDialog_;
     bool manualFocus_ = false;
     ManualView manualView_;
@@ -389,6 +421,25 @@ private:
     GLFWwindow* window_ = nullptr;
     std::string iniPath_;
     bool needsLayout_ = false;
+    shortcuts::Table shortcuts_;
+    std::string shortcutsPath_;
+    int shortcutCapture_ = -1;
+    std::string shortcutMessage_;
+    std::vector<workspace::Entry> workspaces_;
+    bool workspacesStale_ = true;
+    char workspaceName_[64] = {};
+    std::string workspaceMessage_;
+    std::string pendingWorkspace_;
+    int recoveryFlags_ = 0;
+    std::string workspaceDeleteArmed_;
+    float dpiScale_ = 1.0f;
+    float appliedSizeScale_ = 0.0f;
+    bool appliedHighContrast_ = false;
+    std::string appliedTheme_;
+    bool appliedKeyboardNav_ = false;
+    bool keyboardNavSeen_ = false;
+    bool workspacePopupOpen_ = false;
+    float dpiOverride_ = 0.0f;
     bool fontCheckPending_ = false;
     bool cjkTried_ = false;
     bool rescanModels_ = false;

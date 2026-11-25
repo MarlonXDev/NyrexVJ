@@ -359,7 +359,7 @@ void App::drawPlaybackControls(MediaPlayer& player, ClipPlayback& playback) {
     ImGui::TextDisabled(tr("Frame %d"), static_cast<int>(std::lround(position / period)));
 
     float scrub = static_cast<float>(position);
-    ImGui::SetNextItemWidth(-1.0f);
+    ImGui::SetNextItemWidth(ui::px(-1.0f));
     if (ui::sliderFloat("##scrub", &scrub, 0.0f, static_cast<float>(duration), "")) {
         player.scrubTo(static_cast<double>(scrub));
     }
@@ -703,7 +703,7 @@ void App::drawLibraryPopups() {
             ImGui::SameLine();
         }
         ImGui::NewLine();
-        ImGui::SetNextItemWidth(180.0f);
+        ImGui::SetNextItemWidth(ui::px(180.0f));
         const bool entered = ImGui::InputTextWithHint("##newTag", tr("New tag"), tagInput_, sizeof(tagInput_), ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
         if ((ImGui::Button(trId("Add", "addTag")) || entered) && tagInput_[0] != '\0') {
@@ -741,7 +741,7 @@ void App::drawLibraryPopups() {
         ImGui::TextDisabled("%s", clipName.c_str());
         ImGui::TextWrapped("%s", tr("Every cell of every deck that plays this clip plays the clip you pick instead. Layer, effect and mixing settings stay."));
         ImGui::Checkbox(trId("Keep the playback settings of the cells", "replaceKeep"), &replaceKeepPlayback_);
-        ImGui::SetNextItemWidth(260.0f);
+        ImGui::SetNextItemWidth(ui::px(260.0f));
         ImGui::InputTextWithHint("##replaceFilter", tr("Search"), replaceFilter_, sizeof(replaceFilter_));
         const LibraryQuery query = parseLibraryQuery(replaceFilter_);
         ImGui::BeginChild("##replaceList", ImVec2(300.0f, 220.0f), ImGuiChildFlags_Borders);

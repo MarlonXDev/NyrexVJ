@@ -74,7 +74,7 @@ void beginCard(float offset) {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 14.0f, viewport->WorkPos.y + viewport->WorkSize.y - 14.0f - offset), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
     ImGui::SetNextWindowBgAlpha(0.97f);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(ImGui::GetFontSize() * 26.0f, FLT_MAX));
+    ui::setNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(ImGui::GetFontSize() * 26.0f, FLT_MAX));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.5f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(14.0f, 10.0f));
@@ -459,7 +459,7 @@ void App::drawConversionSettings() {
             modeSelected = i;
         }
     }
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::BeginCombo(trId("Import mode", "optConvertMode"), modeLabels[modeSelected])) {
         for (int i = 0; i < 3; ++i) {
             if (ImGui::Selectable(modeLabels[i], i == modeSelected)) {
@@ -481,7 +481,7 @@ void App::drawConversionSettings() {
             formatSelected = i;
         }
     }
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::BeginCombo(trId("HAP format", "optConvertFormat"), formatLabels[formatSelected])) {
         for (int i = 0; i < 4; ++i) {
             if (ImGui::Selectable(formatLabels[i], i == formatSelected)) {
@@ -494,7 +494,7 @@ void App::drawConversionSettings() {
     ImGui::SetItemTooltip("%s", tr("Automatic picks HAP for videos without transparency, HAP Q for DXV High Quality and HAP Alpha for videos with transparency. HAP Q with transparency is not supported, so videos with transparency always become HAP Alpha. A format you choose here is only used when it can keep the picture as it is."));
 
     int cache = settings_.convertCacheMb;
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ui::sliderInt(trId("Cache size limit", "optConvertCache"), &cache, 256, 51200, "%d MB", ImGuiSliderFlags_Logarithmic)) {
         settings_.convertCacheMb = cache;
         persist();

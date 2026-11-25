@@ -49,6 +49,9 @@ struct Settings {
     int renderQuality = 0;
     bool showTimings = true;
     float uiScale = 1.0f;
+    bool uiAutoScale = false;
+    std::string uiContrast = "standard";
+    bool uiKeyboardNav = false;
     UpdateChannel channel = UpdateChannel::Nightly;
     std::array<OutputSpec, kMaxOutputs> outputs = defaultOutputs();
     std::string language = "en";

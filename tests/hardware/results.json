@@ -1391,6 +1391,58 @@
       "test": "A-RQ-8",
       "command": "python3 scripts/test_measure_live.py",
       "notes": "14 tests passed, among them the conditions block and the schema of the live report"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.51.0 (branch feature/interface-accessibility, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "interface-accessibility",
+      "test": "A-UI-1",
+      "command": "ctest -j2 in the build folder (nvj_interface_tests)",
+      "notes": "427 checks passed: workspace store, shortcut table, contrast formula and the new settings keys"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.51.0 (branch feature/interface-accessibility, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "interface-accessibility",
+      "test": "A-UI-2",
+      "command": "ctest -j2 in the build folder (nvj_theme_tests)",
+      "notes": "473 checks passed: contrast ratios of the standard and the high contrast look for all ten themes, and the scaling of the style"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.51.0 (branch feature/interface-accessibility, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "interface-accessibility",
+      "test": "A-UI-3",
+      "command": "NYREXVJ_DATA_DIR=/tmp/uidata NyrexVJ --fresh --no-update-check --no-welcome --audio-demo --frames 100000 --interface-uitest --bench-out result.json under xvfb-run with LIBGL_ALWAYS_SOFTWARE=1, screens of 1280x720 and 2800x1600",
+      "notes": "89 checks passed in about 1200 frames: workspace round trip and a damaged workspace, shortcut dispatch with a moved key and exact modifiers, capture, conflicts and reserved keys, a newer shortcut file kept as .bad, sizes 100 to 200 percent, injected display scales 1.25, 1.5 and 2.0, 13 window sizes from 1024x600 to 2560x1440, a workspace from a larger window in a smaller one, high contrast, keyboard navigation and node canvas zoom; screenshots were looked at by the author only"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-25",
+      "build": "0.51.0 (branch feature/interface-accessibility, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "interface-accessibility",
+      "test": "A-UI-4",
+      "command": "python3 scripts/test_interface_recovery.py build/NyrexVJ --output result.json under xvfb-run",
+      "notes": "24 checks passed: damaged, empty, binary, wild, newer and out-of-range files and --reset-layout and --reset-interface, each with the real program started"
     }
   ]
 }

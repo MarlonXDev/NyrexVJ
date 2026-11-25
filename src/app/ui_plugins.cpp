@@ -85,7 +85,7 @@ void drawParameters(PluginHost& host, const std::string& key) {
     for (int p = 0; p < source->parameterCount && p < kPluginParameters; ++p) {
         ImGui::PushID(p);
         float value = values[static_cast<size_t>(p)];
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ui::sliderFloat(source->parameterNames[static_cast<size_t>(p)].c_str(), &value, 0.0f, 1.0f, "%.2f")) {
             host.setParameter(key, p, value);
         }

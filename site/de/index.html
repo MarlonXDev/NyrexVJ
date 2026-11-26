@@ -107,6 +107,29 @@
 </div>
 </div>
 </section>
+<section class="sec s2 alt-bg">
+<div class="wrap">
+<h2>Gebaut für eine ganze Nacht<span class="badge">Neu</span></h2>
+<p class="lead">NyrexVJ ist seit dem Handbuch weitergewachsen. Die meisten dieser neueren Teile sind aus, bis du sie einschaltest, und einige sind als experimentell gekennzeichnet. Getestet wurden sie mit vom Computer erzeugten Bildern und einem Software-Renderer, noch nicht mit echten Projektoren, Kameras oder Controllern. Im <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/TESTING.md" target="_blank" rel="noopener noreferrer">Testplan</a> steht, was noch offen ist.</p>
+<div class="feat">
+<div><h3>Auf dem Beat starten</h3><p>Halte einen Start bis zum nächsten Beat, Takt, zwei oder vier Takten (standardmäßig aus). Markiere Favoriten, vergib Tags und tausche einen Clip in jeder Zelle jedes Decks in einem Schritt, den du rückgängig machen kannst. <a href="handbuch/clip-grid.html#quantize">Auf dem Beat starten</a></p></div>
+<div><h3>Show-Pakete</h3><p>Pack eine Show mit allen Dateien, die sie braucht, in eine einzige .nyxshow-Datei für einen anderen Computer. Das Öffnen ist zuerst ein Probelauf, und nichts ändert sich, bis du Importieren drückst. <a href="handbuch/presets.html#show-packages">Show-Pakete</a></p></div>
+<div><h3>Community-Pakete</h3><p>Eine .nyxpack-Datei bringt Presets, Shader, Node-Effekte, Masken und Venue-Setups mit. Konflikte werden vorher aufgelistet, und ein Plugin wird nur kopiert und bleibt ausgeschaltet, nachdem du bestätigt hast, dass du dem Autor vertraust. <a href="handbuch/presets.html#community-packages">Community-Pakete</a></p></div>
+<div><h3>Text, Partikel und Ketten</h3><p>Schreib Text-Clips, spiel Partikel-Clips und speichere die vier Effekte eines Layers als Kette. Ein experimenteller Modus lässt bis zu 1.048.576 Partikel auf der Grafikkarte laufen und weicht auf den Prozessor aus, wenn es nicht geht. <a href="handbuch/generators.html">Text, Partikel und Ketten</a></p></div>
+<div><h3>Shader-Editor</h3><p>Bearbeite einen Shader mit Zeilennummern, Farben und einer Live-Vorschau, die die Ausgabe nie anfasst, mit den Compiler-Meldungen daneben und vier Vorlagen zum Starten. <a href="handbuch/shaders.html#shader-editor">Der Shader-Editor</a></p></div>
+<div><h3>Video-Routing</h3><p>Spiel einen anderen Layer, mehrere Layer oder den Master in einem Layer ab, führ einen Layer ein Bild später zurück und schick einen einzelnen Layer über Spout, NDI oder die Aufnahme. <a href="handbuch/outputs.html#video-routing">Video-Routing</a></p></div>
+<div><h3>Mehrere PCs und ein Reserve-PC</h3><p>Folge einem Master mit bis zu acht PCs (standardmäßig aus, mit einem Schlüssel signiert, nicht verschlüsselt, Medien werden nie gesendet). Ein zweiter PC kann bereitstehen und von Hand oder, wenn du es ankreuzt, von selbst übernehmen. NyrexVJ schaltet keine Kabel oder Projektoren um. <a href="handbuch/sync.html#sync-network">Netzwerk-Sync</a> &middot; <a href="handbuch/sync.html#sync-failover">Hot-Standby</a></p></div>
+<div><h3>3D-Mapping</h3><p>Beschreibe Wände und Säulen in Metern, stell einen virtuellen Projektor in den Raum und kalibriere von Hand mit Punkten. Eine Kalibrierung mit Kamera gibt es nicht. <a href="handbuch/outputs.html#spatial">3D-Mapping auf Flächen</a></p></div>
+<div><h3>Farbe</h3><p>Das Farbmodell ist aufgeschrieben. Optional: eine .cube-LUT, Tone Mapping für HDR-Videos und ein Farbprofil je Ausgabe. Das Bild intern bleibt 8 Bit, und es gibt keine HDR-Ausgabe. <a href="handbuch/color.html">Farbe</a></p></div>
+<div><h3>Optischer Fluss</h3><p>Experimentell und standardmäßig aus: macht Zwischenbilder für Videos und fügt Bewegungsunschärfe aus der Bewegung zwischen den Bildern hinzu, innerhalb einer Grafikspeicher-Grenze. <a href="handbuch/video.html#video-flow">Flüssigere Bewegung</a></p></div>
+<div><h3>Netzwerk-Streams</h3><p>Vier Clips nehmen einen RTSP-, SRT- oder UDP-Stream auf (standardmäßig aus, nur diese drei Protokolle). Die NDI-Version der installierten Runtime wird angezeigt. <a href="handbuch/live-sources.html#network-streams">Netzwerk-Streams</a></p></div>
+<div><h3>Personen finden</h3><p>Experimentell und standardmäßig aus: findet Personen im Bild einer Kamera, einer NDI-Quelle oder eines Streams, indem es das Bild mit der leeren Szene vergleicht, für einen Masken-Effekt und sechs Zahlen, die alles steuern können. Ein KI-Modell ist nicht dabei. <a href="handbuch/live-sources.html#person-detection">Personenerkennung</a></p></div>
+<div><h3>Arbeitsbereiche und Barrierefreiheit</h3><p>Speichere Fensteranordnungen, ändere 13 Tastenkürzel, skaliere die Oberfläche von 0,7 bis 2,5 und schalte hohen Kontrast und Tastaturbedienung ein. Bildschirmleser funktionieren noch nicht. <a href="handbuch/interface.html">Oberfläche und Barrierefreiheit</a></p></div>
+<div><h3>Grafikspeicher und Warnungen</h3><p>Die Leistungsseite hält gemessenen und geschätzten Grafikspeicher getrennt, zeigt die langsamsten Frames und gibt acht Warnungen aus. Ein optionales Speicherbudget gibt Clips frei, die nicht laufen. <a href="handbuch/performance.html#perf-memory">Grafikspeicher</a></p></div>
+<div><h3>Unreal-Engine-Anbindung</h3><p>Ein experimentelles Plugin für die Unreal Engine liest die OSC-Ausgabe von NyrexVJ in Blueprints und C++, mit Verbindungsstatus und Umlaufzeit. Der Unreal-Teil wurde noch nie mit der Unreal Engine gebaut. <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/UNREAL.md" target="_blank" rel="noopener noreferrer">Unreal Engine und NyrexVJ</a></p></div>
+</div>
+</div>
+</section>
 <section class="sec s2">
 <div class="wrap">
 <h2>Und noch viel mehr</h2>

@@ -91,6 +91,8 @@ Settings, Output, Frame lock. Several output windows are separate windows with t
 
 **What this is not.** It is not a hardware genlock. The swap skew is the CPU time when the swaps are handed to the graphics driver; the driver, the graphics card, the display and the projector add their own time, and the windows are not locked to the vertical blank of each other. Windows on different graphics cards or at different refresh rates still drift. For tear free output on several cards, use a card with a frame lock option (for example NVIDIA Quadro Sync or AMD FirePro S400) and its driver tools; NyrexVJ does not control them. Use the sync bars with a camera to see what you get on your hardware.
 
+**Hardware status (since 0.57.0).** Below the swap skew, Settings, Output shows "Hardware frame lock": not checked, not offered by this graphics driver, or offered by the driver, and the extension names the driver lists. It reads what the driver says and nothing more: no swap group is joined, no barrier is bound and no driver setting is changed, so the software frame lock above is still the only lock that runs. A listed extension does not mean that a sync board is connected or locked. What was checked, what was not and why joining is held back: [GENLOCK.md](GENLOCK.md) and [ADR 0051](adr/0051-hardware-sync-status.md).
+
 ## Network sync (several PCs)
 
 Settings, Sync, Network sync. Off by default. One NyrexVJ is the **master** and up to eight others are **followers**. The decision and the alternatives are in [ADR 0041](adr/0041-multi-pc-sync.md).
@@ -197,6 +199,6 @@ Not measured: the default lost-after time of 5 s (it follows the same rule, 5 s 
 - Real Pioneer players or mixers, real Denon gear, a real network with switches, a firewall or a second network segment. The packet layout comes from the public analysis; the simulator was written from the same description, so a shared misunderstanding would not be found.
 - Real LTC or MTC sources: timecode generators, DAWs, hardware that sends timecode, audio interfaces and their line levels, cables, drop frame material at 29.97 and any reverse or varispeed playback.
 - Real MIDI clock hardware and USB MIDI jitter, and MIDI clock over network MIDI.
-- Frame lock and delay on real graphics cards, several cards, real projectors, real displays with different refresh rates, tear free output, and the photographed sync bars. Everything above was measured with software OpenGL (llvmpipe) under a virtual display.
+- The hardware frame lock status on any real graphics card (it was only run on a software renderer), and everything about sync boards and swap groups ([GENLOCK.md](GENLOCK.md)). Frame lock and delay on real graphics cards, several cards, real projectors, real displays with different refresh rates, tear free output, and the photographed sync bars. Everything above was measured with software OpenGL (llvmpipe) under a virtual display.
 - Windows at run time: the code is built for Windows in CI, but the shared UDP port, the audio input for LTC and the output windows were not run there.
 - Next to VRChat: the cost of the sync system (a few small updates a frame, the timecode decoding on the render thread, and a capture thread of the audio input only while a timecode device is chosen) and of the output changes was not measured while VRChat runs.

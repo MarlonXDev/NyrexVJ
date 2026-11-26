@@ -2912,6 +2912,12 @@ const Translation kDutch[] = {
     {"the picture changed completely, learning the background again", "het beeld is helemaal veranderd, de achtergrond wordt opnieuw geleerd"},
     {"the analysis is too slow for this computer and was switched off", "de analyse is te langzaam voor deze computer en is uitgeschakeld"},
     {"no source is set for this input", "voor deze ingang is geen bron ingesteld"},
+    {"Driver extensions", "Driverextensies"},
+    {"Hardware frame lock", "Hardware-framelock"},
+    {"Not checked", "Niet gecontroleerd"},
+    {"Not offered by this graphics driver", "Niet aangeboden door deze grafische driver"},
+    {"Offered by the driver, not used by NyrexVJ", "Aangeboden door de driver, niet gebruikt door NyrexVJ"},
+    {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "Hardware-framelock en genlock vragen een professionele grafische kaart met een synckaart (bijvoorbeeld NVIDIA Quadro Sync of AMD FirePro S400), kabels en een instelling in het configuratiescherm van de driver. Deze regel laat alleen zien of de driver de swap-group-extensies vermeldt. Ze kan niet zeggen of een kaart is aangesloten of vergrendeld. NyrexVJ treedt tot geen enkele swap group toe en wijzigt geen driverinstelling; de software-framelock hierboven werkt in elk geval."},
 };
 
 }

@@ -2986,6 +2986,112 @@
           "criteria": "Proposed: all checks pass on Windows, camera, NDI and stream sources are analysed alike, and the settings page works as described. The maintainer sets the real limit after the first runs."
         }
       ]
+    },
+    {
+      "id": "hardware-sync",
+      "title": "Hardware frame lock and genlock status: the swap group and genlock extension names a real driver lists, what a consumer card, a professional card and a card with a sync board show, the software frame lock next to it, Windows and Linux",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/GENLOCK.md",
+        "docs/adr/0051-hardware-sync-status.md",
+        "docs/SYNC.md",
+        "docs/OUTPUTS.md",
+        "docs/INTERFACES.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/TESTING.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/hardware_sync.cpp",
+        "src/render/hardware_sync_probe.cpp",
+        "src/render/engine.cpp",
+        "src/app/ui_outputs.cpp",
+        "src/app/gpu_diag_selftest.cpp",
+        "src/app/output_selftest.cpp",
+        "tests/test_hardware_sync.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-GENLOCK-1",
+          "kind": "ctest",
+          "name": "nvj_hardware_sync_tests",
+          "note": "the names of software renderers, the vendor from GL_VENDOR and GL_RENDERER, no context gives not checked, a consumer card gives not offered, cards that list names give offered by the driver with the names in a fixed order, a software renderer is never offered, text of any length and with a null character, the same input gives the same result; no OpenGL"
+        },
+        {
+          "id": "A-GENLOCK-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --gpu-diag-selftest",
+          "note": "the real engine has read the status at start-up, a software renderer is not reported as offering anything, the state agrees with the listed names, and the report carries summary.hardwareFrameLock; run with a clean data directory"
+        },
+        {
+          "id": "A-GENLOCK-3",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
+          "note": "the status is read from the driver after the frame lock checks and the software frame lock is still on afterwards; the existing frame lock, delay and sync bar checks run as before; run with a clean data directory"
+        },
+        {
+          "id": "A-GENLOCK-4",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "the six new texts of the hardware frame lock line have a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-GENLOCK-1",
+          "title": "What real drivers list: a consumer card, an integrated chip, a professional card",
+          "needs": "A Windows PC and a Linux PC, and as many of these as can be had: an NVIDIA GeForce, an NVIDIA RTX or Quadro professional card, an AMD Radeon, an AMD Radeon Pro or FirePro, an Intel integrated chip",
+          "steps": [
+            "Start NyrexVJ with --fresh and open Settings, Output.",
+            "Read the line Hardware frame lock and the Driver extensions line, and keep a screenshot.",
+            "Start NyrexVJ --gpu-diag-selftest --bench-out hardware-sync.json and read summary.hardwareFrameLock in the file.",
+            "Repeat with each card and each system, and note the card name and the driver version."
+          ],
+          "measure": "for each card and system: the state shown, the graphics vendor shown, the extension names listed, and whether they match the extension list that a tool such as GPU Caps Viewer, glxinfo or the driver's own information shows",
+          "criteria": "Proposed: a consumer card and an integrated chip show Not offered, a professional card lists the names its driver documents, and the vendor is right in every case. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-GENLOCK-2",
+          "title": "A card with a sync board: what the line says with the board connected, set up and locked",
+          "needs": "A professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), the cables and the driver's tool for frame lock and genlock, optionally a house sync signal",
+          "steps": [
+            "Without the board set up, read the line Hardware frame lock.",
+            "Set the board up in the driver's tool until it reports a lock, and read the line again.",
+            "Open two output windows with the Frame lock on and the Sync bars test pattern, and film both screens with one camera.",
+            "Switch the software Frame lock off and on and film again."
+          ],
+          "measure": "whether the line differs with and without a lock (it is expected not to, because it only reads the extension names), the swap skew shown, the counters of the sync bars on both screens, and whether any of it changes with the driver's lock",
+          "criteria": "Proposed: the line states what the driver lists and never claims a lock; nothing in the output changes because of the status. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-GENLOCK-3",
+          "title": "Two graphics vendors, outputs on another card, and Wayland",
+          "needs": "A PC with two graphics cards of different vendors or an integrated chip next to a card, and a Linux system that can run Wayland",
+          "steps": [
+            "Open an output window on a display that is connected to the second card and read the line.",
+            "Move the main window to the other card and start again.",
+            "On Linux, start under X11 and under Wayland and read the line in both."
+          ],
+          "measure": "the state and the names for each case, and whether the line describes the card that really draws the output windows",
+          "criteria": "Proposed: the state is stated for the main window's card, the page says so, and the Wayland case reads Not offered. The maintainer decides whether the outputs of another card need their own status."
+        },
+        {
+          "id": "M-GENLOCK-4",
+          "title": "The software frame lock next to a driver that lists swap group extensions, and Windows",
+          "needs": "A Windows PC with a professional card, the release build, two displays or projectors",
+          "steps": [
+            "Run NyrexVJ --output-selftest --bench-out output.json and read the checks.",
+            "Run with two output windows for ten minutes with the frame lock on and watch the swap skew and the frame time monitor.",
+            "Compare the swap skew and the frame times with the same run on a consumer card.",
+            "Check that no setting of the driver changed and that no swap group is reported in the driver's tool."
+          ],
+          "measure": "every check of the self test, the swap skew and frame times with the status Offered and with Not offered, and any difference in the driver's frame lock panel",
+          "criteria": "Proposed: all checks pass, the frame times do not depend on the status, and the driver's panel shows no change made by NyrexVJ. The maintainer sets the real limit after the first runs."
+        }
+      ]
     }
   ]
 }

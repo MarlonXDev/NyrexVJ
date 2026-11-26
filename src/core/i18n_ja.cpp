@@ -2912,6 +2912,12 @@ const Translation kJapanese[] = {
     {"the picture changed completely, learning the background again", "映像が完全に変わったため、背景を学習し直しています"},
     {"the analysis is too slow for this computer and was switched off", "このコンピューターでは解析が遅すぎるため、オフにしました"},
     {"no source is set for this input", "この入力にはソースが設定されていません"},
+    {"Driver extensions", "ドライバーの拡張機能"},
+    {"Hardware frame lock", "ハードウェアフレームロック"},
+    {"Not checked", "未確認"},
+    {"Not offered by this graphics driver", "このグラフィックドライバーでは提供されていません"},
+    {"Offered by the driver, not used by NyrexVJ", "ドライバーは提供していますが、NyrexVJ では使用しません"},
+    {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "ハードウェアフレームロックとジェンロックには、同期ボード（例：NVIDIA Quadro Sync や AMD FirePro S400）を備えたプロ向けグラフィックカード、ケーブル、そしてドライバーのコントロールパネルでの設定が必要です。この行は、ドライバーがスワップグループ拡張を一覧に出しているかどうかを示すだけで、ボードが接続されているかロックされているかは分かりません。NyrexVJ はスワップグループに参加せず、ドライバーの設定も変更しません。上のソフトウェアフレームロックはどちらの場合でも動作します。"},
 };
 
 }

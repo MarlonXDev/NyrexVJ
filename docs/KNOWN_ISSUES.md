@@ -4,7 +4,7 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
-KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-23 were added at 0.55.0; KI-24 to KI-27 were added at 0.56.0; the other entries were not walked through again.
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-23 were added at 0.55.0; KI-24 to KI-27 were added at 0.56.0; KI-28 was added at 0.57.0; the other entries were not walked through again.
 
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
@@ -255,6 +255,15 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** manual tests `M-PERSON-1` to `M-PERSON-4` in [TESTING.md](TESTING.md).
 - **Impact:** a first real run may show problems that the synthetic tests cannot show.
 - **Workaround:** try it with your camera and your lights before a show; the module is off by default.
+
+### KI-28 Hardware frame lock and genlock are only detected, never used, and the detection was only run on a software renderer
+
+- **Area:** outputs, frame lock
+- **Known by:** what ran: `nvj_hardware_sync_tests`, `--gpu-diag-selftest`, `--output-selftest` and the whole suite on Linux with software OpenGL, 2 cores, no graphics card. The behaviour of real drivers was read from public documents only (see [GENLOCK.md](GENLOCK.md)).
+- **What happens:** the status line in Settings, Output lists the swap group and genlock extension names the driver reports. It cannot see a sync board, a cable, a house signal or a locked state, so "Offered by the driver" can appear on a card without a board. NyrexVJ does not join a swap group, so with a sync board the outputs are still not hardware locked by NyrexVJ; they are locked only as far as the driver's own settings do it. The names are read from the main window's context, and under Wayland or EGL none of the names appear. Unknown: what a GeForce, a professional card, an AMD card or an Intel card lists on Windows and on Linux.
+- **Steps:** manual tests `M-GENLOCK-1` to `M-GENLOCK-4` in [TESTING.md](TESTING.md).
+- **Impact:** the line can be too optimistic ("offered") or too pessimistic (Wayland, another card for the output windows). It never changes how the output is drawn or swapped.
+- **Workaround:** use the sync bars with a camera to see what your hardware does, and set up a sync board in the driver's own tool. The software frame lock stays on as before.
 
 ## Limits of the evidence, not of the program
 

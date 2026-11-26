@@ -105,7 +105,7 @@ A venue setup stores the whole layout of all four outputs under a name: which ou
 
 ## Frame lock and delay
 
-Several output windows have their own graphics context. With Frame lock on (default, Settings, Output) all open outputs are drawn first and swapped one right after the other, and the swap skew is measured and shown. Every output also has a Delay of 0 to 8 frames to match a projector or a path that shows its picture later; the delay copies pictures into a ring that exists only while a delay is set (23.7 MiB at 1920 x 1080 with a delay of 2). The test pattern can be switched to Sync bars, a frame counter that shows with one camera how many frames apart two outputs are. This is not a hardware genlock. Details, numbers and limits: [SYNC.md](SYNC.md).
+Several output windows have their own graphics context. With Frame lock on (default, Settings, Output) all open outputs are drawn first and swapped one right after the other, and the swap skew is measured and shown. Every output also has a Delay of 0 to 8 frames to match a projector or a path that shows its picture later; the delay copies pictures into a ring that exists only while a delay is set (23.7 MiB at 1920 x 1080 with a delay of 2). The test pattern can be switched to Sync bars, a frame counter that shows with one camera how many frames apart two outputs are. This is not a hardware genlock. Since 0.57.0 the line "Hardware frame lock" below it shows whether the graphics driver lists the swap group extensions of professional cards; it is information only, and NyrexVJ does not use them ([GENLOCK.md](GENLOCK.md)). Details, numbers and limits: [SYNC.md](SYNC.md).
 
 ## Test pattern
 

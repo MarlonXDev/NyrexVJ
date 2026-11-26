@@ -6,6 +6,7 @@
 #include "core/color_model.hpp"
 #include "core/composition.hpp"
 #include "core/gpu_diag.hpp"
+#include "core/hardware_sync.hpp"
 #include "core/launch_quantizer.hpp"
 #include "core/optical_flow.hpp"
 #include "core/person_mask.hpp"
@@ -215,6 +216,7 @@ public:
     void setMemoryPolicy(const MemoryPolicy& policy);
     const MemoryPolicy& memoryPolicy() const { return memoryPolicy_; }
     const Diagnostics& diagnostics() const { return diagnostics_; }
+    const HardwareSyncStatus& hardwareSync() const { return hardwareSync_; }
     bool memoryTrimming() const { return memoryPolicy_.budgetBytes > 0 && memoryPolicy_.trim; }
     void refreshDiagnostics();
     std::string shaderNote(int clip) const;
@@ -554,6 +556,7 @@ private:
     unsigned long long shaderBudget_ = kShaderBufferBudgetBytes;
     MemoryPolicy memoryPolicy_;
     Diagnostics diagnostics_;
+    HardwareSyncStatus hardwareSync_;
     gpudiag::PressureLadder pressure_;
     gpudiag::TrafficMeter traffic_;
     gpudiag::DriverMemory driverMemory_;

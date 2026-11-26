@@ -60,6 +60,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Optical flow: motion estimation, frame interpolation, motion blur and the vector view for video clips, and what they do on real footage, real graphics cards and next to other programs | implemented | automated 2/2 | 2 | M-FLOW-1 open; M-FLOW-2 open; M-FLOW-3 open; M-FLOW-4 open |
 | Network stream inputs (RTSP, SRT, UDP) and the NDI runtime: real cameras and servers, real networks, Windows, SDI capture cards, the real NDI runtime and VRChat on the same PC | implemented | automated 3/4 | 4 | M-STREAM-1 open; M-STREAM-2 open; M-STREAM-3 open; M-STREAM-4 open; M-STREAM-5 open |
 | Person detection (mask and 2D tracking from a camera, NDI or stream picture, no model): real cameras, real stage light, a real graphics card, Windows and VRChat on the same PC | implemented | automated 2/2 | 2 | M-PERSON-1 open; M-PERSON-2 open; M-PERSON-3 open; M-PERSON-4 open |
+| Hardware frame lock and genlock status: the swap group and genlock extension names a real driver lists, what a consumer card, a professional card and a card with a sync board show, the software frame lock next to it, Windows and Linux | implemented | automated 4/4 | 4 | M-GENLOCK-1 open; M-GENLOCK-2 open; M-GENLOCK-3 open; M-GENLOCK-4 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

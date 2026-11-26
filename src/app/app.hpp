@@ -214,6 +214,7 @@ private:
     void drawVideoSettings();
     void drawColorSettings();
     void drawFlowSettings();
+    void drawPersonSettings();
     void applyColorSettings();
     void drawConversionSettings();
     void drawFfmpegSection();

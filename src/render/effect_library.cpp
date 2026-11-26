@@ -58,7 +58,16 @@ uniform vec4 uAudio;
 uniform float uKick;
 uniform sampler2D uAudioTex;
 uniform float uMix;
+uniform sampler2D uPerson;
+uniform float uPersonOn;
+uniform vec2 uPersonFit;
 const float PI = 3.14159265;
+
+float personMask(vec2 uv) {
+    vec2 q = (uv - 0.5) * uPersonFit + 0.5;
+    vec2 inside = step(vec2(0.0), q) * step(q, vec2(1.0));
+    return texture(uPerson, vec2(q.x, 1.0 - q.y)).r * inside.x * inside.y;
+}
 
 float spec(float x) {
     return texture(uAudioTex, vec2(clamp(x, 0.0, 1.0), 0.25)).r;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.55.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.56.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -201,6 +201,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/spatial_calibration.cpp
     src/core/color_model.cpp
     src/core/optical_flow.cpp
+    src/core/person_mask.cpp
     src/core/flow_synth.cpp
     src/core/color_lut.cpp
     src/core/venue_setup.cpp
@@ -254,6 +255,7 @@ set(NYREXVJ_CORE_SOURCES
     src/media/playback_driver.cpp
     src/media/frame_luma.cpp
     src/media/flow_worker.cpp
+    src/media/person_worker.cpp
     src/media/video_decoder.cpp
     src/media/video_recorder.cpp
     src/media/video_hardware.cpp
@@ -371,6 +373,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/output_selftest.cpp
     src/app/color_selftest.cpp
     src/app/flow_selftest.cpp
+    src/app/person_selftest.cpp
     src/app/record_selftest.cpp
     src/app/shader_selftest.cpp
     src/app/generator_selftest.cpp
@@ -393,6 +396,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_video.cpp
     src/app/ui_color.cpp
     src/app/ui_flow.cpp
+    src/app/ui_person.cpp
     src/app/ui_convert.cpp
     src/app/ui_profile.cpp
     src/app/ui_panels.cpp
@@ -421,6 +425,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/color_stage.cpp
     src/render/flow_interp.cpp
     src/render/flow_session.cpp
+    src/render/person_session.cpp
     src/render/texture_history.cpp
     src/render/output_manager.cpp
     src/render/ndi_output.cpp
@@ -621,6 +626,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_color_tests PRIVATE nvj_core)
     target_include_directories(nvj_color_tests PRIVATE tests)
     add_test(NAME nvj_color_tests COMMAND nvj_color_tests)
+    add_executable(nvj_person_tests tests/test_person.cpp)
+    target_link_libraries(nvj_person_tests PRIVATE nvj_core)
+    target_include_directories(nvj_person_tests PRIVATE tests)
+    add_test(NAME nvj_person_tests COMMAND nvj_person_tests)
     add_executable(nvj_flow_tests tests/test_flow.cpp)
     target_link_libraries(nvj_flow_tests PRIVATE nvj_core)
     target_include_directories(nvj_flow_tests PRIVATE tests)

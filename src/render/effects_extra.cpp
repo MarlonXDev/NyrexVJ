@@ -1157,6 +1157,35 @@ vec4 effect(vec2 uv, vec4 p) {
     return vec4(col, 1.0);
 }
 )glsl", false, false});
+
+    fx.push_back({"Person Key", {"Mode", "Softness", "Backdrop", "Color"}, {0.0f, 0.4f, 0.0f, 0.55f}, R"glsl(
+vec4 effect(vec2 uv, vec4 p) {
+    vec4 src = texture(uTex, uv);
+    if (uPersonOn < 0.5) {
+        return src;
+    }
+    float m = personMask(uv);
+    float w = mix(0.04, 0.45, p.y);
+    float k = ss(0.5 - w, 0.5 + w, m);
+    vec3 tint = hc(p.w);
+    vec3 back = mix(vec3(0.0), tint * 0.6, p.z);
+    float mode = floor(p.x * 3.999);
+    vec3 col;
+    if (mode < 0.5) {
+        col = mix(back, src.rgb, k);
+    } else if (mode < 1.5) {
+        col = mix(src.rgb, back, k);
+    } else if (mode < 2.5) {
+        col = mix(back, tint, k);
+    } else {
+        vec2 o = vec2(0.012 / uAspect, 0.012) * mix(0.6, 2.5, p.y);
+        float b = (personMask(uv + vec2(o.x, 0.0)) + personMask(uv - vec2(o.x, 0.0)) + personMask(uv + vec2(0.0, o.y)) + personMask(uv - vec2(0.0, o.y))) * 0.25;
+        float edge = clamp(abs(m - b) * 5.0, 0.0, 1.0);
+        col = src.rgb * (0.25 + 0.75 * p.z) + tint * edge * 1.6;
+    }
+    return vec4(col, 1.0);
+}
+)glsl", false, false});
 }
 
 }

@@ -2885,6 +2885,107 @@
           "criteria": "Proposed: the card works as a camera if its driver supports it, and neither program gets visibly worse with a stream running. No SDI claim is made for any card that was not run."
         }
       ]
+    },
+    {
+      "id": "person-detection",
+      "title": "Person detection (mask and 2D tracking from a camera, NDI or stream picture, no model): real cameras, real stage light, a real graphics card, Windows and VRChat on the same PC",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/PERSON.md",
+        "docs/adr/0049-person-segmentation.md",
+        "docs/MODULATION.md",
+        "docs/LIVE.md",
+        "docs/INTERFACES.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/TESTING.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/person_mask.cpp",
+        "src/media/person_worker.cpp",
+        "src/render/person_session.cpp",
+        "src/render/live_input.cpp",
+        "src/render/engine.cpp",
+        "src/render/effect_library.cpp",
+        "src/render/effects_extra.cpp",
+        "src/core/settings.cpp",
+        "src/core/modulation.cpp",
+        "src/app/ui_person.cpp",
+        "src/app/person_selftest.cpp",
+        "tests/test_person.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-PERSON-1",
+          "kind": "ctest",
+          "name": "nvj_person_tests",
+          "note": "the analysis picture size and the reduction of UYVY and RGBA pictures, blobs, the tracker, an empty scene, detection at all three tiers, sensitivity, alpha edges and softness, temporal stability, several people, people who cross, occlusion, light changes and a strobe, a scene that changes completely, a lost camera, the six signals, the backend interface and its provenance, the governor, wrong input, determinism, the worker thread and its stop, the cost per analysis, and the settings keys with damaged values; no OpenGL"
+        },
+        {
+          "id": "A-PERSON-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --person-selftest --bench-out person.json",
+          "note": "the real engine with computer-made camera pictures: detection off creates nothing and the effect is a pass-through; the empty scene is learned; a person at the top left is found with the right position; the mask lies upright and not mirrored in both modes; a 4:3 camera on a 16:9 output; losing the camera, the signals falling to zero and the person found again; learning the background again; the mask counted in the graphics memory report; the cost per step and the analysis time against the budget; switching off removes everything; the state of OpenGL afterwards; needs no files and no camera; on a virtual screen with software OpenGL"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-PERSON-1",
+          "title": "A real camera in a real room: who is found, who is not, and how long it takes to learn",
+          "needs": "A PC with a webcam or capture card and a fixed camera position, a room or stage that can be emptied, two people, a chair and a door or curtain",
+          "steps": [
+            "Open Settings, Performance, Person detection, choose Background difference and the camera, and press Learn background now while nobody is in the picture.",
+            "Walk in, stand still, walk out, and watch the mask preview and the People found line.",
+            "Carry in a chair and put it down, open the door, and note how long the chair stays a person.",
+            "Let two people cross, cover one with the other, and leave and re-enter the picture.",
+            "Repeat with Fast, Balanced and Fine, and at sensitivity 25, 50 and 75."
+          ],
+          "measure": "for each case whether the mask matches the person, how often it flickers, how long learning takes, how long a moved object stays in the mask, whether the numbers of two people survive a crossing, and any false person",
+          "criteria": "Proposed: a person who walks into an empty, steady scene is found within a second and the mask follows the outline well enough for a stage effect; a moved object disappears within about a minute. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-PERSON-2",
+          "title": "Stage light, projections and exposure: false foreground and repeated learning",
+          "needs": "A PC with a camera, stage lights or a projector that can change, a fixed camera",
+          "steps": [
+            "Run person detection with the camera on an empty stage and change the lights slowly, in steps, and with a strobe.",
+            "Point the camera so that it sees part of the projected show, with and without the person.",
+            "Switch the camera's auto exposure and white balance on and off.",
+            "Watch the mask preview, the state line and how often it says that the picture changed completely."
+          ],
+          "measure": "the share of the picture that is falsely in the mask for each case, how often learning started again, and what helped (locked exposure, a view without projection, a lower sensitivity)",
+          "criteria": "Proposed: with locked exposure and a view without projection the mask stays free of false foreground during a normal light change, and the page explains a relearn when it happens. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-PERSON-3",
+          "title": "Cost on a real graphics card and processor, and VRChat on the same PC",
+          "needs": "A PC that runs VRChat and NyrexVJ together, a real graphics card, a camera",
+          "steps": [
+            "Run NyrexVJ with person detection on at each tier and at 15 and 30 analyses per second with a Person Key effect on a layer, and watch the frame time monitor and the analysis time on the page for ten minutes.",
+            "Do the same with the module off and note the difference in both programs.",
+            "Run VRChat in a busy world and note when the governor lowers the tier or the rate or switches the module off.",
+            "Run NyrexVJ --person-selftest --bench-out person.json and keep the file."
+          ],
+          "measure": "frame time and late frames of NyrexVJ and the frame rate of VRChat with the module off and on at each setting, the analysis time and p95 on the page, the setting the governor settles on, and the report of the selftest",
+          "criteria": "Proposed: with the module on neither program gets visibly worse than with it off, or the governor lowers the setting or switches the module off before it does. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-PERSON-4",
+          "title": "The settings page, NDI and stream sources, and Windows",
+          "needs": "A Windows PC with the release build, a camera, an NDI source and a stream (or NDI and stream sources from another program)",
+          "steps": [
+            "Run NyrexVJ --person-selftest --bench-out person.json and read the checks.",
+            "Switch the module on for a camera, an NDI source and a stream input one after the other, and check the state line, the source choice and the mask preview.",
+            "Use the six person sources on a layer opacity, a layer effect parameter and a master slot, and check that a person walking left and right moves the value as expected.",
+            "Close the program with the module on, start it again and check that the settings came back."
+          ],
+          "measure": "the result of every selftest check, whether each source type is analysed, whether the sources move the way the person moves, and anything on the settings page that looks wrong",
+          "criteria": "Proposed: all checks pass on Windows, camera, NDI and stream sources are analysed alike, and the settings page works as described. The maintainer sets the real limit after the first runs."
+        }
+      ]
     }
   ]
 }

@@ -14,6 +14,7 @@ The order is part of the file format, because presets store the name of the sour
 | 10 to 17 | Macro 1 to 8 | the position of the knob |
 | 18 | Beat | rises from 0 to 1 over one beat, then starts again |
 | 19 | Bar | rises from 0 to 1 over one bar (2 to 8 beats), then starts again |
+| 30 to 35 | Person present, Person X, Person Y, Person size, Person motion, Person count | the biggest tracked person in the picture of the camera chosen for person detection ([PERSON.md](PERSON.md)); 0 while the module is off. X runs from the left, Y from the bottom, size is the height of the person as a part of the picture height, motion is the speed of the person (1 at 0.6 picture lengths per second) and count is the number of people divided by 8. X, Y and size keep their last value when nobody is visible, so gate them with Person present. The numbers 20 to 29 (the timecode and plugin sources) are not listed on this page. |
 
 New sources are always appended. Presets store the name of a source (for example `"LFO 2"`), never the number, so reordering would not break them either, but renaming a source would.
 

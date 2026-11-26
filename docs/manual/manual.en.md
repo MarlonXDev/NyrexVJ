@@ -893,6 +893,36 @@ A stream has no audio here, only the picture. HDR and 10 bit streams are shown a
 
 NyrexVJ was tested with generated senders (FFmpeg and a small test server) on one computer, not with real cameras, a real network, Windows or next to VRChat. Test your stream before the show. The NDI settings now show which version the NDI runtime reports, or that it reports none. The details, the numbers and the limits are in docs/STREAMS.md of the project.
 
+## Finding people in the camera picture {#person-detection}
+
+Person detection looks at the picture of a camera, an NDI source or a stream and finds where people are. It gives you a mask for an effect and six numbers that can drive anything that reacts to music. It is experimental and off by default. While it is off nothing extra runs, nothing is created and the six numbers read 0.
+
+There is no AI model in it. The method is a background difference: NyrexVJ learns what the empty scene looks like during the first moments (about 12 analysed pictures) and calls everything that differs from it a person. It does not know what a person is, so a carried chair, an opened door or a shadow counts too. It needs a camera that does not move and an empty scene while it learns. Nothing is downloaded, nothing is sent anywhere and no picture is saved.
+
+To use it, open Settings, Performance, Person detection (experimental) and choose Background difference (no model). Then set:
+
+- Picture source: the camera, NDI source or stream input to look at, for example Camera 1. Set that input on the Live page first.
+- Quality: Fast, Balanced or Fine. The analysis works on a small copy of the picture (about 96, 160 or 256 pixels wide) on its own thread. If it cannot keep up it lowers the quality, then the rate, and switches itself off, with the reason on the page, instead of slowing the show down.
+- Analysis rate (per second): how often a picture is analysed, 2 to 30. Between two analyses the last mask and values stay.
+- Sensitivity, Softness and Stability: higher sensitivity finds weaker differences but also more noise and shadow, softness blurs the edge of the mask, and stability holds the mask longer between analyses so it flickers less.
+- Learn background now: forgets the learned scene and learns again. Press it while nobody is in the picture, and again after the camera, the light or the stage changed.
+
+The page shows the state (learning, watching, no picture from the source), how many people were found, the analysis time against its budget, the size, and a small preview of the mask: white is a person, black is the background.
+
+To use the mask, add the effect Person Key to a layer or the master. Its Mode slider has four steps: the picture only where the person is, the picture only where the person is not, the person as a flat colour, and the outline of the person. Softness softens the edge, Backdrop chooses black or a dark tint for the area outside, and Color sets the tint. The area outside is not transparent, it is the backdrop. To put the person over other layers, give the layer the blend mode Add or Screen with a black backdrop.
+
+To use the numbers, pick them as a source for a layer, an effect reaction or a master slot: Person present, Person X (from the left), Person Y (from the bottom), Person size (the height of the person), Person motion and Person count. They show up in the lists only while person detection is on. X, Y and size keep their last value when nobody is visible, so use Person present as well.
+
+What to expect:
+
+- A person who walks into an empty, steady scene is found within a second. Two people who cross keep their numbers.
+- Whoever stands in the picture while the background is learned becomes part of the background. Press Learn background now when the stage is empty.
+- A camera that sees changing projections or stage lights gets false people. Lock the exposure of the camera, aim it away from the projection and lower Sensitivity.
+- The mask fits the camera picture as shown unscaled. If a layer scales or moves the camera clip, the mask does not follow.
+- It was tested with computer-made pictures and software rendering only. Try it with your own camera, your own lights and your own graphics card before you rely on it in a show.
+
+The details, the numbers and the limits are in docs/PERSON.md of the project.
+
 ## State and reconnecting {#live-state}
 
 The Clip window shows the state of a live source: Searching, Connecting, Live, Signal lost or Reconnecting, together with the size, the frame rate, the dropped pictures and the latency from arrival to the end of the upload. A lost source is searched for again by itself, first after half a second and then with growing pauses up to 10 seconds. The last picture stays on the layer meanwhile.

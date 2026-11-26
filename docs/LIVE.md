@@ -24,6 +24,10 @@ A camera is opened through the FFmpeg device library: Video4Linux2 on Linux and 
 
 Four more clips, **Stream Input 1 to 4**, receive a video stream from the network. They are **off by default**: with **Allow network stream inputs** off no connection is made, no port is opened and the clips stay empty. The addresses (`rtsp://`, `srt://` and `udp://` only), the three profiles (Low latency, Balanced, Smooth), the limits, the security rules, the measurements and what was not tested are in [STREAMS.md](STREAMS.md). A stream uses the same states, the same reconnecting and the same placeholder as the other inputs below; it has no audio.
 
+## Person detection on a live picture
+
+Since 0.56.0 a camera, NDI or stream input can also be watched by an optional, **off by default** person detection (Settings, Performance). It gets each picture the input takes through an observer that `LiveInput::update` calls before the upload; with the module off no observer is set and the live path is as before. The method, the six sources, the cost and the limits are in [PERSON.md](PERSON.md).
+
 ## State, reconnecting and the placeholder
 
 The Clip window shows the state of the source in a colour:
@@ -76,7 +80,8 @@ The pieces are separate and testable without hardware:
 - `src/core/ndi_runtime.*` and `src/core/ndi_receiver.*`: the shared NDI loader, discovery (`NdiFinder`) and the receiver. `tests/fake_ndi.cpp` is a fake NDI library for both directions.
 - `src/media/camera_capture.*`: `CameraCapture` and the camera list.
 - `src/media/stream_capture.*`, `src/core/stream_url.*`, `src/core/stream_clock.*`: the network stream input ([STREAMS.md](STREAMS.md)); `src/media/live_convert.*` is the conversion to UYVY that cameras and streams share.
-- `src/render/live_input.*`: one slot (source, upload, latency); `src/render/engine.*` owns the slots and their lifetime.
+- `src/render/live_input.*`: one slot (source, upload, latency, the optional frame observer); `src/render/engine.*` owns the slots and their lifetime.
+- `src/core/person_mask.*`, `src/media/person_worker.*`, `src/render/person_session.*`: the optional person detection ([PERSON.md](PERSON.md)).
 - `src/app/ui_live.cpp`: the Clip window controls.
 
 A new kind of source (for example a direct Media Foundation camera or a different network protocol) is a new `LiveSource` that delivers `LiveFrame` objects; the engine, the upload and the panel do not change.

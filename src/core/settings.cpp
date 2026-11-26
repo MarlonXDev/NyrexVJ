@@ -2,6 +2,7 @@
 
 #include "core/color_lut.hpp"
 #include "core/optical_flow.hpp"
+#include "core/person_mask.hpp"
 #include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
@@ -179,6 +180,38 @@ bool loadSettings(Settings& settings) {
     auto flowShutter = doc.find("flowShutterPercent");
     if (flowShutter != doc.end() && flowShutter->is_number_integer()) {
         result.flowShutterPercent = std::clamp(flowShutter->get<int>(), 0, 100);
+    }
+    auto personMode = doc.find("personMode");
+    if (personMode != doc.end() && personMode->is_string()) {
+        result.personMode = person::modeName(person::modeFromName(personMode->get<std::string>(), person::Mode::Off));
+    }
+    auto personInput = doc.find("personInput");
+    if (personInput != doc.end() && personInput->is_string()) {
+        person::Input input = person::Input::Camera;
+        int slot = 0;
+        if (person::parseInput(personInput->get<std::string>(), input, slot)) {
+            result.personInput = person::inputText(input, slot);
+        }
+    }
+    auto personQuality = doc.find("personQuality");
+    if (personQuality != doc.end() && personQuality->is_string()) {
+        result.personQuality = person::tierName(person::tierFromName(personQuality->get<std::string>(), person::Tier::Balanced));
+    }
+    auto personRate = doc.find("personRate");
+    if (personRate != doc.end() && personRate->is_number_integer()) {
+        result.personRate = person::clampRate(personRate->get<int>());
+    }
+    auto personSensitivity = doc.find("personSensitivity");
+    if (personSensitivity != doc.end() && personSensitivity->is_number_integer()) {
+        result.personSensitivity = person::clampPercent(personSensitivity->get<int>());
+    }
+    auto personSoftness = doc.find("personSoftness");
+    if (personSoftness != doc.end() && personSoftness->is_number_integer()) {
+        result.personSoftness = person::clampPercent(personSoftness->get<int>());
+    }
+    auto personStability = doc.find("personStability");
+    if (personStability != doc.end() && personStability->is_number_integer()) {
+        result.personStability = person::clampPercent(personStability->get<int>());
     }
     result.colorStage = boolean("colorStage", false);
     auto colorLut = doc.find("colorLut");
@@ -497,6 +530,31 @@ bool saveSettings(const Settings& settings) {
     }
     if (settings.flowShutterPercent != 50) {
         doc["flowShutterPercent"] = std::clamp(settings.flowShutterPercent, 0, 100);
+    }
+    if (person::modeFromName(settings.personMode, person::Mode::Off) != person::Mode::Off) {
+        doc["personMode"] = person::modeName(person::modeFromName(settings.personMode, person::Mode::Off));
+    }
+    {
+        person::Input input = person::Input::Camera;
+        int slot = 0;
+        if (person::parseInput(settings.personInput, input, slot) && (input != person::Input::Camera || slot != 0)) {
+            doc["personInput"] = person::inputText(input, slot);
+        }
+    }
+    if (person::tierFromName(settings.personQuality, person::Tier::Balanced) != person::Tier::Balanced) {
+        doc["personQuality"] = person::tierName(person::tierFromName(settings.personQuality, person::Tier::Balanced));
+    }
+    if (settings.personRate != person::kDefaultRate) {
+        doc["personRate"] = person::clampRate(settings.personRate);
+    }
+    if (settings.personSensitivity != 50) {
+        doc["personSensitivity"] = person::clampPercent(settings.personSensitivity);
+    }
+    if (settings.personSoftness != 50) {
+        doc["personSoftness"] = person::clampPercent(settings.personSoftness);
+    }
+    if (settings.personStability != 50) {
+        doc["personStability"] = person::clampPercent(settings.personStability);
     }
     if (settings.colorStage) {
         doc["colorStage"] = true;

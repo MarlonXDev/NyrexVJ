@@ -4,7 +4,7 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
-KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-23 were added at 0.55.0; the other entries were not walked through again.
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-23 were added at 0.55.0; KI-24 to KI-27 were added at 0.56.0; the other entries were not walked through again.
 
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
@@ -219,6 +219,42 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** `NYREXVJ_REQUIRE_VIDEO=1 valgrind -q --error-exitcode=9 build/nvj_picture_convert_tests` with the FFmpeg libraries on `LD_LIBRARY_PATH`.
 - **Impact:** before this version, a stream or a camera with such a width could damage memory, which is a security risk for streams from outside. Network streams are off by default.
 - **Workaround:** none needed at this version; older versions: use cameras and senders with a width that is a multiple of 16.
+
+### KI-24 A person who is in the picture while the background is learned, or who stands still for minutes, becomes part of the background
+
+- **Area:** person detection
+- **Known by:** a test that ran for the first case (`nvj_person_tests`, `testSceneChange`: a person who is in the picture when the picture changes completely and learning starts again is learned as background) and read from the constants for the second (`kForegroundSeconds = 300` in `src/core/person_mask.cpp`; nobody stood still in front of a camera for minutes).
+- **What happens:** the method learns "the empty scene" from the first 12 analysed pictures after it starts, after **Learn background now**, after a change of the picture size and after a complete change of the picture. Whoever is in the picture then is part of the background and is not found; when that person leaves, the place where they stood is reported as a person until the background has followed (time constant 20 seconds). A person who stands completely still is faded into the background slowly (time constant 300 seconds).
+- **Steps:** stand in front of the camera when you press **Learn background now**, then step out; or run `nvj_person_tests`.
+- **Impact:** a ghost where the person stood, or a person who is not found.
+- **Workaround:** start the module and press **Learn background now** while the stage is empty, and again after the camera, the light or the stage has changed. During a show let the module run; do not restart it with people in the picture.
+
+### KI-25 The method finds everything that differs from the background, not people, and a camera that sees changing light is a problem
+
+- **Area:** person detection
+- **Known by:** read from the method and from tests with computer-made pictures (`nvj_person_tests`: slow light drift by 60 percent, four colour and brightness changes and a strobe that doubles the light every second picture were absorbed with 0.2 to 2.2 percent false foreground). A camera that looks at the projected show or at stage lights that change quickly was **not** tried.
+- **What happens:** a carried object, a moved chair, an opened door, a shadow and a changing projection are foreground. A moved object needs about 20 seconds (time constant) to become background. When 85 percent of the picture changes for three analyses in a row, the program decides that the scene changed and learns again, during which nobody is found.
+- **Steps:** point a camera at a screen that shows the show and watch the mask on the page; or move a chair in front of the camera.
+- **Impact:** false people and a mask that jumps on stages with strong moving light.
+- **Workaround:** a fixed camera, locked exposure and white balance if the camera allows it, a view that the projection does not reach, a lower **Sensitivity**, and the source **Person present** as a gate for the other values. A model (not part of this version) is the real answer for recognising people.
+
+### KI-26 The mask follows the camera picture, not the layer, and there is no real transparency
+
+- **Area:** person detection, effects
+- **Known by:** read from the code (`personMask` in `src/render/effect_library.cpp` maps the whole picture that the effect sees to the camera picture with an aspect fit; the footer of the effect library keeps the alpha of the picture). The selftest checks a 16:9 and a 4:3 camera picture shown unscaled on a 16:9 output; a scaled, moved or rotated camera layer was not tried.
+- **What happens:** when the layer that shows the camera is scaled, moved or rotated, or when other layers are under the effect, the mask stays where the unscaled camera picture would be. On the master the mask covers the whole output. **Person Key** shows the person on a backdrop colour (black or a dark tint); the area outside the person is not transparent.
+- **Steps:** put **Person Key** on a layer with a camera clip, set the layer scale to 50 percent and look at the output.
+- **Impact:** the mask does not fit a scaled or moved camera clip; the person cannot be laid over other layers except with a blend mode.
+- **Workaround:** leave the camera layer unscaled, use **Add** or **Screen** with a black backdrop to put the person over other layers.
+
+### KI-27 Person detection was only run with computer-made pictures, and it has no model
+
+- **Area:** person detection
+- **Known by:** what ran: `nvj_person_tests`, `--person-selftest` and the whole suite on Linux with software OpenGL, 2 cores, no graphics card, no camera.
+- **What happens:** unknown with a real camera (auto exposure, compression noise, flicker, rolling shutter, a camera that moves), with a real graphics card, on Windows and next to VRChat. The method has no model, so it cannot separate a person from a busy background, find hands or hair, or work with a moving camera.
+- **Steps:** manual tests `M-PERSON-1` to `M-PERSON-4` in [TESTING.md](TESTING.md).
+- **Impact:** a first real run may show problems that the synthetic tests cannot show.
+- **Workaround:** try it with your camera and your lights before a show; the module is off by default.
 
 ## Limits of the evidence, not of the program
 

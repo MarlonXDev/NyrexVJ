@@ -6,7 +6,7 @@ The folder `site/` holds a small static website for NyrexVJ: plain HTML and CSS,
 
 | Where | Content |
 | --- | --- |
-| `site/index.html` | Start page: what NyrexVJ is, the main window, a tour with pictures, performance, the manual, features, questions and answers, download |
+| `site/index.html` | Start page: what NyrexVJ is, the main window, a tour with pictures, performance, the manual, a section on the newer features since 0.40.0 (each with a link to its manual section and a note on what is experimental or untested), more features, questions and answers, download |
 | `site/download.html` | Links to the files of the Nightly release, and what to do after the download |
 | `site/docs.html` | Links to the documents on GitHub, and a call-out for the manual |
 | `site/privacy.html` | Privacy note |

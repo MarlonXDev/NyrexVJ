@@ -1587,6 +1587,9 @@ GpuMemory Engine::gpuMemory() const {
             memory.live += static_cast<size_t>(input->info().memory.total());
         }
     }
+    if (person_) {
+        memory.live += static_cast<size_t>(person_->gpuBytes());
+    }
     for (const std::unique_ptr<MediaPlayer>& player : media_) {
         if (player) {
             memory.media += static_cast<size_t>(player->gpuBytes());
@@ -1804,6 +1807,9 @@ bool Engine::ensureEffect(size_t index) {
     effect.audioTex = glGetUniformLocation(program, "uAudioTex");
     effect.mix = glGetUniformLocation(program, "uMix");
     effect.macros = def.usesMacros ? glGetUniformLocation(program, "uMacros") : -1;
+    effect.person = glGetUniformLocation(program, "uPerson");
+    effect.personOn = glGetUniformLocation(program, "uPersonOn");
+    effect.personFit = glGetUniformLocation(program, "uPersonFit");
     effect.usesPrevious = def.usesPrevious;
     return true;
 }
@@ -2104,6 +2110,9 @@ void Engine::setAudio(const AudioFeatures& features) {
 }
 
 float Engine::sourceValue(int source) const {
+    if (source >= BandPersonPresent && source <= BandPersonCount) {
+        return person_ ? person::signalValue(person_->signals(), source - BandPersonPresent) : 0.0f;
+    }
     if (source >= BandPlugin1 && source <= BandPlugin8) {
         return plugins_ != nullptr ? std::clamp(plugins_->modulation(source - BandPlugin1), 0.0f, 1.0f) : 0.0f;
     }
@@ -2331,9 +2340,12 @@ LiveKind liveKindOf(ClipKind kind) {
 }
 
 void Engine::prepareLive(const ClipDef& def) {
-    const LiveKind kind = liveKindOf(def.kind);
-    const size_t index = liveIndex(kind, def.sceneIndex);
-    LiveInput* input = liveSlot(kind, def.sceneIndex);
+    prepareLiveSlot(liveKindOf(def.kind), def.sceneIndex);
+}
+
+void Engine::prepareLiveSlot(LiveKind kind, int slot) {
+    const size_t index = liveIndex(kind, slot);
+    LiveInput* input = liveSlot(kind, slot);
     if (input == nullptr) {
         return;
     }
@@ -2345,18 +2357,18 @@ void Engine::prepareLive(const ClipDef& def) {
     LiveInputConfig config;
     config.maxDimension = videoOptions().maxDimension;
     if (kind == LiveKind::Ndi) {
-        config.source = liveNdi_[static_cast<size_t>(def.sceneIndex)];
+        config.source = liveNdi_[static_cast<size_t>(slot)];
         config.excluded = liveExcluded_;
     } else if (kind == LiveKind::Plugin) {
         config.plugins = plugins_;
-        if (plugins_ != nullptr && def.sceneIndex >= 0 && def.sceneIndex < kPluginFrameSlots) {
-            config.source = plugins_->config().frames[static_cast<size_t>(def.sceneIndex)];
+        if (plugins_ != nullptr && slot >= 0 && slot < kPluginFrameSlots) {
+            config.source = plugins_->config().frames[static_cast<size_t>(slot)];
         }
     } else if (kind == LiveKind::Stream) {
-        config.source = liveStream_[static_cast<size_t>(def.sceneIndex)];
+        config.source = liveStream_[static_cast<size_t>(slot)];
         config.streamProfile = liveStreamProfile_;
     } else {
-        config.source = liveCamera_[static_cast<size_t>(def.sceneIndex)];
+        config.source = liveCamera_[static_cast<size_t>(slot)];
         config.camera = liveMode_;
     }
     input->update(config, clock_);
@@ -2387,6 +2399,55 @@ bool Engine::drawLive(const ClipDef& def, float scale) {
     triangle_.draw();
     glBindTexture(GL_TEXTURE_2D, 0);
     return true;
+}
+
+void Engine::setPersonSettings(const person::Settings& wanted) {
+    const person::Settings settings = person::sanitised(wanted);
+    personSettings_ = settings;
+    if (settings.mode == person::Mode::Off) {
+        if (personInput_ != nullptr) {
+            personInput_->setObserver(nullptr);
+            personInput_ = nullptr;
+        }
+        person_.reset();
+        personNote_.clear();
+        return;
+    }
+    if (!person_) {
+        person_ = std::make_unique<PersonSession>();
+    }
+    person_->configure(settings);
+}
+
+void Engine::servicePerson() {
+    if (!person_) {
+        return;
+    }
+    if (personExternal_) {
+        person_->update(true);
+        return;
+    }
+    const LiveKind kind = personSettings_.input == person::Input::Ndi ? LiveKind::Ndi : (personSettings_.input == person::Input::Stream ? LiveKind::Stream : LiveKind::Camera);
+    const size_t slot = static_cast<size_t>(personSettings_.slot);
+    const std::string& source = kind == LiveKind::Ndi ? liveNdi_[slot] : (kind == LiveKind::Stream ? liveStream_[slot] : liveCamera_[slot]);
+    LiveInput* input = source.empty() ? nullptr : liveSlot(kind, personSettings_.slot);
+    if (personInput_ != input) {
+        if (personInput_ != nullptr) {
+            personInput_->setObserver(nullptr);
+        }
+        personInput_ = input;
+        if (input != nullptr) {
+            input->setObserver(person_.get());
+        }
+    }
+    if (input == nullptr) {
+        personNote_ = "no source is set for this input";
+        person_->update(false);
+        return;
+    }
+    personNote_.clear();
+    prepareLiveSlot(kind, personSettings_.slot);
+    person_->update(input->info().status.state == LiveState::Live);
 }
 
 void Engine::serviceLive() {
@@ -3335,7 +3396,25 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         glUniform1f(effect.beat, static_cast<float>(beat_));
         glUniform1f(effect.aspect, width / height);
         glUniform2f(effect.res, width, height);
+        const bool personBound = effect.personOn >= 0 && person_ && person_->maskReady();
+        if (effect.personOn >= 0) {
+            glUniform1f(effect.personOn, personBound ? 1.0f : 0.0f);
+        }
+        if (personBound) {
+            const float shown = std::max(person_->sourceAspect(), 0.01f);
+            const float target = width / height;
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, person_->texture());
+            glUniform1i(effect.person, 3);
+            glUniform2f(effect.personFit, std::max(target / shown, 1.0f), std::max(shown / target, 1.0f));
+            glActiveTexture(GL_TEXTURE0);
+        }
         triangle_.draw();
+        if (personBound) {
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0);
+        }
 
         if (effect.usesPrevious && feedback[s].fbo) {
             glActiveTexture(GL_TEXTURE1);
@@ -3563,6 +3642,7 @@ void Engine::render() {
     prewarmMedia();
     serviceMemory();
     serviceSpout();
+    servicePerson();
     serviceLive();
     releaseIdleShaderStates();
 

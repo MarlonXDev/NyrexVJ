@@ -852,7 +852,7 @@ bool isReservedShaderName(const std::string& name) {
         "main", "void", "float", "int", "uint", "bool", "double", "vec2", "vec3", "vec4", "ivec2", "ivec3", "ivec4", "bvec2", "bvec3", "bvec4",
         "mat2", "mat3", "mat4", "sampler2D", "sampler3D", "samplerCube", "if", "else", "for", "while", "do", "return", "break", "continue", "discard",
         "struct", "uniform", "in", "out", "inout", "const", "layout", "precision", "highp", "mediump", "lowp", "true", "false", "texture", "vUv",
-        "fragColor", "uTime", "uBeat", "uBpm", "uRes", "uColorA", "uColorB", "uRainbow", "uScale", "uAudio", "uKick", "uAudioTex", "uChannel0",
+        "fragColor", "uTime", "uBeat", "uBpm", "uRes", "uColorA", "uColorB", "uRainbow", "uScale", "uAudio", "uKick", "uAudioTex", "uPerson", "uPersonOn", "uPersonFit", "personMask", "uChannel0",
         "uChannel1", "uChannel2", "uChannel3", "uChannelRes", "uChannelTime", "uFrame", "uDelta", "uMix", "uPicture", "iResolution", "iTime",
         "iFrame", "iTimeDelta", "iMouse", "iDate", "iSampleRate", "iChannel0", "iChannel1", "iChannel2", "iChannel3", "iChannelResolution",
         "iChannelTime", "mainImage", "attribute", "varying", "switch", "case", "default", "sampler2DRect", "flat", "smooth", "centroid", "patch",

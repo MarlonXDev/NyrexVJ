@@ -103,6 +103,12 @@ struct LiveStatus {
     std::string detail;
 };
 
+class LiveFrameObserver {
+public:
+    virtual ~LiveFrameObserver() = default;
+    virtual void offer(const LiveFrame& frame) = 0;
+};
+
 class LiveSource {
 public:
     virtual ~LiveSource() = default;

@@ -128,6 +128,9 @@ void LiveInput::update(const LiveInputConfig& config, double now) {
     if (!source_->take(scratch_)) {
         return;
     }
+    if (observer_ != nullptr) {
+        observer_->offer(scratch_);
+    }
     const double begin = steadySeconds();
     if (!present(scratch_, config.maxDimension)) {
         return;

@@ -83,7 +83,7 @@ float modulationSource(int source, const AudioFeatures& audio, const Modulators&
         const double phase = timecode / period;
         return static_cast<float>(phase - std::floor(phase));
     }
-    if (source >= BandPlugin1 && source <= BandPlugin8) {
+    if ((source >= BandPlugin1 && source <= BandPlugin8) || (source >= BandPersonPresent && source <= BandPersonCount)) {
         return 0.0f;
     }
     if (!std::isfinite(beat)) {

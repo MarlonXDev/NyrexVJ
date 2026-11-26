@@ -8,6 +8,7 @@
 #include "core/gpu_diag.hpp"
 #include "core/launch_quantizer.hpp"
 #include "core/optical_flow.hpp"
+#include "core/person_mask.hpp"
 #include "core/routing.hpp"
 #include "core/settings.hpp"
 #include "core/shader_editor.hpp"
@@ -16,6 +17,7 @@
 #include "render/color_stage.hpp"
 #include "render/dmx_strip.hpp"
 #include "render/gl_util.hpp"
+#include "render/person_session.hpp"
 #include "render/gpu_profiler.hpp"
 #include "render/live_input.hpp"
 #include "render/generators.hpp"
@@ -235,6 +237,12 @@ public:
     const VideoGpuCaps& videoCaps() const { return videoGpu_.caps(); }
     VideoOptions videoOptions() const;
     void setFlowSettings(const flow::Settings& settings);
+    void setPersonSettings(const person::Settings& settings);
+    const person::Settings& personSettings() const { return personSettings_; }
+    PersonSession* personSession() { return person_.get(); }
+    const PersonSession* personSession() const { return person_.get(); }
+    const std::string& personNote() const { return personNote_; }
+    void setPersonFeedExternal(bool external) { personExternal_ = external; }
     const flow::Settings& flowSettings() const { return flowSettings_; }
     std::vector<const MediaPlayer*> activeVideos() const;
     void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
@@ -339,6 +347,9 @@ private:
         GLint audioTex = -1;
         GLint mix = -1;
         GLint macros = -1;
+        GLint person = -1;
+        GLint personOn = -1;
+        GLint personFit = -1;
         bool usesPrevious = false;
         std::vector<PassProgram> passes;
         std::shared_ptr<const ShaderPlan> plan;
@@ -493,6 +504,8 @@ private:
     bool drawSpout(int slot, float scale);
     void serviceSpout();
     void prepareLive(const ClipDef& def);
+    void prepareLiveSlot(LiveKind kind, int slot);
+    void servicePerson();
     bool drawLive(const ClipDef& def, float scale);
     void serviceLive();
     LiveInput* liveSlot(LiveKind kind, int slot);
@@ -614,6 +627,11 @@ private:
     std::array<std::string, kLiveInputSlots> liveNdi_;
     std::array<std::string, kLiveInputSlots> liveCamera_;
     std::array<std::string, kLiveInputSlots> liveStream_;
+    std::unique_ptr<PersonSession> person_;
+    person::Settings personSettings_;
+    LiveInput* personInput_ = nullptr;
+    std::string personNote_;
+    bool personExternal_ = false;
     stream::Profile liveStreamProfile_ = stream::Profile::Balanced;
     std::string liveExcluded_;
     PluginHost* plugins_ = nullptr;

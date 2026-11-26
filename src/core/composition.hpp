@@ -62,6 +62,12 @@ enum AudioBand {
     BandPlugin6,
     BandPlugin7,
     BandPlugin8,
+    BandPersonPresent,
+    BandPersonX,
+    BandPersonY,
+    BandPersonSize,
+    BandPersonMotion,
+    BandPersonCount,
     AudioBandCount
 };
 

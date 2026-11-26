@@ -57,6 +57,13 @@ struct Settings {
     std::string flowQuality = "balanced";
     int flowBudgetMb = 256;
     int flowShutterPercent = 50;
+    std::string personMode = "off";
+    std::string personInput = "camera1";
+    std::string personQuality = "balanced";
+    int personRate = 15;
+    int personSensitivity = 50;
+    int personSoftness = 50;
+    int personStability = 50;
     bool colorStage = false;
     std::string colorLut;
     float colorLutStrength = 1.0f;

@@ -893,6 +893,36 @@ Ein Stream hat hier keinen Ton, nur das Bild. HDR- und 10-Bit-Streams werden ohn
 
 NyrexVJ wurde mit erzeugten Sendern (FFmpeg und ein kleiner Testserver) auf einem Computer getestet, nicht mit echten Kameras, einem echten Netzwerk, Windows oder neben VRChat. Teste deinen Stream vor der Show. Die NDI-Einstellungen zeigen jetzt, welche Version die NDI-Runtime meldet, oder dass sie keine meldet. Die Einzelheiten, die Zahlen und die Grenzen stehen in docs/STREAMS.md des Projekts.
 
+## Personen im Kamerabild finden {#person-detection}
+
+Die Personenerkennung schaut auf das Bild einer Kamera, einer NDI-Quelle oder eines Streams und findet, wo Menschen stehen. Sie liefert dir eine Maske für einen Effekt und sechs Zahlen, mit denen alles reagieren kann, was auf Musik reagiert. Sie ist experimentell und standardmäßig aus. Solange sie aus ist, läuft nichts Zusätzliches, es wird nichts angelegt und die sechs Zahlen sind 0.
+
+Es steckt keine KI darin. Die Methode ist eine Hintergrund-Differenz: NyrexVJ lernt in den ersten Momenten (etwa 12 analysierte Bilder), wie die leere Szene aussieht, und nennt alles, was davon abweicht, eine Person. Es weiß nicht, was eine Person ist, deshalb zählen auch ein getragener Stuhl, eine geöffnete Tür oder ein Schatten. Es braucht eine Kamera, die sich nicht bewegt, und eine leere Szene, während es lernt. Es wird nichts heruntergeladen, nichts irgendwohin gesendet und kein Bild gespeichert.
+
+So benutzt du sie: Öffne Einstellungen, Leistung, Personenerkennung (experimentell) und wähle Hintergrund-Differenz (ohne Modell). Dann stellst du ein:
+
+- Bildquelle: die Kamera, NDI-Quelle oder der Stream, auf den geschaut wird, zum Beispiel Kamera 1. Stelle diesen Eingang vorher auf der Seite Live ein.
+- Qualität: Schnell, Ausgewogen oder Fein. Die Analyse arbeitet in einem eigenen Thread mit einer kleinen Kopie des Bildes (etwa 96, 160 oder 256 Pixel breit). Kommt sie nicht hinterher, senkt sie zuerst die Qualität, dann die Rate und schaltet sich am Ende mit einem Grund auf der Seite selbst ab, statt die Show auszubremsen.
+- Analyse-Rate (pro Sekunde): wie oft ein Bild analysiert wird, 2 bis 30. Zwischen zwei Analysen bleiben die letzte Maske und die letzten Werte stehen.
+- Empfindlichkeit, Weichheit und Stabilität: eine höhere Empfindlichkeit findet schwächere Unterschiede, aber auch mehr Rauschen und Schatten, die Weichheit macht den Rand der Maske weicher, und die Stabilität hält die Maske zwischen zwei Analysen länger fest, sodass sie weniger flackert.
+- Hintergrund jetzt neu lernen: vergisst die gelernte Szene und lernt neu. Drück es, solange niemand im Bild ist, und nochmal, wenn sich Kamera, Licht oder Bühne geändert haben.
+
+Die Seite zeigt den Zustand (lernt, beobachtet, kein Bild von der Quelle), wie viele Personen gefunden wurden, die Analysezeit gegen ihr Budget, die Größe und eine kleine Vorschau der Maske: Weiß ist eine Person, Schwarz der Hintergrund.
+
+Für die Maske legst du den Effekt Person Key auf einen Layer oder auf den Master. Sein Regler Modus hat vier Stufen: das Bild nur dort, wo die Person ist, das Bild nur dort, wo keine Person ist, die Person als flache Farbe und der Umriss der Person. Weichheit macht den Rand weicher, Hintergrundfarbe wählt Schwarz oder eine dunkle Tönung für den Bereich außerhalb, und Farbe stellt die Tönung ein. Der Bereich außerhalb ist nicht durchsichtig, sondern die Hintergrundfarbe. Um die Person über andere Layer zu legen, gib dem Layer den Mischmodus Addieren oder Aufhellen mit schwarzer Hintergrundfarbe.
+
+Für die Zahlen wählst du sie als Quelle für einen Layer, die Reaktion eines Effekts oder einen Master-Regler: Person anwesend, Person X (von links), Person Y (von unten), Personengröße (die Höhe der Person), Personenbewegung und Personenanzahl. Sie erscheinen in den Listen nur, solange die Personenerkennung an ist. X, Y und die Größe behalten ihren letzten Wert, wenn niemand zu sehen ist, nimm also zusätzlich Person anwesend.
+
+Was du erwarten kannst:
+
+- Eine Person, die in eine leere, ruhige Szene läuft, wird innerhalb einer Sekunde gefunden. Zwei Personen, die sich kreuzen, behalten ihre Nummern.
+- Wer im Bild steht, während der Hintergrund gelernt wird, wird Teil des Hintergrunds. Drück Hintergrund jetzt neu lernen, wenn die Bühne leer ist.
+- Eine Kamera, die wechselnde Projektionen oder Bühnenlicht sieht, findet falsche Personen. Sperr die Belichtung der Kamera, richte sie weg von der Projektion und senke die Empfindlichkeit.
+- Die Maske passt zum Kamerabild, wie es ohne Skalierung gezeigt wird. Skaliert oder verschiebt ein Layer den Kamera-Clip, folgt die Maske nicht.
+- Getestet wurde mit am Computer erzeugten Bildern und Software-Rendering. Probiere es mit deiner eigenen Kamera, deinem eigenen Licht und deiner eigenen Grafikkarte aus, bevor du dich in einer Show darauf verlässt.
+
+Die Einzelheiten, die Zahlen und die Grenzen stehen in docs/PERSON.md des Projekts.
+
 ## Zustand und Wiederverbinden {#live-state}
 
 Das Clip-Fenster zeigt den Zustand einer Live-Quelle: Suche, Verbinde, Live, Signal verloren oder Verbinde neu, dazu Größe, Bildrate, verworfene Bilder und die Latenz von der Ankunft bis zum Ende des Uploads. Eine verlorene Quelle wird von selbst wieder gesucht, zuerst nach einer halben Sekunde und dann mit wachsenden Pausen bis zu 10 Sekunden. Das letzte Bild bleibt währenddessen auf dem Layer.

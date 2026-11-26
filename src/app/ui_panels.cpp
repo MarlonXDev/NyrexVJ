@@ -4,6 +4,7 @@
 
 #include "core/ndi_runtime.hpp"
 #include "core/node_graph.hpp"
+#include "core/person_mask.hpp"
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
@@ -20,24 +21,27 @@ namespace nvj {
 
 namespace {
 
-bool pluginBandVisible(const PluginHost* plugins, int band, int current) {
+bool pluginBandVisible(const PluginHost* plugins, int band, int current, bool personOn) {
+    if (band >= BandPersonPresent && band <= BandPersonCount) {
+        return personOn || band == current;
+    }
     if (band < BandPlugin1 || band > BandPlugin8 || band == current) {
         return true;
     }
     return plugins != nullptr && !plugins->config().modulation[static_cast<size_t>(band - BandPlugin1)].empty();
 }
 
-bool bandCombo(const char* id, int& band, float width, const PluginHost* plugins) {
+bool bandCombo(const char* id, int& band, float width, const PluginHost* plugins, bool personOn) {
     bool changed = false;
     width = ui::fitComboWidth(width, tr(audioBandName(band)));
     width = ui::fitComboWidth(width, tr(audioBandName(BandOff)));
     ImGui::SetNextItemWidth(width);
     if (ImGui::BeginCombo(id, tr(audioBandName(band)))) {
         for (int b = 0; b < AudioBandCount; ++b) {
-            if (!pluginBandVisible(plugins, b, band)) {
+            if (!pluginBandVisible(plugins, b, band, personOn)) {
                 continue;
             }
-            if (b == BandLfo1 || b == BandMacro1 || b == BandBeat || b == BandTimecodeSecond || b == BandPlugin1) {
+            if (b == BandLfo1 || b == BandMacro1 || b == BandBeat || b == BandTimecodeSecond || b == BandPlugin1 || b == BandPersonPresent) {
                 ImGui::Separator();
             }
             if (ImGui::Selectable(tr(audioBandName(b)), band == b)) {
@@ -66,7 +70,7 @@ void App::drawMods(std::array<AudioMod, kModSlots>& mods, bool master) {
     for (int i = 0; i < kModSlots; ++i) {
         AudioMod& mod = mods[static_cast<size_t>(i)];
         ImGui::PushID(i);
-        bandCombo("##band", mod.band, 84.0f, plugins_.get());
+        bandCombo("##band", mod.band, 84.0f, plugins_.get(), person::modeFromName(settings_.personMode, person::Mode::Off) != person::Mode::Off);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ui::px(104.0f));
         const bool level = master && mod.target == TargetOpacity;
@@ -236,7 +240,7 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             }
             slot.reactParam = std::clamp(slot.reactParam, 0, std::max(0, def.paramCount() - 1));
             ImGui::PushID("react");
-            bandCombo("##band", slot.reactBand, 78.0f, plugins_.get());
+            bandCombo("##band", slot.reactBand, 78.0f, plugins_.get(), person::modeFromName(settings_.personMode, person::Mode::Off) != person::Mode::Off);
             if (slot.reactBand != BandOff) {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ui::px(92.0f));

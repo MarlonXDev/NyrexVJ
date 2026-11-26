@@ -749,6 +749,17 @@ void App::frame(double dt) {
         flowSettings.shutter = static_cast<float>(settings_.flowShutterPercent) / 100.0f;
         engine_.setFlowSettings(flowSettings);
     }
+    {
+        person::Settings personSettings;
+        personSettings.mode = person::modeFromName(settings_.personMode, person::Mode::Off);
+        person::parseInput(settings_.personInput, personSettings.input, personSettings.slot);
+        personSettings.tier = person::tierFromName(settings_.personQuality, person::Tier::Balanced);
+        personSettings.rate = settings_.personRate;
+        personSettings.sensitivity = settings_.personSensitivity;
+        personSettings.softness = settings_.personSoftness;
+        personSettings.stability = settings_.personStability;
+        engine_.setPersonSettings(personSettings);
+    }
     engine_.prewarmNext = settings_.prewarmNext;
     engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
     MemoryPolicy memoryPolicy;

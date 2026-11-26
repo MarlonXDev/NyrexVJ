@@ -61,6 +61,7 @@ public:
     LiveKind kind() const { return kind_; }
     LiveInputInfo info() const;
     void resetLatencyWindow();
+    void setObserver(LiveFrameObserver* observer) { observer_ = observer; }
 
 private:
     static bool sameConfig(const LiveInputConfig& a, const LiveInputConfig& b, LiveKind kind);
@@ -74,6 +75,7 @@ private:
     std::future<void> reaper_;
     LiveInputConfig running_;
     LiveFrame scratch_;
+    LiveFrameObserver* observer_ = nullptr;
     std::string startError_;
     double retryAt_ = -1.0e9;
     double latencyMs_ = 0.0;

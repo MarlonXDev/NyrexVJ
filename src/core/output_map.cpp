@@ -3,6 +3,7 @@
 #include "core/frame_lock.hpp"
 
 #include "core/output_map_json.hpp"
+#include "core/spatial_mesh.hpp"
 
 #include "scene3d/image_decode.hpp"
 
@@ -339,6 +340,7 @@ void normalizeMapping(OutputMapping& map) {
     map.brightness = clampf(map.brightness, 0.0f, 1.0f);
     normalizeMask(map.mask);
     normalizeColor(map.sliceColor);
+    normalizeSpatial(map.spatial);
 }
 
 bool isDefaultMapping(const OutputMapping& map) {
@@ -996,7 +998,11 @@ OutputBudget estimateOutputBudget(const std::array<OutputSpec, kMaxOutputs>& out
             }
             const OutputMapping& map = sliceMapping(spec, i);
             const size_t divisions = static_cast<size_t>(meshDivisionsFor(map));
-            budget.meshBytes += (divisions + 1u) * (divisions + 1u) * sizeof(MeshVertex) + divisions * divisions * 6u * sizeof(uint32_t);
+            if (map.spatial.enabled) {
+                budget.meshBytes += spatialMeshBytesEstimate(map.spatial);
+            } else {
+                budget.meshBytes += (divisions + 1u) * (divisions + 1u) * sizeof(MeshVertex) + divisions * divisions * 6u * sizeof(uint32_t);
+            }
             if (maskUsable(map.mask)) {
                 const bool soft = map.mask.feather > 0.0f;
                 budget.maskBytes += static_cast<size_t>(soft ? kMaskWidth / 2 : kMaskWidth) * static_cast<size_t>(soft ? kMaskHeight / 2 : kMaskHeight);
@@ -1074,6 +1080,9 @@ nlohmann::json mappingToJson(const OutputMapping& map) {
     doc["mask"] = maskToJson(map.mask);
     if (!isDefaultColor(map.sliceColor)) {
         doc["sliceColor"] = colorToJson(map.sliceColor);
+    }
+    if (!isDefaultSpatial(map.spatial)) {
+        doc["spatial"] = spatialToJson(map.spatial);
     }
     return doc;
 }
@@ -1225,6 +1234,11 @@ bool mappingFromJson(const nlohmann::json& doc, OutputMapping& out) {
     auto sliceColor = doc.find("sliceColor");
     if (sliceColor != doc.end()) {
         colorFromJson(*sliceColor, map.sliceColor);
+    }
+    map.spatial = SpatialMapping{};
+    auto spatial = doc.find("spatial");
+    if (spatial != doc.end()) {
+        spatialFromJson(*spatial, map.spatial);
     }
     normalizeMapping(map);
     out = map;

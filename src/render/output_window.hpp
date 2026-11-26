@@ -3,6 +3,7 @@
 #include "core/mask_images.hpp"
 #include "core/ndi_sender.hpp"
 #include "core/output_map.hpp"
+#include "core/spatial_mesh.hpp"
 
 #include <glad/gl.h>
 
@@ -52,12 +53,37 @@ public:
     size_t gpuBytes() const;
     size_t ndiBytes() const;
     void setNdiBudget(size_t bytes) { ndiBudget_ = bytes; }
+    void setMarkers(bool on, int selected) {
+        markersOn_ = on;
+        markerSelected_ = selected;
+    }
+    bool depthAvailable() const { return depthBits_ > 0; }
     const OutputNdiStatus& ndiStatus() const { return ndiStatus_; }
 
     static std::vector<std::string> monitorNames();
     static int monitorCount();
 
 private:
+    struct MeshProgram {
+        GLuint program = 0;
+        GLint texture = -1;
+        GLint mask = -1;
+        GLint maskOn = -1;
+        GLint gain = -1;
+        GLint tone = -1;
+        GLint black = -1;
+        GLint rect = -1;
+        GLint blend = -1;
+        GLint shape = -1;
+        GLint brightness = -1;
+        GLint pattern = -1;
+        GLint sync = -1;
+        GLint sliceGain = -1;
+        GLint sliceTone = -1;
+        GLint crop = -1;
+        GLint cropOn = -1;
+    };
+
     struct SliceGpu {
         GLuint vao = 0;
         GLuint vbo = 0;
@@ -68,6 +94,7 @@ private:
         size_t eboBytes = 0;
         OutputMapping mapping;
         bool meshValid = false;
+        bool spatial = false;
         GLuint maskTexture = 0;
         int maskWidth = 0;
         int maskHeight = 0;
@@ -82,28 +109,25 @@ private:
     bool ensureSlice(SliceGpu& slice);
     void releaseSlice(SliceGpu& slice);
     void releaseMask(SliceGpu& slice);
+    bool buildMeshProgram(MeshProgram& out, const std::string& vertex, const std::string& fragment, const char* label);
+    void configureAttributes(SliceGpu& slice, bool spatial);
     void uploadMesh(SliceGpu& slice, const OutputMapping& map);
+    void uploadSpatialMesh(SliceGpu& slice, const OutputMapping& map);
+    void drawMarkers(const OutputSpec& spec, int frameWidth, int frameHeight);
     void uploadMask(SliceGpu& slice, const SliceMask& mask);
     void updateNdi(const OutputSpec& spec, int width, int height);
     void releaseNdiBuffers();
 
     GLFWwindow* window_ = nullptr;
-    GLuint program_ = 0;
+    MeshProgram flat_;
+    MeshProgram spatial_;
+    GLuint markerProgram_ = 0;
+    GLuint markerVao_ = 0;
+    GLuint markerVbo_ = 0;
     std::array<SliceGpu, kMaxSlices> slices_;
-    GLint textureLocation_ = -1;
-    GLint maskLocation_ = -1;
-    GLint maskOnLocation_ = -1;
-    GLint gainLocation_ = -1;
-    GLint toneLocation_ = -1;
-    GLint blackLocation_ = -1;
-    GLint rectLocation_ = -1;
-    GLint blendLocation_ = -1;
-    GLint shapeLocation_ = -1;
-    GLint brightnessLocation_ = -1;
-    GLint patternLocation_ = -1;
-    GLint syncLocation_ = -1;
-    GLint sliceGainLocation_ = -1;
-    GLint sliceToneLocation_ = -1;
+    GLint depthBits_ = 0;
+    bool markersOn_ = false;
+    int markerSelected_ = -1;
     int index_ = 0;
     NdiSender ndi_;
     std::string ndiName_;

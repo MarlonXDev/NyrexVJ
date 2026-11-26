@@ -713,33 +713,46 @@ void App::drawOutputMapping(int index) {
     ImGui::SameLine();
     ImGui::Checkbox(tr("Mirror vertically"), &map.flipY);
 
+    drawSpatialMapping(spec, index, map);
+
     ImGui::SeparatorText(tr("Corners and warp"));
     ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextDisabled("%s", tr("Drag the orange squares to fit the picture onto the surface. Drag the round points to bend it."));
+    if (map.spatial.enabled) {
+        ImGui::TextDisabled("%s", tr("Not used while 3D mapping is on for this slice. The mask below is still drawn on the output."));
+        if (canvasMode_ == 0) {
+            canvasMode_ = 1;
+        }
+    } else {
+        ImGui::TextDisabled("%s", tr("Drag the orange squares to fit the picture onto the surface. Drag the round points to bend it."));
+    }
     ImGui::PopTextWrapPos();
-    ImGui::RadioButton(tr("Corners and warp"), &canvasMode_, 0);
-    ImGui::SameLine();
+    if (!map.spatial.enabled) {
+        ImGui::RadioButton(tr("Corners and warp"), &canvasMode_, 0);
+        ImGui::SameLine();
+    }
     ImGui::RadioButton(tr("Mask"), &canvasMode_, 1);
     ImGui::SameLine();
     ImGui::RadioButton(tr("Freehand"), &canvasMode_, 2);
     drawMappingCanvas(spec, index);
-    ImGui::SetNextItemWidth(ui::px(120.0f));
-    if (ImGui::BeginCombo(tr("Warp points"), (std::to_string(map.warpColumns) + " x " + std::to_string(map.warpRows)).c_str())) {
-        for (int n = kMinWarpPoints; n <= kMaxWarpPoints; ++n) {
-            const std::string label = std::to_string(n) + " x " + std::to_string(n);
-            if (ImGui::Selectable(label.c_str(), map.warpColumns == n && map.warpRows == n)) {
-                resizeWarp(map, n, n);
+    if (!map.spatial.enabled) {
+        ImGui::SetNextItemWidth(ui::px(120.0f));
+        if (ImGui::BeginCombo(tr("Warp points"), (std::to_string(map.warpColumns) + " x " + std::to_string(map.warpRows)).c_str())) {
+            for (int n = kMinWarpPoints; n <= kMaxWarpPoints; ++n) {
+                const std::string label = std::to_string(n) + " x " + std::to_string(n);
+                if (ImGui::Selectable(label.c_str(), map.warpColumns == n && map.warpRows == n)) {
+                    resizeWarp(map, n, n);
+                }
             }
+            ImGui::EndCombo();
         }
-        ImGui::EndCombo();
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton(tr("Reset corners"))) {
-        resetCorners(map);
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton(tr("Reset warp"))) {
-        resetWarp(map);
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Reset corners"))) {
+            resetCorners(map);
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Reset warp"))) {
+            resetWarp(map);
+        }
     }
 
     drawSliceMask(map);

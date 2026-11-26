@@ -143,6 +143,22 @@ bool OutputManager::testPattern(int index) const {
     return valid(index) && patterns_[static_cast<size_t>(index)];
 }
 
+void OutputManager::setMarkers(int index, bool on, int selected) {
+    if (valid(index)) {
+        markers_[static_cast<size_t>(index)] = on;
+        markerSelected_[static_cast<size_t>(index)] = selected;
+        windows_[static_cast<size_t>(index)].setMarkers(on, selected);
+    }
+}
+
+bool OutputManager::markers(int index) const {
+    return valid(index) && markers_[static_cast<size_t>(index)];
+}
+
+bool OutputManager::depthAvailable(int index) const {
+    return valid(index) && windows_[static_cast<size_t>(index)].isOpen() && windows_[static_cast<size_t>(index)].depthAvailable();
+}
+
 void OutputManager::render(GLuint texture, int width, int height) {
     if (specs_ == nullptr) {
         return;
@@ -170,6 +186,7 @@ void OutputManager::render(GLuint texture, int width, int height) {
         OutputSpec& spec = (*specs_)[static_cast<size_t>(i)];
         const size_t others = gpuBytes() - window.ndiBytes();
         window.setNdiBudget(others >= budget_ ? 0 : budget_ - others);
+        window.setMarkers(markers_[static_cast<size_t>(i)], markerSelected_[static_cast<size_t>(i)]);
         const bool ok = window.draw(sourceFor(i, texture), width, height, spec, patterns_[static_cast<size_t>(i)], syncValueFor(i));
         if (window.isOpen()) {
             spec.fullscreen = window.isFullscreen();
@@ -205,6 +222,7 @@ bool OutputManager::capture(int index, GLuint texture, int width, int height, Ou
     OutputWindow& window = windows_[static_cast<size_t>(index)];
     const size_t others = gpuBytes() - window.ndiBytes();
     window.setNdiBudget(others >= budget_ ? 0 : budget_ - others);
+    window.setMarkers(markers_[static_cast<size_t>(index)], markerSelected_[static_cast<size_t>(index)]);
     if (window.draw(sourceFor(index, texture), width, height, (*specs_)[static_cast<size_t>(index)], patterns_[static_cast<size_t>(index)], syncValueFor(index), &out)) {
         window.swap(true);
     }

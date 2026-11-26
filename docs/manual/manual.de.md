@@ -920,6 +920,45 @@ Jeder Slice hat seine eigene Farbkorrektur, und das ganze Ausgangsbild auch: Ver
 
 Ausgänge anordnen richtet ein Raster aus überlappenden Projektoren mit einem Klick ein. Gib die Zahl der Spalten und Zeilen und die Überlappung in Prozent des ganzen Bildes ein. NyrexVJ richtet dann die Bildausschnitte und die Kantenüberblendung für dieses Raster ein. Feinjustiere danach.
 
+## 3D-Mapping auf Flächen {#spatial}
+
+Ecken und Verzerrung passen ein Bild auf einen flachen Bildschirm an. 3D-Mapping ist für einen Raum mit echten Dingen darin, etwa einer Wand, einem Pfeiler oder einem Quader: Du sagst NyrexVJ, wo der Projektor steht und wo die Flächen sind, und das Bild wird mit der richtigen Perspektive darauf gezeichnet. Es ist aus, bis du es einschaltest, es gilt pro Slice, und die anderen Slices und Ausgänge bleiben flach, ein Venue kann also beides mischen.
+
+Öffne Einstellungen, Ausgabe, wähle den Ausgang und such den Block 3D-Mapping. Hake 3D-Mapping für diese Slice verwenden an. NyrexVJ beginnt mit einem Projektor und einer Wand davor. Solange es an ist, werden die Ecken und die Verzerrung dieses Slice nicht benutzt; die Maske, die Kantenüberblendung und die Farbe gelten weiter.
+
+### Den Raum beschreiben {#spatial-room}
+
+Jede Position ist in Metern: X nach rechts, Y nach oben und Z zum Publikum. Ein Projektor oder Betrachter mit allen Winkeln auf null blickt entlang minus Z. Positives Gieren dreht ihn nach links, positives Nicken blickt nach oben und positives Rollen hebt seine rechte Seite. Der Block zeigt diese Zeile über den Reglern.
+
+Der Projektor hat eine Position, seine Winkel, ein Sichtfeld (den vertikalen Öffnungswinkel des Objektivs) oder das Projektionsverhältnis aus seinem Datenblatt, das ist dieselbe Einstellung, ein Seitenverhältnis, das zum Ausgang passt, eine Lens-Shift für Projektoren, die nach oben werfen, und einen Abstand Nah und fern. Auf die Projektionsflächen ausrichten dreht ihn zur Mitte der Flächen.
+
+Projektionsflächen sind die echten Dinge, die der Projektor beleuchtet. Wand hinzufügen und Quader hinzufügen geben dir einen Anfang, und du kannst bis zu 16 Flächen hinzufügen, duplizieren und entfernen. Jede besteht aus vier Ecken in Metern, in dieser Reihenfolge von vorn gesehen: oben links, oben rechts, unten rechts, unten links. Die Vorderseite ist die Seite, auf der der Projektor stehen muss; die Rückseite wird nicht gezeichnet, solange Beide Seiten nicht angehakt ist. Der Bildausschnitt ist der Teil des Bildes, den diese Fläche zeigt, von 0 bis 1, und Ganzes Bild zeigen setzt ihn zurück. Unterteilungen machen die Fläche nur feiner; eine ebene braucht sehr wenige.
+
+Die beiden Auswahlknöpfe unter dem Haken bestimmen, was die Flächen zeigen. Bild auf den Projektionsflächen gibt jeder Fläche ihren eigenen Ausschnitt des Bildes. Bild aus Sicht eines Betrachters stellt eine virtuelle Kamera in den Raum, den Betrachter, und jede Fläche zeigt, was dieser Betrachter dort sehen würde. Das nutzt du für erzwungene Perspektive, bei der ein Bild nur von einem Punkt aus richtig aussieht.
+
+### Von Hand kalibrieren {#spatial-calibrate}
+
+Die Kalibrierung findet aus Punkten, die du kennst, heraus, wo der Projektor wirklich steht. Du brauchst ein Maßband und etwas Geduld.
+
+1. Such Punkte aus, die du im Raum wiederfindest, etwa Ecken und Markierungen auf den Flächen, und miss sie in denselben Koordinaten wie die Flächen. Vier Punkte sind das Minimum, und sie dürfen nicht auf einer Linie liegen; verteile sie über die Flächen und nimm mehr für ein besseres Ergebnis.
+2. Füge sie unter Kalibrierung mit Punkt hinzufügen oder Ecken der gewählten Projektionsfläche hinzufügen ein. Gib die Position unter Ort im Raum ein.
+3. Hake Punkte auf der Ausgabe anzeigen an und schalte das Testbild ein. Jeder Punkt zeigt ein grünes Kreuz, wo das Licht landen soll, und ein oranges X, wo ihn die aktuelle Lage des Projektors hinsetzt.
+4. Verschiebe für jeden Punkt das grüne Kreuz, mit der Maus oder mit den Pfeiltasten (ein Pixel bei 1920 Breite, zehn mit Umschalt), bis das Licht auf der echten Markierung landet. Kreuz dorthin setzen, wo die Lage den Punkt hinsetzt zeigt dir, was die Lage gerade sagt.
+5. Drück Lage des Projektors berechnen. Das Ergebnis zeigt den mittleren und den größten Fehler in Pixeln bei 1920 Breite, und die Liste zeigt den Fehler jedes Punktes. Ein Punkt mit großem Fehler ist meist falsch gemessen oder das Kreuz sitzt auf der falschen Markierung.
+6. Wenn die Zahlen gut aussehen, drück Auf den Projektor anwenden. Rückgängig bringt die alte Lage zurück. Ein Ergebnis, das nicht passt, wird gemeldet und ändert nichts.
+
+Lass Sichtfeld mitberechnen aus, wenn du das Objektiv kennst; mit der Option brauchst du sechs Punkte, und die Lage wird unruhiger.
+
+> Tipp: Schau auf die Zeile unter dem Titel des Blocks. Sie zählt die Dreiecke, die gezeichnet werden, die abgewandt sind, die hinter dem Projektor liegen, die an der Nahebene abgeschnitten werden und die außerhalb des Bildes liegen. Daran siehst du schnell, warum eine Fläche dunkel bleibt.
+
+### Gut zu wissen {#spatial-limits}
+
+Die Flächen werden mit einem Tiefenpuffer gezeichnet, ein Pfeiler vor einer Wand verdeckt sie also. Hat ein Ausgabefenster keinen Tiefenpuffer, sagt der Block das und die Flächen werden in der Reihenfolge der Liste gezeichnet. Gib bei mehreren Projektoren jedem Ausgang seinen eigenen Projektor, kalibriere jeden einzeln und stell die Kantenüberblendung der Überlappung bei beiden wie gewohnt ein; die Überblendung weiß nicht, auf welche Fläche das Licht trifft. Die Markierungen werden auf das Ausgabefenster und in eine Aufnahme gezeichnet, nicht in NDI. Das Netz zählt im Speicherbudget der Ausgänge mit.
+
+Nicht gebaut: Kalibrierung mit einer Kamera, Linsenverzerrung, Flächen, die keine ebenen Rechtecke sind, und ein Projektor, der sich während der Show bewegt.
+
+> Warnung: 3D-Mapping wurde gegen ein Rechenmodell des Projektors und des Raums gebaut und getestet, mit einem Software-Renderer. Es wurde nicht mit einem echten Projektor, einem echten Raum oder zwei echten Projektoren ausprobiert. Kalibriere vor der Show mit echten Punkten und prüfe das Ergebnis mit einem Maßband.
+
 ## Venue-Setups {#venues}
 
 Ein Venue-Setup speichert alle Ausgänge eines Raums als kleine Datei, mit den Displays, Slices, Verzerrung, Masken, Überblendung und Farbe. Speichern unter, Laden, Duplizieren, Exportieren und Importieren verwalten sie, und du kannst eine Setup-Datei auf das Fenster ziehen. `--venue NAME` lädt eins beim Start. So baust du das Mapping einmal in einem Club auf und lädst es beim nächsten Mal mit einem Klick.

@@ -24,6 +24,8 @@
 #include "core/library_meta.hpp"
 #include "core/plugin_host.hpp"
 #include "core/recovery.hpp"
+#include "core/spatial_calibration.hpp"
+#include "core/spatial_mesh.hpp"
 #include "core/settings.hpp"
 #include "core/shortcuts.hpp"
 #include "core/workspace.hpp"
@@ -325,6 +327,11 @@ private:
     void drawOutputMapping(int index);
     void drawMappingCanvas(OutputSpec& spec, int index);
     void drawOutputSlices(OutputSpec& spec);
+    void drawSpatialMapping(OutputSpec& spec, int index, OutputMapping& map);
+    void drawSpatialSurfaces(SpatialMapping& spatial);
+    void drawSpatialCalibration(int index, SpatialMapping& spatial);
+    void drawSpatialOutputView(SpatialMapping& spatial);
+    void drawSpatialTopView(SpatialMapping& spatial);
     void drawSliceMask(OutputMapping& map);
     void drawOutputColor(OutputSpec& spec);
     void drawSliceColor(OutputMapping& map);
@@ -509,6 +516,18 @@ private:
     int ndiOutputNameFor_ = -1;
     int selectedSlice_ = 0;
     int canvasMode_ = 0;
+    int spatialOwner_ = -1;
+    int spatialSurface_ = 0;
+    int spatialPoint_ = 0;
+    int spatialDrag_ = -1;
+    bool spatialSolveFov_ = false;
+    bool spatialHasResult_ = false;
+    bool spatialCanUndo_ = false;
+    bool spatialMeshValid_ = false;
+    CalibrationResult spatialResult_;
+    SpatialDevice spatialBefore_;
+    OutputMapping spatialMeshKey_;
+    SpatialMesh spatialMesh_;
     std::vector<std::string> venueList_;
     bool venueListDirty_ = true;
     int selectedVenue_ = -1;

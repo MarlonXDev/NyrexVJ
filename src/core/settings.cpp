@@ -283,6 +283,25 @@ bool loadSettings(Settings& settings) {
     };
     textArray("ndiInputs", result.ndiInputs);
     textArray("cameraInputs", result.cameraInputs);
+    result.streamInputEnabled = boolean("streamInputEnabled", false);
+    {
+        auto streams = doc.find("streamInputs");
+        if (streams != doc.end() && streams->is_array()) {
+            for (size_t i = 0; i < streams->size() && i < result.streamInputs.size(); ++i) {
+                if ((*streams)[i].is_string()) {
+                    const std::string text = (*streams)[i].get<std::string>();
+                    if (text.size() <= 1024) {
+                        result.streamInputs[i] = text;
+                    }
+                }
+            }
+        }
+        auto profile = doc.find("streamProfile");
+        if (profile != doc.end() && profile->is_number_integer()) {
+            const int value = profile->get<int>();
+            result.streamProfile = value >= 0 && value <= 2 ? value : 1;
+        }
+    }
     const auto cameraValue = [&doc](const char* key, int fallback, int low, int high) {
         auto it = doc.find(key);
         if (it == doc.end() || !it->is_number_integer()) {
@@ -581,6 +600,18 @@ bool saveSettings(const Settings& settings) {
     doc["spoutInputFlip"] = settings.spoutInputFlip;
     doc["ndiInputs"] = nlohmann::json(settings.ndiInputs);
     doc["cameraInputs"] = nlohmann::json(settings.cameraInputs);
+    if (settings.streamInputEnabled) {
+        doc["streamInputEnabled"] = true;
+    }
+    for (const std::string& stream : settings.streamInputs) {
+        if (!stream.empty()) {
+            doc["streamInputs"] = nlohmann::json(settings.streamInputs);
+            break;
+        }
+    }
+    if (settings.streamProfile != 1) {
+        doc["streamProfile"] = settings.streamProfile;
+    }
     doc["cameraWidth"] = settings.cameraWidth;
     doc["cameraHeight"] = settings.cameraHeight;
     doc["cameraFps"] = settings.cameraFps;

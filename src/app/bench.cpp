@@ -9,7 +9,9 @@
 #include "core/plugin_host.hpp"
 #include "core/preset.hpp"
 #include "core/recovery.hpp"
+#include "core/stream_url.hpp"
 #include "media/camera_capture.hpp"
+#include "media/stream_capture.hpp"
 #include "platform/platform.hpp"
 #include "render/asset_import.hpp"
 #include "render/clip_library.hpp"
@@ -1657,33 +1659,290 @@ int runLiveSelfTest(Engine& engine, const std::string& outputPath) {
     return passed ? 0 : 1;
 }
 
+namespace {
+
+struct StreamSpec {
+    stream::Profile profile = stream::Profile::Balanced;
+    bool reject = false;
+    bool once = false;
+    std::string url;
+};
+
+StreamSpec parseStreamSpec(const std::string& spec) {
+    StreamSpec result;
+    result.url = spec;
+    const size_t at = spec.find('@');
+    if (at == std::string::npos || at == 0 || at > 32) {
+        return result;
+    }
+    StreamSpec parsed;
+    bool known = true;
+    std::stringstream parts(spec.substr(0, at));
+    std::string token;
+    while (std::getline(parts, token, ',')) {
+        if (token == "low") {
+            parsed.profile = stream::Profile::LowLatency;
+        } else if (token == "balanced") {
+            parsed.profile = stream::Profile::Balanced;
+        } else if (token == "smooth") {
+            parsed.profile = stream::Profile::Smooth;
+        } else if (token == "reject") {
+            parsed.reject = true;
+        } else if (token == "once") {
+            parsed.once = true;
+        } else {
+            known = false;
+        }
+    }
+    if (!known) {
+        return result;
+    }
+    parsed.url = spec.substr(at + 1);
+    return parsed;
+}
+
+double secondsSince(const std::chrono::steady_clock::time_point& start) {
+    return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+}
+
+}
+
+int runStreamSelfTest(Engine& engine, const std::string& spec, const std::string& outputPath) {
+    json report;
+    const StreamSpec request = parseStreamSpec(spec);
+    report["source"] = stream::maskUrl(request.url);
+    report["profile"] = stream::profileSpec(request.profile).name;
+    report["expectRejection"] = request.reject;
+    bool passed = true;
+    const auto finish = [&](bool ok) {
+        report["passed"] = ok;
+        const std::string text = report.dump(2);
+        logLine("Stream self test result:\n" + text);
+        if (!outputPath.empty()) {
+            std::ofstream out(outputPath);
+            out << text << '\n';
+        }
+        return ok ? 0 : 1;
+    };
+    const StreamSupport support = streamSupport();
+    if (!support.compiled || !support.ffmpeg) {
+        report["error"] = "network streams are not available: " + support.problem;
+        return finish(false);
+    }
+    const VideoGpuCaps& caps = engine.videoCaps();
+    report["renderer"] = caps.renderer;
+    if (!caps.conversion) {
+        report["error"] = "the picture conversion shader is not available";
+        return finish(false);
+    }
+    engine.setVideoSettings(VideoDecodeMode::Auto, true, true);
+    {
+        const std::unique_ptr<Composition> neutral = std::make_unique<Composition>();
+        engine.comp = *neutral;
+    }
+    engine.blackout = false;
+    engine.clearLayer(0);
+    const auto step = [&](double dt) {
+        engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+        engine.update(dt);
+        engine.render();
+        glFinish();
+    };
+    int baselineThreads = threadCount();
+    {
+        const auto settleStart = std::chrono::steady_clock::now();
+        auto stableSince = settleStart;
+        while (secondsSince(settleStart) < 20.0 && secondsSince(stableSince) < 2.0) {
+            step(1.0 / 60.0);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            const int now = threadCount();
+            if (now != baselineThreads) {
+                baselineThreads = now;
+                stableSince = std::chrono::steady_clock::now();
+            }
+        }
+    }
+    std::array<std::string, kLiveInputSlots> none;
+    std::array<std::string, kLiveInputSlots> streams;
+    streams[0] = request.url;
+    engine.configureLive(none, none, std::string(), CameraMode{}, streams, request.profile);
+    const int clip = clipIndexByName("Stream Input 1");
+    report["clipFound"] = clip >= 0;
+    if (clip < 0) {
+        return finish(false);
+    }
+    engine.comp.layers[0].cells[0] = clip;
+    engine.paused = true;
+    engine.trigger(0, 0);
+    const auto begin = std::chrono::steady_clock::now();
+
+    if (request.reject) {
+        std::string message;
+        while (secondsSince(begin) < 30.0 && message.empty()) {
+            step(1.0 / 60.0);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            const LiveInputInfo info = engine.liveInfo(LiveKind::Stream, 0);
+            if (!info.status.error.empty()) {
+                message = info.status.error;
+            } else if (!info.startError.empty()) {
+                message = info.startError;
+            }
+        }
+        const LiveInputInfo info = engine.liveInfo(LiveKind::Stream, 0);
+        report["message"] = message;
+        report["uploaded"] = info.uploaded;
+        const bool refused = message.find("not allowed") != std::string::npos && info.uploaded == 0 && info.status.state != LiveState::Live;
+        report["refused"] = refused;
+        logLine("STREAM-PHASE rejected " + message);
+        engine.clearLayer(0);
+        return finish(refused);
+    }
+
+    while (secondsSince(begin) < 45.0 && engine.liveInfo(LiveKind::Stream, 0).uploaded < 5) {
+        step(1.0 / 60.0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    const double firstSeconds = secondsSince(begin);
+    {
+        const auto settled = std::chrono::steady_clock::now();
+        while (secondsSince(settled) < 2.5) {
+            step(1.0 / 60.0);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+    }
+    const LiveInputInfo first = engine.liveInfo(LiveKind::Stream, 0);
+    json live;
+    live["uploaded"] = first.uploaded;
+    live["state"] = liveStateName(first.status.state);
+    live["size"] = std::to_string(first.status.width) + "x" + std::to_string(first.status.height);
+    live["fps"] = first.status.fps;
+    live["route"] = uploadRouteName(first.route);
+    live["latencyMs"] = first.latencyMs;
+    live["jitterMs"] = first.status.jitterMs;
+    live["codec"] = first.status.detail;
+    live["secondsToFirstPicture"] = firstSeconds;
+    std::vector<unsigned char> pixels;
+    int width = 0;
+    int height = 0;
+    if (engine.readOutput(pixels, width, height) && width > 0 && height > 0) {
+        const size_t centre = (static_cast<size_t>(height / 2) * static_cast<size_t>(width) + static_cast<size_t>(width / 2)) * 4u;
+        live["centerPixel"] = {pixels[centre], pixels[centre + 1], pixels[centre + 2]};
+    }
+    const bool isLive = first.status.state == LiveState::Live && first.uploaded >= 5;
+    live["live"] = isLive;
+    passed = passed && isLive;
+    report["live"] = live;
+    logLine("STREAM-PHASE live " + live["size"].get<std::string>());
+
+    if (isLive && !request.once) {
+        auto lastChange = std::chrono::steady_clock::now();
+        unsigned long long seen = engine.liveInfo(LiveKind::Stream, 0).uploaded;
+        bool lost = false;
+        const auto waitStart = std::chrono::steady_clock::now();
+        while (secondsSince(waitStart) < 60.0 && !lost) {
+            step(1.0 / 60.0);
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            const LiveInputInfo now = engine.liveInfo(LiveKind::Stream, 0);
+            if (now.uploaded != seen) {
+                seen = now.uploaded;
+                lastChange = std::chrono::steady_clock::now();
+            }
+            lost = now.status.state == LiveState::SignalLost || now.status.state == LiveState::Reconnecting;
+        }
+        json loss;
+        loss["detected"] = lost;
+        loss["detectedAfterLastPictureSeconds"] = secondsSince(lastChange);
+        passed = passed && lost;
+        const auto lostAt = std::chrono::steady_clock::now();
+        const unsigned long long uploadedAtLoss = engine.liveInfo(LiveKind::Stream, 0).uploaded;
+        if (lost) {
+            logLine("STREAM-PHASE lost");
+            bool recovered = false;
+            const auto recoverStart = std::chrono::steady_clock::now();
+            while (secondsSince(recoverStart) < 90.0 && !recovered) {
+                step(1.0 / 60.0);
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                const LiveInputInfo now = engine.liveInfo(LiveKind::Stream, 0);
+                recovered = now.status.state == LiveState::Live && now.uploaded >= uploadedAtLoss + 5;
+            }
+            json recovery;
+            recovery["recovered"] = recovered;
+            recovery["secondsAfterLoss"] = secondsSince(lostAt);
+            const LiveInputInfo now = engine.liveInfo(LiveKind::Stream, 0);
+            recovery["attempts"] = now.status.attempts;
+            recovery["jitterMs"] = now.status.jitterMs;
+            recovery["catchUps"] = now.status.resyncs;
+            recovery["pictureErrors"] = now.status.unsupported;
+            passed = passed && recovered;
+            report["recovery"] = recovery;
+            if (recovered) {
+                logLine("STREAM-PHASE recovered");
+            }
+        }
+        report["loss"] = loss;
+    }
+
+    engine.clearLayer(0);
+    bool released = false;
+    double elapsed = 0.0;
+    const auto releaseStart = std::chrono::steady_clock::now();
+    while (secondsSince(releaseStart) < 20.0) {
+        engine.update(0.5);
+        engine.render();
+        glFinish();
+        elapsed += 0.5;
+        if (!engine.liveInfo(LiveKind::Stream, 0).active && engine.gpuMemory().live == 0) {
+            released = true;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    report["releasedWhenUnused"] = released;
+    passed = passed && released && elapsed >= kLiveIdleSeconds;
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    const int threadsAfter = threadCount();
+    report["threadsBefore"] = baselineThreads;
+    report["threadsAfter"] = threadsAfter;
+    if (baselineThreads >= 0) {
+        passed = passed && threadsAfter <= baselineThreads;
+    }
+    return finish(passed);
+}
+
 int runLiveBenchmark(Engine& engine, const std::string& spec, const std::string& outputPath) {
     const size_t first = spec.find(':');
     const size_t second = first == std::string::npos ? std::string::npos : spec.find(':', first + 1);
     if (second == std::string::npos) {
-        logLine("Benchmark: use SECONDS:camera:SOURCE or SECONDS:ndi:NAME");
+        logLine("Benchmark: use SECONDS:camera:SOURCE, SECONDS:ndi:NAME or SECONDS:stream:ADDRESS");
         return 1;
     }
     const double seconds = std::clamp(std::atof(spec.substr(0, first).c_str()), 2.0, 600.0);
     const std::string kindText = spec.substr(first + 1, second - first - 1);
     const std::string source = spec.substr(second + 1);
     const bool ndi = kindText == "ndi";
-    if (!ndi && kindText != "camera") {
-        logLine("Benchmark: the kind must be camera or ndi");
+    const bool network = kindText == "stream";
+    if (!ndi && !network && kindText != "camera") {
+        logLine("Benchmark: the kind must be camera, ndi or stream");
         return 1;
     }
     std::array<std::string, kLiveInputSlots> ndiNames;
     std::array<std::string, kLiveInputSlots> cameraNames;
-    (ndi ? ndiNames : cameraNames)[0] = source;
-    engine.configureLive(ndiNames, cameraNames, "NyrexVJ", CameraMode{});
-    const int clip = clipIndexByName(ndi ? "NDI Input 1" : "Camera 1");
+    std::array<std::string, kLiveInputSlots> streamNames;
+    const StreamSpec streamRequest = parseStreamSpec(source);
+    if (network) {
+        streamNames[0] = streamRequest.url;
+    } else {
+        (ndi ? ndiNames : cameraNames)[0] = source;
+    }
+    engine.configureLive(ndiNames, cameraNames, "NyrexVJ", CameraMode{}, streamNames, streamRequest.profile);
+    const int clip = clipIndexByName(network ? "Stream Input 1" : (ndi ? "NDI Input 1" : "Camera 1"));
     if (clip < 0) {
         return 1;
     }
     engine.clearLayer(0);
     engine.comp.layers[0].cells[0] = clip;
     engine.trigger(0, 0);
-    const LiveKind kind = ndi ? LiveKind::Ndi : LiveKind::Camera;
+    const LiveKind kind = network ? LiveKind::Stream : (ndi ? LiveKind::Ndi : LiveKind::Camera);
     const double period = 1.0 / 60.0;
     const auto step = [&](double dt) {
         engine.setAudio(virtualAudio(engine.beat(), engine.time()));
@@ -1754,7 +2013,13 @@ int runLiveBenchmark(Engine& engine, const std::string& spec, const std::string&
 
     json report;
     report["kind"] = kindText;
-    report["source"] = source;
+    report["source"] = network ? stream::maskUrl(streamRequest.url) : source;
+    if (network) {
+        report["streamProfile"] = stream::profileSpec(streamRequest.profile).name;
+        report["jitterMs"] = info.status.jitterMs;
+        report["catchUps"] = info.status.resyncs;
+        report["codec"] = info.status.detail;
+    }
     report["seconds"] = wall;
     report["frames"] = frames;
     report["renderer"] = reinterpret_cast<const char*>(glGetString(GL_RENDERER));

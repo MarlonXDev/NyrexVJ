@@ -2,6 +2,7 @@
 
 #include "app/ui_common.hpp"
 
+#include "core/ndi_runtime.hpp"
 #include "core/node_graph.hpp"
 #include "platform/platform.hpp"
 #include "render/clip_library.hpp"
@@ -463,6 +464,8 @@ void App::drawClipPanel() {
         ImGui::TextColored(ui::kAccent, "%s", tr("Camera or capture card"));
     } else if (def.kind == ClipKind::PluginSource) {
         ImGui::TextColored(ui::kAccent, "%s", tr("Plugin source"));
+    } else if (def.kind == ClipKind::StreamSource) {
+        ImGui::TextColored(ui::kAccent, "%s", tr("Network stream input"));
     } else if (engine_.isSceneClip(clip)) {
         ImGui::TextColored(ui::kAccent, "%s", def.kind == ClipKind::ModelFile ? tr("3D model file") : tr("3D scene"));
     } else if (def.kind == ClipKind::VideoFile) {
@@ -717,6 +720,14 @@ void App::drawNdiControls() {
             NdiSender::recheck();
         }
         return;
+    }
+    {
+        const ndi::RuntimeInfo runtime = ndi::runtimeInfo();
+        const std::string line = std::string(tr("NDI runtime:")) + " " + (runtime.version.empty() ? std::string(tr("version not reported")) : runtime.version);
+        ImGui::TextDisabled("%s", line.c_str());
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("%s\n%s", runtime.library.c_str(), runtime.captureV3 ? tr("This runtime has no NDIlib_recv_capture_v2, so NyrexVJ receives through NDIlib_recv_capture_v3.") : tr("NyrexVJ calls NDIlib_send_send_video_v2, NDIlib_find_create_v2, NDIlib_recv_create_v3 and NDIlib_recv_capture_v2."));
+        }
     }
     if (active) {
         if (ndi_.connections() > 0) {

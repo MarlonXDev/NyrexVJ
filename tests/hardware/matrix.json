@@ -2757,6 +2757,127 @@
           "criteria": "Proposed: all checks pass on Windows and the settings page works as described. The maintainer sets the real limit after the first runs."
         }
       ]
+    },
+    {
+      "id": "network-streams",
+      "title": "Network stream inputs (RTSP, SRT, UDP) and the NDI runtime: real cameras and servers, real networks, Windows, SDI capture cards, the real NDI runtime and VRChat on the same PC",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/STREAMS.md",
+        "docs/adr/0048-network-stream-inputs.md",
+        "docs/LIVE.md",
+        "docs/INTERFACES.md",
+        "docs/DEPENDENCIES.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/TESTING.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/stream_url.cpp",
+        "src/core/stream_clock.cpp",
+        "src/core/ndi_runtime.cpp",
+        "src/core/settings.cpp",
+        "src/media/stream_capture.cpp",
+        "src/media/live_convert.cpp",
+        "src/media/camera_capture.cpp",
+        "src/render/live_input.cpp",
+        "src/render/engine.cpp",
+        "src/app/ui_live.cpp",
+        "src/app/bench.cpp",
+        "tests/test_stream.cpp",
+        "tests/test_ndi_v3.cpp",
+        "tests/fake_ndi.cpp",
+        "scripts/test_stream_input.py"
+      ],
+      "automated": [
+        {
+          "id": "A-STREAM-1",
+          "kind": "ctest",
+          "name": "nvj_stream_tests",
+          "note": "the address parser (allowed and refused schemes, characters, hosts, ports, options and ranges), the fields, hiding of passwords and secret options, the plan given to FFmpeg per scheme and profile, the profile table, the limits for codecs and picture sizes, the lag and jitter measures including a clock off by plus and minus 500 ppm over an hour, and the settings keys (default left out, round trip, wrong values and types, an address over 1024 bytes)"
+        },
+        {
+          "id": "A-STREAM-2",
+          "kind": "ctest",
+          "name": "nvj_ndi_v3_tests",
+          "note": "the NDI receiver against a stand-in runtime that only has NDIlib_recv_capture_v3, and the version text of a stand-in runtime with and without NDIlib_version, with control characters cleaned"
+        },
+        {
+          "id": "A-STREAM-3",
+          "kind": "script",
+          "command": "LD_LIBRARY_PATH=$FFMPEG_SDK/lib NYREXVJ_REQUIRE_VIDEO=1 python3 scripts/test_stream_input.py --binary build/NyrexVJ --ffmpeg $FFMPEG_SDK/bin/ffmpeg --out stream.json",
+          "note": "nine default scenarios with real senders on the loopback address: SRT caller and listener and UDP MPEG-TS with MPEG-2, RTSP over TCP with MJPEG from a test server, each through live, signal loss and recovery with the picture checked; a refused codec and a refused picture size; random and damaged data that must not crash the program; one start per profile. Three more scenarios (H.264 over SRT, Low latency, Smooth) run with --scenario srt-h264, srt-low and srt-smooth"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-STREAM-1",
+          "title": "A real RTSP camera or server, H.264 and H.265",
+          "needs": "An IP camera or an RTSP server that sends H.264, ideally also H.265, on the same network as the PC, and the release build with FFmpeg",
+          "steps": [
+            "Tick Allow network stream inputs in the Clip window of Stream Input 1 and type the address of the camera, with user name and password if it needs them.",
+            "Check that the picture appears, that the password is hidden in the window and in the log, and read size, codec, rate, delay and jitter.",
+            "Pull the network cable of the camera for ten seconds, put it back and watch the state and the time until the picture returns.",
+            "Repeat with the other profiles and with a second and third camera on Stream Input 2 and 3 at the same time."
+          ],
+          "measure": "the time to the first picture, the frame rate, the delay and jitter shown, the time until the signal is seen lost and until it returns, the processor and graphics memory of the PC with one and with three cameras, and any picture damage",
+          "criteria": "Proposed: the picture appears, the password stays hidden, the input returns by itself after the cable is put back, and three cameras do not make the show worse than with the feature off. The maintainer sets the real limits after the first runs."
+        },
+        {
+          "id": "M-STREAM-2",
+          "title": "SRT and UDP over a real network with loss and jitter",
+          "needs": "Two PCs on a network (a wired and a Wi-Fi link if possible), an SRT sender such as OBS or ffmpeg, and a way to add loss or delay (a router setting or a tool)",
+          "steps": [
+            "Send an SRT stream to the PC in caller mode and in listener mode and receive it in each profile.",
+            "Add packet loss and delay to the link in steps and watch the picture, the jitter value and the catch-ups.",
+            "Send UDP MPEG-TS to the PC, with and without loss, and note the result.",
+            "Try an SRT stream with a passphrase on both sides and with a wrong one."
+          ],
+          "measure": "for each profile and each loss level: whether the picture stays usable, the jitter value, the number of catch-ups and the behaviour with a wrong passphrase",
+          "criteria": "Proposed: Smooth rides out the loss that Low latency cannot, a jump to the next key frame leaves no frozen or broken picture, and a wrong passphrase gives a clear message and no picture. The maintainer sets the real limits after the first runs."
+        },
+        {
+          "id": "M-STREAM-3",
+          "title": "Windows: the receiver, the settings page and the firewall",
+          "needs": "A Windows PC with the release build and the Windows FFmpeg libraries, and a sender",
+          "steps": [
+            "Check that the FFmpeg build there has the srt, rtsp and udp protocols; if the page says streams are not available, read the reason.",
+            "Run NyrexVJ --fresh --no-update-check --no-welcome --stream-selftest with an address and a sender and read the result.",
+            "Open a listener port and check what the Windows firewall asks and what the page shows.",
+            "Close the program with a stream running, start it again and check that the settings came back."
+          ],
+          "measure": "whether each protocol opens on Windows, the result of the selftest and the text of the firewall dialog",
+          "criteria": "Proposed: every protocol that the FFmpeg build contains opens, the page says clearly which one is missing, and the selftest passes. The maintainer sets the real limits after the first runs."
+        },
+        {
+          "id": "M-STREAM-4",
+          "title": "The real NDI runtime: version text, receiving and sending",
+          "needs": "A PC with the NDI Tools or the NDI Runtime installed, a second NDI source and a second NDI receiver (OBS with the NDI plugin, NDI Studio Monitor or another PC)",
+          "steps": [
+            "Open Settings, Output and read the line NDI runtime; note the text and the NDI version that the Tools report.",
+            "Receive a source in NDI Input 1, including one with alpha and one that changes its size, and note rate, latency and colours.",
+            "Send the NyrexVJ output over NDI and receive it in the other program.",
+            "Run NyrexVJ --output-selftest without the fake library and note any failure."
+          ],
+          "measure": "the version text of the runtime, the state, size, rate and latency of each source, whether alpha and size changes work, and whether the NDI output arrives",
+          "criteria": "Proposed: the version text is shown or the page says none is reported, receiving and sending work as with the stand-in library, and the result is written into this file. No claim about NDI 6 is made until a real runtime of that version was run."
+        },
+        {
+          "id": "M-STREAM-5",
+          "title": "An SDI capture card and VRChat on the same PC",
+          "needs": "A capture card with an SDI input that shows up as a camera, an SDI source, a PC that runs VRChat and NyrexVJ together",
+          "steps": [
+            "Open Camera 1 and check that the card is listed; choose it, note the mode that the card offers and the picture.",
+            "Run a stream input (RTSP, SRT or UDP) on Stream Input 1 and the card on Camera 1 together and watch NyrexVJ and VRChat for ten minutes.",
+            "Do the same with the feature off and note the difference in both programs."
+          ],
+          "measure": "whether the card is listed and which modes it offers, the picture and its colours, the frame time and late frames of NyrexVJ and the frame rate of VRChat with the stream input on and off",
+          "criteria": "Proposed: the card works as a camera if its driver supports it, and neither program gets visibly worse with a stream running. No SDI claim is made for any card that was not run."
+        }
+      ]
     }
   ]
 }

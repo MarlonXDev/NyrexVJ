@@ -80,6 +80,7 @@ using DestroyFn = void (*)();
 using SendCreateFn = void* (*)(const SendCreate*);
 using SendDestroyFn = void (*)(void*);
 using SendVideoFn = void (*)(void*, const VideoFrame*);
+using VersionFn = const char* (*)();
 using ConnectionsFn = int (*)(void*, uint32_t);
 using FindCreateFn = void* (*)(const FindCreate*);
 using FindDestroyFn = void (*)(void*);
@@ -92,6 +93,7 @@ using RecvFreeVideoFn = void (*)(void*, VideoFrame*);
 using RecvConnectionsFn = int (*)(void*);
 
 struct Api {
+    VersionFn version = nullptr;
     InitializeFn initialize = nullptr;
     DestroyFn destroy = nullptr;
     SendCreateFn sendCreate = nullptr;
@@ -112,9 +114,17 @@ struct Api {
     bool canReceive() const { return findCreate && findDestroy && findWait && findSources && recvCreate && recvDestroy && recvCapture && recvFreeVideo; }
 };
 
+struct RuntimeInfo {
+    std::string library;
+    std::string version;
+    bool captureV3 = false;
+};
+
+std::string sanitizeVersion(const char* text);
 bool available();
 void recheck();
 std::string loadedLibrary();
+RuntimeInfo runtimeInfo();
 std::string loadError();
 void setLibraryOverride(const std::string& path);
 bool load(Api& out);

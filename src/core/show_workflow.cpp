@@ -459,6 +459,9 @@ Catalogue Catalogue::fromLibraries() {
             case ClipKind::PluginSource:
                 catalogue.pluginClips[clip.name] = clip.name;
                 break;
+            case ClipKind::StreamSource:
+                catalogue.liveClips[clip.name] = "Stream";
+                break;
             case ClipKind::TextFile:
             case ClipKind::ParticleClip:
                 if (clip.path.empty()) {

@@ -879,6 +879,20 @@ Vier Clips, NDI Input 1 bis 4, zeigen das Bild eines anderen Programms oder Comp
 
 Vier Clips, Camera 1 bis 4, zeigen eine Webcam oder eine Capture-Karte. Das Clip-Fenster listet die Kameras mit einer Schaltfläche Aktualisieren. Auflösung und Bildrate sind Anfragen an das Gerät, und Kameras antworten mit ihrem nächstliegenden Modus. Kameras brauchen die FFmpeg-Bibliotheken samt der Geräte-Bibliothek.
 
+## Netzwerk-Streams: RTSP, SRT und UDP {#network-streams}
+
+Vier Clips, Stream Input 1 bis 4, zeigen einen Video-Stream aus dem Netzwerk, zum Beispiel von einer IP-Kamera (RTSP), einem Encoder oder einem anderen Computer (SRT) oder von einem Programm, das MPEG-TS-Pakete schickt (UDP). Sie sind standardmäßig aus. Wähle einen Stream-Input-Clip und setze im Clip-Fenster den Haken bei Netzwerk-Stream-Eingänge erlauben. Solange der Haken fehlt, wird keine Verbindung aufgebaut und kein Port geöffnet.
+
+Gib die Adresse im Feld Adresse ein und drücke Enter. NyrexVJ nimmt nur drei Arten von Adressen an: rtsp:// (wird über TCP gelesen, mit Benutzername und Passwort in der Adresse, falls die Kamera sie braucht), srt:// und udp://. Beispiele: rtsp://192.168.1.20:8554/live, srt://host:9000, srt://:9000?mode=listener und udp://@:5000. Alles andere, etwa eine Datei, eine Webseite oder ein Befehl, wird mit einer Meldung abgelehnt. Ein Passwort in der Adresse wird im Fenster und im Log versteckt.
+
+Eine UDP-Adresse und eine SRT-Adresse mit mode=listener öffnen einen Port an diesem Computer und warten auf einen Sender. Das Clip-Fenster zeigt den Port in Orange. Jeder, der den Computer über diesen Port erreicht, kann ein Bild schicken. Nutze das nur in einem Netzwerk, dem du vertraust, und gib den Port in der Firewall bewusst frei. Wenn es geht, lass NyrexVJ lieber selbst eine Verbindung zum Sender aufbauen.
+
+Das Profil bestimmt, wie viel Verzögerung du in Kauf nimmst. Niedrige Latenz hält fast keinen Puffer und kann in einem schlechten Netz ruckeln. Ausgewogen ist der Standard. Weich puffert etwa eine Sekunde und fängt Schübe ab. Im Clip-Fenster stehen der Zustand, die Größe, der Codec, die Bildrate, die Verzögerung vom Dekodieren bis zum Upload, der Jitter und die Zahl der Aufholsprünge. Fällt der Stream zu weit zurück, springt NyrexVJ zum nächsten Keyframe und zählt einen Aufholsprung. Hört der Sender auf, bleibt das letzte Bild oder der Platzhalter stehen und der Eingang verbindet sich von selbst neu.
+
+Ein Stream hat hier keinen Ton, nur das Bild. HDR- und 10-Bit-Streams werden ohne Tone Mapping als normales 8-Bit-Video gezeigt. Streams sind bewusst begrenzt: nur Video, die Codecs H.264, H.265, AV1, MJPEG, MPEG-2, VP8 und VP9 und höchstens 8192 Pixel pro Seite. Ein Stream außerhalb dieser Grenzen wird mit einer Meldung abgelehnt. Der Eingang braucht die FFmpeg-Bibliotheken, und der FFmpeg-Build muss das Protokoll enthalten, zum Beispiel SRT.
+
+NyrexVJ wurde mit erzeugten Sendern (FFmpeg und ein kleiner Testserver) auf einem Computer getestet, nicht mit echten Kameras, einem echten Netzwerk, Windows oder neben VRChat. Teste deinen Stream vor der Show. Die NDI-Einstellungen zeigen jetzt, welche Version die NDI-Runtime meldet, oder dass sie keine meldet. Die Einzelheiten, die Zahlen und die Grenzen stehen in docs/STREAMS.md des Projekts.
+
 ## Zustand und Wiederverbinden {#live-state}
 
 Das Clip-Fenster zeigt den Zustand einer Live-Quelle: Suche, Verbinde, Live, Signal verloren oder Verbinde neu, dazu Größe, Bildrate, verworfene Bilder und die Latenz von der Ankunft bis zum Ende des Uploads. Eine verlorene Quelle wird von selbst wieder gesucht, zuerst nach einer halben Sekunde und dann mit wachsenden Pausen bis zu 10 Sekunden. Das letzte Bild bleibt währenddessen auf dem Layer.

@@ -1,4 +1,4 @@
-# Live sources: NDI input, cameras and capture cards
+# Live sources: NDI input, cameras, capture cards and network streams
 
 Eight clips show a picture that does not come from a file: **NDI Input 1 to 4** (the picture of another program or computer on the network) and **Camera 1 to 4** (a webcam or a capture card). They are in the library under the filter **Live**. Put one into a cell, select it, and choose the source in the Clip window. The design is in [ADR 0014](adr/0014-live-sources.md).
 
@@ -19,6 +19,10 @@ A camera is opened through the FFmpeg device library: Video4Linux2 on Linux and 
 - **Choosing the camera.** The Clip window lists the cameras found; **Refresh** looks again (plug a device in, then press it). **None** leaves the slot empty.
 - **Mode.** Resolution and frame rate are a request. The default is 1280 x 720 at 30 pictures a second; **Auto** leaves the choice to the device. A camera offers fixed modes, and the closest one is used. For modes above 640 x 480 at 30, NyrexVJ first asks for MJPEG (it needs less bandwidth on USB) and falls back to the camera's own format if that fails. The mode you choose is shared by all four camera slots and saved in the settings.
 - **Colour.** The picture is handed to the graphics card as UYVY and converted there. The matrix is BT.709 for 720 lines and above and BT.601 below, with the limited range of video; pictures that FFmpeg reports as full range keep it.
+
+## Network streams (RTSP, SRT, UDP)
+
+Four more clips, **Stream Input 1 to 4**, receive a video stream from the network. They are **off by default**: with **Allow network stream inputs** off no connection is made, no port is opened and the clips stay empty. The addresses (`rtsp://`, `srt://` and `udp://` only), the three profiles (Low latency, Balanced, Smooth), the limits, the security rules, the measurements and what was not tested are in [STREAMS.md](STREAMS.md). A stream uses the same states, the same reconnecting and the same placeholder as the other inputs below; it has no audio.
 
 ## State, reconnecting and the placeholder
 
@@ -62,7 +66,7 @@ The overview of what is tested automatically and what needs real hardware, with 
 
 Tested (automatically, see `nvj_live_tests`, `nvj_ndi_receive_tests`, `nvj_camera_tests`): the state machine and its delays, keeping only the newest picture, choosing an NDI source, receiving from a fake NDI library (formats, lost sender, reconnecting, unsupported formats), cameras with FFmpeg test sources (sizes, rates, colours in both matrices, ranges, a device that does not exist), the conversion shader against a reference on the processor, the three second release, and that graphics memory and threads return to their start values.
 
-**Not tested, because no hardware was available:** a real camera or capture card (format negotiation, the MJPEG request, plugging in and out), DirectShow device listing and opening on Windows, the real NDI runtime (versions 5 and 6, alpha handling, other colour formats, several senders), real graphics card timings, end to end latency, and the effect on VRChat. NDI alpha is assumed to be straight (not premultiplied). The numbers above come from a software rasteriser. Please run `--bench-live` on your computer and report what you see.
+**Not tested, because no hardware was available:** a real camera or capture card (format negotiation, the MJPEG request, plugging in and out), DirectShow device listing and opening on Windows, the real NDI runtime (versions 5 and 6, alpha handling, other colour formats, several senders; since 0.55.0 the runtime's own version text is shown in the NDI output settings, but no real runtime has been loaded in any test), real graphics card timings, end to end latency, and the effect on VRChat. NDI alpha is assumed to be straight (not premultiplied). The numbers above come from a software rasteriser. Please run `--bench-live` on your computer and report what you see.
 
 ## For developers
 
@@ -71,6 +75,7 @@ The pieces are separate and testable without hardware:
 - `src/core/live_source.*`: `LiveStateMachine`, `ReconnectPolicy`, `LiveFrameBox`, the abstract `LiveSource`.
 - `src/core/ndi_runtime.*` and `src/core/ndi_receiver.*`: the shared NDI loader, discovery (`NdiFinder`) and the receiver. `tests/fake_ndi.cpp` is a fake NDI library for both directions.
 - `src/media/camera_capture.*`: `CameraCapture` and the camera list.
+- `src/media/stream_capture.*`, `src/core/stream_url.*`, `src/core/stream_clock.*`: the network stream input ([STREAMS.md](STREAMS.md)); `src/media/live_convert.*` is the conversion to UYVY that cameras and streams share.
 - `src/render/live_input.*`: one slot (source, upload, latency); `src/render/engine.*` owns the slots and their lifetime.
 - `src/app/ui_live.cpp`: the Clip window controls.
 

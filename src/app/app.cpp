@@ -764,7 +764,11 @@ void App::frame(double dt) {
     cameraMode.width = settings_.cameraWidth;
     cameraMode.height = settings_.cameraHeight;
     cameraMode.fps = settings_.cameraFps;
-    engine_.configureLive(settings_.ndiInputs, settings_.cameraInputs, settings_.ndiEnabled ? settings_.ndiName : std::string(), cameraMode);
+    std::array<std::string, kLiveInputSlots> streams;
+    if (settings_.streamInputEnabled) {
+        streams = settings_.streamInputs;
+    }
+    engine_.configureLive(settings_.ndiInputs, settings_.cameraInputs, settings_.ndiEnabled ? settings_.ndiName : std::string(), cameraMode, streams, stream::profileFromInt(settings_.streamProfile));
     OscOutConfig oscOut;
     oscOut.enabled = settings_.oscOutEnabled;
     oscOut.host = settings_.oscOutHost;

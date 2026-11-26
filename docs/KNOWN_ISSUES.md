@@ -4,7 +4,7 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
-KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; the other entries were not walked through again.
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-22 were added at 0.55.0; the other entries were not walked through again.
 
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
@@ -171,6 +171,42 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** play a clip with a quick fade to black in the Interpolate mode and look at the video list on the Performance page: the picture counts show held pictures during the fade, and the tooltip of the Pictures column shows the hard cuts found.
 - **Impact:** no wrong picture, only less smoothness at those places.
 - **Workaround:** none needed; switch the mode off for a clip that is made of quick fades.
+
+### KI-19 Network streams were tested with generated senders on one machine only
+
+- **Area:** live inputs, network streams
+- **Known by:** tests that ran (`nvj_stream_tests`, `scripts/test_stream_input.py`, `--stream-selftest`; [STREAMS.md](STREAMS.md)). Every sender was `ffmpeg` or a small RTSP server written for the test, on the loopback address of the same computer, with software OpenGL; nothing ran with a real RTSP camera, a real network, Windows, H.264 or H.265 over RTSP, multicast, SRT encryption or next to VRChat.
+- **What happens:** unknown for real conditions: lost and reordered packets, Wi-Fi, a camera that sends B-frames or odd time stamps, a server that asks for a login in a way the test server did not, many streams at once, and the processor and graphics memory of four 1080p or 4K streams.
+- **Steps:** manual tests `M-STREAM-1` to `M-STREAM-5` in [TESTING.md](TESTING.md).
+- **Impact:** with **Allow network stream inputs** on, a stream may start slower, stutter, jump to the next key frame more often than in the tests, or not open at all; the details of the clip show the reason from FFmpeg.
+- **Workaround:** leave the setting off (the default) when the show must not depend on it; use the **Smooth** profile on a bad network; send from a source that you tested before the show.
+
+### KI-20 A stream address is saved with its password in settings.json
+
+- **Area:** live inputs, network streams, settings
+- **Known by:** read from the code (`src/core/settings.cpp`, key `streamInputs`) and a test that ran (`nvj_stream_tests`: the saved address is the typed one). The interface and the log show the address with the password and secret option values hidden (`maskUrl`); the file does not.
+- **What happens:** anyone who can read `settings.json` can read the password of an RTSP camera or an SRT `passphrase` that was typed into the address.
+- **Steps:** type an address with a password, open `settings.json` in the user data folder.
+- **Impact:** a password in a file of the user's own profile, the same place as the other settings.
+- **Workaround:** use a camera account that only has the right to view, do not reuse a password, and do not share the settings file or a screenshot of the folder.
+
+### KI-21 A listener opens a port on all network addresses
+
+- **Area:** live inputs, network streams, security
+- **Known by:** read from the code (`makeOpenPlan` in `src/core/stream_url.cpp`) and the scenarios that ran: a `udp://` address and an `srt://` address with `mode=listener` open a port on `0.0.0.0` unless the address names one. The page shows the port in orange.
+- **What happens:** anyone who can reach this computer on that port can send a picture, and the program decodes it. The decoding is limited (codecs, size, number of streams, time, see [STREAMS.md](STREAMS.md)) but is done by FFmpeg's demuxers and decoders, which were not fuzzed in this project.
+- **Steps:** enter `udp://@:5000` in a Stream Input clip and look at the page.
+- **Impact:** an unwanted sender on the same network can show a picture in the show, or send damaged data to the decoders.
+- **Workaround:** use the listener only on a network you trust, allow the port in the firewall for that network only, name the address of the network card in the address (`udp://@192.168.1.5:5000`), or let the program connect to the sender instead (`srt://host:9000` without `mode=listener`, RTSP).
+
+### KI-22 The real NDI runtime was never loaded, and NDI 6 is not proven
+
+- **Area:** live inputs, NDI
+- **Known by:** tests that ran (`nvj_ndi_receive_tests`, `nvj_ndi_v3_tests`, `--output-selftest`, all against the stand-in library `tests/fake_ndi.cpp`) and read from the code ([STREAMS.md](STREAMS.md)). The program looks for `libndi.so.6` before `libndi.so.5` and reads the version from the runtime that it finds; nothing was run with a vendor library.
+- **What happens:** unknown: whether the six functions the program calls behave like the stand-in on a real runtime, whether `NDIlib_version` returns text on every version, whether a real source with alpha, a changing size or a high frame rate is received correctly, and what NDI 6 adds that the program does not use.
+- **Steps:** manual tests `M-STREAM-4` and `M-STREAM-5` in [TESTING.md](TESTING.md); the line "NDI runtime:" in the NDI output settings shows what the runtime reports.
+- **Impact:** an NDI problem on a real machine would be a first finding, not a regression.
+- **Workaround:** check NDI with the free NDI Tools before the show; use Spout on Windows for a program on the same computer.
 
 ## Limits of the evidence, not of the program
 

@@ -257,7 +257,7 @@ public:
     void configureSpout(const std::array<std::string, kSpoutInputSlots>& names, const std::string& excluded, bool flip);
     const SpoutReceiveStatus& spoutStatus(int slot) const;
     const std::vector<std::string>& spoutSenders();
-    void configureLive(const std::array<std::string, kLiveInputSlots>& ndi, const std::array<std::string, kLiveInputSlots>& camera, const std::string& excludedNdi, const CameraMode& mode);
+    void configureLive(const std::array<std::string, kLiveInputSlots>& ndi, const std::array<std::string, kLiveInputSlots>& camera, const std::string& excludedNdi, const CameraMode& mode, const std::array<std::string, kLiveInputSlots>& streams = {}, stream::Profile streamProfile = stream::Profile::Balanced);
     const LiveInput* liveInput(LiveKind kind, int slot) const;
     LiveInputInfo liveInfo(LiveKind kind, int slot) const;
     void resetLiveLatency();
@@ -496,7 +496,7 @@ private:
     bool drawLive(const ClipDef& def, float scale);
     void serviceLive();
     LiveInput* liveSlot(LiveKind kind, int slot);
-    static size_t liveIndex(LiveKind kind, int slot) { return static_cast<size_t>(kind == LiveKind::Ndi ? 0 : (kind == LiveKind::Camera ? kLiveInputSlots : kLiveInputSlots * 2)) + static_cast<size_t>(slot); }
+    static size_t liveIndex(LiveKind kind, int slot) { return static_cast<size_t>(kind == LiveKind::Ndi ? 0 : (kind == LiveKind::Camera ? kLiveInputSlots : (kind == LiveKind::Plugin ? kLiveInputSlots * 2 : kLiveInputSlots * 3))) + static_cast<size_t>(slot); }
     void blit(const RenderTarget& source, const RenderTarget& target);
 
     struct PlaygroundPending {
@@ -608,11 +608,13 @@ private:
     bool spoutFlip_ = false;
     std::array<double, kSpoutInputSlots> spoutLastUse_{};
     std::array<unsigned long long, kSpoutInputSlots> spoutFrame_{};
-    std::array<std::unique_ptr<LiveInput>, static_cast<size_t>(kLiveInputSlots) * 3> liveInputs_;
-    std::array<double, static_cast<size_t>(kLiveInputSlots) * 3> liveLastUse_{};
-    std::array<unsigned long long, static_cast<size_t>(kLiveInputSlots) * 3> liveFrame_{};
+    std::array<std::unique_ptr<LiveInput>, static_cast<size_t>(kLiveInputSlots) * 4> liveInputs_;
+    std::array<double, static_cast<size_t>(kLiveInputSlots) * 4> liveLastUse_{};
+    std::array<unsigned long long, static_cast<size_t>(kLiveInputSlots) * 4> liveFrame_{};
     std::array<std::string, kLiveInputSlots> liveNdi_;
     std::array<std::string, kLiveInputSlots> liveCamera_;
+    std::array<std::string, kLiveInputSlots> liveStream_;
+    stream::Profile liveStreamProfile_ = stream::Profile::Balanced;
     std::string liveExcluded_;
     PluginHost* plugins_ = nullptr;
     CameraMode liveMode_;

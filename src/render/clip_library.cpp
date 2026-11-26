@@ -259,6 +259,14 @@ void appendLiveClips(std::vector<ClipDef>& clips) {
         def.sceneIndex = slot;
         clips.push_back(std::move(def));
     }
+    for (int slot = 0; slot < kLiveInputSlots; ++slot) {
+        ClipDef def;
+        def.name = "Stream Input " + std::to_string(slot + 1);
+        def.body = "const int kSlot = " + std::to_string(slot + 1) + ";\n" + kSpoutPlaceholder;
+        def.kind = ClipKind::StreamSource;
+        def.sceneIndex = slot;
+        clips.push_back(std::move(def));
+    }
 }
 
 void appendRouteClips(std::vector<ClipDef>& clips) {

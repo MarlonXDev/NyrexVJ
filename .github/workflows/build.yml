@@ -206,6 +206,10 @@ jobs:
           NYREXVJ_REQUIRE_VIDEO="${FFMPEG_SDK:+1}" NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-flow" build/NyrexVJ --fresh --no-update-check --no-welcome --flow-selftest tests/data --bench-out "$RUNNER_TEMP/flow.json"
           test -s "$RUNNER_TEMP/flow.json"
           if [ -n "${FFMPEG_SDK:-}" ]; then
+            NYREXVJ_REQUIRE_VIDEO=1 python3 -B scripts/test_stream_input.py --binary build/NyrexVJ --ffmpeg "$FFMPEG_SDK/bin/ffmpeg" --out "$RUNNER_TEMP/stream.json"
+            test -s "$RUNNER_TEMP/stream.json"
+          fi
+          if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_REQUIRE_VIDEO=1 NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-record" build/NyrexVJ --fresh --no-update-check --no-welcome --record-selftest
           fi
           NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-api" build/NyrexVJ --fresh --no-update-check --no-welcome --api-selftest

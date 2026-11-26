@@ -3,8 +3,11 @@
 #include "app/ui_common.hpp"
 #include "core/ndi_receiver.hpp"
 #include "core/ndi_runtime.hpp"
+#include "core/stream_url.hpp"
+#include "media/stream_capture.hpp"
 #include "platform/platform.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <string>
 
@@ -64,7 +67,7 @@ void drawStatus(const LiveInputInfo& info) {
         ImGui::TextDisabled("%s", tr("Idle: the source is opened when a layer shows this clip."));
         if (!info.startError.empty()) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.35f, 1.0f));
-            ImGui::TextWrapped("%s", info.startError.c_str());
+            ImGui::TextWrapped("%s", trMessage(info.startError).c_str());
             ImGui::PopStyleColor();
         }
         return;
@@ -78,12 +81,18 @@ void drawStatus(const LiveInputInfo& info) {
         ImGui::TextDisabled("%d x %d, %.0f fps", status.width, status.height, status.fps);
         ImGui::TextDisabled("%s %.0f ms (%s %.0f ms)", tr("Latency"), info.latencyMs, tr("worst"), info.latencyMaxMs);
         ImGui::TextDisabled("%s %.1f ms, %s %llu", tr("Upload"), info.uploadMs, tr("skipped"), status.dropped);
+        if (status.jitterMs > 0.0 || status.resyncs > 0) {
+            ImGui::TextDisabled("%s %.1f ms, %s %llu", tr("Jitter"), status.jitterMs, tr("catch-ups"), status.resyncs);
+        }
+        if (!status.detail.empty()) {
+            ImGui::TextDisabled("%s", status.detail.c_str());
+        }
     } else if (status.attempts > 0) {
         ImGui::TextDisabled("%s %d", tr("Attempt"), status.attempts);
     }
     if (!status.error.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.2f, 1.0f));
-        ImGui::TextWrapped("%s", status.error.c_str());
+        ImGui::TextWrapped("%s", trMessage(status.error).c_str());
         ImGui::PopStyleColor();
     }
 }
@@ -97,6 +106,100 @@ void App::serviceLiveBrowse() {
     }
 }
 
+void App::drawStreamControls(int slot) {
+    auto persist = [this]() { saveSettings(settings_); };
+    if (ImGui::Checkbox(trId("Allow network stream inputs", "streamAllow"), &settings_.streamInputEnabled)) {
+        persist();
+    }
+    ImGui::PushTextWrapPos(0.0f);
+    if (!settings_.streamInputEnabled) {
+        ImGui::TextDisabled("%s", tr("Off: the four stream clips stay empty and no network connection is made. Turn this on only if you want to receive RTSP, SRT or UDP video."));
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    const StreamSupport support = streamSupport();
+    if (!support.compiled || !support.ffmpeg) {
+        ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s", tr("Network streams are not available"));
+        ImGui::TextDisabled("%s", tr("Streams need the FFmpeg libraries. See Settings, Video, for the files and the folder."));
+        if (!support.problem.empty()) {
+            ImGui::TextDisabled("%s", trMessage(support.problem).c_str());
+        }
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    ImGui::TextDisabled("%s", tr("Streams from the network are untrusted data. Only open addresses you know. Allowed: rtsp://, srt:// and udp://."));
+    ImGui::PopTextWrapPos();
+
+    const size_t index = static_cast<size_t>(slot);
+    char* buffer = streamText_[index].data();
+    if (!streamTyping_[index]) {
+        const std::string& stored = settings_.streamInputs[index];
+        std::snprintf(buffer, streamText_[index].size(), "%s", stored.c_str());
+    }
+    const bool hidden = stream::maskUrl(buffer) != buffer;
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_EnterReturnsTrue;
+    if (hidden) {
+        flags |= ImGuiInputTextFlags_Password;
+    }
+    ImGui::SetNextItemWidth(ui::px(-90.0f));
+    const bool entered = ImGui::InputText(trId("Address", "streamUrl"), buffer, streamText_[index].size(), flags);
+    const bool active = ImGui::IsItemActive();
+    const bool finished = entered || ImGui::IsItemDeactivatedAfterEdit();
+    streamTyping_[index] = active && !finished;
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s", tr("Examples: rtsp://192.168.1.20:8554/live, srt://host:9000, srt://:9000?mode=listener, udp://@:5000"));
+    }
+    if (finished) {
+        const std::string text = buffer;
+        const stream::ParseResult parsed = stream::parseUrl(text);
+        if (text.empty()) {
+            settings_.streamInputs[index].clear();
+            streamProblem_[index].clear();
+            persist();
+        } else if (parsed.ok) {
+            settings_.streamInputs[index] = text;
+            streamProblem_[index].clear();
+            persist();
+        } else {
+            streamProblem_[index] = parsed.error;
+        }
+    }
+    if (!streamProblem_[index].empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.35f, 1.0f));
+        ImGui::TextWrapped("%s", trMessage(streamProblem_[index]).c_str());
+        ImGui::PopStyleColor();
+    }
+    const std::string& stored = settings_.streamInputs[index];
+    if (!stored.empty()) {
+        ImGui::TextDisabled("%s %s", tr("In use:"), stream::maskUrl(stored).c_str());
+        const stream::ParseResult parsed = stream::parseUrl(stored);
+        if (parsed.ok && parsed.url.listener) {
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "%s %d. %s", tr("This opens port"), parsed.url.port, tr("Anyone who can reach this computer on that port can send a picture. Use it only on networks you trust and allow the port in your firewall on purpose."));
+            ImGui::PopTextWrapPos();
+        }
+    }
+
+    const char* const profileNames[] = {tr("Low latency"), tr("Balanced"), tr("Smooth")};
+    const int profile = std::clamp(settings_.streamProfile, 0, 2);
+    ImGui::SetNextItemWidth(ui::px(-90.0f));
+    if (ImGui::BeginCombo(trId("Profile", "streamProfile"), profileNames[profile])) {
+        for (int i = 0; i < 3; ++i) {
+            if (ImGui::Selectable(profileNames[i], profile == i)) {
+                settings_.streamProfile = i;
+                persist();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("%s", tr("Low latency keeps almost no buffer and may stutter on a bad network. Smooth buffers about a second and rides out bursts. Balanced sits between."));
+    }
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("A stream has no audio here, only the picture. When the sender stops, the picture freezes and the input reconnects by itself."));
+    ImGui::PopTextWrapPos();
+}
+
 void App::drawLiveInputControls(const ClipDef& def) {
     const int slot = def.sceneIndex;
     if (slot < 0 || slot >= kLiveInputSlots) {
@@ -104,10 +207,13 @@ void App::drawLiveInputControls(const ClipDef& def) {
     }
     const bool ndi = def.kind == ClipKind::NdiSource;
     const bool plugin = def.kind == ClipKind::PluginSource;
-    ImGui::SeparatorText(plugin ? tr("Plugin source") : (ndi ? tr("NDI input") : tr("Camera or capture card")));
+    const bool network = def.kind == ClipKind::StreamSource;
+    ImGui::SeparatorText(network ? tr("Network stream input") : (plugin ? tr("Plugin source") : (ndi ? tr("NDI input") : tr("Camera or capture card"))));
     auto persist = [this]() { saveSettings(settings_); };
 
-    if (plugin) {
+    if (network) {
+        drawStreamControls(slot);
+    } else if (plugin) {
         drawPluginFrameSlot(slot);
     } else if (ndi) {
         if (!ndi::available()) {
@@ -251,7 +357,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
         ImGui::PopTextWrapPos();
     }
 
-    drawStatus(engine_.liveInfo(plugin ? LiveKind::Plugin : (ndi ? LiveKind::Ndi : LiveKind::Camera), slot));
+    drawStatus(engine_.liveInfo(network ? LiveKind::Stream : (plugin ? LiveKind::Plugin : (ndi ? LiveKind::Ndi : LiveKind::Camera)), slot));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("The source is closed three seconds after no layer shows this clip, so it costs nothing while unused."));
     ImGui::PopTextWrapPos();

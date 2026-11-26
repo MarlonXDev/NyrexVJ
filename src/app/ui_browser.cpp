@@ -543,6 +543,8 @@ void App::drawClipTile(int index, const ImVec2& size) {
         badge = tr("Camera");
     } else if (clip.kind == ClipKind::PluginSource) {
         badge = tr("Plugin");
+    } else if (clip.kind == ClipKind::StreamSource) {
+        badge = tr("Stream");
     } else if (clip.kind == ClipKind::VideoFile) {
         badge = tr("Video");
     } else if (clip.kind == ClipKind::ImageFile) {

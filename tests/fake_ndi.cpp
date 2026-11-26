@@ -124,6 +124,12 @@ uint8_t pattern(int counter, int y, int index) {
 
 }
 
+#ifndef FAKE_NDI_V3_ONLY
+FAKE_EXPORT const char* NDIlib_version() {
+    return "NDI SDK FAKE 6.0.1 (test library)";
+}
+#endif
+
 FAKE_EXPORT bool NDIlib_initialize() {
     state.initialized = true;
     return true;
@@ -328,7 +334,11 @@ FAKE_EXPORT int NDIlib_recv_get_no_connections(void* recv) {
     return rx.receivers.count(recv) > 0 ? rx.connections : 0;
 }
 
+#ifdef FAKE_NDI_V3_ONLY
+FAKE_EXPORT int NDIlib_recv_capture_v3(void* recv, VideoFrame* video, void*, void*, uint32_t timeout) {
+#else
 FAKE_EXPORT int NDIlib_recv_capture_v2(void* recv, VideoFrame* video, void*, void*, uint32_t timeout) {
+#endif
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
     for (;;) {
         {

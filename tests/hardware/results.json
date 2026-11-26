@@ -1547,6 +1547,45 @@
       "test": "A-FLOW-2",
       "command": "NyrexVJ --fresh --no-update-check --no-welcome --flow-selftest tests/data --bench-out flow.json",
       "notes": "22 checks passed, 0 failed with FFmpeg (with NYREXVJ_NO_FFMPEG=1 the whole test is skipped and exits 0; with NYREXVJ_REQUIRE_VIDEO=1 and no FFmpeg it exits 1 as intended); 30 to 60 frames per second interpolated 31.85 dB against 24.56 dB held over 19 frames and half speed 31.88 dB against 24.54 dB over 21 frames, both measured against the real 60 frames per second clip; 20 of 20 exact frames identical to normal playback; 4 hard cuts detected and equal to normal playback; time per step 15.20 ms off and 16.18 ms interpolating, analysis 1.26 ms on average, flow memory 695280 bytes, all on software OpenGL with generated 320x180 clips (not a graphics card number, not real footage); a second run with two busy processes on the two cores also passed all 22 checks, analysis 3.71 ms on average and 12.88 ms at the 95th percentile, time per step 30.76 ms off and 36.06 ms interpolating"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.55.0 (branch feature/network-streams, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "network-streams",
+      "test": "A-STREAM-1",
+      "command": "ctest -R nvj_stream_tests",
+      "notes": "244 checks passed, 0 failed (address rules, fields, masking of passwords and secret options, the plan given to FFmpeg per scheme and profile, profiles, limits, the lag and jitter measures with a clock off by plus and minus 500 ppm over an hour, the settings keys); no OpenGL; the whole suite ran 57 of 57 tests passed in the same build"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.55.0 (branch feature/network-streams, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "network-streams",
+      "test": "A-STREAM-2",
+      "command": "ctest -R nvj_ndi_v3_tests",
+      "notes": "11 checks passed, 0 failed against a stand-in NDI runtime that only has NDIlib_recv_capture_v3; nvj_ndi_receive_tests (181 checks) and nvj_camera_tests (121 checks with the FFmpeg libraries) also passed after the changes; the real NDI runtime was never loaded"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.55.0 (branch feature/network-streams, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "network-streams",
+      "test": "A-STREAM-3",
+      "command": "LD_LIBRARY_PATH=$FFMPEG_SDK/lib NYREXVJ_REQUIRE_VIDEO=1 python3 scripts/test_stream_input.py --binary build/NyrexVJ --ffmpeg $FFMPEG_SDK/bin/ffmpeg --scenario srt-caller --scenario srt-listener --scenario udp --scenario rtsp --scenario srt-h264 --scenario srt-low --scenario srt-smooth --scenario reject-codec --scenario reject-size --scenario garbage --scenario corruption --scenario profiles --out stream.json",
+      "notes": "12 of 12 scenarios passed on the loopback address with ffmpeg 8.1 as sender and a small RTSP server written for the test: first picture after 1.0 to 2.0 s, 25.0 pictures per second, signal loss seen after 1.36 to 1.5 s (RTSP over TCP at once), recovery after 4.5 to 5.0 s (RTSP 1.64 s), jitter 0.8 to 3 ms, decode to upload 20.5 to 26 ms in the three profiles; a stream with MPEG-4 and one of 8400x64 were refused with a message, random and damaged MPEG-TS data did not crash the program (exit code 1, no signal); the input was released after use; software OpenGL, so no graphics card number, no real camera, no real network, no Windows, no real NDI runtime"
     }
   ]
 }

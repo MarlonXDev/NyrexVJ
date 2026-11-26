@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.54.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.55.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -224,6 +224,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/run_conditions.cpp
     src/core/netsync.cpp src/control/netsync_key.cpp src/control/netsync_show.cpp src/control/netsync_transport.cpp
     src/core/ndi_runtime.cpp
+    src/core/stream_url.cpp
+    src/core/stream_clock.cpp
     src/core/ndi_receiver.cpp
     src/core/ndi_sender.cpp
     src/core/stage.cpp
@@ -243,7 +245,9 @@ set(NYREXVJ_CORE_SOURCES
     src/media/convert_cache.cpp
     src/media/convert_manager.cpp
     src/media/video_redirect.cpp
+    src/media/live_convert.cpp
     src/media/camera_capture.cpp
+    src/media/stream_capture.cpp
     src/media/hap.cpp
     src/media/media_image.cpp
     src/media/playback_driver.cpp
@@ -674,6 +678,18 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_ndi_receive_tests PRIVATE tests)
     target_compile_definitions(nvj_ndi_receive_tests PRIVATE NYREXVJ_FAKE_NDI_PATH="$<TARGET_FILE:fake_ndi>")
     add_test(NAME nvj_ndi_receive_tests COMMAND nvj_ndi_receive_tests)
+    add_library(fake_ndi_v3 SHARED tests/fake_ndi.cpp)
+    set_target_properties(fake_ndi_v3 PROPERTIES CXX_VISIBILITY_PRESET hidden PREFIX "")
+    target_compile_definitions(fake_ndi_v3 PRIVATE FAKE_NDI_V3_ONLY)
+    add_executable(nvj_ndi_v3_tests tests/test_ndi_v3.cpp)
+    target_link_libraries(nvj_ndi_v3_tests PRIVATE nvj_core fake_ndi_v3)
+    target_include_directories(nvj_ndi_v3_tests PRIVATE tests)
+    target_compile_definitions(nvj_ndi_v3_tests PRIVATE NYREXVJ_FAKE_NDI_V3_PATH="$<TARGET_FILE:fake_ndi_v3>")
+    add_test(NAME nvj_ndi_v3_tests COMMAND nvj_ndi_v3_tests)
+    add_executable(nvj_stream_tests tests/test_stream.cpp)
+    target_link_libraries(nvj_stream_tests PRIVATE nvj_core)
+    target_include_directories(nvj_stream_tests PRIVATE tests)
+    add_test(NAME nvj_stream_tests COMMAND nvj_stream_tests)
     add_executable(nvj_camera_tests tests/test_camera.cpp)
     target_link_libraries(nvj_camera_tests PRIVATE nvj_core)
     target_include_directories(nvj_camera_tests PRIVATE tests)

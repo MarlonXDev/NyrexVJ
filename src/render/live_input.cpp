@@ -2,6 +2,7 @@
 
 #include "core/ndi_receiver.hpp"
 #include "core/plugin_host.hpp"
+#include "media/stream_capture.hpp"
 
 #include <algorithm>
 
@@ -25,6 +26,9 @@ bool LiveInput::sameConfig(const LiveInputConfig& a, const LiveInputConfig& b, L
     }
     if (kind == LiveKind::Plugin) {
         return true;
+    }
+    if (kind == LiveKind::Stream) {
+        return a.streamProfile == b.streamProfile;
     }
     return a.camera.width == b.camera.width && a.camera.height == b.camera.height && a.camera.fps == b.camera.fps;
 }
@@ -100,6 +104,14 @@ void LiveInput::update(const LiveInputConfig& config, double now) {
                 return;
             }
             source_ = std::move(plugin);
+        } else if (kind_ == LiveKind::Stream) {
+            std::unique_ptr<StreamCapture> capture = std::make_unique<StreamCapture>();
+            if (!capture->start(config.source, config.streamProfile, config.policy)) {
+                startError_ = capture->error();
+                retryAt_ = now + 3.0;
+                return;
+            }
+            source_ = std::move(capture);
         } else {
             std::unique_ptr<CameraCapture> camera = std::make_unique<CameraCapture>();
             if (!camera->start(config.source, config.camera, config.policy)) {

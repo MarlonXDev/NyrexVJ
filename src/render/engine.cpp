@@ -2274,9 +2274,11 @@ bool Engine::drawSpout(int slot, float scale) {
     return true;
 }
 
-void Engine::configureLive(const std::array<std::string, kLiveInputSlots>& ndi, const std::array<std::string, kLiveInputSlots>& camera, const std::string& excludedNdi, const CameraMode& mode) {
+void Engine::configureLive(const std::array<std::string, kLiveInputSlots>& ndi, const std::array<std::string, kLiveInputSlots>& camera, const std::string& excludedNdi, const CameraMode& mode, const std::array<std::string, kLiveInputSlots>& streams, stream::Profile streamProfile) {
     liveNdi_ = ndi;
     liveCamera_ = camera;
+    liveStream_ = streams;
+    liveStreamProfile_ = streamProfile;
     liveExcluded_ = excludedNdi;
     liveMode_ = mode;
 }
@@ -2320,6 +2322,9 @@ LiveKind liveKindOf(ClipKind kind) {
     if (kind == ClipKind::NdiSource) {
         return LiveKind::Ndi;
     }
+    if (kind == ClipKind::StreamSource) {
+        return LiveKind::Stream;
+    }
     return kind == ClipKind::PluginSource ? LiveKind::Plugin : LiveKind::Camera;
 }
 
@@ -2347,6 +2352,9 @@ void Engine::prepareLive(const ClipDef& def) {
         if (plugins_ != nullptr && def.sceneIndex >= 0 && def.sceneIndex < kPluginFrameSlots) {
             config.source = plugins_->config().frames[static_cast<size_t>(def.sceneIndex)];
         }
+    } else if (kind == LiveKind::Stream) {
+        config.source = liveStream_[static_cast<size_t>(def.sceneIndex)];
+        config.streamProfile = liveStreamProfile_;
     } else {
         config.source = liveCamera_[static_cast<size_t>(def.sceneIndex)];
         config.camera = liveMode_;

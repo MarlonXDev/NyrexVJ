@@ -21,6 +21,7 @@ enum class ClipKind {
     NdiSource,
     CameraSource,
     PluginSource,
+    StreamSource,
     TextFile,
     ParticleClip,
     RouteSource
@@ -44,7 +45,7 @@ struct ClipDef {
     int passCount() const { return plan ? static_cast<int>(plan->passes.size()) : 1; }
     bool isScene() const { return kind == ClipKind::BuiltinScene || kind == ClipKind::ModelFile || kind == ClipKind::ScenePack; }
     bool isMedia() const { return kind == ClipKind::ImageFile || kind == ClipKind::VideoFile; }
-    bool isLive() const { return kind == ClipKind::NdiSource || kind == ClipKind::CameraSource || kind == ClipKind::PluginSource; }
+    bool isLive() const { return kind == ClipKind::NdiSource || kind == ClipKind::CameraSource || kind == ClipKind::PluginSource || kind == ClipKind::StreamSource; }
     bool isGenerator() const { return kind == ClipKind::TextFile || kind == ClipKind::ParticleClip; }
     bool isRoute() const { return kind == ClipKind::RouteSource; }
 };

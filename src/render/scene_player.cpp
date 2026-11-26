@@ -82,6 +82,7 @@ uniform float uRainbow;
 uniform float uTime;
 uniform float uKick;
 uniform int uBlend;
+uniform int uSplit;
 void main() {
     vec3 n = normalize(vNormal);
     if (!gl_FrontFacing) {
@@ -90,6 +91,12 @@ void main() {
     vec4 albedo = uBase * vColor;
     if (uHasTex != 0) {
         albedo *= texture(uTex, vUv);
+    }
+    if (uSplit == 1 && albedo.a < 0.98) {
+        discard;
+    }
+    if (uSplit == 2 && albedo.a >= 0.98) {
+        discard;
     }
     vec3 base = albedo.rgb;
     if (uPalette > 0.5) {
@@ -146,6 +153,7 @@ uniform float uSkyIntensity;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform float uExposure;
+uniform int uSplit;
 const float PI = 3.14159265;
 
 vec3 toLinear(vec3 c) {
@@ -205,6 +213,12 @@ void main() {
         albedo.a *= t.a;
     }
     if ((uFlags & 16) != 0 && albedo.a < uCutoff) {
+        discard;
+    }
+    if (uSplit == 1 && albedo.a < 0.98) {
+        discard;
+    }
+    if (uSplit == 2 && albedo.a >= 0.98) {
         discard;
     }
     float metal = uMetal;
@@ -635,6 +649,7 @@ void SceneRenderer::locate(Program& p) {
     p.sunColor = at("uSunColor");
     p.exposure = at("uExposure");
     p.blend = at("uBlend");
+    p.split = at("uSplit");
     p.skinned = at("uSkinned");
     p.jointTex = at("uJointTex");
     p.jointBase = at("uJointBase");
@@ -897,7 +912,8 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
         glUniformMatrix4fv(p.model, 1, GL_FALSE, model.m.data());
         glUniformMatrix3fv(p.normalMat, 1, GL_FALSE, normal.data());
         const SceneMaterial material = materialOf(mesh);
-        const bool blended = material.alphaMode == AlphaMode::Blend;
+        const bool blended = material.alphaMode == AlphaMode::Blend && pass == 1;
+        glUniform1i(p.split, pass == 2 ? 1 : (pass == 1 && material.alphaMode == AlphaMode::Blend ? 2 : 0));
         glUniform4f(p.base, material.baseColor[0], material.baseColor[1], material.baseColor[2], material.baseColor[3]);
         const GLuint baseTexture = textureOf(material.baseTexture);
         if (usePbr) {
@@ -974,7 +990,7 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
             glActiveTexture(GL_TEXTURE0);
         }
         glBindVertexArray(mesh.vao);
-        if (pass == 0) {
+        if (pass != 1) {
             setCull(material.doubleSided ? 0 : 1);
             glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, nullptr);
         } else if (material.doubleSided) {
@@ -1008,6 +1024,9 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
                     sum = sum + transformPoint(pivot * eval.joints[static_cast<size_t>(instance.jointOffset + k)], mesh.centre);
                 }
                 centre = sum * (1.0f / static_cast<float>(instance.jointCount));
+            }
+            if (materialOf(mesh).baseColor[3] >= 0.98f) {
+                drawInstance(instance, 2);
             }
             blendList.push_back({i, dot(centre - eye, forward)});
             continue;

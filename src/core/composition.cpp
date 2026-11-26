@@ -14,7 +14,7 @@ const char* const kBandNames[AudioBandCount] = {"Off", "Bass", "Mid", "High", "L
 const char* const kLfoShapeNames[LfoShapeCount] = {"Sine", "Triangle", "Saw", "Square", "Random", "Smooth random"};
 const char* const kLfoRateNames[kLfoRateCount] = {"1/4 beat", "1/2 beat", "1 beat", "2 beats", "4 beats", "8 beats", "16 beats", "32 beats"};
 const char* const kTargetNames[ModTargetCount] = {"Opacity", "Scale", "Speed", "Hue", "Brightness", "Saturation"};
-const char* const kTransitionNames[TransitionTypeCount] = {"Fade", "Dissolve", "Zoom", "Wipe", "Radial", "Spin", "Slide"};
+const char* const kTransitionNames[TransitionTypeCount] = {"Fade", "Dissolve", "Zoom", "Wipe", "Radial", "Spin", "Slide", "Pixelate", "Glitch", "Blinds", "Ripple", "Flash", "Blur", "Checker", "Frost"};
 const char* const kReactModeNames[EffectReactModeCount] = {"Parameter", "Gate"};
 
 std::string lowered(const std::string& text) {

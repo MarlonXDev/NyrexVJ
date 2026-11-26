@@ -225,6 +225,82 @@ void main() {
         vec3 b = colB(vec2(uv.x - edge, uv.y));
         c = mix(a, b, m);
         c *= 1.0 - 0.35 * exp(-abs(uv.x - edge) * 14.0);
+    } else if (uType == 7) {
+        float k = sin(p * PI);
+        float cells = mix(240.0, 14.0, k);
+        vec2 g = vec2(cells * uAspect, cells);
+        vec2 q = mix(uv, (floor(uv * g) + 0.5) / g, smoothstep(0.0, 0.15, k));
+        c = mix(colA(q), colB(q), smoothstep(0.35, 0.65, p));
+    } else if (uType == 8) {
+        float k = sin(p * PI);
+        float slot = floor(uTime * 20.0);
+        float band = floor(uv.y * 28.0);
+        float hit = step(1.0 - k * 0.9, h21(vec2(band, slot + 3.0)));
+        float shift = (h21(vec2(band * 1.7, slot)) - 0.5) * 0.4 * k * hit;
+        float d = 0.018 * k * (0.4 + hit);
+        float useB = step(h21(vec2(band, 7.3)), p);
+        vec2 q = uv + vec2(shift, 0.0);
+        vec3 a = vec3(colA(q + vec2(d, 0.0)).r, colA(q).g, colA(q - vec2(d, 0.0)).b);
+        vec3 b = vec3(colB(q + vec2(d, 0.0)).r, colB(q).g, colB(q - vec2(d, 0.0)).b);
+        c = mix(a, b, useB);
+    } else if (uType == 9) {
+        float f = fract(uv.x * 12.0);
+        float m = reveal(f, p, 0.04);
+        float edge = 4.0 * m * (1.0 - m);
+        c = mix(colA(uv), colB(uv), m) * (1.0 - 0.35 * edge);
+    } else if (uType == 10) {
+        vec2 d = (uv - 0.5) * asp;
+        float r = length(d);
+        float rr = r / (0.5 * length(asp));
+        float m = reveal(rr, p, 0.25);
+        float edge = 4.0 * m * (1.0 - m);
+        vec2 dir = d / max(r, 0.001);
+        vec2 q = uv + dir * sin(rr * 60.0 - p * 30.0) * 0.03 * edge / asp;
+        c = mix(colAm(q), colBm(q), m);
+    } else if (uType == 11) {
+        float f = pow(sin(p * PI), 4.0);
+        c = mix(colA(uv), colB(uv), smoothstep(0.42, 0.58, p));
+        c = mix(c, vec3(1.0, 0.97, 0.9), f);
+    } else if (uType == 12) {
+        float rad = sin(p * PI) * 0.04;
+        vec3 a = vec3(0.0);
+        vec3 b = vec3(0.0);
+        for (int i = 0; i < 16; ++i) {
+            float f = (float(i) + 0.5) / 16.0;
+            float ang = float(i) * 2.39996;
+            vec2 o = vec2(cos(ang), sin(ang)) * sqrt(f) * rad / asp;
+            a += colAm(uv + o);
+            b += colBm(uv + o);
+        }
+        c = mix(a, b, smoothstep(0.35, 0.65, p)) / 16.0;
+    } else if (uType == 13) {
+        float n = 10.0;
+        vec2 g = uv * vec2(n * uAspect, n);
+        vec2 id = floor(g);
+        vec2 f = fract(g) - 0.5;
+        float delay = (id.x / (n * uAspect) + id.y / n) * 0.24 + h21(id) * 0.18;
+        float local = clamp((p - delay) / 0.3, 0.0, 1.0);
+        float s = abs(local * 2.0 - 1.0);
+        float visible = smoothstep(0.5 * s + 0.004, 0.5 * s - 0.004, abs(f.x));
+        vec3 tile = local < 0.5 ? colA(uv) : colB(uv);
+        c = tile * mix(1.0, visible, step(0.0001, local) * step(local, 0.9999));
+    } else if (uType == 14) {
+        float k = sin(p * PI);
+        vec2 cell = floor(uv * asp * 160.0);
+        vec2 jit = (vec2(h21(cell), h21(cell + 9.0)) - 0.5) * 0.05 * k;
+        float rad = 0.035 * k;
+        vec3 a = vec3(0.0);
+        vec3 b = vec3(0.0);
+        for (int i = 0; i < 16; ++i) {
+            float f = (float(i) + 0.5) / 16.0;
+            float ang = float(i) * 2.39996;
+            vec2 o = vec2(cos(ang), sin(ang)) * sqrt(f) * rad / asp + jit;
+            a += colAm(uv + o);
+            b += colBm(uv + o);
+        }
+        float m = reveal(fbm(uv * asp * 3.0), p, 0.3);
+        c = mix(a, b, m) / 16.0;
+        c = mix(c, vec3(dot(c, vec3(0.299, 0.587, 0.114)) * 0.6 + 0.55), k * 0.2) + vec3(0.1 * k);
     } else {
         c = mix(colA(uv), colB(uv), p);
     }

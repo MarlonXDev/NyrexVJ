@@ -175,6 +175,9 @@ void sleepPrecise(double seconds) {
     }
 }
 
+void setModalLoopTick(const std::function<void()>&) {
+}
+
 void setCurrentThreadBackground(bool background) {
 #ifdef __linux__
     setpriority(PRIO_PROCESS, static_cast<id_t>(syscall(SYS_gettid)), background ? 5 : 0);

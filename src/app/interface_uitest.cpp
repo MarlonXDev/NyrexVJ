@@ -766,6 +766,19 @@ void App::buildInterfaceTest() {
         fs::remove(graphs / "New effect.nyxfx", ec);
     }, 4);
 
+    const auto hidden = std::make_shared<std::array<double, 2>>();
+    add([this, hidden]() {
+        (*hidden)[0] = static_cast<double>(engine_.frameCounter());
+        (*hidden)[1] = engine_.time();
+        for (int i = 0; i < 30; ++i) {
+            frame(1.0 / 60.0, false);
+        }
+    }, 3, nullptr, [this, hidden, record]() {
+        const double frames = static_cast<double>(engine_.frameCounter()) - (*hidden)[0];
+        const double seconds = engine_.time() - (*hidden)[1];
+        record("the engine keeps rendering while no interface is drawn", frames >= 30.0, std::to_string(static_cast<int>(frames)) + " frames");
+        record("the show clock keeps running while no interface is drawn", seconds > 0.4, std::to_string(seconds) + " s");
+    });
     add([this]() {
         std::error_code ec;
         fs::remove(fs::path(userDataDir()) / "workspaces" / "damaged.ini", ec);

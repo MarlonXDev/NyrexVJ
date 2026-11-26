@@ -160,6 +160,7 @@ private:
         GLint sunColor = -1;
         GLint exposure = -1;
         GLint blend = -1;
+        GLint split = -1;
         GLint skinned = -1;
         GLint jointTex = -1;
         GLint jointBase = -1;

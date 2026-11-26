@@ -610,6 +610,40 @@ void testBudget(Runner& run) {
     run.record("the error is cleared again", run.engine().shaderRuntimeError(scale).empty(), "no error");
 }
 
+const char* kTransitionOld =
+    "void mainImage(out vec4 c, in vec2 p) { vec2 uv = p / iResolution.xy; float g = step(0.5, fract((uv.x + uv.y) * 8.0)); c = vec4(mix(vec3(0.9, 0.3, 0.1), vec3(1.0, 0.8, 0.2), g), 1.0); }\n";
+
+const char* kTransitionNew =
+    "void mainImage(out vec4 c, in vec2 p) { vec2 uv = p / iResolution.xy; float g = step(0.5, fract(uv.x * 10.0)); c = vec4(mix(vec3(0.0, 0.3, 1.0), vec3(0.1, 0.9, 0.8), g), 1.0); }\n";
+
+void testTransitionTypes(Runner& run) {
+    const int before = run.add("transition_old", kTransitionOld);
+    const int after = run.add("transition_new", kTransitionNew);
+    for (int t = 0; t < TransitionTypeCount; ++t) {
+        run.clearAll();
+        run.engine().comp.deckSettings.transition = t;
+        run.engine().comp.deckSettings.seconds = 1.0f;
+        run.engine().comp.deckSettings.syncBeats = false;
+        run.place(0, before);
+        run.step(10);
+        const Pixel old = run.centre();
+        run.engine().switchDeck(1);
+        run.place(0, after);
+        run.step(2);
+        const bool running = run.engine().transitioning();
+        const Pixel start = run.centre();
+        run.step(28);
+        const Pixel middle = run.centre();
+        run.step(60);
+        const Pixel end = run.centre();
+        const std::string name = std::string("transition ") + transitionName(t);
+        const std::string detail = "start (" + std::to_string(start.r) + "," + std::to_string(start.g) + "," + std::to_string(start.b) + "), middle (" + std::to_string(middle.r) + "," + std::to_string(middle.g) + "," + std::to_string(middle.b) + "), end (" + std::to_string(end.r) + "," + std::to_string(end.g) + "," + std::to_string(end.b) + ")";
+        const bool startsOld = old.r > 150 && std::abs(start.r - old.r) <= 12 && std::abs(start.g - old.g) <= 12 && std::abs(start.b - old.b) <= 12;
+        const bool endsNew = (run.near(end, 0, 77, 255, 6) || run.near(end, 26, 230, 204, 6)) && !run.engine().transitioning();
+        run.record(name + " starts on the old deck, runs and ends on the new one", running && startsOld && endsNew, detail);
+    }
+}
+
 void testTransition(Runner& run) {
     const int accumulate = run.add("accumulate_again", kAccumulate);
     run.clearAll();
@@ -1013,6 +1047,7 @@ int runShaderSelfTest(Engine& engine, int benchFrames, const std::string& output
     testIsfFallbacks(run);
     testIsfReload(run);
     testIsfExamples(run);
+    testTransitionTypes(run);
     testTransition(run);
     report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
     report["checks"] = run.items();

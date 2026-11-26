@@ -128,7 +128,7 @@ struct StartOptions {
 class App {
 public:
     bool init(GLFWwindow* window, const StartOptions& options);
-    void frame(double dt);
+    void frame(double dt, bool drawUi = true);
     void startShaderEditorTest();
     void startInterfaceTest();
     int tickInterfaceTest();

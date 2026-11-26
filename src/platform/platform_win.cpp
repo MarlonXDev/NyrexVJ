@@ -738,6 +738,39 @@ void sleepPrecise(double seconds) {
     }
 }
 
+namespace {
+
+std::function<void()> modalTick;
+UINT_PTR modalTimer = 0;
+bool modalRunning = false;
+
+void CALLBACK modalTimerProc(HWND, UINT, UINT_PTR, DWORD) {
+    if (modalRunning || !modalTick) {
+        return;
+    }
+    GUITHREADINFO info{};
+    info.cbSize = sizeof(info);
+    if (!GetGUIThreadInfo(GetCurrentThreadId(), &info) || (info.flags & (GUI_INMOVESIZE | GUI_INMENUMODE)) == 0) {
+        return;
+    }
+    modalRunning = true;
+    const std::function<void()> tick = modalTick;
+    tick();
+    modalRunning = false;
+}
+
+}
+
+void setModalLoopTick(const std::function<void()>& tick) {
+    modalTick = tick;
+    if (tick && modalTimer == 0) {
+        modalTimer = SetTimer(nullptr, 0, 8, modalTimerProc);
+    } else if (!tick && modalTimer != 0) {
+        KillTimer(nullptr, modalTimer);
+        modalTimer = 0;
+    }
+}
+
 void setCurrentThreadBackground(bool background) {
     SetThreadPriority(GetCurrentThread(), background ? THREAD_PRIORITY_BELOW_NORMAL : THREAD_PRIORITY_NORMAL);
 }

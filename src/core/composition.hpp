@@ -111,6 +111,14 @@ enum TransitionType {
     TransitionRadial,
     TransitionSpin,
     TransitionSlide,
+    TransitionPixelate,
+    TransitionGlitch,
+    TransitionBlinds,
+    TransitionRipple,
+    TransitionFlash,
+    TransitionBlur,
+    TransitionChecker,
+    TransitionFrost,
     TransitionTypeCount
 };
 

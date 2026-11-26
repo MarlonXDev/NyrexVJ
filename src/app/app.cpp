@@ -686,7 +686,7 @@ void App::updateSync(double dt) {
     netSync_.noteCues(sync_.firedCues().size());
 }
 
-void App::frame(double dt) {
+void App::frame(double dt, bool drawUi) {
     const auto frameStart = std::chrono::steady_clock::now();
     const int vsync = settings_.vsync ? 1 : 0;
     if (vsync != appliedVsync_) {
@@ -845,6 +845,11 @@ void App::frame(double dt) {
             assetsDirty_ = true;
         }
         syncNodeEffects();
+    }
+
+    if (!drawUi) {
+        autosaveTick(dt);
+        return;
     }
 
     drawMenuBar();

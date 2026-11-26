@@ -241,6 +241,75 @@ void testOscOutSettings() {
     std::filesystem::remove_all(dir, ec);
 }
 
+void testPing() {
+    std::filesystem::path dir = std::filesystem::temp_directory_path() / "nyrexvj_ping_test_data";
+    std::error_code ec;
+    std::filesystem::remove_all(dir, ec);
+    std::filesystem::create_directories(dir, ec);
+#ifdef _WIN32
+    _putenv_s("NYREXVJ_DATA_DIR", dir.string().c_str());
+#else
+    setenv("NYREXVJ_DATA_DIR", dir.string().c_str(), 1);
+#endif
+    Composition comp;
+    FakeHost host;
+    ControlSystem system(comp, host);
+    const float opacity = comp.layers[0].opacity;
+
+    CHECK(system.handleOsc(message("/nyrex/ping", {OscArgument::fromInt(5)})));
+    CHECK(system.handleOsc(message("/nyrex/ping", {OscArgument::fromInt(0)})));
+    CHECK(system.handleOsc(message("/nyrex/ping", {OscArgument::fromInt(16777215)})));
+    CHECK(system.pingCount() == 3);
+    std::vector<std::int32_t> pings;
+    system.takePings(pings);
+    CHECK(pings.size() == 3 && pings[0] == 5 && pings[1] == 0 && pings[2] == 16777215);
+    pings.clear();
+    system.takePings(pings);
+    CHECK(pings.empty());
+
+    CHECK(!system.handleOsc(message("/nyrex/ping")));
+    CHECK(!system.handleOsc(message("/nyrex/ping", {OscArgument::fromFloat(3.0f)})));
+    CHECK(!system.handleOsc(message("/nyrex/ping", {OscArgument::fromText("7")})));
+    CHECK(!system.handleOsc(message("/nyrex/ping", {OscArgument::fromInt(-1)})));
+    CHECK(!system.handleOsc(message("/nyrex/ping", {OscArgument::fromInt(16777216)})));
+    CHECK(!system.handleOsc(message("/nyrex/ping", {OscArgument::fromInt(1), OscArgument::fromInt(2)})));
+    CHECK(!system.handleOsc(message("/nyrex/pingx", {OscArgument::fromInt(1)})));
+    CHECK(!system.handleOsc(message("/nyrex/ping/1", {OscArgument::fromInt(1)})));
+    system.takePings(pings);
+    CHECK(pings.empty());
+    CHECK(system.pingCount() == 3);
+
+    for (int i = 1; i <= 20; ++i) {
+        system.handleOsc(message("/nyrex/ping", {OscArgument::fromInt(i)}));
+    }
+    system.takePings(pings);
+    CHECK(pings.size() == 8 && pings.front() == 1 && pings.back() == 8);
+
+    CHECK(near(comp.layers[0].opacity, opacity));
+    CHECK(system.oscCount() == 31);
+
+    std::filesystem::remove_all(dir, ec);
+}
+
+void testPongCompose() {
+    OscOutConfig config;
+    config.enabled = true;
+    OscSender sender;
+    const std::vector<OscMessage> answer = sender.pong(42);
+    CHECK(answer.size() == 1);
+    CHECK(answer[0].address == "/nyrex/out/pong");
+    CHECK(answer[0].arguments.size() == 1);
+    CHECK(answer[0].arguments[0].type == OscArgument::Type::Int);
+    CHECK(near(answer[0].arguments[0].number, 42.0f));
+    const std::vector<unsigned char> wire = encodeOscMessage(answer[0]);
+    std::vector<OscMessage> decoded;
+    CHECK(parseOscPacket(wire.data(), wire.size(), decoded));
+    CHECK(decoded.size() == 1 && decoded[0].address == "/nyrex/out/pong" && decoded[0].arguments.size() == 1 && decoded[0].arguments[0].type == OscArgument::Type::Int);
+
+    sender.queuePong(1);
+    CHECK(!sender.sending());
+}
+
 void testOscParser() {
     {
         std::vector<OscMessage> parsed;
@@ -821,6 +890,108 @@ void testOscOutUdp() {
     CHECK(!broken.sending());
     CHECK(!broken.error().empty());
 }
+
+void testPongUdp() {
+    Composition comp;
+    FakeHost host;
+    ControlRouter router(comp, host);
+
+    UdpSocket listener;
+    std::string error;
+    int port = 0;
+    for (int candidate = 19800; candidate < 19900 && !listener.isOpen(); ++candidate) {
+        if (listener.open(candidate, false, error)) {
+            port = candidate;
+        }
+    }
+    CHECK(listener.isOpen());
+
+    OscOutConfig config;
+    config.enabled = true;
+    config.host = "localhost";
+    config.port = port;
+    config.rate = 10;
+    OscSender sender;
+    sender.configure(config);
+    CHECK(sender.sending());
+
+    OscOutFrame frame;
+    sender.update(0.001, frame, router);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    unsigned char buffer[2048];
+    for (int n = listener.receive(buffer, sizeof(buffer)); n > 0; n = listener.receive(buffer, sizeof(buffer))) {
+    }
+
+    for (int i = 1; i <= 12; ++i) {
+        sender.queuePong(i);
+    }
+    sender.update(0.0001, frame, router);
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    std::vector<int> ids;
+    for (int n = listener.receive(buffer, sizeof(buffer)); n > 0; n = listener.receive(buffer, sizeof(buffer))) {
+        std::vector<OscMessage> decoded;
+        CHECK(parseOscPacket(buffer, static_cast<size_t>(n), decoded));
+        for (const OscMessage& item : decoded) {
+            if (item.address == "/nyrex/out/pong" && item.arguments.size() == 1) {
+                ids.push_back(static_cast<int>(item.arguments[0].number));
+            }
+        }
+    }
+    CHECK(ids.size() == 8);
+    CHECK(!ids.empty() && ids.front() == 1 && ids.back() == 8);
+
+    sender.update(0.0001, frame, router);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    int again = 0;
+    for (int n = listener.receive(buffer, sizeof(buffer)); n > 0; n = listener.receive(buffer, sizeof(buffer))) {
+        std::vector<OscMessage> decoded;
+        parseOscPacket(buffer, static_cast<size_t>(n), decoded);
+        again += find(decoded, "/nyrex/out/pong") != nullptr ? 1 : 0;
+    }
+    CHECK(again == 0);
+
+    sender.update(2.5, frame, router);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int n = listener.receive(buffer, sizeof(buffer)); n > 0; n = listener.receive(buffer, sizeof(buffer))) {
+    }
+    sender.queuePong(31);
+    sender.queuePong(32);
+    sender.update(2.5, frame, router);
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    bool helloSeen = false;
+    std::vector<int> withHello;
+    for (int n = listener.receive(buffer, sizeof(buffer)); n > 0; n = listener.receive(buffer, sizeof(buffer))) {
+        std::vector<OscMessage> decoded;
+        CHECK(parseOscPacket(buffer, static_cast<size_t>(n), decoded));
+        for (const OscMessage& item : decoded) {
+            helloSeen = helloSeen || item.address == "/nyrex/out/hello";
+            if (item.address == "/nyrex/out/pong" && item.arguments.size() == 1) {
+                withHello.push_back(static_cast<int>(item.arguments[0].number));
+            }
+        }
+    }
+    CHECK(helloSeen);
+    CHECK(withHello.size() == 2 && withHello[0] == 31 && withHello[1] == 32);
+
+    sender.queuePong(99);
+    config.enabled = false;
+    sender.configure(config);
+    config.enabled = true;
+    sender.configure(config);
+    sender.update(0.0001, frame, router);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    int stale = 0;
+    for (int n = listener.receive(buffer, sizeof(buffer)); n > 0; n = listener.receive(buffer, sizeof(buffer))) {
+        std::vector<OscMessage> decoded;
+        parseOscPacket(buffer, static_cast<size_t>(n), decoded);
+        for (const OscMessage& item : decoded) {
+            if (item.address == "/nyrex/out/pong") {
+                ++stale;
+            }
+        }
+    }
+    CHECK(stale == 0);
+}
 #endif
 
 }
@@ -832,11 +1003,14 @@ int main() {
     testRouterValues();
     testOscOutCompose();
     testOscOutSettings();
+    testPing();
+    testPongCompose();
     testMidi();
     testLearnAndFiles();
 #ifndef _WIN32
     testUdp();
     testOscOutUdp();
+    testPongUdp();
 #endif
     return testing::finish();
 }

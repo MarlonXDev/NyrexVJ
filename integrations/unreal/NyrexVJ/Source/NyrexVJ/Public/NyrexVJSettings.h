@@ -23,4 +23,13 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Control", meta = (ClampMin = "1", ClampMax = "65535"))
 	int32 ControlPort = 9010;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Link")
+	bool bMeasureLatency = true;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Link", meta = (ClampMin = "0.2", ClampMax = "10.0", EditCondition = "bMeasureLatency"))
+	float PingIntervalSeconds = 1.0f;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Link", meta = (ClampMin = "0.5", ClampMax = "30.0"))
+	float ListenRetrySeconds = 3.0f;
 };

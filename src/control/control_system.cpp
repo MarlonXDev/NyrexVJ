@@ -12,6 +12,9 @@ namespace nvj {
 namespace {
 
 constexpr const char* kOscPrefix = "/nyrex/";
+constexpr const char* kPingAddress = "/nyrex/ping";
+constexpr size_t kMaxPendingPings = 8;
+constexpr int kMaxPingId = 16777215;
 constexpr int kMaxPacketsPerUpdate = 512;
 constexpr double kSaveDelay = 0.5;
 constexpr size_t kMaxSyncMessages = 8192;
@@ -90,6 +93,17 @@ bool ControlSystem::handleOsc(const OscMessage& message) {
     if (message.address.compare(0, prefix.size(), prefix) != 0) {
         return false;
     }
+    if (message.address == kPingAddress) {
+        if (message.arguments.size() == 1 && message.arguments[0].type == OscArgument::Type::Int) {
+            const float id = message.arguments[0].number;
+            if (id >= 0.0f && id <= static_cast<float>(kMaxPingId) && pings_.size() < kMaxPendingPings) {
+                pings_.push_back(static_cast<std::int32_t>(id));
+                ++pingCount_;
+                return true;
+            }
+        }
+        return false;
+    }
     const int target = controlTargetIndex(message.address.substr(prefix.size()));
     if (target < 0) {
         return false;
@@ -112,6 +126,11 @@ bool ControlSystem::handleOsc(const OscMessage& message) {
         return false;
     }
     return router_.set(target, value->number, false);
+}
+
+void ControlSystem::takePings(std::vector<std::int32_t>& out) {
+    out.insert(out.end(), pings_.begin(), pings_.end());
+    pings_.clear();
 }
 
 void ControlSystem::injectMidi(const MidiMessage& message) {

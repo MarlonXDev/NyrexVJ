@@ -794,6 +794,11 @@ void App::frame(double dt) {
     oscFrame.audio = engine_.audio();
     oscFrame.bpm = engine_.comp.bpm;
     oscFrame.beat = engine_.beat();
+    std::vector<std::int32_t> pings;
+    control_.takePings(pings);
+    for (const std::int32_t id : pings) {
+        oscOut_.queuePong(id);
+    }
     oscOut_.update(dt, oscFrame, control_.router());
     stage_.configure(settings_.dmx, settings_.vrchat);
     stage_.update(dt, [this](int id) { return engine_.sourceValue(id); });

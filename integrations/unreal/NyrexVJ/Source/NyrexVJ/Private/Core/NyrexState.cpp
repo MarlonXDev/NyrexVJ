@@ -183,6 +183,13 @@ void applyMessage(NyrexState& state, const OscPacketMessage& message, NyrexEvent
         events.bye = true;
         return;
     }
+    if (name == "pong") {
+        std::int32_t id = 0;
+        if (message.values.size() == 1 && message.values[0].kind == OscValue::Kind::Integer && integerOf(message.values[0], id) && id >= 0 && events.pongs.size() < kMaxEventsPerApply) {
+            events.pongs.push_back(id);
+        }
+        return;
+    }
     if (!state.schemaSupported) {
         return;
     }

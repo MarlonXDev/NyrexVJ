@@ -249,6 +249,8 @@ jobs:
           test -s "$RUNNER_TEMP/failover.json"
           python3 scripts/test_failover_two_instances.py build/NyrexVJ --output "$RUNNER_TEMP/failover-two.json"
           test -s "$RUNNER_TEMP/failover-two.json"
+          python3 scripts/test_unreal_link.py build/NyrexVJ --output "$RUNNER_TEMP/unreal-link.json"
+          test -s "$RUNNER_TEMP/unreal-link.json"
           build/NyrexVJ --scene-selftest tests/data/models
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data

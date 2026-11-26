@@ -15,6 +15,7 @@ namespace nvj {
 constexpr int kOscSchema = 1;
 constexpr int kOscSpectrumBands = 32;
 constexpr size_t kOscMaxParams = 16;
+constexpr size_t kOscMaxPendingPongs = 8;
 
 struct OscOutConfig {
     bool enabled = false;
@@ -43,6 +44,8 @@ public:
     std::vector<OscMessage> compose(const OscOutFrame& frame, const ControlRouter& router, bool tick);
     std::vector<OscMessage> hello() const;
     std::vector<OscMessage> bye() const;
+    std::vector<OscMessage> pong(std::int32_t id) const;
+    void queuePong(std::int32_t id);
 
     bool sending() const { return socket_.isOpen(); }
     const std::string& error() const { return error_; }
@@ -71,6 +74,7 @@ private:
     long long lastBeat_ = 0;
     bool haveOnset_ = false;
     std::uint32_t lastOnset_ = 0;
+    std::vector<std::int32_t> pongs_;
 };
 
 }

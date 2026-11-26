@@ -42,6 +42,8 @@ struct VideoFrame {
     bool msbAligned = false;
     bool fullRange = false;
     int matrix = 1;
+    int transfer = 0;
+    int primaries = 0;
     bool hasAlpha = false;
     std::shared_ptr<void> owner;
 };

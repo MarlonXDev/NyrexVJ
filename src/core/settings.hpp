@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/color_model.hpp"
 #include "core/output_map.hpp"
 #include "core/stage.hpp"
 #include "update/update_logic.hpp"
@@ -52,6 +53,13 @@ struct Settings {
     bool uiAutoScale = false;
     std::string uiContrast = "standard";
     bool uiKeyboardNav = false;
+    bool colorStage = false;
+    std::string colorLut;
+    float colorLutStrength = 1.0f;
+    bool hdrToSdr = false;
+    int hdrWhiteNits = 203;
+    int hdrPeakNits = 1000;
+    std::string hdrTone = "shoulder";
     UpdateChannel channel = UpdateChannel::Nightly;
     std::array<OutputSpec, kMaxOutputs> outputs = defaultOutputs();
     std::string language = "en";

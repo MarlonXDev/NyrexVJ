@@ -1,0 +1,44 @@
+# ADR 0046: Optional colour management: a written colour model, a 3D LUT stage, HDR to SDR for videos and a display conversion per output
+
+- **Status:** Accepted for the automated part (requested by MarlonXDev as prompt 30). Issue [#120](https://github.com/MarlonXDev/NyrexVJ/issues/120). Nothing was run on a real graphics card, a real HDR or wide gamut screen, a projector, a capture card or Windows. 10 bit output and HDR output are not built.
+- **Date:** 2026-11-26
+- **Owners:** Maintainers (pending assignment)
+- **Related:** [COLOR.md](../COLOR.md), [MEDIA.md](../MEDIA.md), [OUTPUTS.md](../OUTPUTS.md), [INTERFACES.md](../INTERFACES.md), [KNOWN_ISSUES.md](../KNOWN_ISSUES.md), [TESTING.md](../TESTING.md), [ADR 0024](0024-video-pipeline-audit-and-measurement.md), [ADR 0015](0015-advanced-output.md)
+
+## Context
+The program had no written statement of what its colours mean. Layers are 8 bit, blended in the encoded values, and handed to outputs, NDI, Spout and the recorder; HDR videos (PQ, HLG) were only detected and looked flat (KI-8); there was no way to apply a look from a grading program; and an output could not be told that its screen or projector expects another gamut or curve. The prompt asked for an audit of exactly which paths keep 10 bit or HDR, a consistent colour model, an optional `.cube` import, a clear line between 10 bit decoding and real 10 bit or HDR output, tests of tone mapping, gamut mapping, alpha and conversion, no promise of HDR without hardware, and a default picture that stays stable.
+
+## Findings (what existed before)
+- **Existed:** layer, composition and master targets in RGBA8; RGBA16F only for node feedback and float routing; matrix, range and bit depth handling in the video conversion shader (8 to 16 bit planes, 601, 709, 2020, YCoCg, limited and full); detection of the PQ and HLG transfer; an output shader with colour correction per slice and per output; NDI as 8 bit RGBX; a recorder that reads 8 bit and tags Rec. 709.
+- **Not found:** any definition of the working colour space, any LUT, any tone mapping or gamut mapping, any per-output display description, any measurement of the frame buffer depth.
+- **Not verified before this version:** what colour depth a real output window gets. The window is made without a hint, so the system default is used.
+- The full table with code references and the measured values is in [COLOR.md](../COLOR.md).
+
+## Decision
+1. **Write the model down and keep the working picture as it is.** The picture is 8 bit RGBA, display-referred, encoded with the sRGB curve with Rec. 709 primaries, and blended in the encoded values. Changing the blend space or the depth would change every look and every saved show, and the prompt asks for a stable default. Linear light is used only inside a conversion.
+2. **One tested colour model in the core library.** `src/core/color_model.cpp` holds the primaries (from chromaticities, matrices computed), the curves (sRGB, 2.2, 2.4, 2.6, linear, PQ, HLG), two tone mappers, a gamut mapper and `hdrToSdr`; `src/core/color_lut.cpp` holds the `.cube` parser, the sampler and the limits. Both have no OpenGL, so they are tested on any machine, and they are the reference the GPU code is compared with.
+3. **A colour stage with a 3D LUT, off by default.** One pass over the finished master picture after the deck transition, with the table in a 3D texture (RGB16F, trilinear), a strength from 0 to 1 and the alpha copied. While it is off, nothing exists: no program, no texture, no scratch target. Switching it on and off, no LUT or strength 0 leave the picture bit identical (tested). It is marked experimental in the settings.
+4. **Only 3D `.cube` tables, with hard limits.** 2 to 65 points per side, 64 MB file size, values within plus or minus 16, a line number in every error, safe file names only. 1D tables, `.3dl` and `.look` are refused or not offered. A bad file never changes the picture.
+5. **HDR to SDR only in the graphics card video conversion.** The shader that already converts the colour planes does the tone mapping, because that is the only place where the signal of the file is still known and the extra cost is a few instructions. It applies to PQ and HLG files while **Convert video colours on the graphics card** is on. The processor conversion and HAP are not changed and the settings say so. The steps and parameters (reference white, peak, two tone mappers, gamut mapping) are written in [COLOR.md](../COLOR.md); the shader and the core model are compared in the tests.
+6. **A display description per output, in the existing output shader.** A gamut (Rec. 709, Display P3, Rec. 2020) and a curve (sRGB, 2.2, 2.4, 2.6) per output, applied after the output colour correction and before edge blending, brightness and black lift, in the flat and the spatial program, not on the test pattern. The default is skipped completely. NDI of that output carries the conversion because it reads the output picture. The signal stays 8 bit and SDR.
+7. **Venue and settings files stay compatible.** New keys (`colorStage`, `colorLut`, `colorLutStrength`, `hdrToSdr`, `hdrWhiteNits`, `hdrPeakNits`, `hdrTone`, and `display` in an output mapping) are written only when they differ from the default; damaged or out-of-range values are read as the default. The frozen files of 0.50.0 read and write as before (tested).
+8. **No 10 bit or HDR output, no HDR claim.** The master stays 8 bit, the window uses the system default frame buffer, NDI stays RGBX 8 bit, the recorder stays 8 bit. The settings show what the graphics card reports for the main picture and say that real 10 bit output and HDR display are not supported. A 10 bit pixel format of the recorder holds an 8 bit picture; this is documented, not hidden.
+9. **Measure it, with a bounded cost.** `--color-selftest [FOLDER]` measures the depths, the LUT and the HDR shader against the core model, the real HDR test clips, the memory of the stage and the frame time with and without it. The frame time is checked only for staying bounded, because software OpenGL numbers say nothing about a graphics card.
+
+## Alternatives considered
+- **Linear light blending or a RGBA16F master.** Rejected for this version: it changes every existing look and doubles the memory and bandwidth of the whole chain; it needs its own request, a visual comparison and hardware measurements.
+- **Doing HDR in the processor path too.** Rejected: it would need a full float conversion per frame on the processor for a path that exists as a fallback; the settings tell the user which route a video takes.
+- **A 1D shaper plus 3D LUT, `.3dl`, `.look`.** Not built: `.cube` 3D is what Resolve and most tools export, and the extra formats are separate work.
+- **Reading the ICC profile or EDID of the screen.** Not built: nothing here could check it against a real screen, and the manual setting is explicit and safe.
+- **Setting a 10 bit or HDR window hint.** Rejected without hardware: a wrong hint can make window creation fail or change the picture on a real driver, and nobody here can see the result.
+
+## Consequences
+- A show that does not use the new features is unchanged: the master picture, the outputs, NDI, Spout and the recorder are the same pixels (tested for the stage, the HDR option on SDR clips and the display default).
+- A person can load a `.cube` look, see HDR videos with a sensible SDR picture and match an output to a screen with another gamut or curve; the effects are limited as listed in [COLOR.md](../COLOR.md).
+- The stage costs one picture of graphics memory plus the table and one pass; the number is shown in the settings and checked against the plan.
+- The HDR conversion is one reasonable choice, not a calibrated one. Two settings (reference white, peak) depend on how a video was mastered and are in the user's hands.
+
+## Validation / open questions
+- **Run (Linux, Mesa llvmpipe, Xvfb, no graphics card):** `nvj_color_tests` (289 674 checks), `--color-selftest` (37 checks, 28 without FFmpeg), `--output-selftest` (632 checks with the fake NDI library, 602 without), `--video-selftest`, `--interface-uitest`, the whole `ctest` suite, `scripts/check_i18n.py`, `scripts/check_test_matrix.py`, `scripts/check_release.py` and `scripts/build_manual_site.py --check`.
+- **Not done:** a real graphics card (speed, the real frame buffer depth), a 10 bit or HDR screen, a wide gamut projector, a capture card or SDI, Windows at run time (and Spout), real HDR files from cameras or streaming services, comparison with a reference player by eye, a review by someone else.
+- **Open for the maintainer:** whether to offer a 10 bit window or an RGBA16F master as a separate request once a 10 bit chain is available; whether the HDR defaults (203 and 1000 nits, soft shoulder) are the right ones; whether LUTs per layer or per output are wanted; whether linear light blending should be offered as an option.

@@ -1,5 +1,6 @@
 #include "core/settings.hpp"
 
+#include "core/color_lut.hpp"
 #include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
@@ -161,6 +162,25 @@ bool loadSettings(Settings& settings) {
     if (contrast != doc.end() && contrast->is_string()) {
         const std::string value = contrast->get<std::string>();
         result.uiContrast = value == "high" ? "high" : "standard";
+    }
+    result.colorStage = boolean("colorStage", false);
+    auto colorLut = doc.find("colorLut");
+    if (colorLut != doc.end() && colorLut->is_string() && safeCubeName(colorLut->get<std::string>())) {
+        result.colorLut = colorLut->get<std::string>();
+    }
+    result.colorLutStrength = number("colorLutStrength", 1.0f, 0.0f, 1.0f);
+    result.hdrToSdr = boolean("hdrToSdr", false);
+    auto hdrWhite = doc.find("hdrWhiteNits");
+    if (hdrWhite != doc.end() && hdrWhite->is_number_integer()) {
+        result.hdrWhiteNits = std::clamp(hdrWhite->get<int>(), 80, 400);
+    }
+    auto hdrPeak = doc.find("hdrPeakNits");
+    if (hdrPeak != doc.end() && hdrPeak->is_number_integer()) {
+        result.hdrPeakNits = std::clamp(hdrPeak->get<int>(), 400, 10000);
+    }
+    auto hdrTone = doc.find("hdrTone");
+    if (hdrTone != doc.end() && hdrTone->is_string()) {
+        result.hdrTone = toneMapperName(toneMapperFromName(hdrTone->get<std::string>(), ToneMapper::Shoulder));
     }
     result.audioGain = number("audioGain", 1.0f, 0.1f, 8.0f);
     result.audioSmoothing = number("audioSmoothing", 0.5f, 0.0f, 1.0f);
@@ -429,6 +449,27 @@ bool saveSettings(const Settings& settings) {
     }
     if (settings.uiKeyboardNav) {
         doc["uiKeyboardNav"] = true;
+    }
+    if (settings.colorStage) {
+        doc["colorStage"] = true;
+    }
+    if (!settings.colorLut.empty() && safeCubeName(settings.colorLut)) {
+        doc["colorLut"] = settings.colorLut;
+    }
+    if (settings.colorLutStrength < 0.9999f) {
+        doc["colorLutStrength"] = std::clamp(settings.colorLutStrength, 0.0f, 1.0f);
+    }
+    if (settings.hdrToSdr) {
+        doc["hdrToSdr"] = true;
+    }
+    if (settings.hdrWhiteNits != 203) {
+        doc["hdrWhiteNits"] = std::clamp(settings.hdrWhiteNits, 80, 400);
+    }
+    if (settings.hdrPeakNits != 1000) {
+        doc["hdrPeakNits"] = std::clamp(settings.hdrPeakNits, 400, 10000);
+    }
+    if (settings.hdrTone != "shoulder") {
+        doc["hdrTone"] = toneMapperName(toneMapperFromName(settings.hdrTone, ToneMapper::Shoulder));
     }
     doc["theme"] = settings.theme;
     doc["design"] = settings.design;

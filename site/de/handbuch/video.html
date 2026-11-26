@@ -84,6 +84,8 @@
 <h4>Ausgabe und Aufnahme</h4><ul>
 <li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
 </li>
+<li><a href="color.html">Farbe: LUTs, HDR-Videos und die Anzeige</a>
+</li>
 <li><a href="recording.html">Aufnahme</a>
 </li>
 </ul>
@@ -176,6 +178,8 @@
 <h4>Ausgabe und Aufnahme</h4><ul>
 <li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
 </li>
+<li><a href="color.html">Farbe: LUTs, HDR-Videos und die Anzeige</a>
+</li>
 <li><a href="recording.html">Aufnahme</a>
 </li>
 </ul>
@@ -213,7 +217,7 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Eigene Inhalte</p>
 <h1>Video- und Bild-Clips</h1>
-<p class="meta">Kapitel 15 von 37 &middot; 2 Min. Lesezeit</p>
+<p class="meta">Kapitel 15 von 38 &middot; 2 Min. Lesezeit</p>
 <nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#add-media">Dateien hinzufügen</a><a href="#ffmpeg">FFmpeg</a><a href="#playback">Wiedergabe-Regler</a><a href="#prewarm">Saubere Clip-Wechsel</a><a href="#dxv">DXV-Videos</a><a href="#decoder">Den Video-Decoder wählen</a></nav>
 <h2 id="add-media"><a class="anchor" href="#add-media" aria-label="Link">#</a>Dateien hinzufügen</h2>
 <p>Leg Bilder und Videos in den Ordner media oder zieh sie auf das NyrexVJ-Fenster. Gezogene Dateien werden im Hintergrund in den Ordner kopiert, bis zu 256 MiB je Datei, und erscheinen in der Bibliothek unter Medien. Bilder sind PNG, JPG, JPEG, BMP, TGA und GIF (erstes Bild). Videos sind MP4, MOV, M4V, MKV, AVI und WEBM. Es werden höchstens 128 Medien-Clips aufgelistet.</p>
@@ -229,7 +233,7 @@
 <h2 id="dxv"><a class="anchor" href="#dxv" aria-label="Link">#</a>DXV-Videos</h2>
 <p>DXV-Videos aus Resolume brauchen viel Prozessorzeit. NyrexVJ kann im Hintergrund HAP-Kopien davon erstellen und spielt die Kopie über den komprimierten HAP-Weg ab, der fast keine Prozessorzeit und nur einen Bruchteil des Videospeichers braucht. Unter Einstellungen, Leistung, DXV-Videos in HAP umwandeln findest du den Importmodus Aus, Nachfragen (der Standard) oder Automatisch, das HAP-Format und ein Größenlimit für den Zwischenspeicher. Die Originaldateien bleiben unberührt, und das Video läuft so weiter, wie es ist, bis die Kopie fertig ist. HAP Q mit Transparenz wird nicht unterstützt.</p>
 <h2 id="decoder"><a class="anchor" href="#decoder" aria-label="Link">#</a>Den Video-Decoder wählen</h2>
-<p>Unter Einstellungen, Leistung, Videowiedergabe wählst du den Decoder: Automatisch, Hardware bevorzugen oder Software erzwingen. Eine Schaltfläche testet die Hardware-Dekodierung auf deinem Computer. Der Video-Monitor listet jedes laufende Video mit Codec, Decode- und Upload-Zeiten, verworfenen und späten Bildern und seinem Speicher. Sieht ein Video flau aus, weil es HDR ist, sagt der Monitor das: HDR wird ohne Tone Mapping gezeigt.</p>
+<p>Unter Einstellungen, Leistung, Videowiedergabe wählst du den Decoder: Automatisch, Hardware bevorzugen oder Software erzwingen. Eine Schaltfläche testet die Hardware-Dekodierung auf deinem Computer. Der Video-Monitor listet jedes laufende Video mit Codec, Decode- und Upload-Zeiten, verworfenen und späten Bildern und seinem Speicher. Sieht ein Video flau aus, weil es HDR ist, sagt der Monitor das: HDR wird ohne Tone Mapping gezeigt, solange du HDR-Videos auf SDR abbilden (Tone Mapping) nicht einschaltest, siehe das Kapitel zur Farbe.</p>
 <nav class="pager" aria-label="Pager"><a class="prev" href="modulation.html"><small>Zurück</small><span>Makros, LFOs und das Beat-Raster</span></a><a class="next" href="shaders.html"><small>Weiter</small><span>Deine eigenen Shader</span></a></nav>
 <p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
 </main>

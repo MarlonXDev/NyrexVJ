@@ -1,5 +1,6 @@
 #include "render/output_window.hpp"
 
+#include "render/color_gpu.hpp"
 #include "render/gl_util.hpp"
 #include "core/log.hpp"
 #include "core/mask_images.hpp"
@@ -177,8 +178,19 @@ bool replaceOnce(std::string& text, const std::string& from, const std::string& 
     return true;
 }
 
-std::string spatialFragmentSource() {
+std::string flatFragmentSource() {
     std::string source = kMeshFragment;
+    bool ok = replaceOnce(source, "#version 330 core\n", "#version 330 core\n" + colorGlslCommon());
+    ok = replaceOnce(source, "uniform vec2 uBlack;\n", "uniform vec2 uBlack;\nuniform int uDisplayOn;\nuniform mat3 uDisplayMatrix;\nuniform int uDisplayTransfer;\n") && ok;
+    ok = replaceOnce(source, "    float f = 1.0;\n", "    if (uPattern == 0 && uDisplayOn == 1) c = cmLinearToDisplay(uDisplayMatrix * cmSrgbToLinear(c), uDisplayTransfer);\n    float f = 1.0;\n") && ok;
+    return ok ? source : std::string();
+}
+
+std::string spatialFragmentSource() {
+    std::string source = flatFragmentSource();
+    if (source.empty()) {
+        return source;
+    }
     bool ok = replaceOnce(source, "in vec2 vUv;\nin vec2 vOut;", "in vec3 vUvq;\nnoperspective in vec2 vOut;");
     ok = replaceOnce(source, "uniform vec2 uBlack;\n", "uniform vec2 uBlack;\nuniform vec4 uCrop;\nuniform int uCropOn;\n") && ok;
     ok = replaceOnce(source, "void main() {\n    vec3 c =", "void main() {\n    if (vUvq.z <= 1e-6) discard;\n    vec2 vUv = vUvq.xy / vUvq.z;\n    if (uCropOn == 1 && (vUv.x < uCrop.x - 1e-4 || vUv.x > uCrop.z + 1e-4 || vUv.y < uCrop.y - 1e-4 || vUv.y > uCrop.w + 1e-4)) discard;\n    vec3 c =") && ok;
@@ -297,11 +309,13 @@ bool OutputWindow::buildMeshProgram(MeshProgram& out, const std::string& vertex,
     out.sliceTone = glGetUniformLocation(out.program, "uSliceTone");
     out.crop = glGetUniformLocation(out.program, "uCrop");
     out.cropOn = glGetUniformLocation(out.program, "uCropOn");
+    out.display.bind(out.program);
     return true;
 }
 
 bool OutputWindow::createResources() {
-    if (!buildMeshProgram(flat_, kMeshVertex, kMeshFragment, "Output")) {
+    const std::string flatFragment = flatFragmentSource();
+    if (flatFragment.empty() || !buildMeshProgram(flat_, kMeshVertex, flatFragment, "Output")) {
         return false;
     }
     const std::string spatialFragment = spatialFragmentSource();
@@ -848,6 +862,7 @@ bool OutputWindow::draw(GLuint texture, int textureWidth, int textureHeight, con
             glUniform1i(program.sync, std::max(syncValue, 0));
             glUniform4f(program.gain, color.red, color.green, color.blue, color.saturation);
             glUniform4f(program.tone, color.contrast, 1.0f / color.gamma, color.black, colorOn ? 1.0f : 0.0f);
+            program.display.upload(spec.display);
             activeProgram = &program;
         };
 

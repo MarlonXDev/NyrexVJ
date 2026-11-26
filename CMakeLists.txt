@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.52.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.53.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -199,6 +199,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/spatial_map.cpp
     src/core/spatial_mesh.cpp
     src/core/spatial_calibration.cpp
+    src/core/color_model.cpp
+    src/core/color_lut.cpp
     src/core/venue_setup.cpp
     src/core/mask_images.cpp
     src/core/node_graph.cpp
@@ -358,6 +360,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/soak.cpp
     src/app/bench_convert.cpp
     src/app/output_selftest.cpp
+    src/app/color_selftest.cpp
     src/app/record_selftest.cpp
     src/app/shader_selftest.cpp
     src/app/generator_selftest.cpp
@@ -378,6 +381,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_diagnostics.cpp
     src/app/ui_record.cpp
     src/app/ui_video.cpp
+    src/app/ui_color.cpp
     src/app/ui_convert.cpp
     src/app/ui_profile.cpp
     src/app/ui_panels.cpp
@@ -402,6 +406,8 @@ set(NYREXVJ_APP_SOURCES
     src/render/gpu_particles.cpp
     src/render/shader_passes.cpp
     src/render/output_window.cpp
+    src/render/color_gpu.cpp
+    src/render/color_stage.cpp
     src/render/texture_history.cpp
     src/render/output_manager.cpp
     src/render/ndi_output.cpp
@@ -597,6 +603,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_spatial_tests PRIVATE nvj_core)
     target_include_directories(nvj_spatial_tests PRIVATE tests)
     add_test(NAME nvj_spatial_tests COMMAND nvj_spatial_tests)
+
+    add_executable(nvj_color_tests tests/test_color.cpp)
+    target_link_libraries(nvj_color_tests PRIVATE nvj_core)
+    target_include_directories(nvj_color_tests PRIVATE tests)
+    add_test(NAME nvj_color_tests COMMAND nvj_color_tests)
     add_executable(nvj_show_tests tests/test_show_package.cpp)
     target_link_libraries(nvj_show_tests PRIVATE nvj_core)
     target_include_directories(nvj_show_tests PRIVATE tests)

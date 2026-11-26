@@ -18,6 +18,7 @@
 #include "control/stage_out.hpp"
 #include "control/sync_system.hpp"
 #include "control/timeline_system.hpp"
+#include "core/color_lut.hpp"
 #include "core/edit_history.hpp"
 #include "core/frame_stats.hpp"
 #include "core/i18n.hpp"
@@ -211,6 +212,8 @@ private:
     void updatePlugins();
     void drawFrameRateLimit();
     void drawVideoSettings();
+    void drawColorSettings();
+    void applyColorSettings();
     void drawConversionSettings();
     void drawFfmpegSection();
     void drawConversionCards();
@@ -479,6 +482,10 @@ private:
     std::unique_ptr<gpudiag::Monitor> diagMonitor_ = std::make_unique<gpudiag::Monitor>();
     std::future<HardwareProbeReport> hardwareProbe_;
     HardwareProbeReport hardwareReport_;
+    std::string colorApplied_;
+    CubeLut colorLut_;
+    std::string colorLutError_;
+    std::vector<std::string> colorLutFiles_;
     bool hasHardwareReport_ = false;
     double perfRefresh_ = 0.0;
     bool restart_ = false;

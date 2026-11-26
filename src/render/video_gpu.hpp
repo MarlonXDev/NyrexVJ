@@ -1,10 +1,13 @@
 #pragma once
 
+#include "core/color_model.hpp"
 #include "core/frame_stats.hpp"
 #include "media/video_types.hpp"
+#include "render/color_gpu.hpp"
 #include "render/gl_util.hpp"
 
 #include <array>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -64,6 +67,9 @@ public:
     Saved save() const;
     void restore(const Saved& saved) const;
     void beginConversion(const VideoFrame& frame, int outWidth, int outHeight) const;
+    void setHdr(const std::optional<HdrToSdr>& params) { hdr_ = params; }
+    const std::optional<HdrToSdr>& hdr() const { return hdr_; }
+    static bool isHdrTransfer(int transferCode) { return transferCode == 16 || transferCode == 18; }
 
 private:
     VideoGpuCaps caps_;
@@ -83,6 +89,8 @@ private:
     GLint locStep_ = -1;
     GLint locTaps_ = -1;
     GLint locSrcSize_ = -1;
+    HdrUniforms hdrUniforms_;
+    std::optional<HdrToSdr> hdr_;
 
     friend class VideoUploader;
 };

@@ -2551,6 +2551,113 @@
           "criteria": "Proposed: lines look straight and continuous from the viewer spot. How the picture looks from other spots is only written down."
         }
       ]
+    },
+    {
+      "id": "color-management",
+      "title": "Colour management: the colour model, the .cube LUT stage, HDR to SDR for videos, the display of an output, and what depth the real window, master and outputs keep",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/COLOR.md",
+        "docs/adr/0046-color-management.md",
+        "docs/MEDIA.md",
+        "docs/OUTPUTS.md",
+        "docs/INTERFACES.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/TESTING.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/color_model.cpp",
+        "src/core/color_lut.cpp",
+        "src/core/settings.cpp",
+        "src/core/output_map.cpp",
+        "src/render/color_gpu.cpp",
+        "src/render/color_stage.cpp",
+        "src/render/video_gpu.cpp",
+        "src/render/output_window.cpp",
+        "src/render/engine.cpp",
+        "src/app/ui_color.cpp",
+        "src/app/color_selftest.cpp",
+        "src/app/output_selftest.cpp",
+        "tests/test_color.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-COLOR-1",
+          "kind": "ctest",
+          "name": "nvj_color_tests",
+          "note": "the primaries and matrices, the sRGB, gamma, PQ and HLG curves with round trips and published reference points, the two tone mappers, gamut mapping, the HDR to SDR conversion, the display conversion, the .cube parser with damaged and extreme files and the file size limit, trilinear sampling, the sizes of the table in graphics memory, safe file names, and the JSON of settings and output mappings with damaged input and the default staying out of the file; no OpenGL"
+        },
+        {
+          "id": "A-COLOR-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --color-selftest tests/data --bench-out color.json",
+          "note": "the real frame buffer, master and float target depth; the picture bit identical with the stage off, switched on and off, without a LUT and at strength 0; identity, inverting, crossing channel and small domain LUTs against the processor model; alpha; memory of the stage planned against measured and freed again; the stage after a deck transition; the HDR shader against the core model for six parameter sets; the two HDR test clips and an SDR clip through the real player on the graphics card and the processor path; and the frame time with and without the stage; the video checks are skipped without FFmpeg (a failure when NYREXVJ_REQUIRE_VIDEO is set); on a virtual screen with software OpenGL"
+        },
+        {
+          "id": "A-COLOR-3",
+          "kind": "cli",
+          "command": "NYREXVJ_NDI_LIB=build/fake_ndi.so NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
+          "note": "the display conversion of an output in the real output window against the processor model (gamut and curve settings on several colours), its place after the colour correction, the mask, the spatial program, and that the NDI frame of the output carries it; with the fake NDI library"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-COLOR-1",
+          "title": "Compare the tone mapped HDR picture with a reference player on a real screen",
+          "needs": "A PC with a real graphics card, an SDR screen that has been checked or calibrated, one or two real PQ files and one real HLG file from a camera or a streaming source, and a reference player that tone maps (for example mpv or a mastering tool)",
+          "steps": [
+            "Open Settings, Performance, Colour and switch on Tone map HDR videos to SDR; keep Convert video colours on the graphics card on.",
+            "Play each file in NyrexVJ and in the reference player on the same screen, side by side or one after the other, and try Soft shoulder and Filmic and a reference white of 100, 203 and 300 nits.",
+            "Look at skin tones, a bright sky or lamps, a dark scene and saturated colours (a red light, a neon sign) and note where NyrexVJ is darker, brighter or less saturated than the reference.",
+            "Switch the option off and note how the same files look, and play an SDR file to check that nothing changes."
+          ],
+          "measure": "for each file and setting: whether highlights keep detail, whether shadows are lifted or crushed, whether colours are clipped or dull, and the settings that came closest to the reference; screenshots of both players",
+          "criteria": "Proposed: with a suitable reference white the picture is close enough to the reference that a viewer would not call it flat or blown out, and an SDR file looks the same with the option on and off. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-COLOR-2",
+          "title": "A wide gamut or gamma 2.4 output on a real projector or screen",
+          "needs": "A projector or screen that can be set to Display P3, Rec. 2020 or a gamma of 2.4, a colorimeter or at least a reference picture on a trusted screen, a PC with an output to it",
+          "steps": [
+            "Put the screen or projector into a known mode (for example Display P3 with gamma 2.2 or a sRGB mode) and open an output window on it.",
+            "Show colour bars and a skin tone picture with the default display of the output and note the picture and, if you can, the measured primaries and white.",
+            "Set Colour gamut and Transfer of the output to what the screen is really set to and compare again; then set them wrongly on purpose to see what that looks like.",
+            "Use Reset display and check that the picture returns to the first one. Check the NDI of that output on a second PC, if there is one."
+          ],
+          "measure": "the measured or judged difference between the default and the matching setting for red, green, blue and white, the colour bars before and after, and what a wrong setting does",
+          "criteria": "Proposed: with the matching setting the colours of the picture agree with the reference picture and a wrong setting is visibly too dull or too strong. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-COLOR-3",
+          "title": "A .cube look from a grading program and the cost on a real graphics card",
+          "needs": "A PC with a real graphics card, a .cube file from DaVinci Resolve or similar with a known look, a short clip or a still, and the same picture graded in the program that made the file",
+          "steps": [
+            "Put the file into the luts folder of the data folder, switch on Colour stage with LUT (experimental), choose it and set strength 1.",
+            "Play the clip and compare the picture with the graded picture from the grading program; then try strength 0.5 and a 17, 33 and 65 point table.",
+            "Run NyrexVJ --color-selftest tests/data --bench-out color.json on that PC and read the depths and the benchmark, and run a normal show for a few minutes with the stage on while watching the frame time monitor.",
+            "Switch the stage off and check that the picture and the frame time return to what they were."
+          ],
+          "measure": "the difference between NyrexVJ and the grading program (by eye and, if possible, by a screenshot comparison), the frame time with and without the stage at the real output size, and the graphics memory shown in the settings",
+          "criteria": "Proposed: the look is the same as in the grading program and the stage costs well under one millisecond at 1080p on the graphics card; with it off nothing differs. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-COLOR-4",
+          "title": "What depth a real window gives, on Windows and on Linux, and a 10 bit chain",
+          "needs": "A PC with a real graphics card on Windows and, if possible, on Linux, a 10 bit capable screen and cable, and the driver setting for 10 bit output or 30 bit colour switched on and off",
+          "steps": [
+            "Run NyrexVJ --color-selftest tests/data and read the first check (depth of the window frame buffer) with the driver setting for 10 bit off and again with it on.",
+            "Open Settings, Performance, Colour and read the depth the graphics card reports for the main picture.",
+            "Show a long grey ramp on an output and look for banding; if NDI or Spout is used, check what the receiver says about the format.",
+            "Run NyrexVJ --output-selftest with and without the fake NDI library on Windows and note any failure."
+          ],
+          "measure": "the reported depth of the window and the master, whether banding is visible, the format a receiver reports, and the result of the selftests on Windows",
+          "criteria": "Proposed: the reported depth is stated honestly (a 10 bit window is reported as such or as 8 bit, never guessed) and the selftests pass on Windows. This only documents the real state; no 10 bit output is promised."
+        }
+      ]
     }
   ]
 }

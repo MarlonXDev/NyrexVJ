@@ -209,6 +209,8 @@ bool describeFrame(const FfmpegApi& api, const AVFrame& frame, VideoFrame& out) 
     out.msbAligned = shift != 0;
     const char* name = api.av_get_pix_fmt_name(format);
     out.matrix = colorMatrix(frame);
+    out.transfer = static_cast<int>(frame.color_trc);
+    out.primaries = static_cast<int>(frame.color_primaries);
     out.fullRange = out.matrix == 3 || frame.color_range == AVCOL_RANGE_JPEG || (name != nullptr && std::strncmp(name, "yuvj", 4) == 0);
     out.hasAlpha = alpha;
     return true;

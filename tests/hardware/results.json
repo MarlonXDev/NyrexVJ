@@ -1482,6 +1482,45 @@
       "test": "A-SPATIAL-3",
       "command": "NYREXVJ_NDI_LIB=build/fake_ndi.so NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
       "notes": "581 checks passed, 0 failed: the same run with the fake NDI library; the calibration markers are on the window and not in the NDI frame"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.53.0 (branch feature/color-management, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "color-management",
+      "test": "A-COLOR-1",
+      "command": "ctest -R nvj_color_tests",
+      "notes": "289674 checks passed, 0 failed (the colour model, the .cube parser and sampler, the JSON of settings and output mappings); no OpenGL"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.53.0 (branch feature/color-management, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "color-management",
+      "test": "A-COLOR-2",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --color-selftest tests/data --bench-out color.json",
+      "notes": "37 checks passed, 0 failed with FFmpeg (28 with NYREXVJ_NO_FFMPEG=1, the three video checks skipped; with NYREXVJ_REQUIRE_VIDEO=1 and no FFmpeg it fails as intended); window and master 8/8/8/8, float target 16/16/16/16; the stage off is bit identical; the HDR clips match the model on 100 percent of 3894 flat samples; frame time 24.9 ms without, 29.3 ms with a 33 point LUT, 23.3 ms without again on software OpenGL (not a graphics card number)"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.53.0 (branch feature/color-management, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "color-management",
+      "test": "A-COLOR-3",
+      "command": "NYREXVJ_NDI_LIB=build/fake_ndi.so NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
+      "notes": "632 checks passed, 0 failed (602 without the fake NDI library, where the NDI checks are skipped); the display conversion differs from the processor model by 0 levels"
     }
   ]
 }

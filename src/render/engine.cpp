@@ -815,6 +815,64 @@ void Engine::setGpuParticles(bool enabled, int budgetMb) {
     }
 }
 
+void Engine::setColorStage(bool enabled, const CubeLut* lut, float strength) {
+    colorStatus_ = ColorStageStatus{};
+    colorStatus_.requested = enabled;
+    colorStrength_ = std::clamp(strength, 0.0f, 1.0f);
+    colorActive_ = false;
+    if (!enabled) {
+        colorStage_.destroy();
+        colorScratch_.destroy();
+        return;
+    }
+    if (!colorStage_.ready() && !colorStage_.create(&colorStatus_.error)) {
+        return;
+    }
+    if (lut == nullptr) {
+        colorStage_.clearLut();
+        return;
+    }
+    if (!colorStage_.setLut(*lut)) {
+        colorStatus_.error = lut->valid() ? "the graphics card could not create the LUT texture" : "the LUT is not valid";
+        return;
+    }
+    colorStatus_.lutLoaded = true;
+    colorStatus_.lutSize = colorStage_.lutSize();
+    colorActive_ = colorStrength_ > 0.0f;
+    colorStatus_.active = colorActive_;
+}
+
+void Engine::setColorStrength(float strength) {
+    colorStrength_ = std::clamp(strength, 0.0f, 1.0f);
+    if (!colorStatus_.lutLoaded) {
+        return;
+    }
+    colorActive_ = colorStrength_ > 0.0f;
+    colorStatus_.active = colorActive_;
+}
+
+FramebufferDepth Engine::outputDepth() const {
+    return out_.fbo != 0 ? measureFramebuffer(out_.fbo) : FramebufferDepth{};
+}
+
+std::uint64_t Engine::colorStageBytes() const {
+    return static_cast<std::uint64_t>(colorScratch_.bytes()) + colorStage_.lutBytes();
+}
+
+void Engine::applyColorStage() {
+    if (!colorScratch_.fbo || colorScratch_.width != out_.width || colorScratch_.height != out_.height) {
+        if (!colorScratch_.create(out_.width, out_.height)) {
+            colorActive_ = false;
+            colorStatus_.active = false;
+            colorStatus_.error = "the graphics card could not create the colour stage target";
+            return;
+        }
+    }
+    profiler_.mark(PassKind::Other, 0, 0, 0, "colour");
+    colorStage_.apply(out_, colorScratch_, colorStrength_, triangle_);
+    blit(colorScratch_, out_);
+}
+
 void Engine::reloadGeneratorClips(const std::vector<size_t>& indices) {
     for (size_t index : indices) {
         if (index >= generators_.size() || !generators_[index]) {
@@ -1496,6 +1554,7 @@ GpuMemory Engine::gpuMemory() const {
     for (const RenderTarget& target : feedback_) {
         memory.targets += bytes(target);
     }
+    memory.targets += static_cast<size_t>(colorStageBytes());
     for (const RenderTarget& target : clipThumbs_) {
         memory.thumbnails += bytes(target);
     }
@@ -1837,6 +1896,8 @@ void Engine::shutdown() {
     particleEditor_.reset();
     generatorGl_.release();
     videoGpu_.destroy();
+    colorStage_.destroy();
+    colorScratch_.destroy();
     deferredMediaThumbs_.clear();
     sceneRenderer_.shutdown();
     for (EffectProgram& effect : effects_) {
@@ -3497,6 +3558,10 @@ void Engine::render() {
         RenderTarget* master = renderDeck(comp.layers, comp.master, effective_, layerClock_, feedbackSet_, true);
         finalPass(*master, effectiveMasterGrade_, effectiveLevel_, deckTex_[1]);
         transitionPass(deckTex_[0], deckTex_[1], transitionProgress(), transition_.type, out_);
+    }
+
+    if (colorActive_ && colorStage_.hasLut()) {
+        applyColorStage();
     }
 
     for (size_t k = 0; k < feedback_.size(); ++k) {

@@ -19,7 +19,7 @@ PARTS = [
     ("play", ["clip-grid", "decks", "layers", "clip-window", "effects", "library", "presets", "master"]),
     ("music", ["audio", "modulation"]),
     ("content", ["video", "shaders", "models", "creator", "generators", "nodes", "live-sources"]),
-    ("output", ["outputs", "recording"]),
+    ("output", ["outputs", "color", "recording"]),
     ("shows", ["control", "sync", "timeline", "stage", "plugins"]),
     ("reference", ["settings", "interface", "shortcuts", "performance", "files", "troubleshooting", "cli", "languages", "glossary"]),
 ]

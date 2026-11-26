@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/color_model.hpp"
 #include "core/spatial_map.hpp"
 
 #include <array>
@@ -108,6 +109,7 @@ struct OutputSpec {
     int delayFrames = 0;
     OutputMapping map;
     OutputColor color;
+    DisplayColor display;
     std::vector<OutputSlice> slices;
     bool ndi = false;
     std::string ndiName;

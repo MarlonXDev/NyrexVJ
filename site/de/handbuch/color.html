@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Farbe: LUTs, HDR-Videos und die Anzeige - NyrexVJ-Handbuch</title>
+<meta name="description" content="Ebenen, Mischung und das Hauptbild sind 8 Bit und haben den sRGB-Look: Jedes Bild liegt mit der sRGB-Kurve und den Rec.-709-Farben vor, und Ebenen werden in diesen...">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#111214">
+<link rel="icon" type="image/png" href="../../assets/icon.png">
+<link rel="alternate" hreflang="en" href="../../manual/color.html">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="top">
+<div class="top-in">
+<a class="brand" href="../index.html" aria-label="NyrexVJ"><img src="../../assets/icon.png" alt="" width="34" height="34"><span>NyrexVJ</span></a>
+<nav class="nav" aria-label="Navigation">
+<a href="../index.html">Überblick</a>
+<a href="index.html" aria-current="page">Handbuch</a>
+<a href="../download.html">Download</a>
+<a href="../docs.html">Doku</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a>
+<a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a class="lang" href="../../manual/color.html" hreflang="en" lang="en">English</a>
+</nav>
+</div>
+</header>
+<div class="manual">
+<aside class="toc" aria-label="Inhalt">
+<h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="generators.html">Text, Partikel und Effektketten</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="color.html" aria-current="page">Farbe: LUTs, HDR-Videos und die Anzeige</a>
+<ul><li><a href="#color-model">Wie NyrexVJ mit Farbe umgeht</a></li><li><a href="#color-lut">Ein Look aus einer .cube-Datei</a></li><li><a href="#color-hdr">HDR-Videos</a></li><li><a href="#color-display">Die Anzeige eines Ausgangs</a></li><li><a href="#color-limits">Was Farbmanagement nicht kann</a></li></ul>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="interface.html">Oberfläche, Arbeitsbereiche und Barrierefreiheit</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul>
+<p class="alllink"><a href="alle.html">Das ganze Handbuch auf einer Seite lesen</a></p>
+</aside>
+<main id="main" class="doc">
+<details class="toc-m"><summary>Inhalt</summary><h4>Erste Schritte</h4><ul>
+<li><a href="welcome.html">Willkommen bei NyrexVJ</a>
+</li>
+<li><a href="install.html">Installation und erster Start</a>
+</li>
+<li><a href="tour.html">Das Fenster im Überblick</a>
+</li>
+<li><a href="first-show.html">Deine erste Show in fünf Minuten</a>
+</li>
+</ul>
+<h4>Visuals spielen</h4><ul>
+<li><a href="clip-grid.html">Das Clip-Raster</a>
+</li>
+<li><a href="decks.html">Decks und Übergänge</a>
+</li>
+<li><a href="layers.html">Layer und Mischmodi</a>
+</li>
+<li><a href="clip-window.html">Das Clip-Fenster</a>
+</li>
+<li><a href="effects.html">Effekte</a>
+</li>
+<li><a href="library.html">Die Bibliothek</a>
+</li>
+<li><a href="presets.html">Presets und Sitzungen</a>
+</li>
+<li><a href="master.html">Das Master-Fenster</a>
+</li>
+</ul>
+<h4>Musik und Bewegung</h4><ul>
+<li><a href="audio.html">Audio und Musik</a>
+</li>
+<li><a href="modulation.html">Makros, LFOs und das Beat-Raster</a>
+</li>
+</ul>
+<h4>Eigene Inhalte</h4><ul>
+<li><a href="video.html">Video- und Bild-Clips</a>
+</li>
+<li><a href="shaders.html">Deine eigenen Shader</a>
+</li>
+<li><a href="models.html">3D-Modelle</a>
+</li>
+<li><a href="creator.html">Der Clip Creator</a>
+</li>
+<li><a href="generators.html">Text, Partikel und Effektketten</a>
+</li>
+<li><a href="nodes.html">Der Node-Effekt-Editor</a>
+</li>
+<li><a href="live-sources.html">Live-Quellen: Spout, NDI und Kameras</a>
+</li>
+</ul>
+<h4>Ausgabe und Aufnahme</h4><ul>
+<li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
+</li>
+<li><a href="color.html" aria-current="page">Farbe: LUTs, HDR-Videos und die Anzeige</a>
+<ul><li><a href="#color-model">Wie NyrexVJ mit Farbe umgeht</a></li><li><a href="#color-lut">Ein Look aus einer .cube-Datei</a></li><li><a href="#color-hdr">HDR-Videos</a></li><li><a href="#color-display">Die Anzeige eines Ausgangs</a></li><li><a href="#color-limits">Was Farbmanagement nicht kann</a></li></ul>
+</li>
+<li><a href="recording.html">Aufnahme</a>
+</li>
+</ul>
+<h4>Live-Steuerung und Shows</h4><ul>
+<li><a href="control.html">Steuerung: MIDI, OSC und die Webseite</a>
+</li>
+<li><a href="sync.html">Show-Sync und Timecode</a>
+</li>
+<li><a href="timeline.html">Die Show-Zeitleiste</a>
+</li>
+<li><a href="stage.html">Bühne: DMX, VRSL und VRChat</a>
+</li>
+<li><a href="plugins.html">Plugins</a>
+</li>
+</ul>
+<h4>Nachschlagen und Hilfe</h4><ul>
+<li><a href="settings.html">Einstellungen im Überblick</a>
+</li>
+<li><a href="interface.html">Oberfläche, Arbeitsbereiche und Barrierefreiheit</a>
+</li>
+<li><a href="shortcuts.html">Tastenkürzel und Maus</a>
+</li>
+<li><a href="performance.html">Leistung</a>
+</li>
+<li><a href="files.html">Dateien und der Datenordner</a>
+</li>
+<li><a href="troubleshooting.html">Fehlersuche und häufige Fragen</a>
+</li>
+<li><a href="cli.html">Die Befehlszeile</a>
+</li>
+<li><a href="languages.html">Sprachen</a>
+</li>
+<li><a href="glossary.html">Glossar</a>
+</li>
+</ul></details>
+<p class="crumb"><a href="index.html">Handbuch</a> / Ausgabe und Aufnahme</p>
+<h1>Farbe: LUTs, HDR-Videos und die Anzeige</h1>
+<p class="meta">Kapitel 23 von 38 &middot; 4 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#color-model">Wie NyrexVJ mit Farbe umgeht</a><a href="#color-lut">Ein Look aus einer .cube-Datei</a><a href="#color-hdr">HDR-Videos</a><a href="#color-display">Die Anzeige eines Ausgangs</a><a href="#color-limits">Was Farbmanagement nicht kann</a></nav>
+<h2 id="color-model"><a class="anchor" href="#color-model" aria-label="Link">#</a>Wie NyrexVJ mit Farbe umgeht</h2>
+<p>Ebenen, Mischung und das Hauptbild sind 8 Bit und haben den sRGB-Look: Jedes Bild liegt mit der sRGB-Kurve und den Rec.-709-Farben vor, und Ebenen werden in diesen Werten gemischt, wie es schon immer war. Nichts in diesem Kapitel ändert das, und nichts davon ist an, bevor du es einschaltest, eine fertige Show sieht also genauso aus wie vorher. Drei Werkzeuge sind optional: eine Farbstufe mit LUT, Tone Mapping für HDR-Videos und eine Anzeige-Einstellung für jeden Ausgang. Die Seite <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/COLOR.md" target="_blank" rel="noopener noreferrer">docs/COLOR.md</a> im Projekt listet Weg für Weg auf, was welche Bittiefe behält und wie das gemessen wurde.</p>
+<h2 id="color-lut"><a class="anchor" href="#color-lut" aria-label="Link">#</a>Ein Look aus einer .cube-Datei</h2>
+<p>Eine LUT ist eine Tabelle, die jede Farbe in eine andere umrechnet, und so geben Grading-Programme einen Look an andere Programme weiter. NyrexVJ liest 3D-Tabellen im <code>.cube</code>-Format, das DaVinci Resolve, Adobe-Programme und viele andere ausgeben.</p>
+<ol><li>Kopiere die <code>.cube</code>-Datei in den Ordner <code>luts</code> im Datenordner. Die Schaltfläche LUT-Ordner öffnen unter Einstellungen, Leistung, Farbe öffnet ihn für dich.</li><li>Hake Farbstufe mit LUT (experimentell) an. Wähle die Datei in der Liste, und drück Liste aktualisieren, falls sie noch nicht auftaucht.</li><li>Stell LUT-Stärke ein. 0 ist das Originalbild, 1 ist der volle Look, dazwischen wird gemischt.</li></ol>
+<p>Der Look wird einmal auf das fertige Hauptbild angewendet, nach dem Deck-Übergang und vor den Ausgängen, NDI, Spout und der Aufnahme, alles, was das Programm verlässt, hat ihn also. Die Transparenz des Bildes bleibt unberührt. Die Einstellungen zeigen die Größe der Tabelle und den zusätzlichen Grafikspeicher, ein Bild mehr plus die Tabelle. Schaltest du die Stufe aus, ist das Bild genau so, als wäre sie nie an gewesen.</p>
+<p>Gelesen werden nur 3D-Tabellen mit 2 bis 65 Punkten pro Seite und bis zu 64 MB. Eine 1D-Tabelle, eine kaputte Datei oder eine Datei mit seltsamem Namen wird mit einer Meldung und möglichst der Zeilennummer abgelehnt; das Bild ändert sich nicht. Tabellen mit wenigen Punkten geben ein gröberes Ergebnis als Tabellen mit 33 Punkten.</p>
+<h2 id="color-hdr"><a class="anchor" href="#color-hdr" aria-label="Link">#</a>HDR-Videos</h2>
+<p>Manche Videos sind für HDR-Bildschirme gemacht (die Übertragungskurven PQ und HLG). Auf einem normalen Bildschirm sehen sie flau und grau aus, und der Video-Monitor sagt, dass die Datei HDR ist. Schalte unter Einstellungen, Leistung, Farbe HDR-Videos auf SDR abbilden (Tone Mapping) ein, dann macht NyrexVJ daraus ein normales Bild, während die Grafikkarte die Farben des Videos umrechnet.</p>
+<ul><li>Referenzweiß (Nits) sagt, wie hell normales Weiß im Video ist. 203 ist der übliche Wert; kleinere Werte machen das Bild heller.</li><li>Spitzenhelligkeit des Videos (Nits) ist der hellste Wert, für den das Video gemastert wurde. Dort erreicht das Bild Weiß.</li><li>Tone Mapping wählt Weiche Schulter, die normale Helligkeit in Ruhe lässt und nur die hellsten Teile abrundet, oder Filmic mit mehr Kontrast.</li></ul>
+<p>Farben, die ein normaler Bildschirm nicht zeigen kann, werden nach innen geschoben und nicht einfach abgeschnitten. Das Tone Mapping wirkt nur, solange Videofarben auf der Grafikkarte umrechnen an ist. Videos, die der Prozessor umrechnet, und HAP-Videos bleiben unverändert, und ein normales SDR-Video sieht mit der Option gleich aus. Es ist eine vernünftige Umrechnung, keine kalibrierte: Vergleiche eine Datei, die du kennst, mit einem Referenzplayer und stell die beiden Werte nach Augenmaß ein.</p>
+<h2 id="color-display"><a class="anchor" href="#color-display" aria-label="Link">#</a>Die Anzeige eines Ausgangs</h2>
+<p>Einstellungen, Ausgabe, Anzeige dieses Ausgangs sagt NyrexVJ, was der Bildschirm oder Projektor an diesem Ausgang erwartet. Farbraum kann Rec. 709 sein (der Standard, dasselbe wie sRGB), Display P3 oder Rec. 2020, und die Übertragungskurve sRGB (der Standard), Gamma 2.2, 2.4 oder 2.6. Mit den Standardwerten passiert gar nichts. Mit anderen Werten wird nur das Bild dieses Ausgangs umgerechnet, nach der Farbkorrektur von Slice und Ausgang und vor Kantenüberblendung, Helligkeit und Schwarzwert. Das Testbild und die Sync-Balken werden nicht umgerechnet. Die NDI-Quelle dieses Ausgangs zeigt das umgerechnete Bild, weil sie den Ausgang so überträgt, wie das Fenster ihn zeigt.</p>
+<p>Wähle eine Einstellung nur, wenn Bildschirm oder Projektor wirklich so eingestellt ist, zum Beispiel ein Projektor im Display-P3-Modus. Eine falsche Einstellung macht Farben matt oder zu kräftig. Anzeige zurücksetzen bringt den Standard zurück. Die Einstellung steht im Venue-Setup und nur dann, wenn sie nicht der Standard ist.</p>
+<h2 id="color-limits"><a class="anchor" href="#color-limits" aria-label="Link">#</a>Was Farbmanagement nicht kann</h2>
+<p>Das Bild bleibt auf jedem Weg 8 Bit und SDR. Es gibt keine 10-Bit-Ausgabe, keine HDR-Ausgabe, keine HDR-Angaben für einen Bildschirm, einen NDI-Empfänger oder eine Capture-Karte und kein SDI. Ein 10-Bit-Video wird beim Zeigen auf 8 Bit reduziert, und eine Aufnahme in einem 10-Bit-Format wie ProRes enthält trotzdem ein 8-Bit-Bild. NyrexVJ liest kein Farbprofil eines Bildschirms. Einstellungen, Leistung, Farbe zeigt die Farbtiefe, die die Grafikkarte für das Hauptbild meldet.</p>
+<aside class="note warning"><strong class="note-label">Warnung</strong><p>Das Farbmanagement wurde gegen ein Rechenmodell der Farben gebaut und getestet, mit einem Software-Renderer und zwei kurzen HDR-Testclips. Mit einer echten HDR-Datei, einem Bildschirm oder Projektor mit großem Farbraum, einer Capture-Karte oder einer echten Grafikkarte wurde es nicht ausprobiert. Sieh dir das Bild vor der Show auf dem echten Bildschirm an.</p></aside>
+<nav class="pager" aria-label="Pager"><a class="prev" href="outputs.html"><small>Zurück</small><span>Ausgänge, Mapping und OBS</span></a><a class="next" href="recording.html"><small>Weiter</small><span>Aufnahme</span></a></nav>
+<p class="small help">Fehler gefunden oder etwas vergessen? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Sag es uns auf GitHub</a>. Dasselbe Handbuch steckt im Programm, du hast es also auch ohne Internet. Öffne es mit F1 oder über das Menü Hilfe, Handbuch.</p>
+</main>
+</div>
+<footer class="footer">
+<div class="wrap">
+<div class="fcols">
+<div><h4>Software</h4><ul><li><a href="../index.html">Überblick</a></li><li><a href="../download.html">Download</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">Änderungen</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/releases" target="_blank" rel="noopener noreferrer">Releases</a></li></ul></div>
+<div><h4>Lernen</h4><ul><li><a href="index.html">Handbuch</a></li><li><a href="first-show.html">Deine erste Show</a></li><li><a href="troubleshooting.html">Fehlersuche</a></li><li><a href="shortcuts.html">Tastatur und Maus</a></li></ul></div>
+<div><h4>Projekt</h4><ul><li><a href="https://github.com/MarlonXDev/NyrexVJ" target="_blank" rel="noopener noreferrer">GitHub</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Issues</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Mitmachen</a></li></ul></div>
+<div><h4>Über</h4><ul><li><a href="../privacy.html">Datenschutz</a></li><li><a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT-Lizenz</a></li><li><a href="../docs.html">Alle Dokumente</a></li></ul></div>
+</div>
+<p class="fine">NyrexVJ ist ein unabhängiges Open-Source-Projekt. Es steht in keiner Verbindung zu Resolume und wird von Resolume weder unterstützt noch gefördert. Resolume, Arena und Avenue sind Namen ihres jeweiligen Inhabers.</p>
+</div>
+</footer>
+</body>
+</html>

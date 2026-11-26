@@ -4,6 +4,7 @@
 #include "core/ndi_sender.hpp"
 #include "core/output_map.hpp"
 #include "core/spatial_mesh.hpp"
+#include "render/color_gpu.hpp"
 
 #include <glad/gl.h>
 
@@ -82,6 +83,7 @@ private:
         GLint sliceTone = -1;
         GLint crop = -1;
         GLint cropOn = -1;
+        DisplayUniforms display;
     };
 
     struct SliceGpu {

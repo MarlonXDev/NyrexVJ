@@ -296,6 +296,7 @@ void normalizeSpec(OutputSpec& spec) {
     }
     normalizeMapping(spec.map);
     normalizeColor(spec.color);
+    spec.display = sanitized(spec.display);
     if (spec.slices.size() > static_cast<size_t>(kMaxSlices - 1)) {
         spec.slices.resize(static_cast<size_t>(kMaxSlices - 1));
     }
@@ -1099,6 +1100,9 @@ nlohmann::json outputToJson(const OutputSpec& spec) {
     doc["fullscreen"] = spec.fullscreen;
     doc["delayFrames"] = spec.delayFrames;
     doc["color"] = colorToJson(spec.color);
+    if (!sanitized(spec.display).isDefault()) {
+        doc["display"] = {{"gamut", primariesName(spec.display.gamut)}, {"transfer", transferName(sanitized(spec.display).transfer)}};
+    }
     if (spec.ndi || !spec.ndiName.empty()) {
         doc["ndi"] = {{"enabled", spec.ndi}, {"name", spec.ndiName}};
     }
@@ -1281,6 +1285,19 @@ bool outputFromJson(const nlohmann::json& doc, OutputSpec& spec) {
     auto color = doc.find("color");
     if (color != doc.end()) {
         colorFromJson(*color, result.color);
+    }
+    result.display = DisplayColor{};
+    auto display = doc.find("display");
+    if (display != doc.end() && display->is_object()) {
+        auto gamut = display->find("gamut");
+        if (gamut != display->end() && gamut->is_string()) {
+            result.display.gamut = primariesFromName(gamut->get<std::string>(), Primaries::Rec709);
+        }
+        auto transfer = display->find("transfer");
+        if (transfer != display->end() && transfer->is_string()) {
+            result.display.transfer = transferFromName(transfer->get<std::string>(), Transfer::Srgb);
+        }
+        result.display = sanitized(result.display);
     }
     result.ndi = false;
     result.ndiName.clear();

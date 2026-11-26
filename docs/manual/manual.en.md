@@ -920,6 +920,45 @@ Every slice has its own colour correction and so has the whole output: gain for 
 
 Arrange outputs sets up a grid of overlapping projectors in one click. Enter the number of Columns and Rows and the Overlap in percent of the whole picture. NyrexVJ then sets up the picture areas and the edge blending for that grid. Fine tune afterwards.
 
+## 3D mapping onto surfaces {#spatial}
+
+Corners and warp fit a picture onto one flat screen. 3D mapping is for a room with real things in it, such as a wall, a pillar or a box: you tell NyrexVJ where the projector stands and where the surfaces are, and the picture is drawn onto them with the right perspective. It is off until you switch it on, it works per slice, and the other slices and outputs stay flat, so one venue can mix both.
+
+Open Settings, Output, pick the output and find the block 3D mapping. Tick Use 3D mapping for this slice. NyrexVJ starts with a projector and one wall in front of it. While it is on, the corners and the warp of that slice are not used; the mask, the edge blending and the colour still are.
+
+### Describing the room {#spatial-room}
+
+Every position is in metres: X to the right, Y up and Z towards the audience. A projector or viewer with all angles at zero looks along minus Z. Positive yaw turns it to the left, positive pitch looks up and positive roll lifts its right side. The block prints this line above the controls.
+
+The Projector has a Position, its Angles, a Field of view (the vertical opening angle of the lens) or the Throw ratio of its data sheet, which is the same setting, an Aspect that matches the output, a Lens shift for projectors that throw upwards and a Near and far distance. Aim at the surfaces turns it towards the middle of the surfaces.
+
+Surfaces are the real things the projector lights. Add wall and Add box give you a start, and you can add, duplicate and remove up to 16 surfaces. Each is four corners in metres, in this order as seen from the front: top left, top right, bottom right, bottom left. The front is the side the projector has to be on; the back is not drawn unless Both sides is ticked. The Picture rectangle is the part of the picture that this surface shows, from 0 to 1, and Show all of the picture resets it. Subdivisions only make the surface finer; a flat one needs very few.
+
+The two choices below the tick box decide what the surfaces show. Picture on the surfaces gives each surface its own rectangle of the picture. Picture seen by a viewer puts a virtual camera in the room, the Viewer, and each surface shows what that viewer would see there. Use that for forced perspective, where a picture only looks right from one spot.
+
+### Calibrating by hand {#spatial-calibrate}
+
+Calibration finds where the projector really stands from points you know. It needs a tape measure and some patience.
+
+1. Pick points you can find again in the room, such as corners and marks on the surfaces, and measure them in the same coordinates as the surfaces. Four points are the least, and they must not lie on one line; spread them over the surfaces and use more for a better result.
+2. Add them under Calibration with Add point, or Add the corners of the selected surface. Enter the position in Place in space.
+3. Tick Show the points on the output and switch on the test pattern. Each point shows a green cross where the light has to land and an orange X where the current projector pose puts it.
+4. For each point move the green cross, with the mouse or with the arrow buttons (one pixel at 1920 wide, ten with Shift), until the light lands on the real mark. Put the cross where the pose puts the point shows you what the pose says now.
+5. Press Solve the projector pose. The result shows the average and the worst error in pixels at 1920 wide, and the list shows the error of every point. A point with a large error is usually a wrong measurement or a cross on the wrong mark.
+6. If the numbers look good, press Apply to the projector. Undo puts the old pose back. A result that does not fit is reported and changes nothing.
+
+Leave Solve the field of view too off when you know the lens; with it on you need six points and the pose is less steady.
+
+> Tip: Look at the line under the title of the block. It counts the triangles that are drawn, that face away, that are behind the projector, that are cut at the near plane and that fall outside the picture, which tells you quickly why a surface stays dark.
+
+### What to know {#spatial-limits}
+
+Surfaces are drawn with a depth buffer, so a pillar in front of a wall hides it. If an output window has no depth buffer, the block says so and the surfaces are drawn in the order of the list. With several projectors give each output its own projector, calibrate each one, and set the edge blending of the overlap on both as usual; the blend does not know which surface the light hits. The markers are drawn on the output window and in a capture, not in NDI. The mesh counts in the output memory budget.
+
+Not built: calibration with a camera, lens distortion, surfaces that are not flat rectangles and a projector that moves during the show.
+
+> Warning: 3D mapping was built and tested against a computer model of the projector and the room, with a software renderer. It was not tried with a real projector, a real room or two real projectors. Calibrate with real points before the show and check the result with a tape measure.
+
 ## Venue setups {#venues}
 
 A venue setup saves all outputs of a room as a small file, with the displays, slices, warp, masks, blending and colour. Save as, Load, Duplicate, Export and Import manage them, and you can drop a setup file onto the window. `--venue NAME` loads one at start. That way you build the mapping once in a club and load it in one click the next time.

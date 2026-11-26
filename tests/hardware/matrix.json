@@ -2453,6 +2453,104 @@
           "criteria": "Proposed: no window stays out of reach; if one does, Reset window layout brings the main panels back and the finding is added to the known issues."
         }
       ]
+    },
+    {
+      "id": "spatial-mapping",
+      "title": "3D mapping onto real surfaces: a virtual projector and viewer, surfaces, perspective, occlusion, calibration points and the manual calibration",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/manual/manual.en.md",
+        "docs/OUTPUTS.md",
+        "docs/TESTING.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0045-spatial-mapping.md"
+      ],
+      "sources": [
+        "src/core/spatial_map.cpp",
+        "src/core/spatial_mesh.cpp",
+        "src/core/spatial_calibration.cpp",
+        "src/core/output_map.cpp",
+        "src/render/output_window.cpp",
+        "src/render/output_manager.cpp",
+        "src/app/ui_spatial.cpp",
+        "src/app/output_selftest.cpp",
+        "tests/test_spatial.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-SPATIAL-1",
+          "kind": "ctest",
+          "name": "nvj_spatial_tests",
+          "note": "the conventions and matrices, surfaces and limits, the JSON round trip with damaged and huge input, the mesh (culling, near clipping, degenerate triangles), ray casting against the mesh, the camera source, occlusion, two overlapping projectors, and the calibration (recovery of a known pose with and without noise, determinism, the field of view, wild start poses, planar sets, too few and collinear points); no OpenGL"
+        },
+        {
+          "id": "A-SPATIAL-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
+          "note": "the spatial cases in the real output window against a CPU model on grids of probe points: a filling wall, oblique and tilted walls, the camera source with a crop, a picture rectangle, flips, edge blending, occlusion, back faces, near clipping, switching between flat and spatial with the memory returning to its start, and the markers; on a virtual screen with software OpenGL"
+        },
+        {
+          "id": "A-SPATIAL-3",
+          "kind": "cli",
+          "command": "NYREXVJ_NDI_LIB=build/fake_ndi.so NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
+          "note": "the same run with the fake NDI library; it also checks that the calibration markers are on the window and not in the frame that NDI sends"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-SPATIAL-1",
+          "title": "Calibrate one real projector on a real wall and a box",
+          "needs": "A projector, a PC with an output to it, a room with a wall and a box or pillar, and a tape measure or a laser distance meter",
+          "steps": [
+            "Choose a corner of the room as the origin and measure the corners of the wall and of the box in metres: x to the right, y up, z towards the audience. Mark six or more points on the surfaces, for example the corners and the middle of two edges, and measure them the same way.",
+            "In NyrexVJ enter the surfaces and the points, open the output on the projector, switch on 3D mapping for the slice, the markers and the test pattern.",
+            "Move the green cross of each point until the light lands on the real mark, press Solve and then Apply to the projector. Show a grid picture and look at the wall and the box from the side of the projector.",
+            "Measure five spots on the surfaces with the tape and compare them with where the grid lines fall."
+          ],
+          "measure": "the average and the worst error that Solve shows, the error in millimetres at the five checked spots, and photographs of the grid on the wall and the box",
+          "criteria": "Proposed: the grid lines are straight and continuous on each surface and the checked spots are within the width of a finger. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-SPATIAL-2",
+          "title": "Two real projectors with an overlap on one wall",
+          "needs": "Two projectors, a wall, a PC with two outputs, a camera or a phone with a fixed exposure",
+          "steps": [
+            "Calibrate each projector on its own with at least four measured points, as in M-SPATIAL-1.",
+            "Let the pictures overlap by about 15 percent of the wall, set the same overlap under Edge blending on both outputs and show a white picture and then a grid.",
+            "Photograph the wall with a fixed exposure and compare the brightness in the overlap with the brightness outside it."
+          ],
+          "measure": "whether the seam can be seen from the usual distance, the brightness of the overlap against the rest in the photograph, and the offset of the grid lines across the seam",
+          "criteria": "Proposed: the seam is not noticed from the usual distance and the grid lines continue across it with an offset smaller than one line width. The blend values may need a hand adjustment; write down what was needed."
+        },
+        {
+          "id": "M-SPATIAL-3",
+          "title": "Surfaces hiding each other on a real graphics card",
+          "needs": "A PC with a real graphics card on Windows and one on Linux, and a monitor or projector for the output",
+          "steps": [
+            "Add a wall and a box in front of it, aim the projector so that the box hides part of the wall, and look at the output.",
+            "Read the line under the statistics in the 3D mapping block: it must not warn about a missing depth buffer.",
+            "Move the box until two surfaces touch along an edge and watch the edge for flicker."
+          ],
+          "measure": "whether the warning appears, whether the box hides the wall as expected, and whether the touching edge flickers",
+          "criteria": "Proposed: no warning, the hiding is correct, and no flicker where two surfaces meet at an edge. A flicker or a missing depth buffer is added to the known issues."
+        },
+        {
+          "id": "M-SPATIAL-4",
+          "title": "A picture that looks right from one spot",
+          "needs": "A projector, the corner of a room or a box, a person, a picture with straight lines or a cube",
+          "steps": [
+            "Measure the spot where the person's eyes will be and enter it as the viewer position; choose Picture seen by a viewer.",
+            "Calibrate the projector and show the picture.",
+            "Look from the viewer spot and from two other spots one step away."
+          ],
+          "measure": "whether lines look straight across the surfaces from the viewer spot, and how far the person can move before it looks wrong",
+          "criteria": "Proposed: lines look straight and continuous from the viewer spot. How the picture looks from other spots is only written down."
+        }
+      ]
     }
   ]
 }

@@ -1443,6 +1443,45 @@
       "test": "A-UI-4",
       "command": "python3 scripts/test_interface_recovery.py build/NyrexVJ --output result.json under xvfb-run",
       "notes": "24 checks passed: damaged, empty, binary, wild, newer and out-of-range files and --reset-layout and --reset-interface, each with the real program started"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.52.0 (branch feature/spatial-mapping, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "spatial-mapping",
+      "test": "A-SPATIAL-1",
+      "command": "ctest -j2 in the build folder (nvj_spatial_tests)",
+      "notes": "1017 checks passed: conventions, matrices, surfaces, JSON, mesh, ray casting, camera source, occlusion, two projectors and the calibration"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.52.0 (branch feature/spatial-mapping, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "spatial-mapping",
+      "test": "A-SPATIAL-2",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
+      "notes": "553 checks passed, 0 failed: the spatial cases agree with the CPU model on probe grids; the NDI cases were skipped without the fake library"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.52.0 (branch feature/spatial-mapping, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "spatial-mapping",
+      "test": "A-SPATIAL-3",
+      "command": "NYREXVJ_NDI_LIB=build/fake_ndi.so NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
+      "notes": "581 checks passed, 0 failed: the same run with the fake NDI library; the calibration markers are on the window and not in the NDI frame"
     }
   ]
 }

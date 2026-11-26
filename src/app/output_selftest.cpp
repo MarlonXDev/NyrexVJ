@@ -1288,6 +1288,31 @@ void caseSpatialMarkers(Runner& run) {
     run.manager().setMarkers(0, false, -1);
     run.draw(spec);
     run.expect("markers disappear again", 0.3f, 0.3f, kRed, 4);
+
+    const char* path = std::getenv("NYREXVJ_NDI_LIB");
+    FakeNdi fake;
+    if (path && *path && fake.open(path)) {
+        spec.map.spatial.points[0].enabled = true;
+        spec.ndi = true;
+        spec.ndiName = "Selftest markers";
+        fake.setConnections(2);
+        run.manager().setMarkers(0, true, -1);
+        for (int i = 0; i < 6; ++i) {
+            run.draw(spec);
+        }
+        run.expect("markers are drawn on the window while NDI runs", 0.3f, 0.3f, {26, 255, 102}, 6);
+        run.condition("an NDI frame was sent with the markers on", fake.frames() >= 3);
+        const Rgb sentTarget = fake.at(0.3f, 0.3f);
+        const Rgb sentPredicted = fake.at(0.5f, 0.5f);
+        run.condition("the target marker is not in the NDI frame", sentTarget.r > 200 && sentTarget.g < 60 && sentTarget.b < 60);
+        run.condition("the predicted marker is not in the NDI frame", std::abs(sentPredicted.r - 255) > 40 || std::abs(sentPredicted.g - 140) > 40 || std::abs(sentPredicted.b - 26) > 40);
+        run.manager().setMarkers(0, false, -1);
+        spec.ndi = false;
+        run.draw(spec);
+        fake.setConnections(0);
+    } else {
+        logLine("Output self test: the NDI check of the markers was skipped (set NYREXVJ_NDI_LIB to the fake NDI library)");
+    }
 }
 
 void measureHistory() {

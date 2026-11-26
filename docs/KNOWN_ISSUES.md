@@ -109,6 +109,33 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Impact:** a person who needs different keys in an editor cannot have them.
 - **Workaround:** none.
 
+### KI-12 Two Fullscreen buttons on the output page share one ID
+
+- **Area:** interface, outputs
+- **Known by:** seen running. Dear ImGui reports an ID conflict for the two buttons with the text Fullscreen or Windowed: the one next to Open all (`drawOutputControls`) and the one of the selected output. The code is the same in the 0.51.0 release; it was found while the 3D mapping block was checked on screen and was not changed by it.
+- **What happens:** both buttons have the same ID because neither is inside its own ID scope, so the library shows its ID conflict warning when the mouse is over either button, and a click may reach the other button.
+- **Steps:** open Settings, Output, hold the mouse over one of the two Fullscreen buttons and read the ID conflict warning of the library; click the lower one with an output window open and see which window changes.
+- **Impact:** a click on one of the two buttons may act on the other. Nobody has seen it do so; it was read from the library's warning.
+- **Workaround:** use the window of the output itself (`F11` in an output window, or the shortcut list) instead of the two buttons.
+
+### KI-13 3D mapping has only been tested against a computer model
+
+- **Area:** 3D mapping
+- **Known by:** tests that ran (`nvj_spatial_tests`, `--output-selftest`, [ADR 0045](adr/0045-spatial-mapping.md)). The pixels of the real output window agree with a CPU model of the same camera, and the calibration finds a pose that was used to make the points. No real projector, room or measuring tape was involved.
+- **What happens:** unknown on real hardware. The lens model is an ideal pinhole with a lens shift; it has no lens distortion, no focus and no keystone from the projector's own correction. Points measured by hand carry errors that the test points do not, and the calibration reports the error it finds, but it cannot tell a wrong measurement from a wrong lens.
+- **Steps:** this is the manual test `M-SPATIAL-1` and `M-SPATIAL-2` in [TESTING.md](TESTING.md): measure four to six points in a real room, calibrate and look at the picture on the wall.
+- **Impact:** a person may need more points, a better measurement or a projector without its own keystone correction before the picture lands within a few pixels.
+- **Workaround:** use the error per point to find the point that is wrong, and switch off the projector's own keystone correction.
+
+### KI-14 Without a depth buffer surfaces do not hide each other
+
+- **Area:** 3D mapping, outputs
+- **Known by:** read from the source and covered by a test with a forced setting. The output window asks for its depth bits when it is opened; a window without them draws the surfaces in list order and the interface says so. No real driver was seen to give a window without a depth buffer.
+- **What happens:** a pillar in front of a wall does not hide the wall unless the pillar comes later in the list.
+- **Steps:** open an output with a wall and a pillar behind it in the list and check the orange line in the 3D mapping block.
+- **Impact:** a wrong picture where surfaces overlap in the view of the projector, on a driver that gives no depth buffer.
+- **Workaround:** put the nearer surface later in the list.
+
 ## Limits of the evidence, not of the program
 
 These are not bugs. They are what the numbers cannot tell you.
@@ -121,3 +148,4 @@ These are not bugs. They are what the numbers cannot tell you.
 - **Codec runs are on a software decoder.** The 20 clips passed on FFmpeg's decoders in software. No hardware decoder was exercised.
 - **The display scale was tested with injected values.** `--interface-uitest` sets 1.25, 1.5 and 2.0 by hand; the value that the operating system reports for a real monitor was never read from a real 125 to 200 percent display, and the high contrast and focus colours were judged by calculation and by screenshots, not by people.
 - **Two real PCs have not been used for sync or hot standby.** The tests use two processes on one PC ([SYNC.md](SYNC.md)).
+- **The edge blend of two projectors in space is the flat model.** Each output blends in its own picture; it does not know which surface the light hits. The test shows that two overlapping projectors add up to one picture in the model; no two real projectors were overlapped.

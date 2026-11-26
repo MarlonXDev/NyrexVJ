@@ -436,6 +436,24 @@ std::string fileNameOf(const std::string& path) {
     return cut == std::string::npos ? path : path.substr(cut + 1);
 }
 
+std::string onDiskPath(const fs::path& file) {
+    const fs::path normal = file.lexically_normal();
+    const fs::path parent = normal.parent_path();
+    const std::string want = lowerCase(pathToUtf8(normal.filename()));
+    std::error_code ec;
+    fs::path alike;
+    for (fs::directory_iterator it(parent, ec), end; !ec && it != end; it.increment(ec)) {
+        const fs::path name = it->path().filename();
+        if (name == normal.filename()) {
+            return pathToUtf8(normal);
+        }
+        if (alike.empty() && lowerCase(pathToUtf8(name)) == want) {
+            alike = name;
+        }
+    }
+    return pathToUtf8(alike.empty() ? normal : parent / alike);
+}
+
 bool mediaName(const std::string& name) {
     return isImageFileName(name) || isVideoFileName(name);
 }
@@ -725,13 +743,13 @@ std::string MediaFinder::find(const std::string& recordedPath) {
     const fs::path direct = pathFromUtf8(path);
     if (direct.is_absolute()) {
         if (fs::is_regular_file(direct, ec)) {
-            return pathToUtf8(direct);
+            return onDiskPath(direct);
         }
     } else if (!hasParentSteps(path)) {
         for (const std::string& root : roots_) {
             const fs::path candidate = pathFromUtf8(root) / direct;
             if (fs::is_regular_file(candidate, ec)) {
-                return pathToUtf8(candidate);
+                return onDiskPath(candidate);
             }
         }
     }
@@ -742,7 +760,7 @@ std::string MediaFinder::find(const std::string& recordedPath) {
     for (const std::string& root : roots_) {
         const fs::path candidate = pathFromUtf8(root) / pathFromUtf8(name);
         if (fs::is_regular_file(candidate, ec)) {
-            return pathToUtf8(candidate);
+            return onDiskPath(candidate);
         }
     }
     if (!indexed_) {

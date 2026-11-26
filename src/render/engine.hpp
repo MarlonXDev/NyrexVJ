@@ -7,6 +7,7 @@
 #include "core/composition.hpp"
 #include "core/gpu_diag.hpp"
 #include "core/launch_quantizer.hpp"
+#include "core/optical_flow.hpp"
 #include "core/routing.hpp"
 #include "core/settings.hpp"
 #include "core/shader_editor.hpp"
@@ -233,6 +234,8 @@ public:
     bool gpuConversion() const { return gpuConversion_; }
     const VideoGpuCaps& videoCaps() const { return videoGpu_.caps(); }
     VideoOptions videoOptions() const;
+    void setFlowSettings(const flow::Settings& settings);
+    const flow::Settings& flowSettings() const { return flowSettings_; }
     std::vector<const MediaPlayer*> activeVideos() const;
     void setGpuTiming(bool enabled) { gpuTiming_ = enabled; }
     void setQuality(int mode, double budgetMs);
@@ -565,6 +568,7 @@ private:
     float colorStrength_ = 1.0f;
     void applyColorStage();
     VideoDecodeMode videoMode_ = VideoDecodeMode::Auto;
+    flow::Settings flowSettings_;
     bool hapDirect_ = true;
     bool gpuConversion_ = true;
     std::vector<std::unique_ptr<MediaPlayer>> media_;

@@ -1256,6 +1256,24 @@ std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double seconds) {
     return result;
 }
 
+std::vector<std::shared_ptr<const VideoFrame>> VideoDecoder::peekAhead(size_t count) const {
+    std::vector<std::shared_ptr<const VideoFrame>> frames;
+    if (!impl_ || !impl_->opened || count == 0) {
+        return frames;
+    }
+    Impl& d = *impl_;
+    std::lock_guard<std::mutex> lock(d.mutex);
+    if (d.reverseWanted.load() || d.seekPending || !d.shown) {
+        return frames;
+    }
+    const size_t limit = std::min(count, d.queue.size());
+    frames.reserve(limit);
+    for (size_t i = 0; i < limit; ++i) {
+        frames.push_back(d.queue[i]);
+    }
+    return frames;
+}
+
 void VideoDecoder::setRange(double in, double out) {
     if (!impl_ || !impl_->opened || impl_->duration <= 0.0) {
         return;
@@ -1369,6 +1387,10 @@ VideoStatus VideoDecoder::status() const {
 
 std::shared_ptr<const VideoFrame> VideoDecoder::frameAt(double) {
     return nullptr;
+}
+
+std::vector<std::shared_ptr<const VideoFrame>> VideoDecoder::peekAhead(size_t) const {
+    return {};
 }
 
 void VideoDecoder::setRange(double, double) {}

@@ -213,6 +213,7 @@ private:
     void drawFrameRateLimit();
     void drawVideoSettings();
     void drawColorSettings();
+    void drawFlowSettings();
     void applyColorSettings();
     void drawConversionSettings();
     void drawFfmpegSection();

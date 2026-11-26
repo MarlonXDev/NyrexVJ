@@ -53,6 +53,10 @@ struct Settings {
     bool uiAutoScale = false;
     std::string uiContrast = "standard";
     bool uiKeyboardNav = false;
+    std::string flowMode = "off";
+    std::string flowQuality = "balanced";
+    int flowBudgetMb = 256;
+    int flowShutterPercent = 50;
     bool colorStage = false;
     std::string colorLut;
     float colorLutStrength = 1.0f;

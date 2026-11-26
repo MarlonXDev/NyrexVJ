@@ -50,6 +50,7 @@ public:
     const VideoInfo& info() const;
     VideoStatus status() const;
     std::shared_ptr<const VideoFrame> frameAt(double seconds);
+    std::vector<std::shared_ptr<const VideoFrame>> peekAhead(size_t count) const;
     void setRange(double in, double out);
     void setDirection(bool reverse);
     bool reversing() const;

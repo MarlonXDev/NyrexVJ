@@ -741,6 +741,14 @@ void App::frame(double dt) {
     serviceLiveBrowse();
     engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);
     applyColorSettings();
+    {
+        flow::Settings flowSettings;
+        flowSettings.mode = flow::modeFromName(settings_.flowMode, flow::Mode::Off);
+        flowSettings.tier = flow::tierFromName(settings_.flowQuality, flow::Tier::Balanced);
+        flowSettings.budgetMb = settings_.flowBudgetMb;
+        flowSettings.shutter = static_cast<float>(settings_.flowShutterPercent) / 100.0f;
+        engine_.setFlowSettings(flowSettings);
+    }
     engine_.prewarmNext = settings_.prewarmNext;
     engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
     MemoryPolicy memoryPolicy;

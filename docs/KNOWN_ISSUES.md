@@ -4,7 +4,7 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
-KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; the other entries were not walked through again.
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; the other entries were not walked through again.
 
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
@@ -153,6 +153,24 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** manual tests `M-COLOR-1` to `M-COLOR-4` in [TESTING.md](TESTING.md).
 - **Impact:** an HDR file may look too dark or too bright against another player; a wrong display setting makes colours dull or too strong.
 - **Workaround:** set **Reference white (nits)** and **Video peak (nits)** by eye, and leave the display of an output at Rec. 709 and sRGB unless a screen is known to be set differently.
+
+### KI-17 Optical flow was tested on generated clips and software OpenGL only
+
+- **Area:** video, optical flow
+- **Known by:** tests that ran (`nvj_flow_tests`, `--flow-selftest`; [FLOW.md](FLOW.md)). The four test clips are made from a moving synthetic picture; nothing was run on a real graphics card, on Windows, with real footage or next to VRChat.
+- **What happens:** unknown for real material: faces, water, smoke, fine particles, repeating patterns and strobing light may show halos, wobble or smearing; the analysis cost at 1080p and 4K on real hardware and the effect of another program using the processor are not measured.
+- **Steps:** manual tests `M-FLOW-1` to `M-FLOW-4` in [TESTING.md](TESTING.md).
+- **Impact:** with **Optical flow mode** on, a video may look worse than the plain picture, or the analysis may fall back to the plain picture more often than in the tests.
+- **Workaround:** leave **Optical flow mode** on Off (the default), or use Motion blur or the vector view only to check a clip; lower the quality tier or the memory limit if the video monitor shows late or dropped frames.
+
+### KI-18 A fast fade to black can be read as a scene cut, and borders can show a halo
+
+- **Area:** video, optical flow
+- **Known by:** a test that ran (`nvj_flow_tests`: layers moving apart, hard cuts) and read from the source. A scene cut is declared when most textured blocks have no good match. In `nvj_flow_tests` a fade to black over 4 frames (a quarter of the brightness per frame) was flagged in all 4 pairs at all three tiers, a fade over 15 frames and a dissolve between two textured shots over 8 frames were not flagged. Where the flow is not trustworthy the picture falls back to the nearer real picture, which leaves a soft halo at the border of a moving object over another background (28.3 dB against 26.5 dB for a plain blend in the layers test).
+- **What happens:** during such a fast fade the current picture is held (the same as without the feature), and the border of a moving object can look soft.
+- **Steps:** play a clip with a quick fade to black in the Interpolate mode and look at the video list on the Performance page: the picture counts show held pictures during the fade, and the tooltip of the Pictures column shows the hard cuts found.
+- **Impact:** no wrong picture, only less smoothness at those places.
+- **Workaround:** none needed; switch the mode off for a clip that is made of quick fades.
 
 ## Limits of the evidence, not of the program
 

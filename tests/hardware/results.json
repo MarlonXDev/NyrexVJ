@@ -1521,6 +1521,32 @@
       "test": "A-COLOR-3",
       "command": "NYREXVJ_NDI_LIB=build/fake_ndi.so NyrexVJ --fresh --no-update-check --no-welcome --output-selftest",
       "notes": "632 checks passed, 0 failed (602 without the fake NDI library, where the NDI checks are skipped); the display conversion differs from the processor model by 0 levels"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.54.0 (branch feature/optical-flow, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "optical-flow",
+      "test": "A-FLOW-1",
+      "command": "ctest -R nvj_flow_tests",
+      "notes": "2905 checks passed, 0 failed (the motion estimate at all three tiers, hard cuts, fades and dissolves, pair planning, governor, memory budget, synthesis, blur, vectors, layers, alpha, frame drops, determinism, the settings keys); no OpenGL; the whole suite ran 55 of 55 tests passed in the same build"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.54.0 (branch feature/optical-flow, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "optical-flow",
+      "test": "A-FLOW-2",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --flow-selftest tests/data --bench-out flow.json",
+      "notes": "22 checks passed, 0 failed with FFmpeg (with NYREXVJ_NO_FFMPEG=1 the whole test is skipped and exits 0; with NYREXVJ_REQUIRE_VIDEO=1 and no FFmpeg it exits 1 as intended); 30 to 60 frames per second interpolated 31.85 dB against 24.56 dB held over 19 frames and half speed 31.88 dB against 24.54 dB over 21 frames, both measured against the real 60 frames per second clip; 20 of 20 exact frames identical to normal playback; 4 hard cuts detected and equal to normal playback; time per step 15.20 ms off and 16.18 ms interpolating, analysis 1.26 ms on average, flow memory 695280 bytes, all on software OpenGL with generated 320x180 clips (not a graphics card number, not real footage); a second run with two busy processes on the two cores also passed all 22 checks, analysis 3.71 ms on average and 12.88 ms at the 95th percentile, time per step 30.76 ms off and 36.06 ms interpolating"
     }
   ]
 }

@@ -469,10 +469,28 @@ void Engine::setVideoSettings(VideoDecodeMode mode, bool hapDirect, bool gpuConv
     }
 }
 
+void Engine::setFlowSettings(const flow::Settings& settings) {
+    const flow::Settings next = flow::sanitised(settings);
+    if (next == flowSettings_) {
+        return;
+    }
+    flowSettings_ = next;
+    flow::globalBudget().setLimit(static_cast<std::uint64_t>(next.budgetMb) * 1024ull * 1024ull);
+    for (std::unique_ptr<MediaPlayer>& player : media_) {
+        if (player && player->isVideo()) {
+            player->setFlowSettings(next);
+        }
+    }
+}
+
 std::unique_ptr<MediaPlayer> Engine::makeMedia(const ClipDef& def) {
     if (def.kind == ClipKind::ImageFile || def.kind == ClipKind::VideoFile) {
         const bool video = def.kind == ClipKind::VideoFile;
-        return std::make_unique<MediaPlayer>(def.name, def.path, video, video ? &videoGpu_ : nullptr, videoOptions());
+        std::unique_ptr<MediaPlayer> player = std::make_unique<MediaPlayer>(def.name, def.path, video, video ? &videoGpu_ : nullptr, videoOptions());
+        if (video) {
+            player->setFlowSettings(flowSettings_);
+        }
+        return player;
     }
     return nullptr;
 }

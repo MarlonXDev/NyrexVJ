@@ -582,6 +582,28 @@ DXV-Videos aus Resolume brauchen viel Prozessorzeit. NyrexVJ kann im Hintergrund
 
 Unter Einstellungen, Leistung, Videowiedergabe wählst du den Decoder: Automatisch, Hardware bevorzugen oder Software erzwingen. Eine Schaltfläche testet die Hardware-Dekodierung auf deinem Computer. Der Video-Monitor listet jedes laufende Video mit Codec, Decode- und Upload-Zeiten, verworfenen und späten Bildern und seinem Speicher. Sieht ein Video flau aus, weil es HDR ist, sagt der Monitor das: HDR wird ohne Tone Mapping gezeigt, solange du HDR-Videos auf SDR abbilden (Tone Mapping) nicht einschaltest, siehe das Kapitel zur Farbe.
 
+## Flüssigere Bewegung mit optischem Fluss {#video-flow}
+
+Ein Video mit 30 Bildern pro Sekunde zeigt auf einem 60-Hz-Ausgang jedes Bild zweimal, und Zeitlupe zeigt jedes Bild viele Frames lang. Der optische Fluss misst, wie sich das Bild zwischen zwei Videobildern bewegt, und kann damit die Bilder dazwischen zeichnen. Er ist experimentell und standardmäßig aus. Solange er aus ist, laufen die Videos genau wie vorher, und es wird nichts Zusätzliches angelegt.
+
+Öffne Einstellungen, Leistung, Optischer Fluss (experimentell) und wähle einen Modus:
+
+- Bilder dazwischenrechnen erzeugt ein neues Bild für die Zeit zwischen zwei echten Bildern. Ein Clip mit 30 Bildern pro Sekunde läuft dann auf einem 60-Hz-Ausgang flüssig, und ein Clip mit Tempo 0,5 zeigt neue Bilder, statt jedes zu wiederholen.
+- Bewegungsunschärfe zieht das Bild entlang seiner Bewegung. Verschluss (%) sagt, wie lange der virtuelle Verschluss offen ist: 0 gibt keine Unschärfe, 100 verschmiert über die ganze Zeit zwischen zwei Bildern.
+- Bewegungsvektoren anzeigen zeichnet die gemessene Bewegung als Farbe. Das ist nur zum Prüfen gedacht, was die Analyse sieht.
+
+Qualität wählt Schnell, Ausgewogen oder Fein. Der Prozessor betrachtet in einem eigenen Thread eine kleine Kopie des Bildes, und feinere Stufen finden kleine und schnelle Bewegungen besser, brauchen aber mehr Zeit. Kommt die Analyse nicht hinterher, wechselt sie von selbst auf die nächstniedrigere Stufe und schaltet sich auf der niedrigsten für dieses Video ab. Grafikspeicher-Grenze (MB) ist, wie viel Grafikspeicher alle Videos zusammen dafür belegen dürfen; ein Video, das mehr bräuchte, wird ohne optischen Fluss gezeigt und nennt den Grund.
+
+Die Liste unter den Einstellungen zeigt jedes laufende Video mit seinem Zustand, seiner Qualitätsstufe, der Analysezeit, den erzeugten und gehaltenen Bildern und seinem Speicher. Wird ein Video normal gezeigt, nennt die Zeile Grund den Grund, zum Beispiel dass es rückwärts läuft oder dass die Speichergrenze zu klein ist.
+
+Was du erwarten kannst:
+
+- Ein Bild, das genau auf einem echten Bild liegt, ist dieses Bild, unverändert. Nur die Bilder dazwischen sind neu.
+- Ein harter Schnitt bleibt ein Schnitt: Das aktuelle Bild wird über ihn hinweg gehalten. Eine schnelle Abblende auf Schwarz kann als Schnitt gelesen werden und hält dann das Bild ebenfalls.
+- Wo sich die Bewegung nicht gut messen lässt, zum Beispiel am Rand eines bewegten Objekts vor anderem Hintergrund, fällt das Ergebnis auf das näherliegende echte Bild zurück, und ein weicher Hof kann zu sehen sein.
+- Rückwärtswiedergabe, komprimierte Quellen wie direkt hochgeladene HAP-Videos und Lücken in den Bildzeiten eines Videos mit wechselnder Bildrate werden wie vorher gezeigt.
+- Der optische Fluss wurde nur mit erzeugten Clips und Software-Rendering getestet. Probiere ihn mit deinen eigenen Clips und deiner eigenen Grafikkarte aus, bevor du dich in einer Show darauf verlässt, und behalte den Video-Monitor daneben im Auge.
+
 # Deine eigenen Shader {#shaders}
 
 ## Einen Shader-Clip machen {#shader-clip}

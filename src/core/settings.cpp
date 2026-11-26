@@ -1,6 +1,7 @@
 #include "core/settings.hpp"
 
 #include "core/color_lut.hpp"
+#include "core/optical_flow.hpp"
 #include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "core/output_map_json.hpp"
@@ -162,6 +163,22 @@ bool loadSettings(Settings& settings) {
     if (contrast != doc.end() && contrast->is_string()) {
         const std::string value = contrast->get<std::string>();
         result.uiContrast = value == "high" ? "high" : "standard";
+    }
+    auto flowMode = doc.find("flowMode");
+    if (flowMode != doc.end() && flowMode->is_string()) {
+        result.flowMode = flow::modeName(flow::modeFromName(flowMode->get<std::string>(), flow::Mode::Off));
+    }
+    auto flowQuality = doc.find("flowQuality");
+    if (flowQuality != doc.end() && flowQuality->is_string()) {
+        result.flowQuality = flow::tierName(flow::tierFromName(flowQuality->get<std::string>(), flow::Tier::Balanced));
+    }
+    auto flowBudget = doc.find("flowBudgetMb");
+    if (flowBudget != doc.end() && flowBudget->is_number_integer()) {
+        result.flowBudgetMb = flow::clampBudgetMb(flowBudget->get<int>());
+    }
+    auto flowShutter = doc.find("flowShutterPercent");
+    if (flowShutter != doc.end() && flowShutter->is_number_integer()) {
+        result.flowShutterPercent = std::clamp(flowShutter->get<int>(), 0, 100);
     }
     result.colorStage = boolean("colorStage", false);
     auto colorLut = doc.find("colorLut");
@@ -449,6 +466,18 @@ bool saveSettings(const Settings& settings) {
     }
     if (settings.uiKeyboardNav) {
         doc["uiKeyboardNav"] = true;
+    }
+    if (flow::modeFromName(settings.flowMode, flow::Mode::Off) != flow::Mode::Off) {
+        doc["flowMode"] = flow::modeName(flow::modeFromName(settings.flowMode, flow::Mode::Off));
+    }
+    if (flow::tierFromName(settings.flowQuality, flow::Tier::Balanced) != flow::Tier::Balanced) {
+        doc["flowQuality"] = flow::tierName(flow::tierFromName(settings.flowQuality, flow::Tier::Balanced));
+    }
+    if (settings.flowBudgetMb != flow::kDefaultBudgetMb) {
+        doc["flowBudgetMb"] = flow::clampBudgetMb(settings.flowBudgetMb);
+    }
+    if (settings.flowShutterPercent != 50) {
+        doc["flowShutterPercent"] = std::clamp(settings.flowShutterPercent, 0, 100);
     }
     if (settings.colorStage) {
         doc["colorStage"] = true;

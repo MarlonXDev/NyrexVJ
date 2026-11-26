@@ -1,9 +1,11 @@
 #pragma once
 
+#include "core/optical_flow.hpp"
 #include "core/playhead.hpp"
 #include "media/playback_driver.hpp"
 #include "media/video_redirect.hpp"
 #include "media/video_decoder.hpp"
+#include "render/flow_session.hpp"
 #include "render/gl_util.hpp"
 #include "render/video_gpu.hpp"
 #include "scene3d/scene_model.hpp"
@@ -47,12 +49,12 @@ public:
     const std::string& label() const { return label_; }
     const std::string& path() const { return path_; }
     const std::string& error() const { return error_; }
-    GLuint texture() const { return uploader_ ? uploader_->texture() : texture_; }
+    GLuint texture() const { return flowTexture_ != 0 ? flowTexture_ : (uploader_ ? uploader_->texture() : texture_); }
     int width() const;
     int height() const;
-    float scaleX() const { return uploader_ ? uploader_->scaleX() : 1.0f; }
-    float scaleY() const { return uploader_ ? uploader_->scaleY() : 1.0f; }
-    bool ycocg() const { return uploader_ && uploader_->ycocg(); }
+    float scaleX() const { return flowTexture_ != 0 ? 1.0f : (uploader_ ? uploader_->scaleX() : 1.0f); }
+    float scaleY() const { return flowTexture_ != 0 ? 1.0f : (uploader_ ? uploader_->scaleY() : 1.0f); }
+    bool ycocg() const { return flowTexture_ == 0 && uploader_ && uploader_->ycocg(); }
     bool premultiplied() const { return !video_; }
     const VideoInfo& videoInfo() const { return info_; }
     unsigned long long gpuBytes() const;
@@ -63,6 +65,10 @@ public:
     bool safeUpload() const { return safeUpload_; }
     void setVideoOptions(const VideoOptions& options);
     const VideoOptions& videoOptions() const { return options_; }
+    void setFlowSettings(const flow::Settings& settings);
+    flow::Settings flowSettings() const { return flowSettings_; }
+    FlowStatus flowStatus() const;
+    bool flowEngaged() const { return flowTexture_ != 0; }
     double lastClock() const { return clock_; }
     bool convertedActive() const { return convertedActive_; }
     bool convertedRetired() const { return convertedRetired_; }
@@ -89,6 +95,8 @@ private:
     void serviceUpgrade();
     void retireConverted(const std::string& reason);
     void destroyTexture();
+    void forgetFrames();
+    bool presentFlow(const std::shared_ptr<const VideoFrame>& frame, double seconds);
     void createTexture(int width, int height, const uint8_t* pixels, bool mipmaps);
 
     std::string label_;
@@ -107,6 +115,9 @@ private:
     VideoGpu* gpu_ = nullptr;
     VideoOptions options_;
     std::unique_ptr<VideoUploader> uploader_;
+    std::unique_ptr<FlowSession> flow_;
+    flow::Settings flowSettings_;
+    GLuint flowTexture_ = 0;
     double clock_ = 0.0;
     double lastBeat_ = 0.0;
     PlaybackDriver driver_;

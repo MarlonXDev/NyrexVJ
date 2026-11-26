@@ -597,6 +597,7 @@ void App::drawPerformancePage() {
 
     drawVideoSettings();
     drawColorSettings();
+    drawFlowSettings();
     drawConversionSettings();
     drawVideoMonitor();
 

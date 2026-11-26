@@ -2658,6 +2658,105 @@
           "criteria": "Proposed: the reported depth is stated honestly (a 10 bit window is reported as such or as 8 bit, never guessed) and the selftests pass on Windows. This only documents the real state; no 10 bit output is promised."
         }
       ]
+    },
+    {
+      "id": "optical-flow",
+      "title": "Optical flow: motion estimation, frame interpolation, motion blur and the vector view for video clips, and what they do on real footage, real graphics cards and next to other programs",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/FLOW.md",
+        "docs/adr/0047-optical-flow.md",
+        "docs/MEDIA.md",
+        "docs/INTERFACES.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/TESTING.md",
+        "docs/manual/manual.en.md"
+      ],
+      "sources": [
+        "src/core/optical_flow.cpp",
+        "src/core/flow_synth.cpp",
+        "src/core/settings.cpp",
+        "src/media/frame_luma.cpp",
+        "src/media/flow_worker.cpp",
+        "src/media/video_decoder.cpp",
+        "src/render/flow_interp.cpp",
+        "src/render/flow_session.cpp",
+        "src/render/media_player.cpp",
+        "src/render/engine.cpp",
+        "src/app/ui_flow.cpp",
+        "src/app/flow_selftest.cpp",
+        "tests/test_flow.cpp",
+        "scripts/make_flow_test_clips.py"
+      ],
+      "automated": [
+        {
+          "id": "A-FLOW-1",
+          "kind": "ctest",
+          "name": "nvj_flow_tests",
+          "note": "pictures of every frame layout to brightness, the motion estimate on translations, fast motion, static and flat pictures at all three tiers, hard cuts (to black, to a dark copy, between two textured shots), fades and dissolves, pair planning for gaps, order, loops and backwards playback, the governor that lowers the tier, the memory budget and its ceiling, the synthesis against a known 60 frames per second frame, motion blur, the vector picture, moving layers, alpha, frame drops, determinism and the settings keys with damaged values; no OpenGL"
+        },
+        {
+          "id": "A-FLOW-2",
+          "kind": "cli",
+          "command": "NyrexVJ --fresh --no-update-check --no-welcome --flow-selftest tests/data --bench-out flow.json",
+          "note": "the real player with four generated clips (30 and 60 frames per second, a hard cut, a variable frame rate): the feature off creates nothing; 30 to 60 and half speed compared with the real 60 frames per second clip; exact frames bit identical to normal playback; the hard cut equals normal playback; the gap of a variable frame rate and backwards playback fall back with a reason; a full memory budget switches the feature off for the clip; skipped frames; motion blur and the vector view change the picture; a clip with alpha; the cost per step and the state of OpenGL afterwards; needs FFmpeg (skipped without, a failure when NYREXVJ_REQUIRE_VIDEO is set); on a virtual screen with software OpenGL"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-FLOW-1",
+          "title": "Interpolation and slow motion on real footage on a real graphics card",
+          "needs": "A PC with a real graphics card, a 1080p output or projector, and real clips: a 24, 25 or 30 frames per second shot with people, one with water or smoke, one with fine particles or a repeating pattern, and one with quick camera movement",
+          "steps": [
+            "Open Settings, Performance, Optical flow and choose Interpolate frames with Balanced.",
+            "Play each clip at speed 1 on a 60 Hz output, then at 0.5 and 0.25, and switch the mode Off and On again while watching the same part.",
+            "Repeat with Fast and Fine and with Motion blur at shutter 50 and 100 percent, and look at the vector view for each clip.",
+            "Watch the video list for state, quality, analysis time and the counters while the clip plays."
+          ],
+          "measure": "for each clip and tier: whether the motion is smoother than with the mode off, where halos, wobble or smearing show (faces, borders, repeating patterns), the analysis time and graphics memory in the list, and whether the picture ever looks worse than the plain picture; screen recordings of both",
+          "criteria": "Proposed: with Balanced the motion looks smoother than the plain picture on most clips, no clip looks clearly broken, and where the analysis cannot cope the picture falls back to the plain one. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-FLOW-2",
+          "title": "Variable frame rate, loops, cuts and fades in real files, and the cost at 1080p and 4K",
+          "needs": "A PC with a real graphics card, a phone video with a variable frame rate, a clip that loops, an edited clip with hard cuts and dissolves, and 1080p and 4K versions of one clip",
+          "steps": [
+            "Play each file in Interpolate mode and look for judder, a picture that jumps back at the loop point, and wrong pictures at the cuts and fades.",
+            "Play the 1080p and the 4K clip with Fast, Balanced and Fine and read analysis time, pending and held counts and memory in the video list.",
+            "Raise the number of playing videos until the memory limit refuses one, and check the reason in the list.",
+            "Run NyrexVJ --flow-selftest tests/data --bench-out flow.json on that PC and keep the file."
+          ],
+          "measure": "the analysis time per pair at 1080p and 4K for each tier, how often pairs were late (pending) or held, whether any cut or loop shows a blended picture, the tier the governor settles on, and the report of the selftest",
+          "criteria": "Proposed: the picture never shows a blend across a hard cut or the loop point, the governor reaches a tier that keeps pairs on time at 1080p, and the memory refusal is clear. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-FLOW-3",
+          "title": "Optical flow while VRChat runs on the same PC",
+          "needs": "A PC that runs VRChat and NyrexVJ together, a normal VRChat world with the headset or desktop mode, one clip for the output",
+          "steps": [
+            "Run VRChat in a busy world and NyrexVJ with a 30 frames per second clip in Interpolate mode on an output, and watch the frame time monitor of NyrexVJ and the frame rate of VRChat for ten minutes.",
+            "Do the same with the mode Off and note the difference in both programs.",
+            "Repeat with Fast and with Fine and note when the governor lowers the tier or switches the feature off."
+          ],
+          "measure": "frame time and late frames of NyrexVJ and the frame rate of VRChat with the mode off and on at each tier, the tier the governor settles on, and any stutter you can see or hear",
+          "criteria": "Proposed: with the feature on neither program gets visibly worse than with it off, or the governor lowers the tier or switches the feature off before it does. The maintainer sets the real limit after the first runs."
+        },
+        {
+          "id": "M-FLOW-4",
+          "title": "The selftest and the settings page on Windows",
+          "needs": "A Windows PC with the release build and FFmpeg",
+          "steps": [
+            "Run NyrexVJ --flow-selftest tests/data --bench-out flow.json with NYREXVJ_REQUIRE_VIDEO set to 1 and read the checks.",
+            "Open Settings, Performance, Optical flow, switch the modes, tiers, the memory limit and the shutter, play a clip and look at the video list.",
+            "Close the program with the mode on, start it again and check that the settings came back."
+          ],
+          "measure": "the result of every selftest check, the numbers in the report (analysis time, frame time, memory) and anything in the settings page that looks wrong",
+          "criteria": "Proposed: all checks pass on Windows and the settings page works as described. The maintainer sets the real limit after the first runs."
+        }
+      ]
     }
   ]
 }

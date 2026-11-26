@@ -66,7 +66,7 @@
 </ul>
 <h4>Your own content</h4><ul>
 <li><a href="video.html" aria-current="page">Video and image clips</a>
-<ul><li><a href="#add-media">Adding files</a></li><li><a href="#ffmpeg">FFmpeg</a></li><li><a href="#playback">Playback controls</a></li><li><a href="#prewarm">Smooth clip changes</a></li><li><a href="#dxv">DXV videos</a></li><li><a href="#decoder">Choosing the video decoder</a></li></ul>
+<ul><li><a href="#add-media">Adding files</a></li><li><a href="#ffmpeg">FFmpeg</a></li><li><a href="#playback">Playback controls</a></li><li><a href="#prewarm">Smooth clip changes</a></li><li><a href="#dxv">DXV videos</a></li><li><a href="#decoder">Choosing the video decoder</a></li><li><a href="#video-flow">Smoother motion with optical flow</a></li></ul>
 </li>
 <li><a href="shaders.html">Your own shaders</a>
 </li>
@@ -160,7 +160,7 @@
 </ul>
 <h4>Your own content</h4><ul>
 <li><a href="video.html" aria-current="page">Video and image clips</a>
-<ul><li><a href="#add-media">Adding files</a></li><li><a href="#ffmpeg">FFmpeg</a></li><li><a href="#playback">Playback controls</a></li><li><a href="#prewarm">Smooth clip changes</a></li><li><a href="#dxv">DXV videos</a></li><li><a href="#decoder">Choosing the video decoder</a></li></ul>
+<ul><li><a href="#add-media">Adding files</a></li><li><a href="#ffmpeg">FFmpeg</a></li><li><a href="#playback">Playback controls</a></li><li><a href="#prewarm">Smooth clip changes</a></li><li><a href="#dxv">DXV videos</a></li><li><a href="#decoder">Choosing the video decoder</a></li><li><a href="#video-flow">Smoother motion with optical flow</a></li></ul>
 </li>
 <li><a href="shaders.html">Your own shaders</a>
 </li>
@@ -217,8 +217,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Your own content</p>
 <h1>Video and image clips</h1>
-<p class="meta">Chapter 15 of 38 &middot; 3 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#add-media">Adding files</a><a href="#ffmpeg">FFmpeg</a><a href="#playback">Playback controls</a><a href="#prewarm">Smooth clip changes</a><a href="#dxv">DXV videos</a><a href="#decoder">Choosing the video decoder</a></nav>
+<p class="meta">Chapter 15 of 38 &middot; 5 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#add-media">Adding files</a><a href="#ffmpeg">FFmpeg</a><a href="#playback">Playback controls</a><a href="#prewarm">Smooth clip changes</a><a href="#dxv">DXV videos</a><a href="#decoder">Choosing the video decoder</a><a href="#video-flow">Smoother motion with optical flow</a></nav>
 <h2 id="add-media"><a class="anchor" href="#add-media" aria-label="Link">#</a>Adding files</h2>
 <p>Put images and videos into the media folder, or drag them onto the NyrexVJ window. Dragged files are copied into the folder in the background, up to 256 MiB each, and appear in the Library under Media. Images are PNG, JPG, JPEG, BMP, TGA and GIF (first frame). Videos are MP4, MOV, M4V, MKV, AVI and WEBM. At most 128 media clips are listed.</p>
 <p>Images with transparency keep it, so a logo with soft edges lies over the layers below without a halo. The picture is fitted into the layer with its own proportions and nothing is stretched. The Scale slider zooms it. Sound in videos is ignored.</p>
@@ -234,6 +234,14 @@
 <p>DXV videos from Resolume take a lot of processor time. NyrexVJ can make HAP copies of them in the background and plays the copy through the compressed HAP path, which needs almost no processor time and a fraction of the video memory. Settings, Performance, Convert DXV videos to HAP has the import mode Off, Ask (the default) or Automatic, the HAP format and a size limit for the cache. The original files stay untouched and the video keeps playing as it is until the copy is ready. HAP Q with transparency is not supported.</p>
 <h2 id="decoder"><a class="anchor" href="#decoder" aria-label="Link">#</a>Choosing the video decoder</h2>
 <p>Settings, Performance, Video playback lets you pick the decoder: Automatic, Prefer hardware or Force software. A button tests the hardware decoding on your computer. The video monitor lists every playing video with its codec, decode and upload times, dropped and late frames and its memory. If a video looks flat because it is HDR, the monitor says so: HDR is shown without tone mapping unless you switch on Tone map HDR videos to SDR, see the chapter on colour.</p>
+<h2 id="video-flow"><a class="anchor" href="#video-flow" aria-label="Link">#</a>Smoother motion with optical flow</h2>
+<p>A video with 30 frames per second shown on a 60 Hz output shows every picture twice, and slow motion shows every picture for many frames. Optical flow measures how the picture moves between two video frames and can use that to draw the pictures in between. It is experimental and off by default. While it is off the videos play exactly as before and nothing extra is created.</p>
+<p>Open Settings, Performance, Optical flow mode (experimental) and choose a mode:</p>
+<ul><li>Interpolate frames makes a new picture for the time between two real frames. A 30 frames per second clip then moves smoothly on a 60 Hz output, and a clip at speed 0.5 shows new pictures instead of repeating each one.</li><li>Motion blur smears the picture along its motion. Shutter (%) says how long the virtual shutter is open: 0 gives no blur, 100 smears over the whole time between two frames.</li><li>Show motion vectors draws the measured motion as colour. It is only meant for checking what the analysis sees.</li></ul>
+<p>Quality chooses Fast, Balanced or Fine. The processor looks at a small copy of the picture on its own thread, and finer levels find small and quick movement better but need more time. If the analysis cannot keep up, it drops to the next lower level by itself and switches off for that video at the lowest level. Graphics memory limit (MB) is how much graphics memory all videos together may use for this; a video that needs more is shown without optical flow and says why.</p>
+<p>The list under the settings shows every playing video with its state, its quality level, the analysis time, the pictures made and held and its memory. If a video is shown normally, the line Why says the reason, for example that it plays backwards or that the memory limit is too small.</p>
+<p>What to expect:</p>
+<ul><li>A picture that sits exactly on a real frame is that frame, unchanged. Only the pictures in between are new.</li><li>A hard cut stays a cut: the current picture is held across it. A quick fade to black can be read as a cut and then also holds the picture.</li><li>Where the motion cannot be measured well, for example at the border of a moving object over another background, the result falls back to the nearer real picture, and a soft halo can show.</li><li>Backwards playback, compressed sources such as HAP uploaded directly, and gaps in the frame times of a variable frame rate video are shown as before.</li><li>Optical flow was tested on generated clips with software rendering only. Try it on your own clips and your own graphics card before you rely on it in a show, and keep an eye on the video monitor next to it.</li></ul>
 <nav class="pager" aria-label="Pager"><a class="prev" href="modulation.html"><small>Previous</small><span>Macros, LFOs and the beat grid</span></a><a class="next" href="shaders.html"><small>Next</small><span>Your own shaders</span></a></nav>
 <p class="small help">Found a mistake or something missing? <a href="https://github.com/MarlonXDev/NyrexVJ/issues" target="_blank" rel="noopener noreferrer">Tell us on GitHub</a>. The same manual is built into the program, so you have it without internet. Open it with F1 or from the Help menu, then User manual.</p>
 </main>

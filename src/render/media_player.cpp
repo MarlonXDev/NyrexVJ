@@ -15,6 +15,58 @@ MediaPlayer::MediaPlayer(std::string label, std::string path, bool video, VideoG
     }
 }
 
+void MediaPlayer::forgetFrames() {
+    lastFrame_ = 0;
+    flowTexture_ = 0;
+    if (flow_) {
+        flow_->reset();
+    }
+}
+
+void MediaPlayer::setFlowSettings(const flow::Settings& settings) {
+    const flow::Settings next = flow::sanitised(settings);
+    if (next == flowSettings_) {
+        return;
+    }
+    flowSettings_ = next;
+    if (next.mode == flow::Mode::Off) {
+        flowTexture_ = 0;
+        lastFrame_ = 0;
+        flow_.reset();
+        return;
+    }
+    if (flow_) {
+        flow_->configure(next);
+    }
+}
+
+FlowStatus MediaPlayer::flowStatus() const {
+    if (flow_) {
+        return flow_->status();
+    }
+    FlowStatus status;
+    status.mode = flowSettings_.mode;
+    status.requested = flowSettings_.tier;
+    status.current = flowSettings_.tier;
+    status.state = flowSettings_.mode == flow::Mode::Off ? "off" : "waiting for the first picture";
+    status.budgetBytes = flow::globalBudget().limit();
+    status.budgetUsed = flow::globalBudget().used();
+    return status;
+}
+
+bool MediaPlayer::presentFlow(const std::shared_ptr<const VideoFrame>& frame, double seconds) {
+    if (!flow_) {
+        flow_ = std::make_unique<FlowSession>(*gpu_);
+        flow_->configure(flowSettings_);
+    }
+    const GLuint texture = flow_->step(*decoder_, *uploader_, frame, seconds, PlaybackDriver::periodOf(info_));
+    if (flow_->uploaderFrame() != 0) {
+        lastFrame_ = flow_->uploaderFrame();
+    }
+    flowTexture_ = texture;
+    return texture != 0;
+}
+
 MediaPlayer::~MediaPlayer() {
     if (imageLoad_.valid()) {
         imageLoad_.wait();
@@ -170,7 +222,7 @@ MediaState MediaPlayer::poll() {
         }
         decoder_ = std::move(load.decoder);
         info_ = decoder_->info();
-        lastFrame_ = 0;
+        forgetFrames();
         driver_.reset();
         state_ = MediaState::Ready;
         return state_;
@@ -217,6 +269,12 @@ void MediaPlayer::stepFrames(int frames) {
 
 bool MediaPlayer::present(double seconds) {
     const std::shared_ptr<const VideoFrame> frame = decoder_->frameAt(seconds);
+    flowTexture_ = 0;
+    if (flowSettings_.mode != flow::Mode::Off && gpu_ != nullptr && !safeUpload_) {
+        if (presentFlow(frame, seconds)) {
+            return true;
+        }
+    }
     if (frame && frame->id != lastFrame_) {
         if (uploader_->present(*frame)) {
             lastFrame_ = frame->id;
@@ -227,7 +285,7 @@ bool MediaPlayer::present(double seconds) {
             decoder_.reset();
             driver_.reset();
             state_ = MediaState::Idle;
-            lastFrame_ = 0;
+            forgetFrames();
             return false;
         } else {
             error_ = "The picture could not be uploaded to the graphics card";
@@ -267,7 +325,7 @@ bool MediaPlayer::update(double clock, double beat) {
             decoder_.reset();
             driver_.reset();
             state_ = MediaState::Idle;
-            lastFrame_ = 0;
+            forgetFrames();
             return false;
         }
         if (!hardwareRetired_ && decoder_->status().path == DecodePath::Hardware) {
@@ -278,7 +336,7 @@ bool MediaPlayer::update(double clock, double beat) {
             decoder_.reset();
             driver_.reset();
             state_ = MediaState::Idle;
-            lastFrame_ = 0;
+            forgetFrames();
             return false;
         }
         error_ = decoder_->failure();
@@ -314,7 +372,7 @@ void MediaPlayer::serviceUpgrade() {
         }
         decoder_ = std::move(load.decoder);
         info_ = next;
-        lastFrame_ = 0;
+        forgetFrames();
         openPath_ = path;
         convertedActive_ = true;
         logLine("Video clip '" + label_ + "': switched to the converted HAP copy");
@@ -370,7 +428,7 @@ void MediaPlayer::release() {
     }
     destroyTexture();
     state_ = MediaState::Idle;
-    lastFrame_ = 0;
+    forgetFrames();
     driver_.reset();
 }
 
@@ -408,7 +466,7 @@ UploadRoute MediaPlayer::uploadRoute() const {
 
 unsigned long long MediaPlayer::gpuBytes() const {
     if (uploader_) {
-        return uploader_->memory().total();
+        return uploader_->memory().total() + (flow_ ? flow_->gpuBytes() : 0ull);
     }
     if (texture_ == 0) {
         return 0;

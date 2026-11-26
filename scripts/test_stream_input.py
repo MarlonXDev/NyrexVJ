@@ -323,10 +323,43 @@ class Run:
     def wait_for(self, name, seconds):
         return self.event(name).wait(seconds)
 
+    def diagnose(self):
+        pid = self.process.pid
+        print("the program did not end in time, pid %d" % pid, flush=True)
+        try:
+            for tid in sorted(os.listdir("/proc/%d/task" % pid), key=int):
+                base = "/proc/%d/task/%s/" % (pid, tid)
+                parts = []
+                for name in ("comm", "wchan", "syscall"):
+                    try:
+                        with open(base + name, "r", errors="replace") as handle:
+                            parts.append(handle.read().strip().split(" ")[0])
+                    except OSError:
+                        parts.append("?")
+                print("    thread %s %s" % (tid, " ".join(parts)), flush=True)
+        except OSError:
+            pass
+        if shutil.which("gdb"):
+            command = ["gdb", "-p", str(pid), "-batch", "-ex", "thread apply all bt 14"]
+            for prefix in ([], ["sudo", "-n"]):
+                try:
+                    result = subprocess.run(prefix + command, capture_output=True, text=True, errors="replace", timeout=90)
+                except (OSError, subprocess.TimeoutExpired):
+                    continue
+                lines = [line for line in result.stdout.splitlines() if line.startswith("#") or line.startswith("Thread")]
+                if lines:
+                    for line in lines[-160:]:
+                        print("    gdb " + line[:220], flush=True)
+                    break
+        print("    last lines of the program:", flush=True)
+        for line in self.lines[-30:]:
+            print("    | " + line[:200], flush=True)
+
     def finish(self, seconds):
         try:
             self.process.wait(timeout=seconds)
         except subprocess.TimeoutExpired:
+            self.diagnose()
             self.process.kill()
             self.process.wait()
         self.reader.join(timeout=3)
@@ -550,7 +583,10 @@ def survive_scenario(ctx, name, feeder):
         problems.append(crashed[0][:160])
     if run.event("live").is_set():
         problems.append("garbage was shown as a picture")
-    ctx.record(name, not problems, {"exitCode": code, "problems": problems})
+    details = {"exitCode": code, "logLines": len(run.lines), "problems": problems}
+    if problems:
+        details["lastLines"] = run.lines[-30:]
+    ctx.record(name, not problems, details)
 
 
 def feed_random(port, stop):

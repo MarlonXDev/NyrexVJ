@@ -146,7 +146,7 @@ jobs:
       - name: Install build and test packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0 binutils
+          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0 binutils gdb
 
       - name: Get the FFmpeg headers and libraries
         continue-on-error: true

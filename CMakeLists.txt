@@ -226,6 +226,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/ndi_runtime.cpp
     src/core/stream_url.cpp
     src/core/stream_clock.cpp
+    src/core/stoppable_thread.cpp
     src/core/ndi_receiver.cpp
     src/core/ndi_sender.cpp
     src/core/stage.cpp

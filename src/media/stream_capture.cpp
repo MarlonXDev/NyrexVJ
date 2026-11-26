@@ -1,6 +1,7 @@
 #include "media/stream_capture.hpp"
 
 #include "core/log.hpp"
+#include "core/stoppable_thread.hpp"
 #include "core/stream_clock.hpp"
 #include "media/ffmpeg_api.hpp"
 #include "media/live_convert.hpp"
@@ -22,6 +23,7 @@ namespace {
 constexpr double kProbeSeconds = 6.0;
 constexpr double kListenSeconds = 3600.0;
 constexpr double kKeyWaitSeconds = 2.0;
+constexpr double kStopWaitSeconds = 3.0;
 
 }
 
@@ -41,10 +43,10 @@ struct StreamCapture::Impl {
     stream::OpenPlan plan;
     std::string shown;
     std::string error;
-    std::thread thread;
     std::mutex wakeMutex;
     std::condition_variable wake;
     std::atomic<bool> stop{false};
+    std::atomic<const char*> phase{"idle"};
     std::atomic<double> deadline{0.0};
     std::atomic<unsigned long long> skipped{0};
     LiveFrameBox box;
@@ -122,6 +124,7 @@ struct StreamCapture::Impl {
         context->interrupt_callback.callback = &Impl::interrupted;
         context->interrupt_callback.opaque = this;
         deadline = steadySeconds() + (plan.waitsForPeer ? kListenSeconds : std::max(policy.connectTimeout, 4.0));
+        phase = "open";
         int result = api->avformat_open_input(&context, plan.url.c_str(), nullptr, &options);
         api->av_dict_free(&options);
         if (result < 0) {
@@ -131,6 +134,7 @@ struct StreamCapture::Impl {
         }
         s.format = context;
         deadline = steadySeconds() + kProbeSeconds;
+        phase = "probe";
         result = api->avformat_find_stream_info(s.format, nullptr);
         deadline = 0.0;
         if (result < 0) {
@@ -262,6 +266,7 @@ struct StreamCapture::Impl {
                 continue;
             }
             deadline = steadySeconds() + readLimit;
+            phase = "read";
             const int read = api->av_read_frame(session.format, session.packet);
             deadline = 0.0;
             if (read == AVERROR(EAGAIN)) {
@@ -303,12 +308,14 @@ struct StreamCapture::Impl {
                     continue;
                 }
             }
+            phase = "decode";
             const int sent = api->avcodec_send_packet(session.codec, session.packet);
             api->av_packet_unref(session.packet);
             if (sent < 0 && sent != AVERROR(EAGAIN)) {
                 continue;
             }
             while (api->avcodec_receive_frame(session.codec, session.frame) == 0) {
+                phase = "convert";
                 if (!stream::pictureSizeAllowed(session.frame->width, session.frame->height)) {
                     problem = "The picture size is not allowed for network streams: " + std::to_string(session.frame->width) + "x" + std::to_string(session.frame->height);
                     ++session.unsupported;
@@ -353,13 +360,15 @@ struct StreamCapture::Impl {
                 api->av_frame_unref(session.frame);
             }
         }
+        phase = "close";
         close(session);
+        phase = "ended";
         std::lock_guard<std::mutex> lock(statusMutex);
         status.state = LiveState::Idle;
     }
 };
 
-StreamCapture::StreamCapture() : impl_(std::make_unique<Impl>()) {}
+StreamCapture::StreamCapture() : impl_(std::make_shared<Impl>()) {}
 
 StreamCapture::~StreamCapture() {
     stop();
@@ -393,22 +402,26 @@ bool StreamCapture::start(const std::string& url, stream::Profile profile, const
         impl_->status.state = LiveState::Searching;
         impl_->status.source = impl_->shown;
     }
-    impl_->thread = std::thread([this]() { impl_->run(); });
+    impl_->phase = "start";
+    worker_.start([keep = impl_]() { keep->run(); });
     return true;
 }
 
 void StreamCapture::stop() {
-    if (impl_->thread.joinable()) {
+    if (worker_.running()) {
         impl_->stop = true;
         impl_->wake.notify_all();
-        impl_->thread.join();
+        if (!worker_.stop(kStopWaitSeconds)) {
+            logLine("Stream input did not stop within " + std::to_string(static_cast<int>(kStopWaitSeconds)) + " s and was left behind (last step: " + std::string(impl_->phase.load()) + "): " + impl_->shown);
+            impl_ = std::make_shared<Impl>();
+        }
     }
     std::lock_guard<std::mutex> lock(impl_->statusMutex);
     impl_->status.state = LiveState::Idle;
 }
 
 bool StreamCapture::running() const {
-    return impl_->thread.joinable();
+    return worker_.running();
 }
 
 bool StreamCapture::take(LiveFrame& out) {
@@ -436,7 +449,7 @@ struct StreamCapture::Impl {
     std::string error = "This build has no FFmpeg support, network streams are not available";
 };
 
-StreamCapture::StreamCapture() : impl_(std::make_unique<Impl>()) {}
+StreamCapture::StreamCapture() : impl_(std::make_shared<Impl>()) {}
 
 StreamCapture::~StreamCapture() = default;
 

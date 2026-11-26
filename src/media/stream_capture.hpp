@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/live_source.hpp"
+#include "core/stoppable_thread.hpp"
 #include "core/stream_url.hpp"
 
 #include <memory>
@@ -32,7 +33,8 @@ public:
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> impl_;
+    std::shared_ptr<Impl> impl_;
+    StoppableThread worker_;
 };
 
 }

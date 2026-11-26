@@ -4,7 +4,7 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
-KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-22 were added at 0.55.0; the other entries were not walked through again.
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-23 were added at 0.55.0; the other entries were not walked through again.
 
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
@@ -207,6 +207,15 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** manual tests `M-STREAM-4` and `M-STREAM-5` in [TESTING.md](TESTING.md); the line "NDI runtime:" in the NDI output settings shows what the runtime reports.
 - **Impact:** an NDI problem on a real machine would be a first finding, not a regression.
 - **Workaround:** check NDI with the free NDI Tools before the show; use Spout on Windows for a program on the same computer.
+
+### KI-23 One stream scenario ran into its time limit once in the continuous build, and the cause is not known
+
+- **Area:** live inputs, network streams, continuous build
+- **Known by:** the log of the first continuous build of the branch of version 0.55.0 (Linux job): the scenario `survive-corruption` of `scripts/test_stream_input.py` (damaged UDP data sent to a stream input) did not end and was stopped by the script after 150 seconds, while the eight other scenarios of the same run passed. The same scenario ended with exit code 1 in about 13 to 33 seconds in every run on the computer where the program was developed (more than 25 runs in a row, with two and with one processor core); a hang could not be reproduced there.
+- **What happens:** unknown. The suspects are a call into FFmpeg that does not return on damaged data, or the stopping of the stream thread. Since this version the stopping waits at most 3 seconds and then leaves the thread behind (log line "Stream input did not stop within 3 s"), and the script prints thread states, a backtrace (if `gdb` is there) and the last log lines when the program does not end in time. Whether the cause is fixed by this was not shown; it was only shown that the wait is bounded (`nvj_stream_tests`).
+- **Steps:** `python3 scripts/test_stream_input.py --binary build/NyrexVJ --ffmpeg PATH/TO/ffmpeg --scenario corruption`, repeated.
+- **Impact:** with **Allow network stream inputs** on and a sender that delivers damaged data, a stream input might stop delivering pictures without a message; the rest of the program is meant to go on. A left-behind thread keeps its memory until the program ends.
+- **Workaround:** leave the setting off (the default); if a stream hangs, take the clip out of its layer and put it back in, or restart the program.
 
 ## Limits of the evidence, not of the program
 

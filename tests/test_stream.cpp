@@ -1,17 +1,22 @@
 #include "check.hpp"
 
 #include "core/settings.hpp"
+#include "core/stoppable_thread.hpp"
 #include "core/stream_clock.hpp"
 #include "core/stream_url.hpp"
 
 #include <nlohmann/json.hpp>
 
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <memory>
 #include <string>
+#include <thread>
 
 namespace {
 
@@ -460,6 +465,82 @@ void testStoredAddressIsChecked() {
     CHECK(makeOpenPlan(open.url, Profile::Balanced).url.find("0.0.0.0:5000") != std::string::npos);
 }
 
+double secondsSince(const std::chrono::steady_clock::time_point& start) {
+    return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+}
+
+struct Gate {
+    std::atomic<bool> release{false};
+    std::atomic<bool> started{false};
+    std::atomic<bool> ended{false};
+};
+
+void waitFor(const std::atomic<bool>& flag, double seconds) {
+    const auto begin = std::chrono::steady_clock::now();
+    while (!flag.load() && secondsSince(begin) < seconds) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+}
+
+void testStoppableThread() {
+    nvj::StoppableThread idle;
+    CHECK(!idle.running());
+    CHECK(idle.stop(0.1));
+
+    const std::shared_ptr<Gate> polite = std::make_shared<Gate>();
+    nvj::StoppableThread worker;
+    worker.start([polite]() {
+        polite->started = true;
+        while (!polite->release.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        polite->ended = true;
+    });
+    CHECK(worker.running());
+    waitFor(polite->started, 2.0);
+    polite->release = true;
+    CHECK(worker.stop(2.0));
+    CHECK(polite->ended.load());
+    CHECK(!worker.running());
+
+    const std::shared_ptr<Gate> stuck = std::make_shared<Gate>();
+    worker.start([stuck]() {
+        stuck->started = true;
+        while (!stuck->release.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        stuck->ended = true;
+    });
+    waitFor(stuck->started, 2.0);
+    const auto begin = std::chrono::steady_clock::now();
+    CHECK(!worker.stop(0.3));
+    const double waited = secondsSince(begin);
+    CHECK(waited >= 0.25);
+    CHECK(waited < 2.0);
+    CHECK(!worker.running());
+    CHECK(!stuck->ended.load());
+
+    const std::shared_ptr<Gate> next = std::make_shared<Gate>();
+    worker.start([next]() {
+        next->started = true;
+        next->ended = true;
+    });
+    CHECK(worker.stop(2.0));
+    CHECK(next->ended.load());
+    CHECK(!stuck->ended.load());
+
+    stuck->release = true;
+    waitFor(stuck->ended, 2.0);
+    CHECK(stuck->ended.load());
+
+    const std::shared_ptr<Gate> quick = std::make_shared<Gate>();
+    worker.start([quick]() { quick->ended = true; });
+    waitFor(quick->ended, 2.0);
+    const auto instant = std::chrono::steady_clock::now();
+    CHECK(worker.stop(5.0));
+    CHECK(secondsSince(instant) < 1.0);
+}
+
 int main() {
     testAllowedAddresses();
     testRefusedAddresses();
@@ -477,5 +558,6 @@ int main() {
     testJitter();
     testSettings();
     testStoredAddressIsChecked();
+    testStoppableThread();
     return testing::finish();
 }

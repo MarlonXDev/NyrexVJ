@@ -97,7 +97,7 @@ A stream is untrusted data, and so is the address that someone types or pastes. 
 - **Ports.** A UDP address and an SRT `mode=listener` open a port. The page says so in orange and names the port (KI-21).
 - **Not hidden:** the address is stored in `settings.json` as typed, with its password (KI-20).
 
-Tested: `nvj_stream_tests` (244 checks) and the scenarios `reject-codec`, `reject-size`, `garbage` and `corruption`. The last two send random bytes and a damaged MPEG-TS over UDP to the receiver; the program is not ended by a signal, writes no crash text, shows no picture and exits with code 1 (the self test got no usable picture). This is not a fuzz test and does not prove the absence of faults in FFmpeg's demuxers and decoders.
+Tested: `nvj_stream_tests` (261 checks) and the scenarios `reject-codec`, `reject-size`, `garbage` and `corruption`. The last two send random bytes and a damaged MPEG-TS over UDP to the receiver; the program is not ended by a signal, writes no crash text, shows no picture and exits with code 1 (the self test got no usable picture); on the development computer this held in every run, but in the first continuous build the `corruption` scenario did not end within its limit once, and the cause is not known (KI-23). This is not a fuzz test and does not prove the absence of faults in FFmpeg's demuxers and decoders.
 
 ## Latency, jitter, drift, colour, alpha, audio, reconnect
 
@@ -142,6 +142,7 @@ Other scenarios:
 - `reject-size`: a stream of 8400x64 is refused with "The picture size is not allowed for network streams: 8400x64".
 - `garbage`, `corruption`: see Security.
 - Release after use: when the clip is removed from its layer the input and its graphics memory are released (`releasedWhenUnused`), and the thread count is not above its value before.
+- Stopping: a stream input is asked to stop through the interrupt of every blocking FFmpeg call; if its thread has not ended after 3 seconds it is left behind, a log line names the step it was in (`open`, `probe`, `read`, `decode`, `convert` or `close`), and the next start gets a fresh input. This bound was tested with a stand-in thread that never ends (`nvj_stream_tests`), not with a real hang of FFmpeg, which has not been seen on the development computer (KI-23).
 
 The rate is taken from the time stamps of the stream over windows of at least one second; an earlier version computed it from arrival times and showed 34.7 for a burst after the Smooth profile's buffer, which was a measuring fault, not extra pictures.
 

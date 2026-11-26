@@ -75,7 +75,9 @@ StageLinq is the network protocol of Denon DJ players and mixers (Prime series, 
 - The beat information needs a long, stateful TCP exchange; the safe subset (listen only, no file transfer, no state writes) is not small, and a wrong implementation could confuse the players of a live set.
 - It cannot be tested without a Denon player and mixer.
 
-What works today for Denon gear: send MIDI clock from the mixer or a DAW, or use the audio analysis. If a small, safe, passive subset becomes possible (for example from a published protocol description or captured traffic from a real device), it can be added as a new source behind the existing beat clock without changing anything else: a source only has to report `SyncObservation`s.
+What works today for Denon gear: send MIDI clock from the mixer or a DAW, or use the audio analysis.
+
+**Analysis at 0.56.0.** The evaluation above was checked again and extended with sources in [STAGELINQ.md](STAGELINQ.md) (risks, what the public descriptions say and do not say, a proposal in steps, the tests and the hardware checks each step would need) and [ADR 0050](adr/0050-stagelinq-analysis-first.md). The conclusion is the same: StageLinq is still not built. Nothing is implemented until the maintainer approves it, and nothing is sent to DJ equipment before a Denon device was available to check it. If a small, safe, passive subset becomes possible (for example from a published protocol description or captured traffic from a real device), it can be added as a new source behind the existing beat clock without changing anything else: a source only has to report `SyncObservation`s.
 
 ## Output frame lock
 

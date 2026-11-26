@@ -2703,7 +2703,7 @@ const Translation kJapanese[] = {
     {"Shortcut", "ショートカット"},
     {"Smaller interface", "インターフェースを小さく"},
     {"That shortcut is already used", "そのショートカットはすでに使われています"},
-    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "保存されていたウィンドウレイアウトが破損していました。コピーを layout_v7.ini.bad として残し、既定のレイアウトに戻しました。"},
+    {"The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored.", "保存されていたウィンドウレイアウトが破損していました。コピーを layout_v8.ini.bad として残し、既定のレイアウトに戻しました。"},
     {"The shortcuts could not be saved", "ショートカットを保存できませんでした"},
     {"The window layout was reset to the default.", "ウィンドウレイアウトを既定に戻しました。"},
     {"View", "表示"},

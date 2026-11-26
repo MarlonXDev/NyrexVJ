@@ -65,7 +65,7 @@ class Suite:
     def case_first_run(self):
         folder = self.folder()
         code, _ = self.start(folder)
-        layout = os.path.join(folder, "layout_v7.ini")
+        layout = os.path.join(folder, "layout_v8.ini")
         ok = code == 0 and os.path.isfile(layout) and "[Window]" in read(layout)
         self.record("a first start exits cleanly and writes a layout", ok, "exit %d" % code)
         return folder
@@ -73,25 +73,25 @@ class Suite:
     def case_damaged_layout(self):
         folder = self.folder()
         garbage = "this is not a layout\n\x01\x02 = = =\n"
-        write(os.path.join(folder, "layout_v7.ini"), garbage)
+        write(os.path.join(folder, "layout_v8.ini"), garbage)
         code, _ = self.start(folder)
-        bad = os.path.join(folder, "layout_v7.ini.bad")
-        fresh = os.path.join(folder, "layout_v7.ini")
+        bad = os.path.join(folder, "layout_v8.ini.bad")
+        fresh = os.path.join(folder, "layout_v8.ini")
         self.record("a damaged layout is set aside and the start still works", code == 0 and os.path.isfile(bad) and read(bad) == garbage, "exit %d" % code)
         self.record("a new usable layout is written after a damaged one", os.path.isfile(fresh) and "[Window]" in read(fresh) and read(fresh) != garbage, "layout present: %s" % os.path.isfile(fresh))
 
     def case_wild_layout(self):
         folder = self.folder()
         wild = "[Window][Deck]\nPos=99999999,99999999\nSize=10,10\n\n"
-        write(os.path.join(folder, "layout_v7.ini"), wild)
+        write(os.path.join(folder, "layout_v8.ini"), wild)
         code, _ = self.start(folder)
-        self.record("a layout with positions far outside any screen is set aside", code == 0 and os.path.isfile(os.path.join(folder, "layout_v7.ini.bad")), "exit %d" % code)
+        self.record("a layout with positions far outside any screen is set aside", code == 0 and os.path.isfile(os.path.join(folder, "layout_v8.ini.bad")), "exit %d" % code)
 
     def case_good_layout_kept(self):
         folder = self.folder()
-        write(os.path.join(folder, "layout_v7.ini"), GOOD_LAYOUT)
+        write(os.path.join(folder, "layout_v8.ini"), GOOD_LAYOUT)
         code, _ = self.start(folder)
-        self.record("a usable layout is not set aside", code == 0 and not os.path.exists(os.path.join(folder, "layout_v7.ini.bad")), "exit %d" % code)
+        self.record("a usable layout is not set aside", code == 0 and not os.path.exists(os.path.join(folder, "layout_v8.ini.bad")), "exit %d" % code)
 
     def case_damaged_settings(self):
         folder = self.folder()
@@ -159,9 +159,9 @@ class Suite:
         good = json.dumps({"version": 1, "bindings": {"blackout": "Ctrl+K"}}, indent=2) + "\n"
         write(os.path.join(folder, "shortcuts.json"), good)
         write(os.path.join(folder, "settings.json"), json.dumps({"uiScale": 1.5}))
-        write(os.path.join(folder, "layout_v7.ini"), GOOD_LAYOUT)
+        write(os.path.join(folder, "layout_v8.ini"), GOOD_LAYOUT)
         code, _ = self.start(folder, ["--reset-layout"])
-        bad = os.path.join(folder, "layout_v7.ini.bad")
+        bad = os.path.join(folder, "layout_v8.ini.bad")
         after = load_json(os.path.join(folder, "settings.json")) or {}
         self.record("--reset-layout sets the layout aside", code == 0 and os.path.isfile(bad) and read(bad) == GOOD_LAYOUT, "exit %d" % code)
         self.record("--reset-layout keeps shortcuts and interface size", read(os.path.join(folder, "shortcuts.json")) == good and abs(after.get("uiScale", 1.0) - 1.5) < 0.001, "uiScale %s" % after.get("uiScale"))
@@ -170,10 +170,10 @@ class Suite:
         folder = self.folder()
         write(os.path.join(folder, "shortcuts.json"), json.dumps({"version": 1, "bindings": {"blackout": "Ctrl+K"}}))
         write(os.path.join(folder, "settings.json"), json.dumps({"uiScale": 2.0, "uiContrast": "high", "uiAutoScale": True, "uiKeyboardNav": True, "theme": "Blue"}))
-        write(os.path.join(folder, "layout_v7.ini"), GOOD_LAYOUT)
+        write(os.path.join(folder, "layout_v8.ini"), GOOD_LAYOUT)
         code, _ = self.start(folder, ["--reset-interface"])
         after = load_json(os.path.join(folder, "settings.json")) or {}
-        self.record("--reset-interface sets layout and shortcuts aside", code == 0 and os.path.isfile(os.path.join(folder, "layout_v7.ini.bad")) and os.path.isfile(os.path.join(folder, "shortcuts.json.bad")), "exit %d" % code)
+        self.record("--reset-interface sets layout and shortcuts aside", code == 0 and os.path.isfile(os.path.join(folder, "layout_v8.ini.bad")) and os.path.isfile(os.path.join(folder, "shortcuts.json.bad")), "exit %d" % code)
         self.record("--reset-interface restores size, contrast and keyboard options", abs(after.get("uiScale", 1.0) - 1.0) < 0.001 and after.get("uiContrast", "standard") == "standard" and not after.get("uiAutoScale", False) and not after.get("uiKeyboardNav", False), json.dumps({k: after.get(k) for k in ("uiScale", "uiContrast", "uiAutoScale", "uiKeyboardNav")}))
         self.record("--reset-interface keeps the other settings", after.get("theme") == "Blue", "theme %s" % after.get("theme"))
 
@@ -188,16 +188,16 @@ class Suite:
 
     def case_binary_files(self):
         folder = self.folder()
-        for name in ("layout_v7.ini", "settings.json", "shortcuts.json"):
+        for name in ("layout_v8.ini", "settings.json", "shortcuts.json"):
             with open(os.path.join(folder, name), "wb") as handle:
                 handle.write(bytes(range(256)) * 8)
         code, _ = self.start(folder)
         names = sorted(os.listdir(folder))
-        self.record("binary garbage in all three files does not stop the start", code == 0 and all(os.path.exists(os.path.join(folder, n + ".bad")) for n in ("layout_v7.ini", "settings.json", "shortcuts.json")), "exit %d, files %s" % (code, ",".join(names)))
+        self.record("binary garbage in all three files does not stop the start", code == 0 and all(os.path.exists(os.path.join(folder, n + ".bad")) for n in ("layout_v8.ini", "settings.json", "shortcuts.json")), "exit %d, files %s" % (code, ",".join(names)))
 
     def case_empty_files(self):
         folder = self.folder()
-        for name in ("layout_v7.ini", "settings.json", "shortcuts.json"):
+        for name in ("layout_v8.ini", "settings.json", "shortcuts.json"):
             write(os.path.join(folder, name), "")
         code, _ = self.start(folder)
         self.record("empty files do not stop the start", code == 0, "exit %d" % code)

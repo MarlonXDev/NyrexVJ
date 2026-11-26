@@ -2703,7 +2703,7 @@ const Translation kSpanish[] = {
     {"Shortcut", "Atajo"},
     {"Smaller interface", "Interfaz más pequeña"},
     {"That shortcut is already used", "Ese atajo ya está en uso"},
-    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "La disposición de ventanas guardada estaba dañada. Se conservó una copia como layout_v7.ini.bad y se restauró la disposición predeterminada."},
+    {"The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored.", "La disposición de ventanas guardada estaba dañada. Se conservó una copia como layout_v8.ini.bad y se restauró la disposición predeterminada."},
     {"The shortcuts could not be saved", "No se pudieron guardar los atajos"},
     {"The window layout was reset to the default.", "La disposición de ventanas se restableció a la predeterminada."},
     {"View", "Ver"},

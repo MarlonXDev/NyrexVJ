@@ -1468,7 +1468,7 @@ A power cut or a hand edit can leave a file unreadable. At the start NyrexVJ che
 
 | File | What happens when it is damaged |
 | --- | --- |
-| `layout_v7.ini` (the window layout) | It is renamed to `layout_v7.ini.bad` and the default layout is built. A layout whose window positions are far outside any screen counts as damaged. |
+| `layout_v8.ini` (the window layout) | It is renamed to `layout_v8.ini.bad` and the default layout is built. A layout whose window positions are far outside any screen counts as damaged. |
 | `settings.json` | It is renamed to `settings.json.bad` and the defaults are used. A single wrong value, such as an interface size of 99, does not make the file damaged; that value is brought into its range. |
 | `shortcuts.json` | It is renamed to `shortcuts.json.bad` and the default shortcuts are used. A file that was written by a newer version of NyrexVJ is left alone and the default shortcuts are used. If you then change a shortcut, a copy of the newer file is kept as `shortcuts.json.bad` first. |
 
@@ -1697,7 +1697,7 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--shader-editor [FILE]` | Open the shader editor on start, with a file of the shaders folder if you give one, otherwise with a template |
 | `--shader-editor-selftest [FRAMES]` | Check the shader editor in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--shader-editor-uitest` | Drive the shader editor with real key and mouse events, check what it holds and exit with code 0 or 1, with `--bench-out FILE.json` for the result |
-| `--reset-layout` | Set the saved window layout aside as `layout_v7.ini.bad` and build the default layout, for a window that can no longer be used |
+| `--reset-layout` | Set the saved window layout aside as `layout_v8.ini.bad` and build the default layout, for a window that can no longer be used |
 | `--reset-interface` | Like `--reset-layout`, and also set the shortcuts file aside and reset interface size, display scale, contrast and keyboard navigation |
 | `--interface-uitest` | Drive the interface with real key and mouse events (workspaces, shortcuts, sizes, high contrast, keyboard navigation, node canvas zoom), check the result and exit with code 0 or 1, with `--bench-out FILE.json` for the result; use `NYREXVJ_DATA_DIR` |
 | `--routing-selftest [FRAMES]` | Check video routing in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |

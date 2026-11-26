@@ -2703,7 +2703,7 @@ const Translation kFrench[] = {
     {"Shortcut", "Raccourci"},
     {"Smaller interface", "Interface plus petite"},
     {"That shortcut is already used", "Ce raccourci est déjà utilisé"},
-    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "La disposition des fenêtres enregistrée était endommagée. Une copie a été conservée sous layout_v7.ini.bad et la disposition par défaut a été rétablie."},
+    {"The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored.", "La disposition des fenêtres enregistrée était endommagée. Une copie a été conservée sous layout_v8.ini.bad et la disposition par défaut a été rétablie."},
     {"The shortcuts could not be saved", "Les raccourcis n'ont pas pu être enregistrés"},
     {"The window layout was reset to the default.", "La disposition des fenêtres a été réinitialisée."},
     {"View", "Affichage"},

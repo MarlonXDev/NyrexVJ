@@ -243,7 +243,7 @@ void App::applyPendingWorkspace() {
             note += text;
         };
         if (recoveryFlags_ & kRecoveredLayout) {
-            add(tr("The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored."));
+            add(tr("The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored."));
         }
         if (recoveryFlags_ & kRecoveredSettings) {
             add(tr("settings.json was damaged. A copy was kept as settings.json.bad and the defaults are used."));

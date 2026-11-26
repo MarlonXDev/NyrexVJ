@@ -2703,7 +2703,7 @@ const Translation kGerman[] = {
     {"Shortcut", "Kürzel"},
     {"Smaller interface", "Kleinere Oberfläche"},
     {"That shortcut is already used", "Dieses Kürzel ist schon belegt"},
-    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "Die gespeicherte Fensteranordnung war beschädigt. Eine Kopie liegt als layout_v7.ini.bad bereit, die Standardanordnung wurde wiederhergestellt."},
+    {"The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored.", "Die gespeicherte Fensteranordnung war beschädigt. Eine Kopie liegt als layout_v8.ini.bad bereit, die Standardanordnung wurde wiederhergestellt."},
     {"The shortcuts could not be saved", "Die Tastenkürzel konnten nicht gespeichert werden"},
     {"The window layout was reset to the default.", "Die Fensteranordnung wurde auf den Standard zurückgesetzt."},
     {"View", "Ansicht"},

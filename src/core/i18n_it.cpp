@@ -2703,7 +2703,7 @@ const Translation kItalian[] = {
     {"Shortcut", "Scorciatoia"},
     {"Smaller interface", "Interfaccia più piccola"},
     {"That shortcut is already used", "Questa scorciatoia è già in uso"},
-    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "La disposizione delle finestre salvata era danneggiata. Una copia è stata conservata come layout_v7.ini.bad e la disposizione predefinita è stata ripristinata."},
+    {"The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored.", "La disposizione delle finestre salvata era danneggiata. Una copia è stata conservata come layout_v8.ini.bad e la disposizione predefinita è stata ripristinata."},
     {"The shortcuts could not be saved", "Non è stato possibile salvare le scorciatoie"},
     {"The window layout was reset to the default.", "La disposizione delle finestre è stata ripristinata a quella predefinita."},
     {"View", "Visualizza"},

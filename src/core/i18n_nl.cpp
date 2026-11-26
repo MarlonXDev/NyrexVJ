@@ -2703,7 +2703,7 @@ const Translation kDutch[] = {
     {"Shortcut", "Sneltoets"},
     {"Smaller interface", "Kleinere interface"},
     {"That shortcut is already used", "Die sneltoets is al in gebruik"},
-    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "De opgeslagen vensterindeling was beschadigd. Een kopie is bewaard als layout_v7.ini.bad en de standaardindeling is hersteld."},
+    {"The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored.", "De opgeslagen vensterindeling was beschadigd. Een kopie is bewaard als layout_v8.ini.bad en de standaardindeling is hersteld."},
     {"The shortcuts could not be saved", "De sneltoetsen konden niet worden opgeslagen"},
     {"The window layout was reset to the default.", "De vensterindeling is teruggezet naar de standaard."},
     {"View", "Weergave"},

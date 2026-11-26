@@ -59,7 +59,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         dropTarget->queueDroppedFiles(list);
     });
     ImGuiIO& io = ImGui::GetIO();
-    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v7.ini").string();
+    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v8.ini").string();
     io.IniFilename = iniPath_.c_str();
     recoverInterfaceFiles(options);
 

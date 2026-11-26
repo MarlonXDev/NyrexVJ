@@ -1468,7 +1468,7 @@ Ein Stromausfall oder eine Änderung von Hand kann eine Datei unlesbar machen. B
 
 | Datei | Was bei einer Beschädigung geschieht |
 | --- | --- |
-| `layout_v7.ini` (die Fensteranordnung) | Sie wird in `layout_v7.ini.bad` umbenannt und die Standardanordnung wird aufgebaut. Eine Anordnung mit Fensterpositionen weit außerhalb jedes Bildschirms gilt als beschädigt. |
+| `layout_v8.ini` (die Fensteranordnung) | Sie wird in `layout_v8.ini.bad` umbenannt und die Standardanordnung wird aufgebaut. Eine Anordnung mit Fensterpositionen weit außerhalb jedes Bildschirms gilt als beschädigt. |
 | `settings.json` | Sie wird in `settings.json.bad` umbenannt und die Standardwerte gelten. Ein einzelner falscher Wert, etwa eine Oberflächengröße von 99, macht die Datei nicht beschädigt; dieser Wert wird in seinen Bereich geholt. |
 | `shortcuts.json` | Sie wird in `shortcuts.json.bad` umbenannt und die Standardkürzel gelten. Eine Datei, die eine neuere Version von NyrexVJ geschrieben hat, bleibt unberührt, und die Standardkürzel gelten. Änderst du danach ein Kürzel, wird zuerst eine Kopie der neueren Datei als `shortcuts.json.bad` behalten. |
 
@@ -1697,7 +1697,7 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--shader-editor [DATEI]` | Den Shader-Editor beim Start öffnen, mit einer Datei aus dem Ordner shaders, wenn du eine angibst, sonst mit einer Vorlage |
 | `--shader-editor-selftest [BILDER]` | Den Shader-Editor in der echten Engine prüfen und beenden, mit einer Bilderzahl danach für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--shader-editor-uitest` | Den Shader-Editor mit echten Tasten- und Mausereignissen bedienen, prüfen, was er enthält, und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis |
-| `--reset-layout` | Die gespeicherte Fensteranordnung als `layout_v7.ini.bad` beiseitelegen und die Standardanordnung aufbauen, für ein Fenster, das sich nicht mehr bedienen lässt |
+| `--reset-layout` | Die gespeicherte Fensteranordnung als `layout_v8.ini.bad` beiseitelegen und die Standardanordnung aufbauen, für ein Fenster, das sich nicht mehr bedienen lässt |
 | `--reset-interface` | Wie `--reset-layout`, legt außerdem die Kürzeldatei beiseite und setzt Oberflächengröße, Bildschirmskalierung, Kontrast und Tastaturbedienung zurück |
 | `--interface-uitest` | Die Oberfläche mit echten Tasten- und Mausereignissen bedienen (Arbeitsbereiche, Kürzel, Größen, hoher Kontrast, Tastaturbedienung, Zoom der Node-Fläche), das Ergebnis prüfen und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis; mit `NYREXVJ_DATA_DIR` benutzen |
 | `--routing-selftest [BILDER]` | Das Video-Routing in der echten Engine prüfen und beenden, mit einer Bildanzahl dahinter für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |

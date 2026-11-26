@@ -97,7 +97,7 @@ A stream is untrusted data, and so is the address that someone types or pastes. 
 - **Ports.** A UDP address and an SRT `mode=listener` open a port. The page says so in orange and names the port (KI-21).
 - **Not hidden:** the address is stored in `settings.json` as typed, with its password (KI-20).
 
-Tested: `nvj_stream_tests` (261 checks) and the scenarios `reject-codec`, `reject-size`, `garbage` and `corruption`. The last two send random bytes and a damaged MPEG-TS over UDP to the receiver; the program is not ended by a signal, writes no crash text, shows no picture and exits with code 1 (the self test got no usable picture); on the development computer this held in every run, but in the first continuous build the `corruption` scenario did not end within its limit once, and the cause is not known (KI-23). This is not a fuzz test and does not prove the absence of faults in FFmpeg's demuxers and decoders.
+Tested: `nvj_stream_tests` (261 checks) and the scenarios `reject-codec`, `reject-size`, `garbage` and `corruption`. The last two send random bytes and a damaged MPEG-TS over UDP to the receiver; the program is not ended by a signal, writes no crash text, shows no picture and exits with code 1 (the self test got no usable picture); on the development computer this held in every run, but in two continuous builds in a row the `corruption` scenario ended with damaged memory (`malloc(): corrupted top size`) in the thread that decodes the stream, and the cause is not found (KI-23). This is not a fuzz test and does not prove the absence of faults in FFmpeg's demuxers and decoders.
 
 ## Latency, jitter, drift, colour, alpha, audio, reconnect
 

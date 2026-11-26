@@ -297,9 +297,28 @@ class Display:
                 self.process.wait()
 
 
+MALLOC_DEBUG = "/lib/x86_64-linux-gnu/libc_malloc_debug.so.0"
+
+
+def debugger_usable():
+    if not shutil.which("gdb"):
+        return False
+    try:
+        result = subprocess.run(["gdb", "-batch", "-nx", "-return-child-result", "-ex", "run", "--args", "/bin/true"], capture_output=True, text=True, errors="replace", timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
 class Run:
-    def __init__(self, binary, spec, out_json, env, timeout):
+    def __init__(self, binary, spec, out_json, env, timeout, mode="plain"):
         command = [binary, "--fresh", "--no-update-check", "--no-welcome", "--stream-selftest", spec, "--bench-out", out_json]
+        if mode != "plain" and debugger_usable():
+            prefix = ["gdb", "-batch", "-nx", "-return-child-result", "-ex", "set pagination off"]
+            if mode == "gdb-heap" and os.path.exists(MALLOC_DEBUG):
+                prefix += ["-ex", "set environment LD_PRELOAD " + MALLOC_DEBUG, "-ex", "set environment MALLOC_CHECK_ 3"]
+            prefix += ["-ex", "run", "-ex", "bt 40", "-ex", "thread apply all bt 12", "--args"]
+            command = prefix + command
         self.process = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
         self.lines = []
         self.events = {}
@@ -560,11 +579,11 @@ def scenario_reject_size(ctx):
     reject_scenario(ctx, "reject-size", "color=c=red:size=8400x64:rate=10", sender_args("mpeg2"), "picture size")
 
 
-def survive_scenario(ctx, name, feeder):
+def survive_once(ctx, name, feeder, mode):
     port = free_port("udp")
     out_json = os.path.join(ctx.work, name + ".json")
     problems = []
-    run = Run(ctx.args.binary, "reject@udp://@:%d" % port, out_json, ctx.env, 120)
+    run = Run(ctx.args.binary, "reject@udp://@:%d" % port, out_json, ctx.env, 120, mode)
     stop = threading.Event()
     thread = threading.Thread(target=feeder, args=(port, stop), daemon=True)
     thread.start()
@@ -578,14 +597,32 @@ def survive_scenario(ctx, name, feeder):
         problems.append("the program was killed by signal %s" % code)
     if code not in (0, 1):
         problems.append("exit code %s" % code)
-    crashed = [line for line in run.lines if "Segmentation" in line or "AddressSanitizer" in line or "terminate called" in line]
+    crashed = [line for line in run.lines if "Segmentation" in line or "AddressSanitizer" in line or "terminate called" in line or "Program received signal" in line or "corrupted" in line]
     if crashed:
         problems.append(crashed[0][:160])
     if run.event("live").is_set():
         problems.append("garbage was shown as a picture")
+    return run, code, problems
+
+
+def show_lines(title, lines):
+    print("    " + title, flush=True)
+    for line in lines:
+        print("    | " + line[:200], flush=True)
+
+
+def survive_scenario(ctx, name, feeder):
+    first_mode = "gdb-heap" if ctx.args.debugger else "plain"
+    run, code, problems = survive_once(ctx, name, feeder, first_mode)
     details = {"exitCode": code, "logLines": len(run.lines), "problems": problems}
     if problems:
-        details["lastLines"] = run.lines[-30:]
+        details["lastLines"] = run.lines[-40:]
+        show_lines("last lines of the program:", run.lines[-40:])
+        if first_mode == "plain" and debugger_usable():
+            for mode in ("gdb", "gdb-heap"):
+                again, again_code, again_problems = survive_once(ctx, name, feeder, mode)
+                trace = [line for line in again.lines if line.startswith("#") or line.startswith("Thread ") or "Program received signal" in line or "corrupted" in line or "malloc" in line or "free()" in line]
+                show_lines("again under %s: exit code %s, %d problems" % (mode, again_code, len(again_problems)), trace[-120:] if trace else again.lines[-20:])
     ctx.record(name, not problems, details)
 
 
@@ -678,6 +715,7 @@ def main():
     parser.add_argument("--scenario", action="append")
     parser.add_argument("--out")
     parser.add_argument("--work")
+    parser.add_argument("--debugger", action="store_true")
     args = parser.parse_args()
     if not os.path.exists(args.binary):
         print("the program was not found: %s" % args.binary, file=sys.stderr)

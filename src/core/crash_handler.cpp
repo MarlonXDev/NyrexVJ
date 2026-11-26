@@ -11,6 +11,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 namespace nvj {
@@ -37,6 +40,62 @@ bool validSlot(int slot) {
     return slot >= 0 && slot < kCrashMarkerSlots;
 }
 
+#ifndef _WIN32
+void putText(int fd, const char* text) {
+    size_t left = std::strlen(text);
+    while (left > 0) {
+        const ssize_t written = ::write(fd, text, left);
+        if (written <= 0) {
+            return;
+        }
+        text += written;
+        left -= static_cast<size_t>(written);
+    }
+}
+
+void putNumber(int fd, unsigned long long value) {
+    char reversed[24];
+    size_t count = 0;
+    do {
+        reversed[count++] = static_cast<char>('0' + value % 10);
+        value /= 10;
+    } while (value != 0 && count < sizeof(reversed));
+    char text[24];
+    for (size_t i = 0; i < count; ++i) {
+        text[i] = reversed[count - 1 - i];
+    }
+    text[count] = '\0';
+    putText(fd, text);
+}
+
+void writeReport(const char* reason, unsigned long code) {
+    if (gWritten != 0 || gReportPath[0] == '\0') {
+        return;
+    }
+    gWritten = 1;
+    const int fd = ::open(gReportPath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0) {
+        return;
+    }
+    putText(fd, "NyrexVJ ");
+    putText(fd, gVersion);
+    putText(fd, "\nreason: ");
+    putText(fd, reason);
+    putText(fd, "\ncode: ");
+    putNumber(fd, code);
+    putText(fd, "\ntime: ");
+    putNumber(fd, static_cast<unsigned long long>(std::time(nullptr)));
+    putText(fd, "\n");
+    for (int i = 0; i < kCrashMarkerSlots; ++i) {
+        if (gMarkers[i].state.load() == kMarkerInCall) {
+            putText(fd, "plugin: ");
+            putText(fd, gMarkers[i].id);
+            putText(fd, "\n");
+        }
+    }
+    ::close(fd);
+}
+#else
 void writeReport(const char* reason, unsigned long code) {
     if (gWritten != 0 || gReportPath[0] == '\0') {
         return;
@@ -54,6 +113,7 @@ void writeReport(const char* reason, unsigned long code) {
     }
     std::fclose(file);
 }
+#endif
 
 const char* signalName(int signal) {
     switch (signal) {

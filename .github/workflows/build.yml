@@ -146,7 +146,7 @@ jobs:
       - name: Install build and test packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0 binutils gdb
+          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0 binutils gdb valgrind
 
       - name: Get the FFmpeg headers and libraries
         continue-on-error: true
@@ -189,6 +189,15 @@ jobs:
             export LD_LIBRARY_PATH="$PWD/build/ffmpeg"
           fi
           ctest --test-dir build --output-on-failure
+
+      - name: Check the picture conversion for writes past its buffer
+        continue-on-error: true
+        run: |
+          if [ -n "${FFMPEG_SDK:-}" ]; then
+            export NYREXVJ_REQUIRE_VIDEO=1
+            export LD_LIBRARY_PATH="$PWD/build/ffmpeg"
+            valgrind -q --error-exitcode=9 build/nvj_picture_convert_tests
+          fi
 
       - name: Check the shaders and start the program
         run: |

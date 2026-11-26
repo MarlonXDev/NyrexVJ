@@ -2788,6 +2788,7 @@
         "src/app/ui_live.cpp",
         "src/app/bench.cpp",
         "tests/test_stream.cpp",
+        "tests/test_picture_convert.cpp",
         "tests/test_ndi_v3.cpp",
         "tests/fake_ndi.cpp",
         "scripts/test_stream_input.py"
@@ -2810,6 +2811,12 @@
           "kind": "script",
           "command": "LD_LIBRARY_PATH=$FFMPEG_SDK/lib NYREXVJ_REQUIRE_VIDEO=1 python3 scripts/test_stream_input.py --binary build/NyrexVJ --ffmpeg $FFMPEG_SDK/bin/ffmpeg --out stream.json",
           "note": "nine default scenarios with real senders on the loopback address: SRT caller and listener and UDP MPEG-TS with MPEG-2, RTSP over TCP with MJPEG from a test server, each through live, signal loss and recovery with the picture checked; a refused codec and a refused picture size; random and damaged data that must not crash the program; one start per profile. Three more scenarios (H.264 over SRT, Low latency, Smooth) run with --scenario srt-h264, srt-low and srt-smooth"
+        },
+        {
+          "id": "A-STREAM-4",
+          "kind": "ctest",
+          "name": "nvj_picture_convert_tests",
+          "note": "the shared picture conversion of streams and cameras with 28 widths (also odd ones and ones that are no multiple of 16), 7 heights and 10 pixel formats against a buffer with a marker behind it: nothing may be written further past the end of a picture than half of the padding, and the first pixels must have the right colour. With the padding removed this test reported 307 pictures that wrote up to 28 bytes past the end. The Linux build runs the same test once more under valgrind"
         }
       ],
       "manual": [

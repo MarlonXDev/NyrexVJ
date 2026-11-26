@@ -25,7 +25,13 @@ bool convertToUyvy(const FfmpegApi& api, SwsContext*& sws, const AVFrame& pictur
     out.height = height;
     out.stride = static_cast<int>(rowBytes);
     out.capturedAt = arrived;
-    out.data.resize(rowBytes * static_cast<size_t>(height));
+    const size_t frameBytes = rowBytes * static_cast<size_t>(height);
+    struct Trim {
+        std::vector<unsigned char>& data;
+        size_t bytes;
+        ~Trim() { data.resize(bytes); }
+    } trim{out.data, frameBytes};
+    out.data.resize(frameBytes + kConvertPadding);
     const AVPixelFormat source = static_cast<AVPixelFormat>(picture.format);
     if (source == AV_PIX_FMT_UYVY422 && picture.data[0] != nullptr) {
         for (int y = 0; y < height; ++y) {

@@ -56,7 +56,7 @@ void App::drawRecovery() {
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(680.0f, viewport->Size.x - 40.0f), std::min(470.0f, viewport->Size.y - 40.0f)), ImGuiCond_Appearing);
+    ui::setNextWindowSize(ImVec2(std::min(680.0f, viewport->Size.x - 40.0f), std::min(470.0f, viewport->Size.y - 40.0f)), ImGuiCond_Appearing);
     if (!ImGui::BeginPopupModal(trId("Recover your work", "recovery"), nullptr, ImGuiWindowFlags_NoSavedSettings)) {
         recoveryOpen_ = false;
         keepLatestAutosave();

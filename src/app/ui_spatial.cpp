@@ -107,7 +107,7 @@ bool deviceControls(SpatialDevice& device, const char* id, const SpatialMapping&
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(tr("Aspect"));
     ImGui::SameLine(labelColumn());
-    ImGui::SetNextItemWidth(90.0f);
+    ImGui::SetNextItemWidth(ui::px(90.0f));
     changed |= ImGui::DragFloat("##aspect", &device.lens.aspect, 0.005f, 0.25f, 4.0f, "%.4f");
     ImGui::SetItemTooltip("%s", tr("Width divided by height of the picture. It has to match the output window or the projector."));
     const float presets[3] = {16.0f / 9.0f, 16.0f / 10.0f, 4.0f / 3.0f};
@@ -277,7 +277,7 @@ void App::drawSpatialSurfaces(SpatialMapping& spatial) {
     ImGui::PushID("surface");
     char name[48];
     std::snprintf(name, sizeof(name), "%s", surface.name.c_str());
-    ImGui::SetNextItemWidth(170.0f);
+    ImGui::SetNextItemWidth(ui::px(170.0f));
     if (ImGui::InputText("##name", name, sizeof(name))) {
         surface.name = name;
     }
@@ -411,7 +411,7 @@ void App::drawSpatialCalibration(int index, SpatialMapping& spatial) {
         ImGui::PushID("point");
         char name[48];
         std::snprintf(name, sizeof(name), "%s", point.name.c_str());
-        ImGui::SetNextItemWidth(170.0f);
+        ImGui::SetNextItemWidth(ui::px(170.0f));
         if (ImGui::InputText("##name", name, sizeof(name))) {
             point.name = name;
         }
@@ -514,7 +514,7 @@ void App::drawSpatialCalibration(int index, SpatialMapping& spatial) {
 
 void App::drawSpatialOutputView(SpatialMapping& spatial) {
     const float aspect = std::clamp(spatial.projector.lens.aspect, 0.25f, 4.0f);
-    const float width = std::max(160.0f, std::min(ImGui::GetContentRegionAvail().x, 480.0f));
+    const float width = std::max(ui::px(160.0f), std::min(ImGui::GetContentRegionAvail().x, ui::px(480.0f)));
     const ImVec2 size(width, width / aspect);
     const ImVec2 origin = ImGui::GetCursorScreenPos();
     const ImVec2 end(origin.x + size.x, origin.y + size.y);
@@ -554,7 +554,7 @@ void App::drawSpatialOutputView(SpatialMapping& spatial) {
     if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         const ImVec2 mouse = ImGui::GetIO().MousePos;
         int best = -1;
-        float bestDistance = 12.0f;
+        float bestDistance = ui::px(12.0f);
         for (size_t i = 0; i < spatial.points.size(); ++i) {
             const ImVec2 at = screen(spatial.points[i].outputX, spatial.points[i].outputY);
             const float distance = std::fabs(at.x - mouse.x) + std::fabs(at.y - mouse.y);
@@ -587,11 +587,11 @@ void App::drawSpatialOutputView(SpatialMapping& spatial) {
         if (point.enabled && p.inFront) {
             const ImVec2 predicted = screen(p.x, p.y);
             draw->AddLine(target, predicted, IM_COL32(255, 230, 26, 255), 1.0f);
-            draw->AddLine(ImVec2(predicted.x - 4.0f, predicted.y - 4.0f), ImVec2(predicted.x + 4.0f, predicted.y + 4.0f), IM_COL32(255, 140, 26, 255), 2.0f);
-            draw->AddLine(ImVec2(predicted.x - 4.0f, predicted.y + 4.0f), ImVec2(predicted.x + 4.0f, predicted.y - 4.0f), IM_COL32(255, 140, 26, 255), 2.0f);
+            draw->AddLine(ImVec2(predicted.x - ui::px(4.0f), predicted.y - ui::px(4.0f)), ImVec2(predicted.x + ui::px(4.0f), predicted.y + ui::px(4.0f)), IM_COL32(255, 140, 26, 255), 2.0f);
+            draw->AddLine(ImVec2(predicted.x - ui::px(4.0f), predicted.y + ui::px(4.0f)), ImVec2(predicted.x + ui::px(4.0f), predicted.y - ui::px(4.0f)), IM_COL32(255, 140, 26, 255), 2.0f);
         }
-        draw->AddLine(ImVec2(target.x - 7.0f, target.y), ImVec2(target.x + 7.0f, target.y), targetColour, 2.0f);
-        draw->AddLine(ImVec2(target.x, target.y - 7.0f), ImVec2(target.x, target.y + 7.0f), targetColour, 2.0f);
+        draw->AddLine(ImVec2(target.x - ui::px(7.0f), target.y), ImVec2(target.x + ui::px(7.0f), target.y), targetColour, 2.0f);
+        draw->AddLine(ImVec2(target.x, target.y - ui::px(7.0f)), ImVec2(target.x, target.y + ui::px(7.0f)), targetColour, 2.0f);
     }
     draw->PopClipRect();
     draw->AddRect(origin, end, IM_COL32(90, 90, 100, 255));
@@ -599,7 +599,7 @@ void App::drawSpatialOutputView(SpatialMapping& spatial) {
 }
 
 void App::drawSpatialTopView(SpatialMapping& spatial) {
-    const float width = std::max(160.0f, std::min(ImGui::GetContentRegionAvail().x, 480.0f));
+    const float width = std::max(ui::px(160.0f), std::min(ImGui::GetContentRegionAvail().x, ui::px(480.0f)));
     const ImVec2 size(width, width * 0.7f);
     const ImVec2 origin = ImGui::GetCursorScreenPos();
     const ImVec2 end(origin.x + size.x, origin.y + size.y);
@@ -635,7 +635,7 @@ void App::drawSpatialTopView(SpatialMapping& spatial) {
     }
     const float spanX = std::max(maxX - minX, 1.0f);
     const float spanZ = std::max(maxZ - minZ, 1.0f);
-    const float margin = 18.0f;
+    const float margin = ui::px(18.0f);
     const float scale = std::min((size.x - 2.0f * margin) / spanX, (size.y - 2.0f * margin) / spanZ);
     const float centreX = 0.5f * (minX + maxX);
     const float centreZ = 0.5f * (minZ + maxZ);

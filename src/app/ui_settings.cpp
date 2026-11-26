@@ -133,9 +133,9 @@ void App::drawSettingsWindow() {
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowSize(ImVec2(std::min(880.0f, viewport->Size.x - 40.0f), std::min(580.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
+    ui::setNextWindowSize(ImVec2(std::min(880.0f, viewport->Size.x - 40.0f), std::min(580.0f, viewport->Size.y - 60.0f)), ImGuiCond_Appearing);
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSizeConstraints(ImVec2(560.0f, 340.0f), ImVec2(FLT_MAX, FLT_MAX));
+    ui::setNextWindowSizeConstraints(ImVec2(560.0f, 340.0f), ImVec2(FLT_MAX, FLT_MAX));
     if (settingsFocus_) {
         ImGui::SetNextWindowFocus();
         settingsFocus_ = false;
@@ -199,7 +199,6 @@ void App::drawThemePicker() {
         }
         if (clicked) {
             settings_.theme = theme.id;
-            applyTheme(i);
             saveSettings(settings_);
         }
         ImGui::PopID();
@@ -219,7 +218,7 @@ void App::drawThemePicker() {
     ImGui::Button(trId("Button", "previewPlain"));
     ImGui::SameLine();
     ImGui::Checkbox(trId("Checkbox", "previewCheck"), &checked);
-    ImGui::SetNextItemWidth(260.0f);
+    ImGui::SetNextItemWidth(ui::px(260.0f));
     ui::sliderFloat(trId("Slider", "previewSlider"), &value, 0.0f, 1.0f, "%.2f");
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);
     ImGui::ProgressBar(0.65f, ImVec2(260.0f, 8.0f), "");
@@ -231,6 +230,9 @@ void App::drawSettingsPage(int page) {
     if (page != SettingsControl && control_.learning()) {
         control_.cancelLearn();
     }
+    if (page != SettingsShortcuts) {
+        shortcutCapture_ = -1;
+    }
     ImGui::PushFont(nullptr, 20.0f);
     ImGui::TextColored(ui::kAccent, "%s", settingsPageTitle(page));
     ImGui::PopFont();
@@ -239,7 +241,7 @@ void App::drawSettingsPage(int page) {
 
     if (page == SettingsGeneral) {
         ImGui::SeparatorText(tr("Language"));
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::BeginCombo("##language", languageLabel(currentLanguage()))) {
             for (int i = 0; i < languageCount(); ++i) {
                 Language language = static_cast<Language>(i);
@@ -296,11 +298,11 @@ void App::drawSettingsPage(int page) {
     } else if (page == SettingsAudio) {
         drawAudioSource();
         ImGui::SeparatorText(tr("Analysis"));
-        ImGui::SetNextItemWidth(-170.0f);
+        ImGui::SetNextItemWidth(ui::px(-170.0f));
         ui::sliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
-        ImGui::SetNextItemWidth(-170.0f);
+        ImGui::SetNextItemWidth(ui::px(-170.0f));
         ui::sliderFloat(trId("Smoothing", "audioSmoothing"), &settings_.audioSmoothing, 0.0f, 1.0f, "%.2f");
-        ImGui::SetNextItemWidth(-170.0f);
+        ImGui::SetNextItemWidth(ui::px(-170.0f));
         ui::sliderFloat(trId("Beat sensitivity", "audioSensitivity"), &settings_.audioBeatSensitivity, 0.0f, 1.0f, "%.2f");
         if (ImGui::Checkbox(trId("Sync BPM to audio", "audioSyncBpm"), &settings_.audioSyncBpm)) {
             persist();
@@ -311,7 +313,7 @@ void App::drawSettingsPage(int page) {
         drawOutputControls();
         ImGui::SeparatorText(tr("Quality"));
         Composition& comp = engine_.comp;
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::BeginCombo(trId("Resolution", "resolution"), kResolutions[comp.resolution].label)) {
             for (int i = 0; i < kResolutionCount; ++i) {
                 if (ImGui::Selectable(kResolutions[i].label, i == comp.resolution)) {
@@ -340,47 +342,23 @@ void App::drawSettingsPage(int page) {
     } else if (page == SettingsAppearance) {
         ImGui::SeparatorText(tr("Theme"));
         drawThemePicker();
-        ImGui::SeparatorText(tr("Scale"));
-        ImGui::SetNextItemWidth(260.0f);
-        ui::sliderFloat(trId("Interface size", "optScale"), &uiScaleEdit_, 0.7f, 1.8f, "%.2f");
-        if (ImGui::IsItemDeactivatedAfterEdit()) {
-            settings_.uiScale = uiScaleEdit_;
-            persist();
-        }
-        ImGui::SameLine();
-        if (ImGui::SmallButton(trId("Reset", "optScaleReset"))) {
-            uiScaleEdit_ = 1.0f;
-            settings_.uiScale = 1.0f;
-            persist();
-        }
+        drawInterfaceOptions();
         ImGui::SeparatorText(tr("Layout"));
         if (ImGui::Checkbox(trId("Show status bar", "optStatusBar"), &settings_.showStatusBar)) {
             persist();
         }
         if (ImGui::Button(trId("Reset window layout", "optLayoutReset"))) {
-            needsLayout_ = true;
-            toast(tr("Window layout reset"));
+            resetWindowLayout();
         }
         ImGui::SetItemTooltip("%s", tr("Puts all panels back to their default places."));
+        ImGui::SeparatorText(tr("Workspaces"));
+        drawWorkspacePanel();
     } else if (page == SettingsPerformance) {
         drawPerformancePage();
     } else if (page == SettingsPlugins) {
         drawPluginsPage();
     } else if (page == SettingsShortcuts) {
-        ImGui::SeparatorText(tr("Clips and tempo"));
-        ImGui::BulletText("%s", tr("1 - 8  trigger a column"));
-        ImGui::BulletText("%s", tr("Space  tap tempo"));
-        ImGui::BulletText("%s", tr("B  blackout"));
-        ImGui::SeparatorText(tr("Decks"));
-        ImGui::BulletText("%s", tr("Page Up / Page Down  previous / next deck"));
-        ImGui::BulletText("%s", tr("Ctrl + 1 - 8  deck 1 - 8"));
-        ImGui::BulletText("%s", tr("Ctrl + Shift + 1 - 8  deck 9 - 16"));
-        ImGui::SeparatorText(tr("Window"));
-        ImGui::BulletText("%s", tr("F11  output window fullscreen"));
-        ImGui::BulletText("%s", tr("F1  open or close the manual"));
-        ImGui::BulletText("%s", tr("Ctrl + ,  open settings"));
-        ImGui::BulletText("%s", tr("Ctrl + Shift + R  start or stop recording"));
-        ImGui::BulletText("%s", tr("Right click a slider  reset effect value"));
+        drawShortcutsPage();
     } else {
         ImGui::Text("NyrexVJ %s", NYREXVJ_VERSION);
         if (NYREXVJ_BUILD_NUMBER > 0) {
@@ -571,7 +549,7 @@ void App::drawFrameRateLimit() {
     } else {
         std::snprintf(current, sizeof(current), "%s", tr("Unlimited"));
     }
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::BeginCombo(trId("Frame rate limit", "optFpsLimit"), current)) {
         for (const int fps : kFpsLimits) {
             char label[32];
@@ -625,7 +603,7 @@ void App::drawPerformancePage() {
     static const int kBudgets[] = {30, 45, 60, 90, 120, 144};
     char current[48];
     std::snprintf(current, sizeof(current), "%d FPS  (%.1f ms)", settings_.perfBudgetFps, budget);
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::BeginCombo(trId("Target frame rate", "optBudget"), current)) {
         for (const int fps : kBudgets) {
             char label[48];
@@ -643,7 +621,7 @@ void App::drawPerformancePage() {
     }
 
     ImGui::SeparatorText(tr("Render quality"));
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::BeginCombo(trId("Layer resolution", "optQuality"), qualityLabel(settings_.renderQuality))) {
         for (int mode = 0; mode < QualityModeCount; ++mode) {
             if (ImGui::Selectable(qualityLabel(mode), settings_.renderQuality == mode)) {
@@ -664,7 +642,7 @@ void App::drawPerformancePage() {
     ImGui::SeparatorText(tr("Text and particles"));
     {
         int limit = settings_.particleLimit;
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::SliderInt(trId("Particle limit per layer", "optParticleLimit"), &limit, particles::kMinLimit, particles::kHardMaxParticles, "%d", ImGuiSliderFlags_Logarithmic)) {
             settings_.particleLimit = particles::clampLimit(limit);
             engine_.setParticleLimit(settings_.particleLimit);
@@ -678,7 +656,7 @@ void App::drawPerformancePage() {
         ImGui::SetItemTooltip("%s", tr("Lets particle clips that ask for it run on the graphics card with up to a million particles. If the card cannot do it, or the memory budget is used up, the clip runs on the processor with fewer particles. Off until it has been tried on a real graphics card."));
         ImGui::BeginDisabled(!settings_.gpuParticles);
         int budget = settings_.gpuParticleBudgetMb;
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::SliderInt(trId("Graphics memory for GPU particles", "optGpuParticleBudget"), &budget, gpuparticles::kMinBudgetMb, gpuparticles::kMaxBudgetMb, "%d MB", ImGuiSliderFlags_Logarithmic)) {
             settings_.gpuParticleBudgetMb = gpuparticles::clampBudgetMb(budget);
             engine_.setGpuParticles(settings_.gpuParticles, settings_.gpuParticleBudgetMb);

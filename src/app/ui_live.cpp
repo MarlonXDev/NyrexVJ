@@ -127,7 +127,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
         std::string& wanted = settings_.ndiInputs[static_cast<size_t>(slot)];
         const std::vector<NdiSourceInfo> sources = NdiFinder::instance().sources();
         const std::string preview = wanted.empty() ? std::string(tr("Automatic")) : wanted;
-        ImGui::SetNextItemWidth(-90.0f);
+        ImGui::SetNextItemWidth(ui::px(-90.0f));
         if (ImGui::BeginCombo(trId("NDI source", "ndiPick"), preview.c_str())) {
             if (ImGui::Selectable(tr("Automatic"), wanted.empty())) {
                 wanted.clear();
@@ -183,7 +183,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
         if (!wanted.empty() && preview == tr("None")) {
             preview = wanted;
         }
-        ImGui::SetNextItemWidth(-90.0f);
+        ImGui::SetNextItemWidth(ui::px(-90.0f));
         if (ImGui::BeginCombo(trId("Camera", "cameraPick"), preview.c_str())) {
             if (ImGui::Selectable(tr("None"), wanted.empty())) {
                 wanted.clear();
@@ -212,7 +212,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
                 resolutionLabel = choice.width == 0 ? std::string(tr("Auto")) : std::string(choice.label);
             }
         }
-        ImGui::SetNextItemWidth(-90.0f);
+        ImGui::SetNextItemWidth(ui::px(-90.0f));
         if (ImGui::BeginCombo(trId("Resolution", "cameraResolution"), resolutionLabel.c_str())) {
             for (const ModeChoice& choice : kCameraModes) {
                 const bool selected = choice.width == settings_.cameraWidth && choice.height == settings_.cameraHeight;
@@ -230,7 +230,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
         } else {
             std::snprintf(rate, sizeof(rate), "%d fps", settings_.cameraFps);
         }
-        ImGui::SetNextItemWidth(-90.0f);
+        ImGui::SetNextItemWidth(ui::px(-90.0f));
         if (ImGui::BeginCombo(trId("Frame rate", "cameraRate"), rate)) {
             for (const int fps : kFrameRates) {
                 char label[24];

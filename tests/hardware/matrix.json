@@ -2338,6 +2338,121 @@
           "criteria": "Proposed: no crash, a message that names video memory, and the clips play again after the memory is free. The program refuses some allocations with a message; it is not tested what a driver does when it silently falls back to system memory."
         }
       ]
+    },
+    {
+      "id": "interface-accessibility",
+      "title": "Interface and accessibility: workspaces, your own shortcuts, interface size and display scale, high contrast, keyboard navigation, zoom of the node canvas, and recovery from damaged layout, settings and shortcut files",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/manual/manual.en.md",
+        "docs/TESTING.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0044-interface-workspaces-shortcuts-accessibility.md"
+      ],
+      "sources": [
+        "src/core/workspace.cpp",
+        "src/core/shortcuts.cpp",
+        "src/core/contrast.cpp",
+        "src/core/settings.cpp",
+        "src/app/theme.cpp",
+        "src/app/ui_interface.cpp",
+        "src/app/interface_uitest.cpp",
+        "scripts/test_interface_recovery.py",
+        "tests/test_interface.cpp",
+        "tests/test_theme.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-UI-1",
+          "kind": "ctest",
+          "name": "nvj_interface_tests",
+          "note": "the workspace store (names, layout check, save, load, list, delete, damaged files, limits), the shortcut table (parse, format, conflicts, reserved keys, exact modifiers, JSON, damaged and newer files), the contrast formula and the new settings keys with their ranges"
+        },
+        {
+          "id": "A-UI-2",
+          "kind": "ctest",
+          "name": "nvj_theme_tests",
+          "note": "the contrast ratios of both looks for all ten themes (text, dim text, focus ring, check marks, borders, hovered and pressed states) against 4.5, 7 and 3, and that the style scales with the size scale"
+        },
+        {
+          "id": "A-UI-3",
+          "kind": "cli",
+          "command": "NYREXVJ_DATA_DIR=dir NyrexVJ --fresh --no-update-check --no-welcome --audio-demo --frames 100000 --interface-uitest --bench-out result.json",
+          "note": "the interface in the real window with key and mouse events: workspaces, shortcuts, sizes 100 to 200 percent, injected display scales, 13 window sizes from 1024x600 to 2560x1440, high contrast, keyboard navigation and node canvas zoom; on a virtual screen with software OpenGL it proves the logic and the layout, not how a real display looks"
+        },
+        {
+          "id": "A-UI-4",
+          "kind": "script",
+          "command": "python3 scripts/test_interface_recovery.py build/NyrexVJ --output result.json",
+          "note": "starts the real program with a damaged, empty, binary, wild, newer or out-of-range layout, settings and shortcut file, and with the two reset options, and checks that it starts, sets the file aside as .bad and keeps what must stay"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-UI-1",
+          "title": "A real display at 125, 150 and 200 percent",
+          "needs": "A PC with a display whose operating system scale can be set to 125, 150 and 200 percent",
+          "steps": [
+            "Set the operating system scale to 125 percent, start NyrexVJ with --fresh and turn on Settings, Appearance, Match the display scale.",
+            "Look at the main window, Settings, the manual and the node effect editor; note anything cut off, overlapping or unreadable.",
+            "Repeat at 150 and 200 percent and with the box off."
+          ],
+          "measure": "the display scale shown next to the box, screenshots of the four windows, a list of anything cut off or overlapping",
+          "criteria": "Proposed: the shown scale equals the operating system scale, every control can be reached and read, no window opens outside the screen."
+        },
+        {
+          "id": "M-UI-2",
+          "title": "A 4K screen and a small laptop screen",
+          "needs": "A 3840x2160 display and a laptop with a screen of 1366x768 or smaller",
+          "steps": [
+            "Start NyrexVJ with --fresh on each screen, reset the window layout and set Interface size to a value you find comfortable.",
+            "Open Settings, the manual and the node effect editor on each.",
+            "Save a workspace on the 4K screen, copy the file to the laptop and load it there."
+          ],
+          "measure": "screenshots and notes on readability, cut-off controls and where the panels ended up",
+          "criteria": "Proposed: all main panels are inside the window and usable on both screens; a workspace from the larger screen loads without a panel outside the window."
+        },
+        {
+          "id": "M-UI-3",
+          "title": "A whole show with the keyboard alone",
+          "needs": "A person who runs a show, a PC, a composition with at least eight clips and two decks",
+          "steps": [
+            "Turn on Keyboard navigation and set your own shortcuts for blackout, tap tempo and the next deck.",
+            "Run a ten minute show without touching the mouse: trigger columns with the number keys, change decks, open a window and close it, change one slider value.",
+            "Write down every action that could not be done with the keyboard."
+          ],
+          "measure": "the list of actions that needed the mouse, how often a key fired the wrong action",
+          "criteria": "Proposed: the actions of the show can be done with the keyboard, and no key fires an action that is not assigned to it. Sliders, the grid cells and library drag and drop are known to need the mouse."
+        },
+        {
+          "id": "M-UI-4",
+          "title": "High contrast in a dark room and on a projector",
+          "needs": "A dark room, a projector or a second screen, and if possible a person with low vision or a colour vision test",
+          "steps": [
+            "Turn on High contrast and look at the main window, Settings and the node effect editor from the usual distance.",
+            "Switch between the standard and the high contrast look and compare what can be read.",
+            "Move through the controls with the keyboard and watch the focus ring."
+          ],
+          "measure": "what can and cannot be read at the usual distance, whether the focus ring is found at once, how the colours look to the person",
+          "criteria": "Proposed: text and the focus ring can be found without effort in both looks; the calculated contrast ratios are not a replacement for this check."
+        },
+        {
+          "id": "M-UI-5",
+          "title": "A workspace moved between two monitors",
+          "needs": "A PC with two monitors of different sizes",
+          "steps": [
+            "Drag a floating window (for example Settings) to the second monitor and save a workspace.",
+            "Unplug or turn off the second monitor and load the workspace.",
+            "Plug the monitor in again and load it once more."
+          ],
+          "measure": "where the floating window appears each time, whether Reset window layout is needed",
+          "criteria": "Proposed: no window stays out of reach; if one does, Reset window layout brings the main panels back and the finding is added to the known issues."
+        }
+      ]
     }
   ]
 }

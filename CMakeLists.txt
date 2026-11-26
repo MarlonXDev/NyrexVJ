@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.50.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.51.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -258,6 +258,9 @@ set(NYREXVJ_CORE_SOURCES
     src/core/playhead.cpp
     src/core/live_source.cpp
     src/core/settings.cpp
+    src/core/workspace.cpp
+    src/core/shortcuts.cpp
+    src/core/contrast.cpp
     src/core/sha256.cpp
     src/core/library_meta.cpp
     src/core/launch_quantizer.cpp
@@ -364,6 +367,8 @@ set(NYREXVJ_APP_SOURCES
     src/app/shader_editor_selftest.cpp
     src/app/scene_selftest.cpp
     src/app/theme.cpp
+    src/app/shortcut_keys.cpp
+    src/app/ui_interface.cpp
     src/app/ui_browser.cpp
     src/app/ui_deck.cpp
     src/app/ui_control.cpp
@@ -387,6 +392,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_routing.cpp
     src/app/ui_failover.cpp
     src/app/shader_editor_uitest.cpp
+    src/app/interface_uitest.cpp
     src/app/pack_cli.cpp
     src/render/engine.cpp
     src/render/routing_engine.cpp
@@ -518,6 +524,14 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_compat_tests PRIVATE tests)
     target_compile_definitions(nvj_compat_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data")
     add_test(NAME nvj_compat_tests COMMAND nvj_compat_tests)
+    add_executable(nvj_interface_tests tests/test_interface.cpp)
+    target_link_libraries(nvj_interface_tests PRIVATE nvj_core)
+    target_include_directories(nvj_interface_tests PRIVATE tests)
+    add_test(NAME nvj_interface_tests COMMAND nvj_interface_tests)
+    add_executable(nvj_theme_tests tests/test_theme.cpp src/app/theme.cpp)
+    target_link_libraries(nvj_theme_tests PRIVATE nvj_core imgui)
+    target_include_directories(nvj_theme_tests PRIVATE tests)
+    add_test(NAME nvj_theme_tests COMMAND nvj_theme_tests)
     add_executable(nvj_failover_tests tests/test_failover.cpp)
     target_link_libraries(nvj_failover_tests PRIVATE nvj_core)
     target_include_directories(nvj_failover_tests PRIVATE tests)

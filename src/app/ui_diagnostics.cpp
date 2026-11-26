@@ -101,7 +101,7 @@ void App::drawGpuDiagnostics() {
 
     ImGui::Spacing();
     int budgetMb = settings_.gpuMemoryBudgetMb;
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::DragInt(trId("Memory budget (0 = off)", "optGpuBudget"), &budgetMb, 32.0f, 0, gpudiag::kMaxBudgetMb, "%d MB")) {
         if (budgetMb > 0 && budgetMb < gpudiag::kMinBudgetMb) {
             budgetMb = settings_.gpuMemoryBudgetMb >= gpudiag::kMinBudgetMb ? 0 : gpudiag::kMinBudgetMb;
@@ -161,15 +161,15 @@ void App::drawGpuDiagnostics() {
         persist();
     }
     if (ImGui::TreeNode(tr("Warning limits"))) {
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::SliderInt(tr("Slow frame limit (slowest 1 %)"), &settings_.diagP99Percent, 110, 400, "%d %% of the budget")) {
             persist();
         }
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::SliderInt(tr("Dropped frames per minute from"), &settings_.diagDroppedPerMinute, 1, 120)) {
             persist();
         }
-        ImGui::SetNextItemWidth(220.0f);
+        ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::SliderInt(tr("Memory budget used from"), &settings_.diagMemoryPercent, 50, 99, "%d %%")) {
             persist();
         }

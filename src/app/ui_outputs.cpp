@@ -447,7 +447,7 @@ void App::drawOutputSlices(OutputSpec& spec) {
         OutputSlice& slice = spec.slices[static_cast<size_t>(selectedSlice_ - 1)];
         char buffer[48];
         std::snprintf(buffer, sizeof(buffer), "%s", slice.name.c_str());
-        ImGui::SetNextItemWidth(170.0f);
+        ImGui::SetNextItemWidth(ui::px(170.0f));
         if (ImGui::InputText("##slicename", buffer, sizeof(buffer))) {
             slice.name = buffer;
         }
@@ -481,7 +481,7 @@ void App::drawMaskImage(SliceMask& mask) {
             mask.enabled = mask.points.size() >= static_cast<size_t>(kMinMaskPoints) && mask.enabled;
         }
     }
-    ImGui::SetNextItemWidth(-90.0f);
+    ImGui::SetNextItemWidth(ui::px(-90.0f));
     ImGui::InputTextWithHint("##maskImagePath", tr("Image file path"), maskImagePath_, sizeof(maskImagePath_));
     ImGui::SetItemTooltip("%s", tr("Full path of a picture on this computer. It is copied into the mask folder of NyrexVJ, so the original can be moved afterwards."));
     ImGui::SameLine();
@@ -735,7 +735,7 @@ void App::drawOutputMapping(int index) {
     ImGui::RadioButton(tr("Freehand"), &canvasMode_, 2);
     drawMappingCanvas(spec, index);
     if (!map.spatial.enabled) {
-        ImGui::SetNextItemWidth(120.0f);
+        ImGui::SetNextItemWidth(ui::px(120.0f));
         if (ImGui::BeginCombo(tr("Warp points"), (std::to_string(map.warpColumns) + " x " + std::to_string(map.warpRows)).c_str())) {
             for (int n = kMinWarpPoints; n <= kMaxWarpPoints; ++n) {
                 const std::string label = std::to_string(n) + " x " + std::to_string(n);
@@ -922,7 +922,7 @@ void App::drawVenueControls() {
         ImGui::EndPopup();
     }
 
-    ImGui::SetNextItemWidth(220.0f);
+    ImGui::SetNextItemWidth(ui::px(220.0f));
     ImGui::InputTextWithHint("##venueName", tr("Name"), venueName_, sizeof(venueName_));
     ImGui::SameLine();
     const bool exists = venueExists(directory, venueName_);
@@ -945,7 +945,7 @@ void App::drawVenueControls() {
         }
     }
 
-    ImGui::SetNextItemWidth(-130.0f);
+    ImGui::SetNextItemWidth(ui::px(-130.0f));
     ImGui::InputTextWithHint("##venuePath", tr("File path"), venuePath_, sizeof(venuePath_));
     ImGui::SetItemTooltip("%s", tr("Where to export the selected venue setup to, or which venue file to import"));
     ImGui::SameLine();
@@ -1074,7 +1074,7 @@ void App::drawOutputControls() {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(tr("Delay"));
     ImGui::SameLine(90.0f);
-    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SetNextItemWidth(ui::px(160.0f));
     ui::sliderInt("##delayFrames", &spec.delayFrames, 0, kMaxDelayFrames, "%d");
     spec.delayFrames = clampDelay(spec.delayFrames);
     ImGui::SameLine();
@@ -1123,7 +1123,7 @@ void App::drawOutputControls() {
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Splits the picture over a grid of outputs with the right overlap and edge blending. It turns the outputs on and replaces their picture area and blending."));
     ImGui::PopTextWrapPos();
-    ImGui::SetNextItemWidth(80.0f);
+    ImGui::SetNextItemWidth(ui::px(80.0f));
     ui::sliderInt(tr("Columns"), &gridColumns_, 1, kMaxOutputs);
     gridRows_ = std::clamp(gridRows_, 1, kMaxOutputs);
     gridColumns_ = std::clamp(gridColumns_, 1, kMaxOutputs);
@@ -1131,7 +1131,7 @@ void App::drawOutputControls() {
         gridRows_ = std::max(1, kMaxOutputs / gridColumns_);
     }
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(80.0f);
+    ImGui::SetNextItemWidth(ui::px(80.0f));
     ui::sliderInt(tr("Rows"), &gridRows_, 1, kMaxOutputs);
     if (gridColumns_ * gridRows_ > kMaxOutputs) {
         gridColumns_ = std::max(1, kMaxOutputs / gridRows_);

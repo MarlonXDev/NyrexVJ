@@ -102,6 +102,8 @@
 <h4>Reference and help</h4><ul>
 <li><a href="settings.html">Settings reference</a>
 </li>
+<li><a href="interface.html">Interface, workspaces and accessibility</a>
+</li>
 <li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
 </li>
 <li><a href="performance.html">Performance</a>
@@ -192,6 +194,8 @@
 <h4>Reference and help</h4><ul>
 <li><a href="settings.html">Settings reference</a>
 </li>
+<li><a href="interface.html">Interface, workspaces and accessibility</a>
+</li>
 <li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
 </li>
 <li><a href="performance.html">Performance</a>
@@ -209,7 +213,7 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Your own content</p>
 <h1>The node effect editor</h1>
-<p class="meta">Chapter 20 of 36 &middot; 3 min read</p>
+<p class="meta">Chapter 20 of 37 &middot; 3 min read</p>
 <nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#nodes-what">What it does</a><a href="#nodes-quick">Quick start</a><a href="#nodes-graph">Working in the graph</a><a href="#nodes-catalogue">The 68 nodes</a><a href="#nodes-share">Controls, sharing and limits</a></nav>
 <h2 id="nodes-what"><a class="anchor" href="#nodes-what" aria-label="Link">#</a>What it does</h2>
 <p>The node editor builds your own effects without code. You connect nodes for pictures, audio, beats, LFOs, maths, colour, distortion, noise and shapes, and NyrexVJ turns the graph into one shader. The result is a normal effect: it shows in the Library as Node: name, goes into any layer or master slot, has up to four sliders and can read the macros, the audio and the beat. A node effect costs what the same effect written by hand costs.</p>
@@ -217,7 +221,7 @@
 <ol><li>Open the editor with Creator, Node effect editor, or with Edit nodes below a node effect in the effect rack.</li><li>Press New, or Create examples for four ready made effects: Wavy Rainbow, Mirror Swirl, Kick Pulse and Trails.</li><li>Right click in the graph and search for a node. Drag from an output pin on the right of a node to an input pin on the left of another to connect them. The Output node is the end of every effect.</li><li>The effect is saved and rebuilt a moment after every change. The status line shows whether it compiles, how often it reads the picture and the message on the node that is wrong. An invalid edit keeps the last good shader running.</li><li>Press Add to layer to use the effect on the selected layer.</li></ol>
 <figure class="shot"><a href="../assets/manual/en/node-editor.webp"><img src="../assets/manual/en/node-editor.webp" width="1244" height="764" loading="lazy" alt="The node effect editor with a graph of connected nodes"></a><figcaption>The node effect editor with a graph of connected nodes</figcaption></figure>
 <h2 id="nodes-graph"><a class="anchor" href="#nodes-graph" aria-label="Link">#</a>Working in the graph</h2>
-<div class="tablewrap"><table><thead><tr><th scope="col">Action</th><th scope="col">How</th></tr></thead><tbody><tr><td>Add a node</td><td>Right click on empty space, type to search, click the node</td></tr><tr><td>Connect</td><td>Drag from an output pin to an input pin</td></tr><tr><td>Remove a link</td><td>Drag a connected input away, or right click the node and choose Disconnect</td></tr><tr><td>Change a value</td><td>Drag the value box, or double click it and type a number</td></tr><tr><td>Delete a node</td><td>Select it and press Delete or Backspace</td></tr><tr><td>Duplicate</td><td>Ctrl+D or right click, Duplicate</td></tr><tr><td>Move the view</td><td>Middle mouse button, or drag on empty space</td></tr><tr><td>Undo and redo</td><td>Ctrl+Z and Ctrl+Y</td></tr><tr><td>Tidy up</td><td>The Arrange button places the nodes in columns from the inputs to the output</td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th scope="col">Action</th><th scope="col">How</th></tr></thead><tbody><tr><td>Add a node</td><td>Right click on empty space, type to search, click the node</td></tr><tr><td>Connect</td><td>Drag from an output pin to an input pin</td></tr><tr><td>Remove a link</td><td>Drag a connected input away, or right click the node and choose Disconnect</td></tr><tr><td>Change a value</td><td>Drag the value box, or double click it and type a number</td></tr><tr><td>Delete a node</td><td>Select it and press Delete or Backspace</td></tr><tr><td>Duplicate</td><td>Ctrl+D or right click, Duplicate</td></tr><tr><td>Move the view</td><td>Middle mouse button, or drag on empty space</td></tr><tr><td>Zoom the view</td><td>Ctrl and the mouse wheel zooms towards the mouse; <code>=</code> and <code>-</code> zoom in and out, <code>0</code> goes back to 100 percent</td></tr><tr><td>Undo and redo</td><td>Ctrl+Z and Ctrl+Y</td></tr><tr><td>Tidy up</td><td>The Arrange button places the nodes in columns from the inputs to the output</td></tr></tbody></table></div>
 <p>A number can feed a vector or a colour, and a colour can feed a colour with alpha. A connection that would make a loop or that cannot be converted is refused when you drop it.</p>
 <h2 id="nodes-catalogue"><a class="anchor" href="#nodes-catalogue" aria-label="Link">#</a>The 68 nodes</h2>
 <p>The nodes come in groups: Input (picture, previous picture for feedback, position, time, beat, audio, spectrum, waveform, controls, macros, LFO and constants), Maths, Vector, Colour, Distort, Noise, Shape, Filter and Output. Nodes read the picture, the audio analysis, the beat, the eight macros and four controls. An LFO node runs in the shader on the beat clock and follows the sync source without any processor work. The full catalogue with every input and option is in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/NODES.md" target="_blank" rel="noopener noreferrer">docs/NODES.md</a> of the project.</p>

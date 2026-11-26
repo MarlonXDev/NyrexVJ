@@ -12,20 +12,21 @@ void FNyrexVJRuntime::OnReceived(const FArrayReaderPtr& Data, const FIPv4Endpoin
 
 	NyrexCore::NyrexEvents Events;
 	FScopeLock Lock(&Mutex);
+	const double Now = FPlatformTime::Seconds();
 	NyrexCore::applyPacket(State, Data->GetData(), static_cast<std::size_t>(Data->Num()), Events);
 
+	Link.onPacket(Now);
 	if (Events.hello)
 	{
-		LastHelloSeconds = FPlatformTime::Seconds();
-		bWireConnected = State.schemaSupported;
-		if (State.schemaSupported)
-		{
-			bSchemaWarned = false;
-		}
+		Link.onHello(Now, State.schemaSupported);
 	}
 	if (Events.bye)
 	{
-		bWireConnected = false;
+		Link.onBye(Now);
+	}
+	for (const std::int32_t Pong : Events.pongs)
+	{
+		Latency.onPong(Pong, Now);
 	}
 	for (const std::pair<std::int32_t, std::int32_t>& Beat : Events.beats)
 	{
@@ -49,9 +50,10 @@ void FNyrexVJRuntime::Collect(TArray<TPair<int32, int32>>& OutBeats, TArray<int3
 
 	const double Now = FPlatformTime::Seconds();
 	bOutWasConnected = bConnected;
-	bConnected = bWireConnected && (Now - LastHelloSeconds) < ConnectionTimeoutSeconds;
+	const NyrexCore::LinkChange Change = Link.evaluate(Now);
+	bConnected = Link.connected();
 	bOutIsConnected = bConnected;
-	OutUnsupportedSchema = 0;
+	OutUnsupportedSchema = Change.incompatible ? static_cast<int32>(State.schema) : 0;
 
 	if (bConnected)
 	{
@@ -61,22 +63,49 @@ void FNyrexVJRuntime::Collect(TArray<TPair<int32, int32>>& OutBeats, TArray<int3
 	PendingBeats.Reset();
 	PendingOnsets.Reset();
 
+	Latency.expire(Now);
+
 	if (bOutWasConnected && !bConnected)
 	{
 		ResetDataKeepingIdentity();
-	}
-
-	if (State.helloSeen && !State.schemaSupported && !bSchemaWarned)
-	{
-		bSchemaWarned = true;
-		OutUnsupportedSchema = static_cast<int32>(State.schema);
+		Latency.reset();
 	}
 }
 
-void FNyrexVJRuntime::MarkStopped()
+void FNyrexVJRuntime::SetListening(bool bListening)
 {
 	FScopeLock Lock(&Mutex);
-	bWireConnected = false;
+	Link.setListening(bListening, FPlatformTime::Seconds());
+}
+
+bool FNyrexVJRuntime::TryBeginPing(double IntervalSeconds, int32& OutId)
+{
+	FScopeLock Lock(&Mutex);
+	const double Now = FPlatformTime::Seconds();
+	if (!bConnected || !Latency.due(Now, IntervalSeconds))
+	{
+		return false;
+	}
+	OutId = static_cast<int32>(Latency.beginPing(Now));
+	return OutId > 0;
+}
+
+NyrexCore::LinkStats FNyrexVJRuntime::ReadLinkStats() const
+{
+	FScopeLock Lock(&Mutex);
+	return Link.stats(FPlatformTime::Seconds());
+}
+
+NyrexCore::LatencyStats FNyrexVJRuntime::ReadLatencyStats() const
+{
+	FScopeLock Lock(&Mutex);
+	return Latency.stats();
+}
+
+void FNyrexVJRuntime::ResetLatency()
+{
+	FScopeLock Lock(&Mutex);
+	Latency.reset();
 }
 
 bool FNyrexVJRuntime::IsConnected() const

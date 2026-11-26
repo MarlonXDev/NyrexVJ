@@ -1178,6 +1178,8 @@ Layers go from 1 to 4, effect slots from 1 to 4 and parameters from 1 to 4. The 
 
 Tick Send OSC data under OSC output. NyrexVJ then sends to `127.0.0.1` on port 9011, 60 times a second. Address, port and rate can be changed, only IPv4 addresses and `localhost` are accepted. All messages start with `/nyrex/out/`. You get the audio levels, the spectrum in 32 bands, the clock with tempo and beat position, beat and onset events and up to 16 values of your own, each following one control, for example the opacity of a layer. Programs like Unreal Engine, TouchDesigner or Max can use this to react to the show. The full table is in docs/UNREAL.md of the project.
 
+To check the connection, a program can send `/nyrex/ping` with one whole number to the OSC input (tick Receive OSC messages, port 9010). NyrexVJ answers on the OSC output with `/nyrex/out/pong` and the same number, in the next frame. The time between the two is the round trip. It includes the network and up to one frame of NyrexVJ, so it is not the delay from the music to the picture. The answer goes to the address in the OSC output settings, not to the sender of the ping.
+
 > Warning: Data is sent to the address you enter. Only use addresses in a network you trust.
 
 ## The web interface {#web}

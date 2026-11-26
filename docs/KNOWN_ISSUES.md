@@ -4,7 +4,7 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
-KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-23 were added at 0.55.0; KI-24 to KI-27 were added at 0.56.0; KI-28 was added at 0.57.0; the other entries were not walked through again.
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; KI-17 and KI-18 were added at 0.54.0; KI-19 to KI-23 were added at 0.55.0; KI-24 to KI-27 were added at 0.56.0; KI-28 was added at 0.57.0; KI-29 was added at 0.58.0; the other entries were not walked through again.
 
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
@@ -264,6 +264,15 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** manual tests `M-GENLOCK-1` to `M-GENLOCK-4` in [TESTING.md](TESTING.md).
 - **Impact:** the line can be too optimistic ("offered") or too pessimistic (Wayland, another card for the output windows). It never changes how the output is drawn or swapped.
 - **Workaround:** use the sync bars with a camera to see what your hardware does, and set up a sync board in the driver's own tool. The software frame lock stays on as before.
+
+### KI-29 The Unreal plugin has never been compiled, and the round trip was only measured on loopback
+
+- **Area:** Unreal integration
+- **Known by:** what ran: `nvj_unreal_core_tests`, `nvj_unreal_link_tests`, `nvj_control_tests` and `scripts/test_unreal_link.py` on Linux with software OpenGL, 2 cores, no graphics card, no Unreal Engine. The Unreal-facing files were read, not built.
+- **What happens:** the plugin files that use Unreal types (subsystem, runtime, settings, Blueprint library, the link status struct, Build.cs) can contain compile errors or wrong API use for any engine version. Nothing is known about how the plugin behaves in the editor, in a packaged game, or with several game instances. The round trip number from NyrexVJ's side includes up to one NyrexVJ frame, so on a slow machine it is large and says little about the network.
+- **Steps:** manual tests `M-UNREAL-1` to `M-UNREAL-5` in [TESTING.md](TESTING.md).
+- **Impact:** a user who copies the plugin into a project may have to fix compile errors first. The documents say so, and no engine version is promised.
+- **Workaround:** use Unreal's own OSC plugin and the addresses in [UNREAL.md](UNREAL.md), or run the Python example client to check that NyrexVJ's output and the ping work on your network before you debug Unreal.
 
 ## Limits of the evidence, not of the program
 

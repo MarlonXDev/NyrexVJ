@@ -1664,6 +1664,58 @@
       "test": "A-GENLOCK-4",
       "command": "python3 -B scripts/check_i18n.py",
       "notes": "all 2913 translation keys are covered in the seven tables, with the same printf specifiers"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.58.0 (branch feature/unreal-link, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card, no Unreal Engine",
+      "area": "unreal-integration",
+      "test": "A-UNREAL-1",
+      "command": "build/nvj_unreal_core_tests",
+      "notes": "15302 checks, 0 failed; the plugin protocol core against the real NyrexVJ sender and parser"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.58.0 (branch feature/unreal-link, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card, no Unreal Engine",
+      "area": "unreal-integration",
+      "test": "A-UNREAL-2",
+      "command": "build/nvj_unreal_link_tests",
+      "notes": "16777403 checks, 0 failed (most of them the wrap of the ping number); link states, five second timeout, bye, reconnect, incompatible schema, round trip statistics, ping and pong bytes (20 and 44)"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.58.0 (branch feature/unreal-link, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card, no Unreal Engine",
+      "area": "unreal-integration",
+      "test": "A-UNREAL-3",
+      "command": "build/nvj_control_tests",
+      "notes": "656 checks, 0 failed, including the ping in every form, the limit of 8, the pong over UDP and a pong in the same update as a hello"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.58.0 (branch feature/unreal-link, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card, no Unreal Engine",
+      "area": "unreal-integration",
+      "test": "A-UNREAL-4",
+      "command": "python3 -B scripts/test_unreal_link.py build/NyrexVJ --output result.json",
+      "notes": "15 checks passed in two runs; 111 pongs of 125 and of 126 pings, round trip 42 ms on average, 97 and 124 ms at most, 95th percentile 79 and 83 ms; three connections, one loss (the killed run); software OpenGL, loopback, so the numbers describe NyrexVJ's slow frames and say nothing about a graphics card or a network"
     }
   ]
 }

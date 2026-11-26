@@ -101,6 +101,7 @@ void OscSender::configure(const OscOutConfig& config) {
 }
 
 void OscSender::stop() {
+    pongs_.clear();
     if (socket_.isOpen()) {
         transmit(bye());
         socket_.close();
@@ -120,6 +121,21 @@ std::vector<OscMessage> OscSender::bye() const {
     OscMessage out = message("/nyrex/out/bye");
     out.arguments.push_back(OscArgument::fromInt(kOscSchema));
     return {out};
+}
+
+std::vector<OscMessage> OscSender::pong(std::int32_t id) const {
+    OscMessage out = message("/nyrex/out/pong");
+    out.arguments.push_back(OscArgument::fromInt(id));
+    return {out};
+}
+
+void OscSender::queuePong(std::int32_t id) {
+    if (!config_.enabled || !socket_.isOpen()) {
+        return;
+    }
+    if (pongs_.size() < kOscMaxPendingPongs) {
+        pongs_.push_back(id);
+    }
 }
 
 std::vector<OscMessage> OscSender::compose(const OscOutFrame& frame, const ControlRouter& router, bool tick) {
@@ -225,9 +241,15 @@ void OscSender::update(double dt, const OscOutFrame& frame, const ControlRouter&
         }
     }
     std::vector<OscMessage> messages;
+    for (const std::int32_t id : pongs_) {
+        const std::vector<OscMessage> answer = pong(id);
+        messages.insert(messages.end(), answer.begin(), answer.end());
+    }
+    pongs_.clear();
     nextHello_ -= std::max(dt, 0.0);
     if (nextHello_ <= 0.0) {
-        messages = hello();
+        const std::vector<OscMessage> greeting = hello();
+        messages.insert(messages.end(), greeting.begin(), greeting.end());
         if (helloBurst_ > 0) {
             --helloBurst_;
             nextHello_ = 0.25;

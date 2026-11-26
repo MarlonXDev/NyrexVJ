@@ -7,11 +7,19 @@
 #include "Sockets.h"
 #include "SocketSubsystem.h"
 
+#include "Core/NyrexLink.h"
 #include "Core/NyrexOsc.h"
 #include "Core/NyrexState.h"
 #include "NyrexVJLog.h"
 #include "NyrexVJRuntime.h"
 #include "NyrexVJSettings.h"
+
+static_assert(static_cast<uint8>(NyrexCore::LinkState::Stopped) == static_cast<uint8>(ENyrexLinkState::Stopped), "link state order");
+static_assert(static_cast<uint8>(NyrexCore::LinkState::Waiting) == static_cast<uint8>(ENyrexLinkState::Waiting), "link state order");
+static_assert(static_cast<uint8>(NyrexCore::LinkState::Connected) == static_cast<uint8>(ENyrexLinkState::Connected), "link state order");
+static_assert(static_cast<uint8>(NyrexCore::LinkState::Lost) == static_cast<uint8>(ENyrexLinkState::Lost), "link state order");
+static_assert(static_cast<uint8>(NyrexCore::LinkState::Ended) == static_cast<uint8>(ENyrexLinkState::Ended), "link state order");
+static_assert(static_cast<uint8>(NyrexCore::LinkState::Incompatible) == static_cast<uint8>(ENyrexLinkState::Incompatible), "link state order");
 
 namespace NyrexVJPrivate
 {
@@ -82,13 +90,15 @@ bool UNyrexVJSubsystem::StartListening(int32 Port)
 		UE_LOG(LogNyrexVJ, Warning, TEXT("Invalid listen port %d."), Port);
 		return false;
 	}
+	bListenWanted = true;
+	WantedListenPort = Port;
 	if (ListenSocket != nullptr)
 	{
 		if (ActiveListenPort == Port)
 		{
 			return true;
 		}
-		StopListening();
+		CloseListenSocket();
 	}
 
 	FSocket* Socket = FUdpSocketBuilder(TEXT("NyrexVJ Listen"))
@@ -99,10 +109,17 @@ bool UNyrexVJSubsystem::StartListening(int32 Port)
 		.Build();
 	if (Socket == nullptr)
 	{
-		UE_LOG(LogNyrexVJ, Warning, TEXT("Could not open UDP port %d. Another program may already use it."), Port);
+		if (!bListenFailureLogged)
+		{
+			bListenFailureLogged = true;
+			UE_LOG(LogNyrexVJ, Warning, TEXT("Could not open UDP port %d. Another program may already use it. The plugin tries again every few seconds."), Port);
+		}
+		NextListenAttemptSeconds = FPlatformTime::Seconds() + GetDefault<UNyrexVJSettings>()->ListenRetrySeconds;
 		return false;
 	}
 
+	bListenFailureLogged = false;
+	Runtime->SetListening(true);
 	Receiver = new FUdpSocketReceiver(Socket, FTimespan::FromMilliseconds(100), TEXT("NyrexVJ Receiver"));
 	Receiver->OnDataReceived().BindRaw(Runtime.Get(), &FNyrexVJRuntime::OnReceived);
 	Receiver->Start();
@@ -114,6 +131,13 @@ bool UNyrexVJSubsystem::StartListening(int32 Port)
 }
 
 void UNyrexVJSubsystem::StopListening()
+{
+	bListenWanted = false;
+	bListenFailureLogged = false;
+	CloseListenSocket();
+}
+
+void UNyrexVJSubsystem::CloseListenSocket()
 {
 	if (Receiver != nullptr)
 	{
@@ -133,7 +157,7 @@ void UNyrexVJSubsystem::StopListening()
 	ActiveListenPort = 0;
 	if (Runtime.IsValid())
 	{
-		Runtime->MarkStopped();
+		Runtime->SetListening(false);
 	}
 }
 
@@ -145,6 +169,45 @@ bool UNyrexVJSubsystem::IsListening() const
 bool UNyrexVJSubsystem::IsConnected() const
 {
 	return Runtime.IsValid() && Runtime->IsConnected();
+}
+
+ENyrexLinkState UNyrexVJSubsystem::GetLinkState() const
+{
+	return GetLinkStatus().State;
+}
+
+FNyrexLinkStatus UNyrexVJSubsystem::GetLinkStatus() const
+{
+	FNyrexLinkStatus Status;
+	if (!Runtime.IsValid())
+	{
+		return Status;
+	}
+	const NyrexCore::LinkStats Link = Runtime->ReadLinkStats();
+	const NyrexCore::LatencyStats Latency = Runtime->ReadLatencyStats();
+	Status.State = static_cast<ENyrexLinkState>(static_cast<uint8>(Link.state));
+	Status.Connections = static_cast<int32>(Link.connections);
+	Status.Losses = static_cast<int32>(Link.losses);
+	Status.SecondsSinceLastPacket = static_cast<float>(Link.secondsSinceLastPacket);
+	Status.PacketsPerSecond = static_cast<float>(Link.packetsPerSecond);
+	Status.LongestGapSeconds = static_cast<float>(Link.longestGapSeconds);
+	Status.bHasLatency = Latency.valid;
+	Status.LatencyLastMs = static_cast<float>(Latency.lastMs);
+	Status.LatencyAverageMs = static_cast<float>(Latency.averageMs);
+	Status.LatencyMinMs = static_cast<float>(Latency.minMs);
+	Status.LatencyMaxMs = static_cast<float>(Latency.maxMs);
+	Status.LatencyP95Ms = static_cast<float>(Latency.p95Ms);
+	Status.PingsSent = static_cast<int32>(Latency.sent);
+	Status.PingsLost = static_cast<int32>(Latency.lost);
+	return Status;
+}
+
+void UNyrexVJSubsystem::ResetLatencyStatistics()
+{
+	if (Runtime.IsValid())
+	{
+		Runtime->ResetLatency();
+	}
 }
 
 FString UNyrexVJSubsystem::GetNyrexVJVersion() const
@@ -329,6 +392,15 @@ bool UNyrexVJSubsystem::TickSubsystem(float DeltaTime)
 	int32 UnsupportedSchema = 0;
 	Runtime->Collect(Beats, Onsets, bWasConnected, bIsConnected, UnsupportedSchema);
 
+	const double Now = FPlatformTime::Seconds();
+	RetryListening(Now);
+	const UNyrexVJSettings* Settings = GetDefault<UNyrexVJSettings>();
+	int32 PingId = 0;
+	if (bIsConnected && Settings->bMeasureLatency && Runtime->TryBeginPing(Settings->PingIntervalSeconds, PingId))
+	{
+		SendPing(PingId);
+	}
+
 	if (UnsupportedSchema != 0)
 	{
 		UE_LOG(LogNyrexVJ, Warning, TEXT("NyrexVJ announced OSC schema %d. This plugin only understands schema %d and ignores the data."), UnsupportedSchema, NyrexCore::kSupportedSchema);
@@ -351,6 +423,24 @@ bool UNyrexVJSubsystem::TickSubsystem(float DeltaTime)
 		OnDisconnected.Broadcast();
 	}
 	return true;
+}
+
+void UNyrexVJSubsystem::RetryListening(double Now)
+{
+	if (!bListenWanted || ListenSocket != nullptr || Now < NextListenAttemptSeconds)
+	{
+		return;
+	}
+	StartListening(WantedListenPort);
+}
+
+void UNyrexVJSubsystem::SendPing(int32 Id)
+{
+	std::vector<std::uint8_t> Bytes;
+	if (NyrexCore::encodePing(static_cast<std::int32_t>(Id), Bytes))
+	{
+		SendBytes(Bytes);
+	}
 }
 
 bool UNyrexVJSubsystem::SendControlMessage(const FString& Address, bool bWithValue, float Value)
@@ -383,6 +473,17 @@ bool UNyrexVJSubsystem::SendControlMessage(const FString& Address, bool bWithVal
 	if (!NyrexVJPrivate::ParseControlHost(ControlHost, Ip) || !NyrexVJPrivate::ValidPort(ControlPort))
 	{
 		UE_LOG(LogNyrexVJ, Warning, TEXT("Invalid control target %s:%d. Use an IPv4 address or localhost."), *ControlHost, ControlPort);
+		return false;
+	}
+
+	return SendBytes(Bytes);
+}
+
+bool UNyrexVJSubsystem::SendBytes(const std::vector<std::uint8_t>& Bytes)
+{
+	FIPv4Address Ip;
+	if (!NyrexVJPrivate::ParseControlHost(ControlHost, Ip) || !NyrexVJPrivate::ValidPort(ControlPort))
+	{
 		return false;
 	}
 

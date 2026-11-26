@@ -3092,6 +3092,128 @@
           "criteria": "Proposed: all checks pass, the frame times do not depend on the status, and the driver's panel shows no change made by NyrexVJ. The maintainer sets the real limit after the first runs."
         }
       ]
+    },
+    {
+      "id": "unreal-integration",
+      "title": "Unreal Engine link: the plugin in a real editor and a packaged game, the connection state, the ping and pong round trip, the Python example client, Windows and Linux",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/UNREAL.md",
+        "docs/adr/0052-unreal-link-status-and-latency.md",
+        "docs/adr/0009-unreal-plugin.md",
+        "docs/INTERFACES.md",
+        "docs/KNOWN_ISSUES.md",
+        "docs/TESTING.md",
+        "docs/manual/manual.en.md",
+        "integrations/unreal/NyrexVJ/README.md"
+      ],
+      "sources": [
+        "integrations/unreal/NyrexVJ/Source/NyrexVJ/Private/Core/NyrexLink.cpp",
+        "integrations/unreal/NyrexVJ/Source/NyrexVJ/Private/Core/NyrexState.cpp",
+        "integrations/unreal/NyrexVJ/Source/NyrexVJ/Private/NyrexVJRuntime.cpp",
+        "integrations/unreal/NyrexVJ/Source/NyrexVJ/Private/NyrexVJSubsystem.cpp",
+        "integrations/unreal/examples/nyrex_monitor.py",
+        "src/control/control_system.cpp",
+        "src/control/osc_out.cpp",
+        "tests/test_unreal_link.cpp",
+        "tests/test_unreal_core.cpp",
+        "tests/test_control.cpp",
+        "scripts/test_unreal_link.py"
+      ],
+      "automated": [
+        {
+          "id": "A-UNREAL-1",
+          "kind": "ctest",
+          "name": "nvj_unreal_core_tests",
+          "note": "the plugin protocol core against the real NyrexVJ sender and parser: decoding, encoding, limits, damaged and cut-off packets, the schema rules, the new pong event; no Unreal Engine"
+        },
+        {
+          "id": "A-UNREAL-2",
+          "kind": "ctest",
+          "name": "nvj_unreal_link_tests",
+          "note": "the link monitor (waiting, connected, lost after five seconds, ended by bye, reconnect, incompatible schema, rate and longest gap, bad and backwards clock values) and the round trip statistics (minimum, average, maximum, 95th percentile, window of 64, lost, unknown, repeated and late pongs, id wrap around at 16777215), the ping and pong bytes through the real sender and parser; no Unreal Engine"
+        },
+        {
+          "id": "A-UNREAL-3",
+          "kind": "ctest",
+          "name": "nvj_control_tests",
+          "note": "the ping on the OSC input is accepted for one integer from 0 to 16777215 and refused in every other form, at most 8 are kept per frame, a ping changes no control, the pong is composed, sent over UDP, limited to 8, dropped when the output restarts, and sent in the same update as a hello"
+        },
+        {
+          "id": "A-UNREAL-4",
+          "kind": "script",
+          "command": "xvfb-run -a python3 scripts/test_unreal_link.py build/NyrexVJ --output result.json",
+          "note": "the real NyrexVJ with OSC input and output on loopback and the Python example client: three connections (two clean runs with bye, one killed run that is seen as lost after five seconds), hello with schema 1, version and input port, the pongs, the 95th percentile of the round trip below one second, audio and clock data arriving; software OpenGL, so the frame rate and the round trip are those of a software renderer"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-UNREAL-1",
+          "title": "Compile the plugin with a real Unreal Engine, one run per engine version",
+          "needs": "A Windows PC with Unreal Engine installed (each version to be named as supported, the newest stable release and the one before it are proposed), Visual Studio with the C++ workload for Unreal, and this repository",
+          "steps": [
+            "Copy integrations/unreal/NyrexVJ to <Project>/Plugins/NyrexVJ in a C++ project and generate the project files.",
+            "Build the Development Editor target for Win64 and keep the full compiler output.",
+            "Build the standalone package with RunUAT.bat BuildPlugin -Plugin=<repo>/integrations/unreal/NyrexVJ/NyrexVJ.uplugin -Package=<out>/NyrexVJ -TargetPlatforms=Win64 and keep the output.",
+            "Repeat for each engine version, and note the engine version number, the compiler and the date."
+          ],
+          "measure": "per engine version: whether both builds succeed, the number of errors and warnings, and each error with file and line",
+          "criteria": "Proposed: a version counts as supported only when both builds finish without errors. The maintainer decides the versions. Every error found here is a bug in the unverified Unreal files."
+        },
+        {
+          "id": "M-UNREAL-2",
+          "title": "Play In Editor with a running NyrexVJ: connection, data and events",
+          "needs": "A Windows PC, a project with the plugin from M-UNREAL-1, NyrexVJ with Send OSC data and Receive OSC messages on",
+          "steps": [
+            "Start NyrexVJ with music playing, then press Play In Editor in a level whose Blueprint prints Is Connected, Get Bass and Get Beat Number every second.",
+            "Bind On Beat, On Onset, On Connected and On Disconnected to Print String nodes.",
+            "Close NyrexVJ and watch the state, then start it again.",
+            "Read the log lines starting with LogNyrexVJ."
+          ],
+          "measure": "whether the values move with the music, whether each event fires once per occurrence, the time until Connected after NyrexVJ starts, the state after NyrexVJ closes cleanly and after it is killed with the task manager",
+          "criteria": "Proposed: Connected within 3 seconds of NyrexVJ's first hello, Ended after a clean close, Lost after about 5 seconds without a bye, no event twice, no error line in the log."
+        },
+        {
+          "id": "M-UNREAL-3",
+          "title": "A packaged game with the plugin",
+          "needs": "A Windows PC with Unreal Engine and the project from M-UNREAL-2",
+          "steps": [
+            "Package the project for Windows (Development), start the packaged game and NyrexVJ.",
+            "Repeat the checks of M-UNREAL-2 in the packaged game.",
+            "Start the packaged game first and NyrexVJ second, then the other way round."
+          ],
+          "measure": "whether the plugin is in the package, whether the checks of M-UNREAL-2 give the same result, and the log of the packaged game",
+          "criteria": "Proposed: identical behaviour to the editor, in both start orders."
+        },
+        {
+          "id": "M-UNREAL-4",
+          "title": "The round trip in a real project, and in comparison with the Python client",
+          "needs": "A Windows PC with a graphics card, Unreal Engine, NyrexVJ at its normal frame rate, and for the second part a second computer on the same network",
+          "steps": [
+            "Show Get Link Status in the level (average, 95th percentile, pings lost) while NyrexVJ renders a heavy look at 60 frames per second.",
+            "Run integrations/unreal/examples/nyrex_monitor.py on the same PC at the same time on the same ports (stop the game first, the port can be held only once) and compare.",
+            "Repeat with NyrexVJ on the second computer, sending to the PC's address."
+          ],
+          "measure": "the average and the 95th percentile of the round trip in the game, the Python client and over the network, and the number of lost pings in 10 minutes",
+          "criteria": "Proposed: on one PC the round trip stays below two NyrexVJ frame times and no ping is lost. The maintainer sets the limits after the first runs."
+        },
+        {
+          "id": "M-UNREAL-5",
+          "title": "Failure and recovery",
+          "needs": "A Windows PC with the project from M-UNREAL-2, a second program that can hold a UDP port, and a firewall that can be switched on",
+          "steps": [
+            "Hold the listen port (9011) with another program, start the game, then free the port.",
+            "Block UDP 9011 in the firewall for a minute while NyrexVJ sends, then allow it again.",
+            "Switch Measure Latency off and check that no ping reaches NyrexVJ.",
+            "Send controls (Set Master Level, Trigger Column) from the plugin and watch NyrexVJ."
+          ],
+          "measure": "the log line about the busy port (once, not repeatedly), the time until the plugin connects after the port is free, the states during the firewall block, and whether the controls arrive",
+          "criteria": "Proposed: one log line, connected within the retry time plus 2 seconds, Lost during the block and Connected again after it, controls arrive."
+        }
+      ]
     }
   ]
 }

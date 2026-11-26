@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "0.1.0",
+	"VersionName": "0.2.0",
 	"FriendlyName": "NyrexVJ",
 	"Description": "Blueprint access to NyrexVJ: audio levels, spectrum, tempo, beat events and exposed parameters over OSC, plus control messages back to NyrexVJ.",
 	"Category": "Audio",

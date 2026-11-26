@@ -8,6 +8,7 @@
 #include "control/osc.hpp"
 #include "control/udp_socket.hpp"
 
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -40,6 +41,8 @@ public:
     void useMidiOutput(std::unique_ptr<MidiOutput> output);
 
     bool handleOsc(const OscMessage& message);
+    void takePings(std::vector<std::int32_t>& out);
+    unsigned long long pingCount() const { return pingCount_; }
     const ControlRouter& router() const { return router_; }
 
     bool oscListening() const { return socket_.isOpen(); }
@@ -106,6 +109,8 @@ private:
     bool dirty_ = false;
     double dirtyFor_ = 0.0;
     unsigned long long oscCount_ = 0;
+    unsigned long long pingCount_ = 0;
+    std::vector<std::int32_t> pings_;
     unsigned long long midiCount_ = 0;
     bool socketWantsOpen_ = false;
     int socketPort_ = 0;

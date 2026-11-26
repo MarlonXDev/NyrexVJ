@@ -1178,6 +1178,8 @@ Layer gehen von 1 bis 4, Effekt-Slots von 1 bis 4 und Parameter von 1 bis 4. Der
 
 Hak unter OSC-Ausgang OSC-Daten senden an. NyrexVJ sendet dann an `127.0.0.1` auf Port 9011, 60 Mal pro Sekunde. Adresse, Port und Rate lassen sich ändern, nur IPv4-Adressen und `localhost` werden akzeptiert. Alle Nachrichten beginnen mit `/nyrex/out/`. Du bekommst die Audio-Pegel, das Spektrum in 32 Bändern, die Clock mit Tempo und Beat-Position, Beat- und Onset-Ereignisse und bis zu 16 eigene Werte, die jeweils einem Regler folgen, zum Beispiel der Deckkraft eines Layers. Programme wie Unreal Engine, TouchDesigner oder Max können damit auf die Show reagieren. Die vollständige Tabelle steht in docs/UNREAL.md des Projekts.
 
+Um die Verbindung zu prüfen, kann ein Programm `/nyrex/ping` mit einer ganzen Zahl an den OSC-Eingang schicken (OSC-Nachrichten empfangen anhaken, Port 9010). NyrexVJ antwortet im nächsten Bild auf dem OSC-Ausgang mit `/nyrex/out/pong` und derselben Zahl. Die Zeit dazwischen ist die Umlaufzeit. Sie enthält das Netzwerk und bis zu ein Bild von NyrexVJ, ist also nicht die Verzögerung von der Musik bis zum Bild. Die Antwort geht an die Adresse aus den Einstellungen des OSC-Ausgangs, nicht an den Absender des Pings.
+
 > Warnung: Die Daten werden an die Adresse gesendet, die du eingibst. Nutze nur Adressen in einem Netzwerk, dem du vertraust.
 
 ## Die Web-Oberfläche {#web}

@@ -47,6 +47,7 @@ struct NyrexEvents {
     bool bye = false;
     std::vector<std::pair<std::int32_t, std::int32_t>> beats;
     std::vector<std::int32_t> onsets;
+    std::vector<std::int32_t> pongs;
 };
 
 float clampUnit(float value);

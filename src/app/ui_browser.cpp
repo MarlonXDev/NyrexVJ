@@ -1122,15 +1122,13 @@ void App::drawAudioSource() {
 }
 
 void App::drawAudioTab() {
-    drawAudioSource();
-
     const AudioFeatures& features = engine_.audio();
     ImGui::Spacing();
     if (!audio_.active()) {
         ImGui::TextWrapped("%s", tr("Audio is off. Clips and effects follow the BPM clock instead."));
     }
 
-    ImVec2 size(ImGui::GetContentRegionAvail().x, 84.0f);
+    ImVec2 size(ImGui::GetContentRegionAvail().x, ui::px(64.0f));
     ImVec2 origin = ImGui::GetCursorScreenPos();
     ImDrawList* draw = ImGui::GetWindowDrawList();
     draw->AddRectFilled(origin, ImVec2(origin.x + size.x, origin.y + size.y), IM_COL32(14, 14, 17, 255));
@@ -1190,21 +1188,22 @@ void App::drawAudioTab() {
 void App::drawBrowser() {
     ImGui::Begin(trId("Browser", "browser"));
     if (ImGui::BeginTabBar("browser_tabs")) {
-        const char* names[] = {trId("Presets", "tabPresets"), trId("Library", "tabLibrary"), trId("Audio", "tabAudio")};
-        for (int i = 0; i < 3; ++i) {
+        const char* names[] = {trId("Presets", "tabPresets"), trId("Library", "tabLibrary")};
+        for (int i = 0; i < 2; ++i) {
             ImGuiTabItemFlags flags = focusTab_ == i ? ImGuiTabItemFlags_SetSelected : 0;
             if (ImGui::BeginTabItem(names[i], nullptr, flags)) {
                 if (i == 0) {
                     drawPresetsTab();
-                } else if (i == 1) {
-                    drawLibraryTab();
                 } else {
-                    drawAudioTab();
+                    drawLibraryTab();
                 }
                 ImGui::EndTabItem();
             }
         }
-        focusTab_ = -1;
+        if (focusTab_ >= 0 && ++focusTabAge_ > 6) {
+            focusTab_ = -1;
+            focusTabAge_ = 0;
+        }
         ImGui::EndTabBar();
     }
     ImGui::End();

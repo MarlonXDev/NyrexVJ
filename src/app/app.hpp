@@ -176,7 +176,15 @@ private:
     void drawOutput();
     void drawPreview();
     void drawClipPanel();
-    void drawTransport(bool wide);
+    void drawTransportBar();
+    void drawTrigger();
+    void drawAudioWindow();
+    void drawStripMaster();
+    void drawStripAudio();
+    void drawStripNetwork();
+    void drawStripMidi();
+    void drawStripOsc();
+    void applyTimelineDock();
     void drawSceneControls(ScenePlayer& player);
     void drawLayer();
     void drawMaster();
@@ -401,6 +409,8 @@ private:
     bool timelineOpen_ = false;
     bool timelineFocus_ = false;
     bool timelineHasFocus_ = false;
+    int timelineDockRequest_ = 0;
+    ImGuiID rootDock_ = 0;
     bool manualOpen_ = false;
     ShowDialog showDialog_;
     PackDialog packDialog_;
@@ -510,6 +520,7 @@ private:
     bool profileMessageGood_ = true;
     char effectPickFilter_[64] = {};
     int focusTab_ = -1;
+    int focusTabAge_ = 0;
     int selectedOutput_ = 0;
     int outputTabForce_ = 0;
     std::array<OutputSpec, kMaxOutputs> savedOutputs_ = defaultOutputs();

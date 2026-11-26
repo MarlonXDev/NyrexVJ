@@ -2695,7 +2695,7 @@ const Translation kSpanish[] = {
     {"Shortcut", "Atajo"},
     {"Smaller interface", "Interfaz más pequeña"},
     {"That shortcut is already used", "Ese atajo ya está en uso"},
-    {"The saved window layout was damaged. A copy was kept as layout_v6.ini.bad and the default layout was restored.", "La disposición de ventanas guardada estaba dañada. Se conservó una copia como layout_v6.ini.bad y se restauró la disposición predeterminada."},
+    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "La disposición de ventanas guardada estaba dañada. Se conservó una copia como layout_v7.ini.bad y se restauró la disposición predeterminada."},
     {"The shortcuts could not be saved", "No se pudieron guardar los atajos"},
     {"The window layout was reset to the default.", "La disposición de ventanas se restableció a la predeterminada."},
     {"View", "Ver"},
@@ -2918,6 +2918,18 @@ const Translation kSpanish[] = {
     {"Not offered by this graphics driver", "Este controlador gráfico no lo ofrece"},
     {"Offered by the driver, not used by NyrexVJ", "Ofrecido por el controlador, NyrexVJ no lo usa"},
     {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "El bloqueo de fotogramas por hardware y el genlock necesitan una tarjeta gráfica profesional con tarjeta de sincronización (por ejemplo NVIDIA Quadro Sync o AMD FirePro S400), cables y una configuración en el panel de control del controlador. Esta línea solo muestra si el controlador enumera las extensiones de swap group. No puede saber si hay una tarjeta conectada o bloqueada. NyrexVJ no se une a ningún swap group y no cambia ningún ajuste del controlador; el bloqueo de fotogramas por software de arriba funciona en cualquier caso."},
+    {"Audio input", "Entrada de audio"},
+    {"Clip start", "Inicio de clips"},
+    {"Dock at the bottom", "Acoplar abajo"},
+    {"Dock on the right", "Acoplar a la derecha"},
+    {"Float as a window", "Como ventana flotante"},
+    {"Master level", "Nivel master"},
+    {"Nudge", "Desplazar"},
+    {"Pauses and restarts the beat count at 1", "Pausa y reinicia el conteo de beats en 1"},
+    {"Phase", "Fase"},
+    {"Place the timeline", "Colocar la línea de tiempo"},
+    {"Runs the tempo clock and all clip motion", "Pone en marcha el reloj de tempo y todo el movimiento de los clips"},
+    {"Trigger", "Disparo"},
 };
 
 }

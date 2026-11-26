@@ -63,8 +63,8 @@ void App::drawDeckBar() {
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("%s", tr("Decks"));
-    for (int d = 0; d < kDeckCount; ++d) {
-        ImGui::SameLine(0.0f, 4.0f);
+    const bool compact = ImGui::GetContentRegionAvail().x < ui::px(1480.0f);
+    auto drawDeckButton = [&](int d, bool inPicker) {
         ImGui::PushID(d);
         const bool used = comp.deckUsed[static_cast<size_t>(d)];
         const bool active = d == comp.activeDeck;
@@ -85,6 +85,9 @@ void App::drawDeckBar() {
         }
         if (ImGui::Button(std::to_string(d + 1).c_str(), ImVec2(buttonWidth, 0.0f))) {
             switchDeckTo(d);
+            if (inPicker) {
+                ImGui::CloseCurrentPopup();
+            }
         }
         ImGui::PopStyleColor(colors);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
@@ -121,6 +124,27 @@ void App::drawDeckBar() {
             ImGui::EndPopup();
         }
         ImGui::PopID();
+    };
+    if (!compact) {
+        for (int d = 0; d < kDeckCount; ++d) {
+            ImGui::SameLine(0.0f, 4.0f);
+            drawDeckButton(d, false);
+        }
+    } else {
+        ImGui::SameLine(0.0f, 4.0f);
+        const std::string pickLabel = std::string(tr("Deck")) + " " + std::to_string(comp.activeDeck + 1) + "###deckPick";
+        if (ImGui::Button(pickLabel.c_str(), ImVec2(ui::px(84.0f), 0.0f))) {
+            ImGui::OpenPopup("###deckPicker");
+        }
+        if (ImGui::BeginPopup("###deckPicker")) {
+            for (int d = 0; d < kDeckCount; ++d) {
+                if (d % 8 != 0) {
+                    ImGui::SameLine(0.0f, 4.0f);
+                }
+                drawDeckButton(d, true);
+            }
+            ImGui::EndPopup();
+        }
     }
 
     if (renameRequested_) {
@@ -154,163 +178,6 @@ void App::drawDeckBar() {
     ImGui::SetItemTooltip("%s", tr("Next deck"));
 }
 
-void App::drawTransport(bool wide) {
-    Composition& comp = engine_.comp;
-    DeckSettings& settings = comp.deckSettings;
-
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextDisabled("BPM");
-    ImGui::SameLine();
-    float bpm = comp.bpm;
-    ImGui::SetNextItemWidth(ui::px(78.0f));
-    if (ImGui::DragFloat("##bpm", &bpm, 0.1f, 40.0f, 240.0f, "%.1f")) {
-        comp.bpm = std::clamp(bpm, 40.0f, 240.0f);
-    }
-    ImGui::SameLine(0.0f, 4.0f);
-    if (ImGui::Button("-")) {
-        comp.bpm = std::clamp(comp.bpm - 1.0f, 40.0f, 240.0f);
-    }
-    ImGui::SameLine(0.0f, 2.0f);
-    if (ImGui::Button("+")) {
-        comp.bpm = std::clamp(comp.bpm + 1.0f, 40.0f, 240.0f);
-    }
-    ImGui::SameLine(0.0f, 4.0f);
-    if (ImGui::Button("/2")) {
-        comp.bpm = std::clamp(comp.bpm * 0.5f, 40.0f, 240.0f);
-    }
-    ImGui::SameLine(0.0f, 2.0f);
-    if (ImGui::Button("x2")) {
-        comp.bpm = std::clamp(comp.bpm * 2.0f, 40.0f, 240.0f);
-    }
-    ImGui::SameLine(0.0f, 8.0f);
-    if (ImGui::Button(trId("Tap", "tap"))) {
-        engine_.tap();
-    }
-    ImGui::SetItemTooltip("%s", tr("Tap the tempo (Space)"));
-    ImGui::SameLine(0.0f, 4.0f);
-    if (ImGui::Button(trId("Resync", "resync"))) {
-        engine_.resync();
-    }
-    ImGui::SetItemTooltip("%s", tr("Restart the beat count at 1"));
-    ImGui::SameLine(0.0f, 4.0f);
-    if (ui::accentButton(trId("Pause", "pause"), engine_.paused)) {
-        engine_.paused = !engine_.paused;
-    }
-    ImGui::SetItemTooltip("%s", tr("Freezes the tempo clock and all clip motion"));
-    ImGui::SameLine(0.0f, 10.0f);
-    ImGui::AlignTextToFramePadding();
-    const int bar = clampBeatsPerBar(comp.beatsPerBar);
-    ImGui::TextDisabled("%s %d/%d", tr("Beat"), static_cast<int>(std::floor(engine_.beat())) % bar + 1, bar);
-    if (ImGui::IsItemClicked()) {
-        ImGui::OpenPopup("##beatGrid");
-    }
-    ImGui::SetItemTooltip("%s", tr("Click to adjust the beat grid"));
-    if (ImGui::BeginPopup("##beatGrid")) {
-        ImGui::TextColored(ui::kAccent, "%s", tr("Beat grid"));
-        ImGui::SetNextItemWidth(ui::px(120.0f));
-        int beatsPerBar = comp.beatsPerBar;
-        if (ui::sliderInt(tr("Beats per bar"), &beatsPerBar, kMinBeatsPerBar, kMaxBeatsPerBar)) {
-            comp.beatsPerBar = clampBeatsPerBar(beatsPerBar);
-        }
-        if (ImGui::Button("<<")) {
-            engine_.shiftBeat(-0.0625);
-        }
-        ImGui::SetItemTooltip("%s", tr("Move the beat grid earlier by a sixteenth of a beat"));
-        ImGui::SameLine();
-        if (ImGui::Button(">>")) {
-            engine_.shiftBeat(0.0625);
-        }
-        ImGui::SetItemTooltip("%s", tr("Move the beat grid later by a sixteenth of a beat"));
-        ImGui::SameLine();
-        if (ImGui::Button(trId("Snap to beat", "snapBeat"))) {
-            engine_.nudgeBeat(1.0f);
-        }
-        ImGui::SetItemTooltip("%s", tr("Align the grid to the nearest beat without changing the count"));
-        ImGui::SameLine();
-        if (ImGui::Button(trId("Bar start here", "barStart"))) {
-            engine_.shiftBeat(std::round(engine_.beat() / bar) * bar - engine_.beat());
-        }
-        ImGui::SetItemTooltip("%s", tr("Make the nearest beat the first beat of the bar"));
-        ImGui::EndPopup();
-    }
-    ImGui::SameLine(0.0f, 10.0f);
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextDisabled("%s", tr("Quantize"));
-    ImGui::SameLine();
-    {
-        const char* gridLabels[kQuantizeGridCount] = {tr("Off"), tr("Beat"), tr("Bar"), tr("2 bars"), tr("4 bars")};
-        const QuantizeGrid current = quantizeGridFromName(settings_.launchQuantize.c_str());
-        ImGui::SetNextItemWidth(ui::px(84.0f));
-        if (ImGui::BeginCombo("##launchQuantize", gridLabels[static_cast<int>(current)])) {
-            for (int g = 0; g < kQuantizeGridCount; ++g) {
-                if (ImGui::Selectable(gridLabels[g], static_cast<int>(current) == g)) {
-                    settings_.launchQuantize = quantizeGridName(static_cast<QuantizeGrid>(g));
-                    saveSettings(settings_);
-                }
-            }
-            ImGui::EndCombo();
-        }
-        ImGui::SetItemTooltip("%s", tr("Clips, columns and decks that you start with a click, a key, MIDI, OSC or a cue wait for the next beat or bar. If the beat clock is lost, they start at once."));
-        const size_t waiting = engine_.quantizer().pending();
-        if (waiting > 0) {
-            ImGui::SameLine(0.0f, 4.0f);
-            ImGui::TextColored(ui::kAccent, "%zu", waiting);
-        }
-    }
-    if (audio_.active()) {
-        ImGui::SameLine(0.0f, 10.0f);
-        ImGui::Checkbox(trId("Sync BPM to audio", "syncBpm"), &settings_.audioSyncBpm);
-        const AudioFeatures& features = audio_.features();
-        if (features.bpm > 0.0f) {
-            ImGui::SameLine();
-            ImGui::TextDisabled("%.1f", features.bpm);
-        }
-    }
-
-    if (wide) {
-        ImGui::SameLine(0.0f, 28.0f);
-    }
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextDisabled("%s", tr("Transition"));
-    ImGui::SameLine();
-    float transitionWidth = 104.0f;
-    for (int t = 0; t < TransitionTypeCount; ++t) {
-        transitionWidth = ui::fitComboWidth(transitionWidth, tr(transitionName(t)));
-    }
-    ImGui::SetNextItemWidth(transitionWidth);
-    if (ImGui::BeginCombo("##transition", tr(transitionName(settings.transition)))) {
-        for (int t = 0; t < TransitionTypeCount; ++t) {
-            if (ImGui::Selectable(tr(transitionName(t)), settings.transition == t)) {
-                settings.transition = t;
-            }
-        }
-        ImGui::EndCombo();
-    }
-    ImGui::SameLine();
-    ImGui::Checkbox(trId("Beat sync", "transSync"), &settings.syncBeats);
-    ImGui::SetItemTooltip("%s", tr("Transition length follows the tempo"));
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ui::px(120.0f));
-    if (settings.syncBeats) {
-        ui::sliderInt("##transbeats", &settings.beats, 1, 32, "%d beats");
-    } else {
-        ui::sliderFloat("##transsec", &settings.seconds, 0.0f, 10.0f, "%.1f s");
-    }
-    ImGui::SameLine(0.0f, 16.0f);
-    ImGui::Checkbox(trId("Auto cycle", "transCycle"), &settings.autoCycle);
-    ImGui::SetItemTooltip("%s", tr("Switches to the next used deck by itself"));
-    if (settings.autoCycle) {
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", tr("every"));
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(ui::px(110.0f));
-        ui::sliderInt("##cyclebeats", &settings.cycleBeats, 4, 128, "%d beats");
-    }
-    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);
-    ImGui::ProgressBar(engine_.transitioning() ? engine_.transitionProgress() : 0.0f, ImVec2(-FLT_MIN, 4.0f), "");
-    ImGui::PopStyleColor();
-}
-
 void App::drawDeck() {
     ImGui::Begin(trId("Deck", "deck"));
     const std::vector<ClipDef>& library = clipLibrary();
@@ -319,10 +186,7 @@ void App::drawDeck() {
     const float cellH = 61.0f;
     const ImGuiTableFlags flags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_NoSavedSettings;
 
-    const float rowHeight = ImGui::GetFrameHeightWithSpacing();
-    const bool wide = ImGui::GetContentRegionAvail().x >= 1240.0f;
-    const float footer = rowHeight * (wide ? 2.0f : 3.0f) + 8.0f;
-    const ImVec2 tableSize(0.0f, std::max(80.0f, ImGui::GetContentRegionAvail().y - footer));
+    const ImVec2 tableSize(0.0f, std::max(80.0f, ImGui::GetContentRegionAvail().y));
 
     if (ImGui::BeginTable("deck", kColumnCount + 1, flags, tableSize)) {
         ImGui::TableSetupScrollFreeze(1, 1);
@@ -495,8 +359,6 @@ void App::drawDeck() {
         }
         ImGui::EndTable();
     }
-    drawDeckBar();
-    drawTransport(wide);
     ImGui::End();
 }
 

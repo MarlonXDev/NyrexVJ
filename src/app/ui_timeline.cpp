@@ -1051,6 +1051,7 @@ void App::drawTimeline() {
         if (timelineView_.editing) {
             timelineEndEdit();
         }
+        applyTimelineDock();
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -1060,8 +1061,9 @@ void App::drawTimeline() {
         ImGui::SetNextWindowFocus();
         timelineFocus_ = false;
     }
+    applyTimelineDock();
     const std::string title = std::string(tr("Show timeline")) + "###timeline";
-    if (!ImGui::Begin(title.c_str(), &timelineOpen_, ImGuiWindowFlags_NoDocking)) {
+    if (!ImGui::Begin(title.c_str(), &timelineOpen_)) {
         ImGui::End();
         timelineHasFocus_ = false;
         return;

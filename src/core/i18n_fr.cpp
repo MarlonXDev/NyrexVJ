@@ -2695,7 +2695,7 @@ const Translation kFrench[] = {
     {"Shortcut", "Raccourci"},
     {"Smaller interface", "Interface plus petite"},
     {"That shortcut is already used", "Ce raccourci est déjà utilisé"},
-    {"The saved window layout was damaged. A copy was kept as layout_v6.ini.bad and the default layout was restored.", "La disposition des fenêtres enregistrée était endommagée. Une copie a été conservée sous layout_v6.ini.bad et la disposition par défaut a été rétablie."},
+    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "La disposition des fenêtres enregistrée était endommagée. Une copie a été conservée sous layout_v7.ini.bad et la disposition par défaut a été rétablie."},
     {"The shortcuts could not be saved", "Les raccourcis n'ont pas pu être enregistrés"},
     {"The window layout was reset to the default.", "La disposition des fenêtres a été réinitialisée."},
     {"View", "Affichage"},
@@ -2918,6 +2918,18 @@ const Translation kFrench[] = {
     {"Not offered by this graphics driver", "Non proposé par ce pilote graphique"},
     {"Offered by the driver, not used by NyrexVJ", "Proposé par le pilote, non utilisé par NyrexVJ"},
     {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "Le verrouillage d'images matériel et le genlock demandent une carte graphique professionnelle avec une carte de synchronisation (par exemple NVIDIA Quadro Sync ou AMD FirePro S400), des câbles et une configuration dans le panneau de contrôle du pilote. Cette ligne indique seulement si le pilote liste les extensions de swap group. Elle ne peut pas dire si une carte est branchée ou verrouillée. NyrexVJ ne rejoint aucun swap group et ne modifie aucun réglage du pilote ; le verrouillage d'images logiciel ci-dessus fonctionne dans tous les cas."},
+    {"Audio input", "Entrée audio"},
+    {"Clip start", "Départ des clips"},
+    {"Dock at the bottom", "Ancrer en bas"},
+    {"Dock on the right", "Ancrer à droite"},
+    {"Float as a window", "Comme fenêtre flottante"},
+    {"Master level", "Niveau master"},
+    {"Nudge", "Décaler"},
+    {"Pauses and restarts the beat count at 1", "Met en pause et redémarre le compte des beats à 1"},
+    {"Phase", "Phase"},
+    {"Place the timeline", "Placer la timeline"},
+    {"Runs the tempo clock and all clip motion", "Relance l'horloge du tempo et tout le mouvement des clips"},
+    {"Trigger", "Déclenchement"},
 };
 
 }

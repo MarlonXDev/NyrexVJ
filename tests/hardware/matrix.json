@@ -2382,7 +2382,7 @@
           "id": "A-UI-3",
           "kind": "cli",
           "command": "NYREXVJ_DATA_DIR=dir NyrexVJ --fresh --no-update-check --no-welcome --audio-demo --frames 100000 --interface-uitest --bench-out result.json",
-          "note": "the interface in the real window with key and mouse events: workspaces, shortcuts, sizes 100 to 200 percent, injected display scales, 13 window sizes from 1024x600 to 2560x1440, high contrast, keyboard navigation and node canvas zoom; on a virtual screen with software OpenGL it proves the logic and the layout, not how a real display looks"
+          "note": "the interface in the real window with key and mouse events: workspaces, shortcuts, sizes 100 to 200 percent, injected display scales, 13 window sizes from 1024x600 to 2560x1440, high contrast, keyboard navigation and node canvas zoom; since 0.59.0 also that the 13 panels of the new default layout (grid, clip, master, preview, output, browser, trigger, audio and the five strip windows) are inside the window, and that the timeline docks at the bottom and on the right, floats again, and leaves the layout on reset; on a virtual screen with software OpenGL it proves the logic and the layout, not how a real display looks"
         },
         {
           "id": "A-UI-4",
@@ -2451,6 +2451,30 @@
           ],
           "measure": "where the floating window appears each time, whether Reset window layout is needed",
           "criteria": "Proposed: no window stays out of reach; if one does, Reset window layout brings the main panels back and the finding is added to the known issues."
+        },
+        {
+          "id": "M-UI-6",
+          "title": "The new default layout on the screens of a real show",
+          "needs": "The PC and the screens that are used on stage (for example a laptop screen, a 1080p monitor and a 4K screen), and this build",
+          "steps": [
+            "Start with --reset-layout and look at the whole window at the normal interface size, then at 125, 150 and 200 percent.",
+            "Check that every slider can be grabbed, that its name and value can be read, and that no text is cut off in the transport bar, the Trigger window, the Audio window and the five strip windows.",
+            "Run a short set: switch decks, change the tempo, start clips, change the transition, switch the audio source and the blackout, and note every control that needs scrolling."
+          ],
+          "measure": "per screen and scale: the controls that are cut off or need scrolling, and whether the transport bar still fits in one row",
+          "criteria": "Proposed: every control that a show needs is reachable without scrolling at 1920x1080 and 100 percent; findings at other sizes go to the known issues."
+        },
+        {
+          "id": "M-UI-7",
+          "title": "The timeline docked during a show",
+          "needs": "A PC, this build and a timeline with a few lanes",
+          "steps": [
+            "Open the timeline, use Timeline, Place the timeline, Dock at the bottom and play it.",
+            "Drag the timeline by its title to another dock, then use Dock on the right and Float as a window.",
+            "Close and start the program again, then use View, Reset window layout."
+          ],
+          "measure": "whether the playback keeps running while the window is moved, where the timeline is after the restart, and whether the reset brings the default layout back",
+          "criteria": "Proposed: playback is not interrupted by docking, the placement is remembered after a restart, and the reset restores the default layout."
         }
       ]
     },

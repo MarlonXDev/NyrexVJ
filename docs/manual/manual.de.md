@@ -6,7 +6,7 @@
 
 NyrexVJ ist ein Programm für Live-Visuals. Du spielst generative Clips, 3D-Modelle, Videos und eigene Shader auf Layern ab, legst Effekte darüber, lässt alles auf deine Musik reagieren und schickst das fertige Bild an OBS, einen Projektor oder einen Bildschirm. Es ist für VRChat-Events und Partys gemacht und so klein, dass es in einer Sekunde startet: eine Datei, kein Installer, keine Game-Engine.
 
-Wenn du Resolume Arena oder ähnliche Programme kennst, kommt dir die Aufteilung bekannt vor: oben ein Clip-Raster, darunter die Deck- und Tempo-Zeile, eine Vorschau und das Ausgabebild, Fenster für Layer, Clip und Master und rechts ein Browser.
+Wenn du Resolume Arena oder ähnliche Programme kennst, kommt dir die Aufteilung bekannt vor: links ein Clip-Raster, rechts die Fenster für Clip, Master und Layer, oben quer eine Transportleiste, unter dem Raster eine Reihe mit Vorschau, Ausgabe, Trigger, Audio und Bibliothek und unten eine Leiste mit dem Master-Pegel und den Ein- und Ausgängen.
 
 ## Was du damit machen kannst {#what-you-can-do}
 
@@ -79,28 +79,48 @@ Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Han
 | Ansicht | Arbeitsbereiche, Fensteranordnung zurücksetzen, Oberflächengröße, Hoher Kontrast, Tastaturbedienung, Statusleiste zeigen |
 | Ausgabe | Ausgabefenster öffnen oder schließen, Vollbild, Ausgänge und Mapping, Aufnahme starten oder beenden, Aufnahme-Einstellungen, Per Spout an OBS senden, Über NDI senden, Video-Routing |
 | Audio | Audioquelle wählen: Aus, Demo-Signal, Systemaudio, Eingang, und Geräte aktualisieren |
-| Zeitleiste | Zeitleiste ausführen, Fenster der Show-Zeitleiste anzeigen, Abspielen, Pause, Stopp, Handeingriffe freigeben |
+| Zeitleiste | Zeitleiste ausführen, Fenster der Show-Zeitleiste anzeigen, Zeitleiste platzieren (unten andocken, rechts andocken, als frei schwebendes Fenster), Abspielen, Pause, Stopp, Handeingriffe freigeben |
 | Einstellungen | Öffnet das Einstellungsfenster |
 | Creator | Clip Creator öffnen, Neue 3D-Szene, Vorlagen, der Node-Effekt-Editor, Text und Partikel, Effektketten, Shader-Editor |
 | Hilfe | Handbuch, Was ist neu, Links, Sprache, Nach Updates suchen |
 
-![Das Hauptfenster von NyrexVJ mit dem Clip-Raster oben, Ausgabe und Vorschau links und Master, Clip und Browser unten](main-window.webp)
+![Das Hauptfenster von NyrexVJ mit der Transportleiste oben, dem Clip-Raster links, Clip, Master und Layer rechts und Vorschau, Ausgabe, Trigger, Audio und Browser darunter](main-window.webp)
+
+## Die Transportleiste {#transport-bar}
+
+Die Leiste unter dem Menü enthält, was du in jedem Moment brauchst: die 16 Deck-Knöpfe mit Zurück und Weiter, das BPM-Feld mit Minus, Plus, /2 und x2, Tap und Neu sync, dann Abspielen, Pause und Stopp und die Beat-Anzeige. Abspielen lässt die Tempo-Clock und alle Clip-Bewegung laufen, Pause friert sie ein, und Stopp hält an und beginnt die Beat-Zählung wieder bei 1. Die Beat-Anzeige zeigt den Beat im Takt, einen Strich für jeden Beat des Takts und die Position innerhalb des Beats als Phase. Eine dünne Linie am unteren Rand zeigt, wie weit ein Deck-Übergang ist. In einem Fenster, das schmaler als etwa 1540 Pixel ist (bei einer Oberflächengröße von 100 Prozent), werden die 16 Deck-Knöpfe zu einem Knopf, der das aktive Deck zeigt und die Liste der Decks öffnet, und in einem sehr schmalen Fenster machen die Knöpfe /2 und x2, Neu sync und die Beat-Anzeige Platz für Abspielen, Pause und Stopp.
+
+![Die Transportleiste mit den Deck-Knöpfen, den Tempo-Reglern, Abspielen, Pause und Stopp und der Beat-Anzeige](transport-bar.webp)
 
 ## Das Deck-Fenster {#deck-window}
 
-Das große Fenster oben ist das Deck-Fenster. Es enthält das Clip-Raster mit 8 Spalten und 4 Layern, die 16 Deck-Knöpfe, die Tempo-Regler und die Übergangs-Einstellungen. Alles, was du live spielst, beginnt hier. Siehe [Das Clip-Raster](#clip-grid) und [Decks und Übergänge](#decks).
+Das große Fenster oben links ist das Deck-Fenster. Es enthält das Clip-Raster mit 8 Spalten und 4 Layern. Alles, was du live spielst, beginnt hier. Siehe [Das Clip-Raster](#clip-grid) und [Decks und Übergänge](#decks).
 
 ## Vorschau und Ausgabe {#preview-output}
 
-Unter dem Deck-Fenster findest du links zwei Fenster mit einem Bild. Das Fenster Ausgabe zeigt das fertige Bild genau so, wie es NyrexVJ verlässt, mit Größe, Bildrate und Tempo. Das Fenster Vorschau zeigt eine Zelle, die du dir nur angesehen hast: Strg+Klick auf eine Zelle zeigt sie dort, ohne sie abzuspielen, und Jetzt abspielen spielt sie ab. So bereitest du den nächsten Clip vor, während das Publikum etwas anderes sieht.
+In der Reihe unter dem Raster findest du links zwei Fenster mit einem Bild. Das Fenster Ausgabe zeigt das fertige Bild genau so, wie es NyrexVJ verlässt, mit Größe, Bildrate und Tempo. Das Fenster Vorschau zeigt eine Zelle, die du dir nur angesehen hast: Strg+Klick auf eine Zelle zeigt sie dort, ohne sie abzuspielen, und Jetzt abspielen spielt sie ab. So bereitest du den nächsten Clip vor, während das Publikum etwas anderes sieht.
 
 ## Layer, Clip und Master {#layer-clip-master}
 
-Neben den Bildern liegen drei Fenster, die zusammengehören. Das Layer-Fenster (in der Oberfläche heißt es Ebene) enthält Deckkraft, Mischmodus, die Audio-Reaktionen und die vier Effekt-Slots des gewählten Layers. Das Clip-Fenster zeigt den Clip der gewählten Zelle und seine Regler. Das Master-Fenster wirkt auf das fertige Bild: Pegel, Blackout, Auflösung, Farbkorrektur, Makros, LFOs und vier Master-Effekte. Sie sind in [Layer und Mischmodi](#layers), [Das Clip-Fenster](#clip-window) und [Das Master-Fenster](#master) beschrieben.
+Rechts vom Clip-Raster liegen drei Fenster, die zusammengehören. Clip und Master teilen sich eine Tab-Leiste, das Layer-Fenster liegt darunter. Das Layer-Fenster (in der Oberfläche heißt es Ebene) enthält Deckkraft, Mischmodus, die Audio-Reaktionen und die vier Effekt-Slots des gewählten Layers. Das Clip-Fenster zeigt den Clip der gewählten Zelle und seine Regler. Das Master-Fenster wirkt auf das fertige Bild: Pegel, Blackout, Auflösung, Farbkorrektur, Makros, LFOs und vier Master-Effekte. Sie sind in [Layer und Mischmodi](#layers), [Das Clip-Fenster](#clip-window) und [Das Master-Fenster](#master) beschrieben.
+
+## Das Trigger-Fenster {#trigger-window}
+
+Das Trigger-Fenster liegt neben den Bildern. Unter Clip-Start steht die Quantisierung, die bestimmt, wann ein Start passiert. Unter Übergang stehen Typ, Beat-Sync, Länge und Auto-Wechsel. Unter Beat-Raster stehen Schläge pro Takt, Verschieben, Auf Schlag einrasten und Takt beginnt hier. Läuft eine Audioquelle, steht dort unter Tempo auch BPM mit Audio synchronisieren. Siehe [Auf dem Beat starten](#clip-grid/quantize), [Übergänge](#decks/transitions) und [Das Beat-Raster](#modulation/beat-grid).
+
+## Das Audio-Fenster {#audio-window}
+
+Das Audio-Fenster zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und die Analyse-Einstellungen. Siehe [Audio und Musik](#audio).
 
 ## Der Browser {#browser-window}
 
-Der Browser rechts hat drei Tabs. Presets enthält die Werks-Looks und deine eigenen Looks, Bibliothek enthält alle Clips, Effekte und Dateien, die du nutzen kannst, und Audio enthält die Audioquelle, das Live-Spektrum und die Beat-Erkennung. Siehe [Presets und Sitzungen](#presets), [Die Bibliothek](#library) und [Audio und Musik](#audio).
+Der Browser unten rechts hat zwei Tabs. Presets enthält die Werks-Looks und deine eigenen Looks, und Bibliothek enthält alle Clips, Effekte und Dateien, die du nutzen kannst. Siehe [Presets und Sitzungen](#presets) und [Die Bibliothek](#library).
+
+## Die untere Leiste {#bottom-strip}
+
+Fünf kleine Fenster am unteren Rand zeigen den Zustand auf einen Blick. Master-Pegel hat den Pegel-Regler, den Pegel in dB und Blackout. Audio-Eingang hat die Quelle, Geräte aktualisieren und eine Pegelanzeige. Netzwerk hat die Schalter für NDI und Spout und den Zustand des Netzwerk-Syncs, mit einem Knopf zu dessen Einstellungen. MIDI zeigt das Gerät, seinen Zustand und die letzte Nachricht. OSC hat den Schalter zum Empfangen und zeigt seinen Zustand und die letzte Nachricht. Alle Optionen stehen weiterhin unter Einstellungen.
+
+![Die untere Leiste mit den Fenstern Master-Pegel, Audio-Eingang, Netzwerk, MIDI und OSC](bottom-strip.webp)
 
 ## Die Statusleiste {#status-bar}
 
@@ -108,7 +128,7 @@ Die Leiste unten zeigt die Bildrate, die Prozessor- und Grafikzeit, die Ausgabeg
 
 ## Fenster verschieben {#layout}
 
-Alle Fenster lassen sich am Titel ziehen, nebeneinander andocken, als Tabs stapeln oder frei schwebend herausziehen. NyrexVJ merkt sich die Anordnung. Benannte Anordnungen kannst du als Arbeitsbereiche behalten und im Menü Ansicht wechseln. Wenn du ein Fenster verlierst oder die Anordnung durcheinander ist, nutze Ansicht, Fensteranordnung zurücksetzen. Die Größe der ganzen Oberfläche, ihr Kontrast und ihre Farben stehen unter Einstellungen, Aussehen; alles ist erklärt unter [Oberfläche, Arbeitsbereiche und Barrierefreiheit](#interface).
+Alle Fenster lassen sich am Titel ziehen, nebeneinander andocken, als Tabs stapeln oder frei schwebend herausziehen. NyrexVJ merkt sich die Anordnung. Benannte Anordnungen kannst du als Arbeitsbereiche behalten und im Menü Ansicht wechseln. Wenn du ein Fenster verlierst oder die Anordnung durcheinander ist, nutze Ansicht, Fensteranordnung zurücksetzen. Die Zeitleiste öffnest du über Zeitleiste, Fenster der Show-Zeitleiste anzeigen, zuerst als Fenster, das über den anderen schwebt. Zeitleiste, Zeitleiste platzieren dockt sie unten oder rechts am Hauptfenster an oder lässt sie wieder frei schweben. Du kannst sie auch wie jedes andere Fenster am Titel in ein beliebiges Dock ziehen. Die Größe der ganzen Oberfläche, ihr Kontrast und ihre Farben stehen unter Einstellungen, Aussehen; alles ist erklärt unter [Oberfläche, Arbeitsbereiche und Barrierefreiheit](#interface).
 
 # Deine erste Show in fünf Minuten {#first-show}
 
@@ -118,7 +138,7 @@ Diese neun Schritte führen dich vom ersten Start zu einem Bild, das auf deine M
 
 1. Starte NyrexVJ. Ein Look namens Neon Club ist geladen, du siehst also sofort ein Bild.
 2. Klick auf eine Zelle im Clip-Raster. Der Clip läuft auf seinem Layer. Mit den Tasten `1` bis `8` startest du ganze Spalten.
-3. Öffne im Browser den Tab Audio. Wähle Systemaudio und such den Ausgang, auf dem deine Musik läuft. Starte dein DJ-Programm oder einen Player und sieh zu, wie sich die Anzeigen für Bass, Mitten, Höhen und Pegel bewegen. Keine Musik zur Hand? Wähle Demo-Signal.
+3. Öffne unten das Fenster Audio-Eingang. Wähle Systemaudio und such den Ausgang, auf dem deine Musik läuft. Starte dein DJ-Programm oder einen Player und sieh zu, wie sich die Anzeigen für Bass, Mitten, Höhen und Pegel bewegen. Keine Musik zur Hand? Wähle Demo-Signal.
 4. Öffne den Tab Bibliothek, wechsel zu Effekte und klick auf einen Effekt. Er wird zum gewählten Layer hinzugefügt. Beweg seine Regler und sieh zu, wie sich das Bild verändert.
 5. Öffne das Layer-Fenster. Wähle im Bereich Audio-Reaktivität Bass als Quelle für Skalierung oder Helligkeit und erhöhe die Stärke. Das Bild atmet jetzt mit deiner Kick.
 6. Drück ein paar Mal `Leertaste` im Takt deiner Musik. Das ist das Tap-Tempo. Die Clips, die dem Beat folgen, folgen jetzt deinem.
@@ -164,7 +184,7 @@ Am Anfang jeder Zeile siehst du den Namen des Layers, seinen Deckkraft-Regler, s
 
 ## Auf den Takt starten {#quantize}
 
-Das Menü Quantisierung in der Transportleiste über dem Raster bestimmt, wann ein Start passiert. Aus startet alles sofort, wie bisher. Beat, Takt, 2 Takte und 4 Takte halten einen Start bis zum nächsten Beat, Takt, zweiten oder vierten Takt der Beat-Uhr zurück, sodass ein Clip oder eine ganze Spalte genau auf dem Raster einsetzt, auch wenn du ein bisschen zu früh oder zu spät drückst.
+Das Menü Quantisierung im Trigger-Fenster bestimmt, wann ein Start passiert. Aus startet alles sofort, wie bisher. Beat, Takt, 2 Takte und 4 Takte halten einen Start bis zum nächsten Beat, Takt, zweiten oder vierten Takt der Beat-Uhr zurück, sodass ein Clip oder eine ganze Spalte genau auf dem Raster einsetzt, auch wenn du ein bisschen zu früh oder zu spät drückst.
 
 Es gilt für jeden Weg, etwas zu starten: Klick auf eine Zelle oder einen Spaltenkopf, die Tasten `1` bis `8`, einen Deck-Knopf, MIDI, OSC, die Weboberfläche, Cues und die Zeitleiste. Jetzt abspielen im Vorschaufenster, einen Clip aus der Bibliothek in eine Zelle legen und der Start von der Befehlszeile bleiben sofort, weil du dort den Clip ausdrücklich jetzt wolltest. Ein kleiner Zähler neben dem Menü zeigt, wie viele Starts warten. Startest du denselben Layer oder dieselbe Spalte vor dem Beat zweimal, zählt nur der letzte.
 
@@ -190,7 +210,7 @@ Die Reihe mit 16 Knöpfen über dem Clip-Raster wechselt die Decks. Jedes Deck i
 | Spin | Beide Bilder drehen sich ineinander |
 | Slide | Das neue Deck schiebt sich von der Seite herein |
 
-Wähl den Übergang und seine Länge neben den Deck-Knöpfen. Stell die Länge in Sekunden ein, oder hak Beat-Sync an, um in Beats zu zählen, damit der Wechsel dem Tempo folgt. Wenn du mitten in einem Übergang noch einmal wechselst, friert NyrexVJ das Bild ein, das du gerade siehst, und blendet von dort aus über, es gibt also nie einen Sprung.
+Wähl den Übergang und seine Länge im Trigger-Fenster. Stell die Länge in Sekunden ein, oder hak Beat-Sync an, um in Beats zu zählen, damit der Wechsel dem Tempo folgt. Wenn du mitten in einem Übergang noch einmal wechselst, friert NyrexVJ das Bild ein, das du gerade siehst, und blendet von dort aus über, es gibt also nie einen Sprung.
 
 ## Auto-Wechsel {#auto-cycle}
 
@@ -454,7 +474,7 @@ Bearbeiten, Rückgängig und Wiederherstellen, oder `Strg+Z` und `Strg+Y` (auch 
 
 Pegel oben ist die Helligkeit des fertigen Bildes von 0 bis 1, ein Master-Fader. Blackout macht das ganze Bild auf einen Schlag schwarz und wieder zurück, auch mit der Taste `B`. Er ist die Notbremse deiner Show und auch per MIDI und OSC erreichbar.
 
-![Das Master-Fenster mit Pegel, Blackout, Auflösung und den Effekt-Slots](master-window.webp)
+![Das Master-Fenster mit Pegel, Blackout, Auflösung und der Farbkorrektur](master-window.webp)
 
 ## Auflösung {#resolution}
 
@@ -470,7 +490,7 @@ Der Bereich Farbkorrektur hat Farbton, Sättigung, Helligkeit und Kontrast für 
 
 ## Eine Quelle wählen {#sources}
 
-Öffne den Tab Audio im Browser, oder Einstellungen, Audio, oder das Menü Audio.
+Wähle die Quelle im Fenster Audio-Eingang unten, oder unter Einstellungen, Audio, oder im Menü Audio.
 
 | Quelle | Worauf sie hört |
 | --- | --- |
@@ -479,13 +499,13 @@ Der Bereich Farbkorrektur hat Farbton, Sättigung, Helligkeit und Kontrast für 
 | Demo-Signal | Ein eingebauter Beat, damit du Looks ohne Musik bauen kannst |
 | Aus | Nichts. Clips und Effekte folgen stattdessen dem BPM-Takt |
 
-Der Tab zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und ein erkanntes Tempo. Liefert das gewählte Gerät einige Sekunden lang keinen Ton, sagen das der Tab und die Statusleiste und schlagen vor, etwas abzuspielen oder eine andere Quelle zu wählen.
+Das Audio-Fenster zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und ein erkanntes Tempo. Liefert das gewählte Gerät einige Sekunden lang keinen Ton, sagen das das Fenster Audio-Eingang und die Statusleiste und schlagen vor, etwas abzuspielen oder eine andere Quelle zu wählen.
 
-![Der Tab Audio mit Audioquelle, Spektrum und den Anzeigen für Bass, Mitten, Höhen und Pegel](audio-tab.webp)
+![Das Audio-Fenster mit Spektrum und den Anzeigen für Bass, Mitten, Höhen und Pegel](audio-tab.webp)
 
 ## Analyse-Einstellungen {#analysis}
 
-Verstärkung hebt oder senkt den Pegel, den die Analyse sieht, Glättung macht die Bänder ruhiger, und Beat-Schwelle bestimmt, wie leicht ein Beat gefunden wird. Du findest sie im Tab Audio und unter Einstellungen, Audio. Wenn die Anzeigen dauernd oben anschlagen, senk die Verstärkung, und wenn in jedem Geräusch ein Beat gefunden wird, senk die Empfindlichkeit.
+Verstärkung hebt oder senkt den Pegel, den die Analyse sieht, Glättung macht die Bänder ruhiger, und Beat-Schwelle bestimmt, wie leicht ein Beat gefunden wird. Du findest sie im Audio-Fenster und unter Einstellungen, Audio. Wenn die Anzeigen dauernd oben anschlagen, senk die Verstärkung, und wenn in jedem Geräusch ein Beat gefunden wird, senk die Empfindlichkeit.
 
 Erkanntes Tempo zeigt die Schätzung, und Verwenden übernimmt sie als Tempo. BPM mit Audio synchronisieren hält das Tempo dauerhaft am erkannten Beat. Das klappt am besten mit Musik mit klarer Kick. Für eine gleichmäßige Show mit einem DJ ist es oft besser, das Tempo selbst zu tappen oder einer Clock zu folgen, siehe [Show-Sync und Timecode](#sync).
 
@@ -528,14 +548,14 @@ Ein LFO ist eine sich wiederholende Bewegung. NyrexVJ hat vier, mit den Formen S
 
 ## Tempo und Beat-Clock {#tempo}
 
-Unter dem Clip-Raster liegt die Tempo-Zeile: das BPM-Feld mit den Knöpfen Minus, Plus, /2 und x2, dann Tap und Neu sync, dann Pause. Tap setzt das Tempo aus deinen Taps, auch mit der `Leertaste`. Neu sync startet die Beat-Zählung wieder bei 1, das hilft, wenn das Bild um einen Beat daneben liegt. Pause friert die Tempo-Clock und alle Clip-Bewegung ein. Das Tempo kann auch vom Audio, von MIDI-Clock, von Timecode oder von Pro DJ Link kommen, siehe [Show-Sync und Timecode](#sync).
+In der Transportleiste findest du das BPM-Feld mit den Knöpfen Minus, Plus, /2 und x2, dann Tap und Neu sync, dann Abspielen, Pause und Stopp. Tap setzt das Tempo aus deinen Taps, auch mit der `Leertaste`. Neu sync startet die Beat-Zählung wieder bei 1, das hilft, wenn das Bild um einen Beat daneben liegt. Abspielen lässt die Clock wieder laufen, Pause friert die Tempo-Clock und alle Clip-Bewegung ein, und Stopp hält an und beginnt die Beat-Zählung wieder bei 1. Das Tempo kann auch vom Audio, von MIDI-Clock, von Timecode oder von Pro DJ Link kommen, siehe [Show-Sync und Timecode](#sync).
 
 ## Das Beat-Raster {#beat-grid}
 
-Klick auf die Beat-Anzeige neben den Tempo-Reglern, um das Beat-Raster zu öffnen.
+Das Beat-Raster steht im Trigger-Fenster unter Beat-Raster.
 
 - Schläge pro Takt, von 2 bis 8, legt fest, wie lang ein Takt ist.
-- Die Knöpfe für früher und später verschieben das Raster um eine Sechzehntel-Note eines Beats. Nutze sie, wenn dein Beat leicht neben der Musik liegt.
+- Verschieben mit den Knöpfen für früher und später bewegt das Raster um eine Sechzehntel-Note eines Beats. Nutze sie, wenn dein Beat leicht neben der Musik liegt.
 - Auf Schlag einrasten richtet das Raster am nächsten Beat aus, ohne die Zählung zu ändern.
 - Takt beginnt hier macht den nächsten Beat zum ersten Beat eines Takts.
 
@@ -1448,7 +1468,7 @@ Ein Stromausfall oder eine Änderung von Hand kann eine Datei unlesbar machen. B
 
 | Datei | Was bei einer Beschädigung geschieht |
 | --- | --- |
-| `layout_v6.ini` (die Fensteranordnung) | Sie wird in `layout_v6.ini.bad` umbenannt und die Standardanordnung wird aufgebaut. Eine Anordnung mit Fensterpositionen weit außerhalb jedes Bildschirms gilt als beschädigt. |
+| `layout_v7.ini` (die Fensteranordnung) | Sie wird in `layout_v7.ini.bad` umbenannt und die Standardanordnung wird aufgebaut. Eine Anordnung mit Fensterpositionen weit außerhalb jedes Bildschirms gilt als beschädigt. |
 | `settings.json` | Sie wird in `settings.json.bad` umbenannt und die Standardwerte gelten. Ein einzelner falscher Wert, etwa eine Oberflächengröße von 99, macht die Datei nicht beschädigt; dieser Wert wird in seinen Bereich geholt. |
 | `shortcuts.json` | Sie wird in `shortcuts.json.bad` umbenannt und die Standardkürzel gelten. Eine Datei, die eine neuere Version von NyrexVJ geschrieben hat, bleibt unberührt, und die Standardkürzel gelten. Änderst du danach ein Kürzel, wird zuerst eine Kopie der neueren Datei als `shortcuts.json.bad` behalten. |
 
@@ -1604,7 +1624,7 @@ Prüf zuerst die einfachen Dinge. Ist Blackout an, die Taste `B` schaltet ihn um
 
 ## Die Visuals reagieren nicht auf die Musik {#no-reaction}
 
-Wähl im Tab Audio eine Audioquelle. Die Anzeigen müssen sich bewegen. Tun sie das nicht, sagt der Tab, dass auf diesem Gerät kein Ton ankommt. Spiel etwas auf dem gewählten Ausgang ab oder wähl eine andere Quelle. Prüf dann, dass ein Layer, der Master oder ein Effekt ein Band mit einer Stärke über null hat. Ohne Quelle folgen die Clips dem BPM-Takt.
+Wähl im Fenster Audio-Eingang eine Audioquelle. Die Anzeigen müssen sich bewegen. Tun sie das nicht, sagt das Fenster, dass auf diesem Gerät kein Ton ankommt. Spiel etwas auf dem gewählten Ausgang ab oder wähl eine andere Quelle. Prüf dann, dass ein Layer, der Master oder ein Effekt ein Band mit einer Stärke über null hat. Ohne Quelle folgen die Clips dem BPM-Takt.
 
 ## OBS zeigt nichts {#obs-nothing}
 
@@ -1677,7 +1697,7 @@ NyrexVJ lässt sich mit Optionen starten. Die meisten sind für Tests und Screen
 | `--shader-editor [DATEI]` | Den Shader-Editor beim Start öffnen, mit einer Datei aus dem Ordner shaders, wenn du eine angibst, sonst mit einer Vorlage |
 | `--shader-editor-selftest [BILDER]` | Den Shader-Editor in der echten Engine prüfen und beenden, mit einer Bilderzahl danach für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |
 | `--shader-editor-uitest` | Den Shader-Editor mit echten Tasten- und Mausereignissen bedienen, prüfen, was er enthält, und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis |
-| `--reset-layout` | Die gespeicherte Fensteranordnung als `layout_v6.ini.bad` beiseitelegen und die Standardanordnung aufbauen, für ein Fenster, das sich nicht mehr bedienen lässt |
+| `--reset-layout` | Die gespeicherte Fensteranordnung als `layout_v7.ini.bad` beiseitelegen und die Standardanordnung aufbauen, für ein Fenster, das sich nicht mehr bedienen lässt |
 | `--reset-interface` | Wie `--reset-layout`, legt außerdem die Kürzeldatei beiseite und setzt Oberflächengröße, Bildschirmskalierung, Kontrast und Tastaturbedienung zurück |
 | `--interface-uitest` | Die Oberfläche mit echten Tasten- und Mausereignissen bedienen (Arbeitsbereiche, Kürzel, Größen, hoher Kontrast, Tastaturbedienung, Zoom der Node-Fläche), das Ergebnis prüfen und mit Code 0 oder 1 beenden, mit `--bench-out DATEI.json` für das Ergebnis; mit `NYREXVJ_DATA_DIR` benutzen |
 | `--routing-selftest [BILDER]` | Das Video-Routing in der echten Engine prüfen und beenden, mit einer Bildanzahl dahinter für einen Benchmark und `--bench-out DATEI.json` für das Ergebnis |

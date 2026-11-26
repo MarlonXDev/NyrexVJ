@@ -2695,7 +2695,7 @@ const Translation kJapanese[] = {
     {"Shortcut", "ショートカット"},
     {"Smaller interface", "インターフェースを小さく"},
     {"That shortcut is already used", "そのショートカットはすでに使われています"},
-    {"The saved window layout was damaged. A copy was kept as layout_v6.ini.bad and the default layout was restored.", "保存されていたウィンドウレイアウトが破損していました。コピーを layout_v6.ini.bad として残し、既定のレイアウトに戻しました。"},
+    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "保存されていたウィンドウレイアウトが破損していました。コピーを layout_v7.ini.bad として残し、既定のレイアウトに戻しました。"},
     {"The shortcuts could not be saved", "ショートカットを保存できませんでした"},
     {"The window layout was reset to the default.", "ウィンドウレイアウトを既定に戻しました。"},
     {"View", "表示"},
@@ -2918,6 +2918,18 @@ const Translation kJapanese[] = {
     {"Not offered by this graphics driver", "このグラフィックドライバーでは提供されていません"},
     {"Offered by the driver, not used by NyrexVJ", "ドライバーは提供していますが、NyrexVJ では使用しません"},
     {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "ハードウェアフレームロックとジェンロックには、同期ボード（例：NVIDIA Quadro Sync や AMD FirePro S400）を備えたプロ向けグラフィックカード、ケーブル、そしてドライバーのコントロールパネルでの設定が必要です。この行は、ドライバーがスワップグループ拡張を一覧に出しているかどうかを示すだけで、ボードが接続されているかロックされているかは分かりません。NyrexVJ はスワップグループに参加せず、ドライバーの設定も変更しません。上のソフトウェアフレームロックはどちらの場合でも動作します。"},
+    {"Audio input", "オーディオ入力"},
+    {"Clip start", "クリップの開始"},
+    {"Dock at the bottom", "下にドッキング"},
+    {"Dock on the right", "右にドッキング"},
+    {"Float as a window", "独立したウィンドウにする"},
+    {"Master level", "マスターレベル"},
+    {"Nudge", "ずらす"},
+    {"Pauses and restarts the beat count at 1", "一時停止し、ビートカウントを1から再開します"},
+    {"Phase", "フェーズ"},
+    {"Place the timeline", "タイムラインの配置"},
+    {"Runs the tempo clock and all clip motion", "テンポクロックとすべてのクリップの動きを動かします"},
+    {"Trigger", "トリガー"},
 };
 
 }

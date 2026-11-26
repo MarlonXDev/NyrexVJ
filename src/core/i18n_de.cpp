@@ -2695,7 +2695,7 @@ const Translation kGerman[] = {
     {"Shortcut", "Kürzel"},
     {"Smaller interface", "Kleinere Oberfläche"},
     {"That shortcut is already used", "Dieses Kürzel ist schon belegt"},
-    {"The saved window layout was damaged. A copy was kept as layout_v6.ini.bad and the default layout was restored.", "Die gespeicherte Fensteranordnung war beschädigt. Eine Kopie liegt als layout_v6.ini.bad bereit, die Standardanordnung wurde wiederhergestellt."},
+    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "Die gespeicherte Fensteranordnung war beschädigt. Eine Kopie liegt als layout_v7.ini.bad bereit, die Standardanordnung wurde wiederhergestellt."},
     {"The shortcuts could not be saved", "Die Tastenkürzel konnten nicht gespeichert werden"},
     {"The window layout was reset to the default.", "Die Fensteranordnung wurde auf den Standard zurückgesetzt."},
     {"View", "Ansicht"},
@@ -2918,6 +2918,18 @@ const Translation kGerman[] = {
     {"Not offered by this graphics driver", "Von diesem Grafiktreiber nicht angeboten"},
     {"Offered by the driver, not used by NyrexVJ", "Vom Treiber angeboten, wird von NyrexVJ nicht genutzt"},
     {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "Hardware-Frame-Lock und Genlock brauchen eine professionelle Grafikkarte mit Sync-Karte (zum Beispiel NVIDIA Quadro Sync oder AMD FirePro S400), Kabel und eine Einrichtung in der Systemsteuerung des Treibers. Diese Zeile zeigt nur, ob der Treiber die Swap-Group-Erweiterungen auflistet. Ob eine Karte angeschlossen oder gesperrt ist, kann sie nicht sagen. NyrexVJ tritt keiner Swap Group bei und ändert keine Treibereinstellung; der Software-Frame-Lock oben läuft in jedem Fall."},
+    {"Audio input", "Audio-Eingang"},
+    {"Clip start", "Clip-Start"},
+    {"Dock at the bottom", "Unten andocken"},
+    {"Dock on the right", "Rechts andocken"},
+    {"Float as a window", "Als frei schwebendes Fenster"},
+    {"Master level", "Master-Pegel"},
+    {"Nudge", "Verschieben"},
+    {"Pauses and restarts the beat count at 1", "Hält an und beginnt die Beat-Zählung wieder bei 1"},
+    {"Phase", "Phase"},
+    {"Place the timeline", "Zeitleiste platzieren"},
+    {"Runs the tempo clock and all clip motion", "Lässt den Tempo-Takt und alle Clip-Bewegung laufen"},
+    {"Trigger", "Trigger"},
 };
 
 }

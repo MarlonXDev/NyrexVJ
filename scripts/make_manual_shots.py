@@ -19,10 +19,13 @@ OUT = ROOT / "site" / "assets" / "manual"
 COMMON = ["--fresh", "--no-welcome", "--no-update-check", "--audio-demo", "--frames", "60"]
 
 WIN = (0, 0, 1600, 900)
-DECK = (0, 22, 1600, 464)
-BROWSER = (1140, 490, 460, 386)
-MASTER = (402, 490, 406, 386)
-CLIP = (810, 490, 328, 386)
+DECK = (0, 60, 1024, 424)
+BROWSER = (1190, 482, 410, 262)
+MASTER = (1024, 60, 576, 238)
+CLIP = (1024, 60, 576, 238)
+AUDIO = (890, 482, 302, 262)
+TRANSPORT = (0, 24, 1600, 38)
+STRIP = (0, 742, 1600, 130)
 SETTINGS = (358, 158, 874, 584)
 CREATOR = (138, 58, 1324, 784)
 NODES = (178, 68, 1244, 764)
@@ -39,6 +42,7 @@ RUNS = {
     "effects": ["--tab", "1", "--library-mode", "1"],
     "presets": ["--tab", "0"],
     "audio": ["--tab", "2"],
+    "master": ["--tab", "3"],
     "set0": ["--settings", "0"],
     "set2": ["--settings", "2"],
     "set3": ["--settings", "3"],
@@ -64,12 +68,14 @@ GENERATED = {"generators", "gpuparticles", "chains"}
 FIGURES = [
     ("main-window", "main", WIN),
     ("clip-grid", "main", DECK),
-    ("master-window", "main", MASTER),
+    ("transport-bar", "main", TRANSPORT),
+    ("bottom-strip", "main", STRIP),
+    ("master-window", "master", MASTER),
     ("clip-window", "main", CLIP),
     ("library", "library", BROWSER),
     ("effects-library", "effects", BROWSER),
     ("presets", "presets", BROWSER),
-    ("audio-tab", "audio", BROWSER),
+    ("audio-tab", "audio", AUDIO),
     ("settings-general", "set0", SETTINGS),
     ("settings-audio", "set2", SETTINGS),
     ("settings-output", "set3", SETTINGS),
@@ -89,10 +95,10 @@ FIGURES = [
 ]
 
 CARDS = [
-    ("card-clips", "main", (0, 46, 800, 450)),
+    ("card-clips", "main", (0, 56, 800, 450)),
     ("card-creator", "creator", (150, 70, 1300, 731)),
     ("card-nodes", "nodes", (180, 70, 1240, 690)),
-    ("card-audio", "audio", (800, 450, 800, 450)),
+    ("card-audio", "audio", (640, 482, 720, 405)),
     ("card-output", "set3", (358, 158, 874, 492)),
     ("card-timeline", "timeline", (208, 278, 996, 560)),
 ]

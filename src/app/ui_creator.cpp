@@ -617,13 +617,13 @@ void App::drawCreator() {
         ImGui::OpenPopup("creatorOpen");
     }
     if (ImGui::BeginPopup("creatorOpen")) {
-        ImGui::SeparatorText(tr("Templates"));
+        ui::sectionHeader(tr("Templates"));
         for (int i = 0; i < static_cast<int>(builtinDocs().size()); ++i) {
             if (ImGui::MenuItem(builtinDocs()[static_cast<size_t>(i)].name)) {
                 request(CreatorAction::Template, i);
             }
         }
-        ImGui::SeparatorText(tr("Your scenes"));
+        ui::sectionHeader(tr("Your scenes"));
         if (cs.packs.empty()) {
             ImGui::TextDisabled("%s", tr("No saved scenes yet"));
         }
@@ -706,7 +706,7 @@ void App::drawCreator() {
         if (ImGui::Selectable(tr("Scene, camera and sky"), cs.selectKind == CreatorSelect::Scene)) {
             cs.selectKind = CreatorSelect::Scene;
         }
-        ImGui::SeparatorText(tr("Objects"));
+        ui::sectionHeader(tr("Objects"));
         for (int i = 0; i < static_cast<int>(cs.doc.objects.size()); ++i) {
             const DocObject& o = cs.doc.objects[static_cast<size_t>(i)];
             ImGui::PushID(i);
@@ -717,7 +717,7 @@ void App::drawCreator() {
             }
             ImGui::PopID();
         }
-        ImGui::SeparatorText(tr("Lights"));
+        ui::sectionHeader(tr("Lights"));
         for (int i = 0; i < static_cast<int>(cs.doc.lights.size()); ++i) {
             ImGui::PushID(1000 + i);
             if (ImGui::Selectable(cs.doc.lights[static_cast<size_t>(i)].name.c_str(), cs.selectKind == CreatorSelect::Light && cs.selectIndex == i)) {

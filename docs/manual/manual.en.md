@@ -6,7 +6,7 @@
 
 NyrexVJ is a program for live visuals. You play generative clips, 3D models, videos and your own shaders on layers, stack effects on top, let everything follow your music and send the final picture to OBS, a projector or a screen. It was made for VRChat events and parties, and it is small enough to start in a second: one file, no installer, no game engine.
 
-If you know Resolume Arena or similar programs, the layout will feel familiar: a clip grid on the left, the clip, master and layer windows on the right, a transport bar across the top, a row with preview, output, trigger, audio and library below the grid, and a strip with the master level and the inputs and outputs at the bottom.
+If you know Resolume Arena or similar programs, the layout will feel familiar: the clip grid across the top with the deck buttons and the transport bar right below it, and underneath a row with Output above Preview on the left, then the Master and Layer panels, then Clip and Trigger, and on the right the Browser with the Audio window, the master level, the audio input and the connections as tabs.
 
 ## What you can do with it {#what-you-can-do}
 
@@ -74,7 +74,7 @@ This chapter names every part of the main window, so the rest of the manual can 
 
 | Menu | What it holds |
 | --- | --- |
-| File | New empty composition, Save as preset, Open data folder, Quit |
+| File | New empty composition, Save as preset, Import Resolume composition (ResoPort)..., Open data folder, Quit |
 | Edit | Undo and Redo |
 | View | Workspaces, Reset window layout, interface size, High contrast, Keyboard navigation, Show status bar |
 | Output | Open or close the output windows, Fullscreen, Outputs and mapping, Start or stop recording, Recording settings, Send to OBS via Spout, Send via NDI, Video routing |
@@ -84,43 +84,43 @@ This chapter names every part of the main window, so the rest of the manual can 
 | Creator | Open the Clip Creator, New 3D scene, templates, the node effect editor, Text and particles, Effect chains, Shader editor |
 | Help | User manual, What's new, links, Language, Check for updates |
 
-![The main window of NyrexVJ with the transport bar on top, the clip grid on the left, Clip, Master and Layer on the right, and Preview, Output, Trigger, Audio and Browser below](main-window.webp)
+![The main window of NyrexVJ with the clip grid, the deck buttons and the transport bar on top, and Output, Preview, Master and Layer, Clip and Trigger and the Browser below](main-window.webp)
 
 ## The transport bar {#transport-bar}
 
-The bar under the menu holds what you need at every moment: the 16 deck buttons with Previous and Next, the BPM field with minus, plus, /2 and x2, Tap and Resync, then Play, Pause and Stop, and the beat display. Play lets the tempo clock and all clip motion run, Pause freezes them, and Stop pauses and restarts the beat count at 1. The beat display shows the beat in the bar, one tick for every beat of the bar and the position inside the beat as Phase. A thin line along the lower edge shows how far a deck transition has come. In a window narrower than about 1540 pixels (at an interface size of 100 percent) the 16 deck buttons shrink to one button that shows the active deck and opens the list of decks, and in a very narrow window the buttons /2 and x2, Resync and the beat display make room for Play, Pause and Stop.
+The two rows right under the clip grid hold what you need at every moment. The first row has the 16 deck buttons with Previous and Next. The second row has the BPM field with minus, plus, /2 and x2, Tap and Resync, then Play, Pause and Stop, and the beat display. Play lets the tempo clock and all clip motion run, Pause freezes them, and Stop pauses and restarts the beat count at 1. The beat display shows the beat in the bar, one tick for every beat of the bar and the position inside the beat as Phase. A thin line along the lower edge of the deck window shows how far a deck transition has come. In a window narrower than about 1500 pixels (at an interface size of 100 percent) the 16 deck buttons shrink to one button that shows the active deck and opens the list of decks, and in a very narrow window the buttons /2 and x2, Resync and the beat display make room for Play, Pause and Stop.
 
 ![The transport bar with the deck buttons, the tempo controls, Play, Pause and Stop and the beat display](transport-bar.webp)
 
 ## The deck window {#deck-window}
 
-The big window at the top left is the deck window. It holds the clip grid with 8 columns and 4 layers. Everything you play live starts here. See [The clip grid](#clip-grid) and [Decks and transitions](#decks).
+The big window across the top is the deck window. It holds the clip grid with 8 columns and 4 layers and, right below the grid, the deck buttons and the transport bar. In front of each layer row are the buttons X (clears the layer), B (bypass) and S (solo), the blend mode, the opacity and the layer name, which turns mint when the layer is selected. Everything you play live starts here. See [The clip grid](#clip-grid) and [Decks and transitions](#decks).
 
 ## Preview and output {#preview-output}
 
-In the row below the grid, on the left, you find two windows with a picture. The Output window shows the final picture exactly as it leaves NyrexVJ, with its size, the frame rate and the tempo. The Preview window shows a cell that you only looked at: Ctrl+click on a cell shows it there without playing it, and Play now plays it. That way you can prepare the next clip while the audience sees something else.
+In the row below the grid, on the left, you find two windows with a picture, Output above and Preview below. The Output window shows the final picture exactly as it leaves NyrexVJ, with its size, the frame rate and the tempo. The Preview window shows a cell that you only looked at: Ctrl+click on a cell shows it there without playing it, and Play now plays it. That way you can prepare the next clip while the audience sees something else.
 
 ## Layer, Clip and Master {#layer-clip-master}
 
-On the right of the clip grid are three windows that belong together. Clip and Master share one tab bar, the Layer window sits below them. The Layer window holds opacity, blend mode, the audio reactions and the four effect slots of the selected layer. The Clip window shows the clip of the selected cell and its controls. The Master window works on the final picture: level, blackout, resolution, colour grade, macros, LFOs and four master effects. They are described in [Layers and blending](#layers), [The Clip window](#clip-window) and [The Master window](#master).
+Next to the two pictures are the panels that belong together. Master and Layer share one tab bar, and Clip and Trigger share the next one. The Layer window holds opacity, blend mode, the audio reactions and the four effect slots of the selected layer. The Clip window shows the clip of the selected cell and its controls. The Master window works on the final picture: level, blackout, resolution, colour grade, macros, LFOs and four master effects. They are described in [Layers and blending](#layers), [The Clip window](#clip-window) and [The Master window](#master).
 
 ## The Trigger window {#trigger-window}
 
-The Trigger window sits next to the pictures. Clip start holds Quantize, which decides when a launch happens. Transition holds the type, Beat sync, the length and Auto cycle. Beat grid holds Beats per bar, Nudge, Snap to beat and Bar start here. When an audio source is running, it also holds Sync BPM to audio. See [Starting on the beat](#clip-grid/quantize), [Transitions](#decks/transitions) and [The beat grid](#modulation/beat-grid).
+The Trigger window is the second tab next to Clip. Clip start holds Quantize, which decides when a launch happens. Transition holds the type, Beat sync, the length and Auto cycle. Beat grid holds Beats per bar, Nudge, Snap to beat and Bar start here. When an audio source is running, it also holds Sync BPM to audio. See [Starting on the beat](#clip-grid/quantize), [Transitions](#decks/transitions) and [The beat grid](#modulation/beat-grid).
 
 ## The Audio window {#audio-window}
 
-The Audio window shows the live spectrum, the meters for Bass, Mid, High and Level, the beat detection and the analysis settings. See [Audio and music](#audio).
+The Audio window is a tab in the tab bar of the Browser. It shows the live spectrum, the meters for Bass, Mid, High and Level, the beat detection and the analysis settings. See [Audio and music](#audio).
 
 ## The Browser {#browser-window}
 
-The Browser at the bottom right has two tabs. Presets holds the factory looks and your own looks, and Library holds all clips, effects and files you can use. See [Presets and sessions](#presets) and [The Library](#library).
+The Browser at the bottom right has two tabs of its own. Presets holds the factory looks and your own looks, and Library holds all clips, effects and files you can use. See [Presets and sessions](#presets) and [The Library](#library).
 
-## The bottom strip {#bottom-strip}
+## The tabs next to the Browser {#bottom-strip}
 
-Five small windows along the bottom show the state at a glance. Master level has the level slider, the level in dB and Blackout. Audio input has the source, Refresh devices and a level meter. Network has the switches for NDI and Spout and the state of the network sync, with a button to its settings. MIDI shows the device, its state and the last message. OSC has the switch for receiving and shows its state and the last message. All options are still in Settings.
+The tab bar of the right column holds, besides the Browser and the Audio window, five small windows that show the state at a glance. Master level has the level slider, the level in dB and Blackout. Audio input has the source, Refresh devices and a level meter. Network has the switches for NDI and Spout and the state of the network sync, with a button to its settings; MIDI shows the device, its state and the last message; OSC has the switch for receiving and shows its state and the last message. They are windows like all others, so you can drag a tab out and place it where you want it, for example below the pictures. All options are still in Settings.
 
-![The bottom strip with the windows Master level, Audio input, Network, MIDI and OSC](bottom-strip.webp)
+![The tab bar next to the Browser with the tabs Audio, Browser, Master level and Audio input](bottom-strip.webp)
 
 ## The status bar {#status-bar}
 
@@ -209,6 +209,14 @@ The row of 16 buttons above the clip grid switches decks. Each deck is a complet
 | Radial | A circle that opens from the centre |
 | Spin | Both pictures rotate into each other |
 | Slide | The new deck pushes in from the side |
+| Pixelate | The picture breaks into coarse blocks and back while it changes |
+| Glitch | Torn bands with a colour split, some of them already show the new deck |
+| Blinds | Vertical strips that open like blinds |
+| Ripple | A wave runs out from the centre and carries the new picture in |
+| Flash | A white flash covers the cut |
+| Blur | The old picture blurs out and the new one comes into focus |
+| Checker | A grid of tiles flips from old to new in a diagonal wave |
+| Frost | The picture frosts over and thaws into the new one |
 
 Choose the transition and its length in the Trigger window. Set the length in seconds, or tick Beat sync to count in beats so the change follows the tempo. If you switch again in the middle of a transition, NyrexVJ freezes the picture you see and fades from there, so there is never a jump.
 
@@ -312,6 +320,10 @@ Under the sliders of a slot you find a band list, a mode and a target. Pick Bass
 Gate is a fast way to make a strobe or a glitch that only hits on the beat.
 
 > Tip: Put one slow LFO on a parameter and Kick on a second effect. The picture then has a calm movement and a pulse at the same time.
+
+## Glass effects {#glass-effects}
+
+Two effects make the picture look as if it is seen through glass. **Prism Glass** breaks the picture into prism facets: Facets sets how many, Refraction how far each facet bends the picture, Dispersion how strongly the colours split at the bend, and Shine how bright the edges are and how much they flash on the beat. **Frosted Glass** blurs the picture like frosted glass: Frost sets the blur, Grain adds fine grain, Milk lifts and veils the picture, and Beat Pulse makes the blur swell on every beat. Both have four sliders from 0 to 1 and are found in the Library under Effects.
 
 ## Your own effects {#own-effects}
 
@@ -464,6 +476,22 @@ A community package is one file that ends in `.nyxpack`. Somebody made presets, 
 
 ![The Community packages window](community-packages.webp)
 
+## Importing from Resolume (ResoPort) {#resoport}
+
+ResoPort reads a composition that Resolume saved (a file that ends in `.avc`) and builds a NyrexVJ composition from it. Open it with File, Import Resolume composition (ResoPort)..., or drop an `.avc` file onto the NyrexVJ window.
+
+1. Type or paste the path of the `.avc` file. If the media of the composition lie in another place, enter that folder in the second field. Press **Check file**.
+2. Read the report. It says which Resolume version made the file, how many clips will be imported, and what will not be: media that were not found (the first names are listed), files that NyrexVJ cannot play, generator clips and clips from other sources, effects, layers beyond the fourth, decks beyond the sixteenth, clips outside the four layers and eight columns, blend modes that NyrexVJ does not know, and a picture size that NyrexVJ does not have. Nothing has changed yet.
+3. Press **Import**. The media that were found are copied into the library and the composition is built.
+
+**What is taken over:** media clips (videos and images) at the same layer and column, the opacity and blend mode of each layer, the names of the decks, the name of the composition, the tempo (when it is between 40 and 240 BPM) and the picture size (when NyrexVJ has the same size). **What is not taken over:** effects, generators, clips from other sources, and every other Resolume setting; they are counted in the report so that you know what is missing. A blend mode whose name NyrexVJ does not know becomes Normal and is named in the report.
+
+ResoPort looks for each medium next to the `.avc` file, at the path that Resolume recorded, and in the extra folder. A medium that is not found leaves its cell empty; put the media next to the file and check again. DXV movies are copied like any other file and are then handled by the DXV to HAP setting described in the chapter on video clips.
+
+> **Import replaces the composition that is open**, like loading a preset, and it cannot be undone. Save what you want to keep as a preset first.
+
+> Note: ResoPort was written from a few sample files of Resolume Arena 7.22 and from test files. It was not tried on a large show composition. Check the result before you rely on it, and tell the maintainers what it got wrong.
+
 ## Undo and redo {#undo}
 
 Edit, Undo and Redo, or `Ctrl+Z` and `Ctrl+Y` (`Ctrl+Shift+Z` also redoes), step through your changes to sliders, clips, effects and decks. Playing a clip, triggering a column and moving the macro knobs are performance actions and are not part of undo. In the timeline and the node editor the same keys work on their own history while those windows have the focus.
@@ -499,7 +527,7 @@ Choose the source in the Audio input window at the bottom, or in Settings, Audio
 | Demo signal | A built-in beat, so you can build looks without music |
 | Off | Nothing. Clips and effects follow the BPM clock instead |
 
-The Audio window shows the live spectrum, the meters for Bass, Mid, High and Level, the beat detection and a detected tempo. If the chosen device delivers no sound for a few seconds, the Audio input window and the status bar say so and suggest to play something or to pick another source.
+The Audio window is a tab in the tab bar of the Browser. It shows the live spectrum, the meters for Bass, Mid, High and Level, the beat detection and a detected tempo. If the chosen device delivers no sound for a few seconds, the Audio input window and the status bar say so and suggest to play something or to pick another source.
 
 ![The Audio window with the spectrum and the Bass, Mid, High and Level meters](audio-tab.webp)
 
@@ -986,6 +1014,10 @@ Settings, Output has a tab for each of up to four outputs. Output 1 is always in
 
 ![The Output page of the settings](settings-output.webp)
 
+## When the window is minimized or moved {#minimized}
+
+The picture does not stop when you minimize the main window. The engine and every output (the output windows, Spout, NDI, the recording, the network sync, MIDI and OSC) keep running; only the interface is not drawn, which saves work. On Windows the system also runs its own loop while you drag the window, change its size or keep a menu open; NyrexVJ keeps the engine running in that time as well. The Windows part was only compiled and not run when this was written, so if an output freezes while you move the window, tell the maintainers.
+
 ## Slices and picture area {#slices}
 
 An output holds up to eight slices. A slice shows a part of the picture in a part of the output. Add slice, Duplicate and Remove manage them. The Picture area sets which part of the composition a slice shows, as Left, Top, Width and Height in percent, or with the buttons Whole picture and the four halves. That is how one picture is split over several projectors. Fill the whole window stretches it, Mirror horizontally and vertically flip it for rear projection.
@@ -1380,7 +1412,7 @@ Open Settings with the menu Settings or with `Ctrl+,`. The window has a list of 
 
 ## Appearance {#settings-appearance}
 
-The theme colour changes the accent of the whole interface. There are ten themes: Studio (the default, a neutral dark with a red-orange accent), Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold and Mono. Interface size scales all windows and text, and Reset sets it back. The same page holds the display scale, high contrast, keyboard navigation, the reset of the window layout and the workspaces; see [Interface, workspaces and accessibility](#interface).
+The theme colour changes the accent of the whole interface. There are eleven themes: Arena (the default), Studio (a neutral dark with a red-orange accent, rounded corners and slim sliders), Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold, Mono. Arena follows the look of Resolume Arena: neutral greys without a colour tint, flat corners, flat bars for the sliders with the name on the right and a thin marker, dark bands with a small triangle above each group of controls, a mint highlight with dark text for the selected layer and the playing column, a dark teal accent, and the sans-serif font of the system instead of the built-in pixel font. A setup that used Studio before 0.60.0 is moved to Arena once; choose Studio here to go back. Interface size scales all windows and text, and Reset sets it back. The same page holds the display scale, high contrast, keyboard navigation, the reset of the window layout and the workspaces; see [Interface, workspaces and accessibility](#interface).
 
 # Interface, workspaces and accessibility {#interface}
 
@@ -1468,7 +1500,7 @@ A power cut or a hand edit can leave a file unreadable. At the start NyrexVJ che
 
 | File | What happens when it is damaged |
 | --- | --- |
-| `layout_v7.ini` (the window layout) | It is renamed to `layout_v7.ini.bad` and the default layout is built. A layout whose window positions are far outside any screen counts as damaged. |
+| `layout_v8.ini` (the window layout) | It is renamed to `layout_v8.ini.bad` and the default layout is built. A layout whose window positions are far outside any screen counts as damaged. |
 | `settings.json` | It is renamed to `settings.json.bad` and the defaults are used. A single wrong value, such as an interface size of 99, does not make the file damaged; that value is brought into its range. |
 | `shortcuts.json` | It is renamed to `shortcuts.json.bad` and the default shortcuts are used. A file that was written by a newer version of NyrexVJ is left alone and the default shortcuts are used. If you then change a shortcut, a copy of the newer file is kept as `shortcuts.json.bad` first. |
 
@@ -1697,7 +1729,7 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--shader-editor [FILE]` | Open the shader editor on start, with a file of the shaders folder if you give one, otherwise with a template |
 | `--shader-editor-selftest [FRAMES]` | Check the shader editor in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--shader-editor-uitest` | Drive the shader editor with real key and mouse events, check what it holds and exit with code 0 or 1, with `--bench-out FILE.json` for the result |
-| `--reset-layout` | Set the saved window layout aside as `layout_v7.ini.bad` and build the default layout, for a window that can no longer be used |
+| `--reset-layout` | Set the saved window layout aside as `layout_v8.ini.bad` and build the default layout, for a window that can no longer be used |
 | `--reset-interface` | Like `--reset-layout`, and also set the shortcuts file aside and reset interface size, display scale, contrast and keyboard navigation |
 | `--interface-uitest` | Drive the interface with real key and mouse events (workspaces, shortcuts, sizes, high contrast, keyboard navigation, node canvas zoom), check the result and exit with code 0 or 1, with `--bench-out FILE.json` for the result; use `NYREXVJ_DATA_DIR` |
 | `--routing-selftest [FRAMES]` | Check video routing in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |

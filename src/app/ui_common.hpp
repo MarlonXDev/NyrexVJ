@@ -17,6 +17,7 @@
 namespace nvj::ui {
 
 inline bool kHighContrast = false;
+inline bool kFlatLook = false;
 inline ImVec4 kAccent(1.00f, 0.55f, 0.12f, 1.00f);
 inline ImVec4 kAccentHover(1.00f, 0.68f, 0.32f, 1.00f);
 inline ImVec4 kAccentDim(0.50f, 0.28f, 0.06f, 1.00f);
@@ -110,14 +111,27 @@ inline float labelColumn(const char* text, const char* end) {
     return std::max(column, std::min(textWidth + px(10.0f), avail * 0.5f));
 }
 
+inline ImU32 flatLineColor() {
+    return ImGui::GetColorU32(ImVec4(0.039f, 0.035f, 0.035f, 1.00f));
+}
+
+inline void drawFieldLabel(ImDrawList* draw, const ImVec2& origin, float column, float height, const char* text, const char* end) {
+    const float textWidth = ImGui::CalcTextSize(text, end).x;
+    const float inner = column - px(8.0f);
+    const float offset = kFlatLook ? std::max(0.0f, inner - textWidth) : 0.0f;
+    draw->PushClipRect(origin, ImVec2(origin.x + column - px(6.0f), origin.y + height), true);
+    draw->AddText(ImVec2(origin.x + offset, origin.y + ImGui::GetStyle().FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), text, end);
+    draw->PopClipRect();
+    if (kFlatLook) {
+        draw->AddRectFilled(ImVec2(origin.x + column - 1.0f, origin.y), ImVec2(origin.x + column, origin.y + height), flatLineColor());
+    }
+}
+
 inline void fieldLabel(const char* label) {
     const float column = labelColumn(label, label + std::strlen(label));
     const float height = ImGui::GetFrameHeight();
     const ImVec2 origin = ImGui::GetCursorScreenPos();
-    ImDrawList* draw = ImGui::GetWindowDrawList();
-    draw->PushClipRect(origin, ImVec2(origin.x + column - px(6.0f), origin.y + height), true);
-    draw->AddText(ImVec2(origin.x, origin.y + ImGui::GetStyle().FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), label);
-    draw->PopClipRect();
+    drawFieldLabel(ImGui::GetWindowDrawList(), origin, column, height, label, label + std::strlen(label));
     ImGui::Dummy(ImVec2(column, height));
     ImGui::SameLine(0.0f, 0.0f);
 }
@@ -147,20 +161,37 @@ inline bool styledSlider(const char* label, const std::string& valueText, float 
             area = std::max(0.0f, avail - labelWidth);
         }
     }
-    const float valueWidth = std::max(px(46.0f), ImGui::CalcTextSize(valueText.c_str()).x + px(4.0f));
-    const float gap = px(8.0f);
+    const bool flat = kFlatLook;
+    const float valueWidth = flat ? std::max(px(52.0f), ImGui::CalcTextSize(valueText.c_str()).x + px(14.0f)) : std::max(px(46.0f), ImGui::CalcTextSize(valueText.c_str()).x + px(4.0f));
+    const float gap = flat ? 0.0f : px(8.0f);
     const float trackWidth = area - valueWidth - gap;
     if (trackWidth < px(56.0f)) {
         return legacy(label);
     }
 
+    struct SpacingGuard {
+        bool on;
+        explicit SpacingGuard(bool enable, float x, float y) : on(enable) {
+            if (on) {
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(x, y));
+            }
+        }
+        ~SpacingGuard() {
+            if (on) {
+                ImGui::PopStyleVar();
+            }
+        }
+    } spacingGuard(flat, style.ItemSpacing.x, px(1.0f));
+
     ImDrawList* draw = ImGui::GetWindowDrawList();
+    const ImVec2 rowPos = ImGui::GetCursorScreenPos();
     if (hasLabel) {
-        const ImVec2 origin = ImGui::GetCursorScreenPos();
-        draw->PushClipRect(origin, ImVec2(origin.x + labelWidth - px(6.0f), origin.y + frameHeight), true);
-        draw->AddText(ImVec2(origin.x, origin.y + style.FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), label, end);
-        draw->PopClipRect();
+        drawFieldLabel(draw, rowPos, labelWidth, frameHeight, label, end);
         ImGui::Dummy(ImVec2(labelWidth, frameHeight));
+        ImGui::SameLine(0.0f, 0.0f);
+    }
+    if (flat) {
+        ImGui::Dummy(ImVec2(valueWidth, frameHeight));
         ImGui::SameLine(0.0f, 0.0f);
     }
 
@@ -191,8 +222,26 @@ inline bool styledSlider(const char* label, const std::string& valueText, float 
     const bool typing = typingBefore || ImGui::TempInputIsActive(widgetId);
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (typing) {
-        window->DC.CursorPosPrevLine.x += gap + valueWidth;
-        window->DC.CursorMaxPos.x = std::max(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
+        if (!flat) {
+            window->DC.CursorPosPrevLine.x += gap + valueWidth;
+            window->DC.CursorMaxPos.x = std::max(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
+        }
+        return changed;
+    }
+
+    if (flat) {
+        const ImVec2 barMin = pos;
+        const ImVec2 barMax(pos.x + trackWidth, pos.y + frameHeight);
+        const float markerWidth = std::max(2.0f, px(3.0f));
+        const float markerX = barMin.x + std::clamp(ratio, 0.0f, 1.0f) * (trackWidth - markerWidth);
+        const float level = hovered || active ? 0.215f : 0.165f;
+        draw->AddRectFilled(barMin, barMax, ImGui::GetColorU32(ImVec4(0.031f, 0.031f, 0.031f, 1.00f)));
+        draw->AddRectFilled(barMin, ImVec2(markerX + markerWidth, barMax.y), ImGui::GetColorU32(ImVec4(level, level, level, 1.00f)));
+        draw->AddRectFilled(ImVec2(markerX, barMin.y), ImVec2(markerX + markerWidth, barMax.y), ImGui::GetColorU32(active ? kAccentHover : kAccent));
+        draw->AddRectFilled(ImVec2(rowPos.x, barMax.y), ImVec2(barMax.x, barMax.y + 1.0f), flatLineColor());
+        draw->PushClipRect(ImVec2(pos.x - valueWidth, pos.y), ImVec2(pos.x - 2.0f, barMax.y), true);
+        draw->AddText(ImVec2(pos.x - valueWidth + px(7.0f), pos.y + style.FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), valueText.c_str());
+        draw->PopClipRect();
         return changed;
     }
 
@@ -269,6 +318,27 @@ inline bool sliderInt(const char* label, int* value, int low, int high, const ch
         });
 }
 
+inline void sectionHeader(const char* label) {
+    if (!kFlatLook) {
+        ImGui::SeparatorText(label);
+        return;
+    }
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float height = ImGui::GetFrameHeight();
+    const float width = ImGui::GetContentRegionAvail().x;
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const float left = pos.x - style.WindowPadding.x;
+    const float right = pos.x + width + style.WindowPadding.x;
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    draw->AddRectFilled(ImVec2(left, pos.y), ImVec2(right, pos.y + height), ImGui::GetColorU32(ImVec4(0.173f, 0.173f, 0.173f, 1.00f)));
+    const float arrow = std::max(3.0f, height * 0.17f);
+    const float arrowX = left + px(10.0f);
+    const float arrowY = pos.y + height * 0.5f - arrow * 0.35f;
+    draw->AddTriangleFilled(ImVec2(arrowX - arrow, arrowY), ImVec2(arrowX + arrow, arrowY), ImVec2(arrowX, arrowY + arrow * 1.2f), ImGui::GetColorU32(ImVec4(0.56f, 0.56f, 0.56f, 1.00f)));
+    draw->AddText(ImVec2(left + px(22.0f), pos.y + style.FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), label);
+    ImGui::Dummy(ImVec2(width, height));
+}
+
 inline std::string cellLabel(int layer, int column) {
     return std::string(tr("Layer ")) + std::to_string(layer + 1) + ", " + tr("Column ") + std::to_string(column + 1);
 }
@@ -284,13 +354,13 @@ inline ImTextureID texId(unsigned int texture) {
     return static_cast<ImTextureID>(static_cast<std::uintptr_t>(texture));
 }
 
-inline bool toggleButton(const char* label, bool& value) {
+inline bool toggleButton(const char* label, bool& value, const ImVec2& size = ImVec2(0.0f, 0.0f)) {
     if (value) {
         ImGui::PushStyleColor(ImGuiCol_Button, kAccent);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, kAccentHover);
         ImGui::PushStyleColor(ImGuiCol_Text, kBlack);
     }
-    bool pressed = ImGui::SmallButton(label);
+    bool pressed = size.x > 0.0f ? ImGui::Button(label, size) : ImGui::SmallButton(label);
     if (value) {
         ImGui::PopStyleColor(3);
     }

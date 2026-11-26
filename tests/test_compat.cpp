@@ -88,6 +88,8 @@ nvj::Settings makeSettings() {
     settings.particleLimit = 4096;
     settings.showStatusBar = false;
     settings.convertMode = "automatic";
+    settings.design = 1;
+    settings.theme = "studio";
     return settings;
 }
 

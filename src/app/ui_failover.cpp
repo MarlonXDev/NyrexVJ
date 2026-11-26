@@ -183,7 +183,7 @@ void App::drawFailoverWindow() {
 
     ImGui::TextWrapped("%s", tr("Two PCs run the same show. The primary sends its state through the network sync and the standby follows it with its outputs held black. If the primary stops, the standby can take over. NyrexVJ does not switch projectors or network streams itself: a video switcher or router in front of the projectors has to move to the standby."));
 
-    ImGui::SeparatorText(tr("Settings"));
+    ui::sectionHeader(tr("Settings"));
     if (ImGui::Checkbox(trId("Use hot standby", "failoverEnabled"), &settings_.failoverEnabled)) {
         persist();
     }
@@ -227,7 +227,7 @@ void App::drawFailoverWindow() {
         return;
     }
 
-    ImGui::SeparatorText(tr("Status"));
+    ui::sectionHeader(tr("Status"));
     const failover::State state = failover_.state();
     const ImVec4* stateColor = state == failover::State::Following || state == failover::State::Leader ? &kGood : (state == failover::State::Connecting || state == failover::State::Idle ? nullptr : &kWarn);
     valueRow(tr("This PC"), failover_.standby() ? tr("Standby (follower)") : (failover_.primary() ? tr("Primary or leader (master)") : tr("No role")));
@@ -245,7 +245,7 @@ void App::drawFailoverWindow() {
     }
 
     if (failover_.standby()) {
-        ImGui::SeparatorText(tr("Readiness of this PC"));
+        ui::sectionHeader(tr("Readiness of this PC"));
         const failover::Report& report = failover_.report();
         valueRow(tr("Overall"), levelLabel(report.overall), &levelColor(report.overall));
         if (ImGui::BeginTable("##failoverChecks", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
@@ -262,7 +262,7 @@ void App::drawFailoverWindow() {
         }
         valueRow(tr("Ready for"), fixed(failover_.machine().readySeconds(now), 0) + " s");
 
-        ImGui::SeparatorText(tr("Takeover"));
+        ui::sectionHeader(tr("Takeover"));
         if (settings_.failoverAutoTakeover) {
             if (failover_.machine().autoUsed()) {
                 warnText(tr("The automatic takeover was used once. Arm it again to allow another."));
@@ -286,7 +286,7 @@ void App::drawFailoverWindow() {
         ImGui::EndDisabled();
         ImGui::SetItemTooltip("%s", tr("Makes this PC the leader. It asks again before it does."));
     } else if (failover_.primary()) {
-        ImGui::SeparatorText(tr("Standby PC"));
+        ui::sectionHeader(tr("Standby PC"));
         const StandbyView view = failover_.standbyView(now);
         if (!view.present) {
             ImGui::TextDisabled("%s", tr("No standby PC is connected."));
@@ -337,7 +337,7 @@ void App::drawFailoverWindow() {
     }
 
     const failover::Measure& measure = failover_.machine().measure();
-    ImGui::SeparatorText(tr("Last takeover (measured, not promised)"));
+    ui::sectionHeader(tr("Last takeover (measured, not promised)"));
     if (!measure.taken) {
         ImGui::TextDisabled("%s", tr("No takeover yet."));
     } else {
@@ -352,7 +352,7 @@ void App::drawFailoverWindow() {
         }
     }
 
-    ImGui::SeparatorText(tr("Events"));
+    ui::sectionHeader(tr("Events"));
     const std::vector<FailoverEvent>& events = failover_.events();
     if (events.empty()) {
         ImGui::TextDisabled("%s", tr("Nothing happened yet."));

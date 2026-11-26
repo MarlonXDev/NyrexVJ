@@ -59,7 +59,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         dropTarget->queueDroppedFiles(list);
     });
     ImGuiIO& io = ImGui::GetIO();
-    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v7.ini").string();
+    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v8.ini").string();
     io.IniFilename = iniPath_.c_str();
     recoverInterfaceFiles(options);
 
@@ -76,6 +76,13 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         settings_.design = 1;
         if (settings_.theme == "orange") {
             settings_.theme = "studio";
+        }
+        saveSettings(settings_);
+    }
+    if (settings_.design < 2) {
+        settings_.design = 2;
+        if (settings_.theme == "studio") {
+            settings_.theme = "arena";
         }
         saveSettings(settings_);
     }
@@ -489,6 +496,8 @@ void App::queueDroppedFiles(const std::vector<std::string>& paths) {
             importDroppedVenue(path);
         } else if (extension == ".nyxfx") {
             importNodeGraph(path);
+        } else if (extension == ".avc") {
+            openResoPort(path);
         } else {
             pendingImports_.push_back(path);
         }
@@ -686,7 +695,7 @@ void App::updateSync(double dt) {
     netSync_.noteCues(sync_.firedCues().size());
 }
 
-void App::frame(double dt) {
+void App::frame(double dt, bool drawUi) {
     const auto frameStart = std::chrono::steady_clock::now();
     const int vsync = settings_.vsync ? 1 : 0;
     if (vsync != appliedVsync_) {
@@ -847,8 +856,12 @@ void App::frame(double dt) {
         syncNodeEffects();
     }
 
+    if (!drawUi) {
+        autosaveTick(dt);
+        return;
+    }
+
     drawMenuBar();
-    drawTransportBar();
     drawStatusBar();
     ImGuiID dock = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
     rootDock_ = dock;
@@ -877,6 +890,7 @@ void App::frame(double dt) {
     drawTimeline();
     drawManual();
     drawShowPackages();
+    drawResoPort();
     drawCommunityPackages();
     drawGeneratorStudio();
     drawShaderEditor();
@@ -888,6 +902,12 @@ void App::frame(double dt) {
     drawConversionCards();
     drawWelcome();
     drawRecovery();
+
+    if (tabFocusFrames_ > 0 && --tabFocusFrames_ == 0) {
+        ImGui::SetWindowFocus("###clip");
+        ImGui::SetWindowFocus("###layer");
+        ImGui::SetWindowFocus("###browser");
+    }
 
     history_.observe(engine_.comp, dt, ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsAnyItemActive());
 
@@ -934,46 +954,30 @@ void App::buildLayout(ImGuiID dock) {
     ImGui::DockBuilderSetNodeSize(dock, static_cast<ImGuiViewportP*>(ImGui::GetMainViewport())->GetBuildWorkRect().GetSize());
     ImGuiID lower = 0;
     ImGuiID upper = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.52f, nullptr, &lower);
-    ImGuiID strip = 0;
-    ImGuiID row = ImGui::DockBuilderSplitNode(lower, ImGuiDir_Up, 0.67f, nullptr, &strip);
-
-    ImGuiID side = 0;
-    ImGuiID grid = ImGui::DockBuilderSplitNode(upper, ImGuiDir_Left, 0.64f, nullptr, &side);
-    ImGuiID layer = 0;
-    ImGuiID panels = ImGui::DockBuilderSplitNode(side, ImGuiDir_Up, 0.56f, nullptr, &layer);
-
-    ImGuiID rowRest = 0;
-    ImGuiID preview = ImGui::DockBuilderSplitNode(row, ImGuiDir_Left, 0.20f, nullptr, &rowRest);
-    ImGuiID rowRest2 = 0;
-    ImGuiID output = ImGui::DockBuilderSplitNode(rowRest, ImGuiDir_Left, 0.25f, nullptr, &rowRest2);
-    ImGuiID rowRest3 = 0;
-    ImGuiID trigger = ImGui::DockBuilderSplitNode(rowRest2, ImGuiDir_Left, 0.26f, nullptr, &rowRest3);
+    ImGuiID rest = 0;
+    ImGuiID monitors = ImGui::DockBuilderSplitNode(lower, ImGuiDir_Left, 0.31f, nullptr, &rest);
+    ImGuiID preview = 0;
+    ImGuiID output = ImGui::DockBuilderSplitNode(monitors, ImGuiDir_Up, 0.58f, nullptr, &preview);
+    ImGuiID rest2 = 0;
+    ImGuiID layer = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.35f, nullptr, &rest2);
     ImGuiID browser = 0;
-    ImGuiID audio = ImGui::DockBuilderSplitNode(rowRest3, ImGuiDir_Left, 0.42f, nullptr, &browser);
+    ImGuiID clip = ImGui::DockBuilderSplitNode(rest2, ImGuiDir_Left, 0.51f, nullptr, &browser);
 
-    ImGuiID stripRest = 0;
-    ImGuiID levels = ImGui::DockBuilderSplitNode(strip, ImGuiDir_Left, 0.16f, nullptr, &stripRest);
-    ImGuiID stripRest2 = 0;
-    ImGuiID audioIn = ImGui::DockBuilderSplitNode(stripRest, ImGuiDir_Left, 0.24f, nullptr, &stripRest2);
-    ImGuiID stripRest3 = 0;
-    ImGuiID network = ImGui::DockBuilderSplitNode(stripRest2, ImGuiDir_Left, 0.34f, nullptr, &stripRest3);
-    ImGuiID osc = 0;
-    ImGuiID midi = ImGui::DockBuilderSplitNode(stripRest3, ImGuiDir_Left, 0.5f, nullptr, &osc);
-
-    ImGui::DockBuilderDockWindow("###deck", grid);
-    ImGui::DockBuilderDockWindow("###clip", panels);
-    ImGui::DockBuilderDockWindow("###master", panels);
-    ImGui::DockBuilderDockWindow("###layer", layer);
-    ImGui::DockBuilderDockWindow("###preview", preview);
+    ImGui::DockBuilderDockWindow("###deck", upper);
     ImGui::DockBuilderDockWindow("###output", output);
-    ImGui::DockBuilderDockWindow("###trigger", trigger);
-    ImGui::DockBuilderDockWindow("###audio", audio);
+    ImGui::DockBuilderDockWindow("###preview", preview);
+    ImGui::DockBuilderDockWindow("###master", layer);
+    ImGui::DockBuilderDockWindow("###layer", layer);
+    ImGui::DockBuilderDockWindow("###clip", clip);
+    ImGui::DockBuilderDockWindow("###trigger", clip);
     ImGui::DockBuilderDockWindow("###browser", browser);
-    ImGui::DockBuilderDockWindow("###stripMaster", levels);
-    ImGui::DockBuilderDockWindow("###stripAudio", audioIn);
-    ImGui::DockBuilderDockWindow("###stripNetwork", network);
-    ImGui::DockBuilderDockWindow("###stripMidi", midi);
-    ImGui::DockBuilderDockWindow("###stripOsc", osc);
+    ImGui::DockBuilderDockWindow("###audio", browser);
+    ImGui::DockBuilderDockWindow("###stripMaster", browser);
+    ImGui::DockBuilderDockWindow("###stripAudio", browser);
+    ImGui::DockBuilderDockWindow("###stripNetwork", browser);
+    ImGui::DockBuilderDockWindow("###stripMidi", browser);
+    ImGui::DockBuilderDockWindow("###stripOsc", browser);
+    tabFocusFrames_ = 3;
     ImGui::DockBuilderFinish(dock);
 }
 
@@ -1145,6 +1149,9 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Import show package..."))) {
             openShowPackages(1);
+        }
+        if (ImGui::MenuItem(tr("Import Resolume composition (ResoPort)..."))) {
+            openResoPort(std::string());
         }
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Install community package..."))) {

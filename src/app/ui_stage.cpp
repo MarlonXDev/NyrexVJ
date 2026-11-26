@@ -81,7 +81,7 @@ void App::drawStagePage() {
     DmxConfig& dmx = settings_.dmx;
     VrchatConfig& vrchat = settings_.vrchat;
 
-    ImGui::SeparatorText(tr("Art-Net output"));
+    ui::sectionHeader(tr("Art-Net output"));
     ImGui::TextWrapped("%s", tr("Sends the channels below as Art-Net DMX, for example to HNode, QLC+ or a lighting console."));
     if (ImGui::Checkbox(trId("Send Art-Net", "dmxArtnet"), &dmx.artnetEnabled)) {
         persist();
@@ -123,7 +123,7 @@ void App::drawStagePage() {
         warnText(tr("Data is sent to another address. Only use addresses in a network you trust."));
     }
 
-    ImGui::SeparatorText(tr("DMX strip in the video (VRSL)"));
+    ui::sectionHeader(tr("DMX strip in the video (VRSL)"));
     ImGui::TextWrapped("%s", tr("Draws the channels as a row of grey blocks into the output video. Spout, NDI and the output windows all carry it, so VRSL in VRChat can read it from the stream."));
     if (ImGui::Checkbox(trId("Draw the strip into the video", "dmxStrip"), &dmx.stripEnabled)) {
         persist();
@@ -163,7 +163,7 @@ void App::drawStagePage() {
     }
     warnText(tr("The channel to block order follows the public VRSL description and is not yet checked against a real VRSL world. Use the test patterns to compare."));
 
-    ImGui::SeparatorText(tr("Test patterns"));
+    ui::sectionHeader(tr("Test patterns"));
     const StageTest current = stage_.test();
     const struct {
         StageTest test;
@@ -189,7 +189,7 @@ void App::drawStagePage() {
         warnText(tr("A test pattern is running. The channels below are ignored."));
     }
 
-    ImGui::SeparatorText(tr("Channels"));
+    ui::sectionHeader(tr("Channels"));
     ImGui::TextWrapped("%s", tr("Each row drives one DMX channel from a fixed value or a modulation source such as an audio band, an LFO, a macro or the beat."));
     int removeLane = -1;
     if (ImGui::BeginChild("dmxLanes", ImVec2(0.0f, std::min(260.0f, 36.0f + 30.0f * static_cast<float>(dmx.lanes.size()))), ImGuiChildFlags_Borders)) {
@@ -250,7 +250,7 @@ void App::drawStagePage() {
     ImGui::SameLine();
     ImGui::TextDisabled("%zu / %zu", dmx.lanes.size(), kMaxDmxLanes);
 
-    ImGui::SeparatorText(tr("VRChat avatar parameters"));
+    ui::sectionHeader(tr("VRChat avatar parameters"));
     ImGui::TextWrapped("%s", tr("Sends values to VRChat over OSC as /avatar/parameters/<name>, so an avatar or a world prop can follow the music or the beat. VRChat must have OSC enabled."));
     if (ImGui::Checkbox(trId("Send to VRChat", "vrcSend"), &vrchat.enabled)) {
         persist();

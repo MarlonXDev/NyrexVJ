@@ -64,7 +64,7 @@ void App::applyColorSettings() {
 void App::drawColorSettings() {
     auto persist = [this]() { saveSettings(settings_); };
 
-    ImGui::SeparatorText(tr("Colour"));
+    ui::sectionHeader(tr("Colour"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Layers, mixing and the main picture are 8 bit and use the sRGB look. The tools below change the picture only when you switch them on, the default show looks exactly as before."));
     ImGui::PopTextWrapPos();

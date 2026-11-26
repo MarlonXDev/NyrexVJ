@@ -208,7 +208,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
     const bool ndi = def.kind == ClipKind::NdiSource;
     const bool plugin = def.kind == ClipKind::PluginSource;
     const bool network = def.kind == ClipKind::StreamSource;
-    ImGui::SeparatorText(network ? tr("Network stream input") : (plugin ? tr("Plugin source") : (ndi ? tr("NDI input") : tr("Camera or capture card"))));
+    ui::sectionHeader(network ? tr("Network stream input") : (plugin ? tr("Plugin source") : (ndi ? tr("NDI input") : tr("Camera or capture card"))));
     auto persist = [this]() { saveSettings(settings_); };
 
     if (network) {

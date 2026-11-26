@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.59.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.60.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -181,6 +181,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/effect_json.cpp
     src/core/effect_chain.cpp
     src/core/show_workflow.cpp
+    src/core/resoport.cpp
     src/core/pack_workflow.cpp
     src/scene3d/builtin_docs.cpp
     src/scene3d/doc_build.cpp
@@ -407,6 +408,7 @@ set(NYREXVJ_APP_SOURCES
     src/app/ui_welcome.cpp
     src/app/ui_recovery.cpp
     src/app/ui_show.cpp
+    src/app/ui_resoport.cpp
     src/app/ui_packs.cpp
     src/app/ui_generators.cpp
     src/app/ui_shader_editor.cpp
@@ -653,6 +655,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_show_workflow_tests PRIVATE nvj_core)
     target_include_directories(nvj_show_workflow_tests PRIVATE tests)
     add_test(NAME nvj_show_workflow_tests COMMAND nvj_show_workflow_tests)
+
+    add_executable(nvj_resoport_tests tests/test_resoport.cpp)
+    target_link_libraries(nvj_resoport_tests PRIVATE nvj_core)
+    target_include_directories(nvj_resoport_tests PRIVATE tests)
+    add_test(NAME nvj_resoport_tests COMMAND nvj_resoport_tests)
 
     add_executable(nvj_pack_tests tests/test_pack.cpp)
     target_link_libraries(nvj_pack_tests PRIVATE nvj_core)

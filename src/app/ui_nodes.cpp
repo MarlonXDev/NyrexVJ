@@ -1286,7 +1286,7 @@ void App::drawNodeEditor() {
 
     ImGui::SameLine();
     ImGui::BeginChild("##nodeside", ImVec2(0.0f, canvasSize.y), ImGuiChildFlags_Borders);
-    ImGui::SeparatorText(tr("Effect controls"));
+    ui::sectionHeader(tr("Effect controls"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Control 1 to 4 nodes read these values. A control without a label is not shown in the effect."));
     ImGui::PopTextWrapPos();
@@ -1304,14 +1304,14 @@ void App::drawNodeEditor() {
     const GraphNode* picked = s.graph.find(s.selected);
     const NodeSpec* pickedSpec = picked ? findNodeSpec(picked->type) : nullptr;
     if (pickedSpec) {
-        ImGui::SeparatorText(tr("Selected node"));
+        ui::sectionHeader(tr("Selected node"));
         ImGui::Text("%s", pickedSpec->title);
         ImGui::TextDisabled("%s", pickedSpec->category);
         if (pickedSpec->reads > 0) {
             ImGui::TextDisabled("%s %d", tr("Texture reads:"), pickedSpec->reads);
         }
     }
-    ImGui::SeparatorText(tr("Zoom"));
+    ui::sectionHeader(tr("Zoom"));
     const ImVec2 zoomCentre(s.canvasSize.x * 0.5f, s.canvasSize.y * 0.5f);
     if (ImGui::SmallButton("-##zoomOut")) {
         applyZoom(s, zoomCentre, s.zoom / 1.1f);
@@ -1332,7 +1332,7 @@ void App::drawNodeEditor() {
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Ctrl + mouse wheel zooms the view. The keys - and = zoom out and in, 0 resets the zoom."));
     ImGui::PopTextWrapPos();
-    ImGui::SeparatorText(tr("Mouse and keys"));
+    ui::sectionHeader(tr("Mouse and keys"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Right click: add a node. Drag from a pin: connect. Drag a connected input away: remove the link. Double click or Ctrl+click a value to type it. Delete: remove the node. Ctrl+D: duplicate. Middle mouse or empty space: move the view."));
     ImGui::PopTextWrapPos();

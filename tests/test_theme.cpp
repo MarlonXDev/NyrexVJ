@@ -129,7 +129,8 @@ void testStyleReset() {
 }
 
 void testIndexes() {
-    CHECK(nvj::themeCount() == 10);
+    CHECK(nvj::themeCount() == 11);
+    CHECK(nvj::themeIndex("arena") == 10);
     CHECK(nvj::themeIndex("studio") == 0);
     CHECK(nvj::themeIndex("mono") == 9);
     CHECK(nvj::themeIndex("unknown") == 0);

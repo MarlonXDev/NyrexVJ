@@ -685,10 +685,38 @@ int main(int argc, char** argv) {
         std::error_code renameError;
         std::filesystem::rename(temporary, options.failoverReport, renameError);
     };
+    bool frameBusy = true;
+    nvj::platform::setModalLoopTick([&]() {
+        if (frameBusy) {
+            return;
+        }
+        frameBusy = true;
+        const double stamp = glfwGetTime();
+        const double step = std::clamp(stamp - last, 0.0, 0.25);
+        last = stamp;
+        app.frame(step, false);
+        frameBusy = false;
+    });
     while (!glfwWindowShouldClose(window)) {
+        frameBusy = false;
         glfwPollEvents();
+        frameBusy = true;
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
-            glfwWaitEventsTimeout(0.1);
+            const double stamp = glfwGetTime();
+            const double step = std::clamp(stamp - last, 0.0, 0.25);
+            last = stamp;
+            app.frame(step, false);
+            const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+            const int refresh = mode != nullptr && mode->refreshRate >= 24 && mode->refreshRate <= 240 ? mode->refreshRate : 60;
+            pacer.setTargetFps(app.fpsLimit() > 0 ? app.fpsLimit() : refresh);
+            const double finished = glfwGetTime();
+            const double deadline = pacer.nextDeadline(finished);
+            if (deadline > finished) {
+                nvj::platform::sleepPrecise(deadline - finished);
+            }
+            if (options.runSeconds > 0.0 && glfwGetTime() - loopStart >= options.runSeconds) {
+                break;
+            }
             continue;
         }
 
@@ -850,6 +878,8 @@ int main(int argc, char** argv) {
             }
         }
     }
+
+    nvj::platform::setModalLoopTick(nullptr);
 
     if (!options.netSyncReport.empty()) {
         nlohmann::json report = app.netSync().report();

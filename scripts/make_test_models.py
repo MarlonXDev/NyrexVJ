@@ -285,6 +285,28 @@ def blend_planes(near_first):
     return builder.finish(doc), builder.bin
 
 
+def blend_opaque_mesh():
+    builder = Builder()
+    near, near_normals, near_indices = quad(0.4, 0.5)
+    far, far_normals, far_indices = quad(0.9, -0.5)
+    positions = near + far
+    normals = near_normals + far_normals
+    indices = near_indices + [index + 4 for index in far_indices]
+    colors = [(0.1, 1.0, 0.1, 1.0)] * 4 + [(1.0, 0.1, 0.1, 1.0)] * 4
+    attributes = mesh_attributes(builder, positions, normals)
+    attributes["COLOR_0"] = builder.floats(colors, "VEC4")
+    meshes = [{"primitives": [{"attributes": attributes, "indices": builder.indices(indices), "material": 0}]}]
+    doc = {
+        "asset": {"version": "2.0", "generator": "NyrexVJ scripts/make_test_models.py"},
+        "scene": 0,
+        "scenes": [{"nodes": [0]}],
+        "nodes": [{"mesh": 0, "name": "one blended mesh"}],
+        "meshes": meshes,
+        "materials": [material((1.0, 1.0, 1.0, 1.0), "BLEND", double_sided=True)],
+    }
+    return builder.finish(doc), builder.bin
+
+
 def lights_and_cameras(required):
     builder = Builder()
     positions = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)]
@@ -339,6 +361,7 @@ def main():
         "morph_many.glb": morph_many(),
         "blend_near_first.glb": blend_planes(True),
         "blend_far_first.glb": blend_planes(False),
+        "blend_opaque_mesh.glb": blend_opaque_mesh(),
         "lights_cameras.glb": lights_and_cameras(False),
         "lights_required.glb": lights_and_cameras(True),
     }

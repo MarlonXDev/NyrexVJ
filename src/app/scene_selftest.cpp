@@ -189,6 +189,17 @@ int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const st
         }
     }
     {
+        auto player = fileScene(models / "blend_opaque_mesh.glb");
+        const Shot shot = capture(engine, *player, 0.0f, target);
+        if (shot.ok) {
+            const uint8_t* centre = shot.at(kSize / 2, kSize / 2);
+            const bool nearWins = centre[1] > centre[0] + 40 && centre[1] > centre[2] + 40;
+            check.expect("opaque parts of one blended mesh hide what lies behind them", nearWins, "centre " + std::to_string(centre[0]) + "," + std::to_string(centre[1]) + "," + std::to_string(centre[2]));
+        } else {
+            check.expect("opaque parts of one blended mesh hide what lies behind them", false, "no picture");
+        }
+    }
+    {
         auto player = fileScene(models / "lights_cameras.glb");
         const Shot shot = capture(engine, *player, 0.0f, target);
         check.expect("file lights and cameras do not change the picture", shot.ok && shot.lit > 100 && player->scene().lights.empty());

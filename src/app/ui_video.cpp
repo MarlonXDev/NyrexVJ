@@ -84,7 +84,7 @@ void App::drawVideoSettings() {
     auto persist = [this]() { saveSettings(settings_); };
     const VideoGpuCaps& caps = engine_.videoCaps();
 
-    ImGui::SeparatorText(tr("Video playback"));
+    ui::sectionHeader(tr("Video playback"));
     const VideoDecodeMode mode = videoDecodeModeFromName(settings_.videoDecoder);
     const char* labels[] = {tr("Automatic"), tr("Prefer hardware"), tr("Force software")};
     const VideoDecodeMode modes[] = {VideoDecodeMode::Auto, VideoDecodeMode::PreferHardware, VideoDecodeMode::ForceSoftware};
@@ -182,7 +182,7 @@ void App::drawVideoSettings() {
 
 void App::drawVideoMonitor() {
     const std::vector<const MediaPlayer*> videos = engine_.activeVideos();
-    ImGui::SeparatorText(tr("Videos"));
+    ui::sectionHeader(tr("Videos"));
     if (videos.empty()) {
         ImGui::TextDisabled("%s", tr("No video is loaded right now."));
         return;

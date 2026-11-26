@@ -307,9 +307,11 @@ void App::drawLayer() {
     int activeClip = layer.activeColumn >= 0 ? layer.cells[static_cast<size_t>(layer.activeColumn)] : -1;
     ImGui::TextDisabled("%s", activeClip >= 0 ? library[static_cast<size_t>(activeClip)].name.c_str() : tr("no clip"));
 
-    ImGui::SeparatorText(tr("Video"));
+    ui::sectionHeader(tr("Video"));
     ui::sliderFloat(trId("Opacity", "layerOpacity"), &layer.opacity, 0.0f, 1.0f, "%.2f");
-    if (ImGui::BeginCombo(trId("Blend", "layerBlend"), tr(blendName(layer.blend)))) {
+    ui::fieldLabel(tr("Blend"));
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::BeginCombo("##layerBlendMode", tr(blendName(layer.blend)))) {
         for (int b = 0; b < BlendModeCount; ++b) {
             if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
                 layer.blend = b;
@@ -317,6 +319,7 @@ void App::drawLayer() {
         }
         ImGui::EndCombo();
     }
+    ui::fieldLabel("");
     ui::toggleButton("B", layer.bypass);
     ImGui::SetItemTooltip("%s", tr("Bypass: skip this layer"));
     ImGui::SameLine();
@@ -372,7 +375,7 @@ static void drawShaderControls(const ShaderPlan& plan, ClipPlayback& playback) {
     if (plan.params.empty()) {
         return;
     }
-    ImGui::SeparatorText(tr("Shader controls"));
+    ui::sectionHeader(tr("Shader controls"));
     const ShaderValues resolved = resolveShaderValues(plan, playback.values);
     for (const ShaderParam& param : plan.params) {
         ImGui::PushID(param.name.c_str());
@@ -571,11 +574,11 @@ void App::drawClipPanel() {
         drawSceneControls(*engine_.scenePlayer(clip));
     }
 
-    ImGui::SeparatorText(tr("Look"));
+    ui::sectionHeader(tr("Look"));
     ui::sliderFloat(trId("Speed", "layerSpeed"), &layer.speed, 0.1f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
     ui::sliderFloat(trId("Scale", "layerScale"), &layer.scale, 0.25f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 
-    ImGui::SeparatorText(tr("Color"));
+    ui::sectionHeader(tr("Color"));
     ImGui::ColorEdit3(trId("Color A", "colorA"), layer.colorA.data(), ImGuiColorEditFlags_NoInputs);
     ImGui::SameLine();
     ImGui::ColorEdit3(trId("Color B", "colorB"), layer.colorB.data(), ImGuiColorEditFlags_NoInputs);
@@ -607,7 +610,7 @@ void App::drawSpoutInputControls(int slot) {
     if (slot < 0 || slot >= kSpoutInputSlots) {
         return;
     }
-    ImGui::SeparatorText(tr("Spout input"));
+    ui::sectionHeader(tr("Spout input"));
     if (!SpoutInput::supported() && !SpoutInput::testPattern()) {
         ImGui::PushTextWrapPos(0.0f);
         ImGui::TextDisabled("%s", tr("Spout input only works on Windows."));
@@ -658,7 +661,7 @@ void App::drawSpoutInputControls(int slot) {
 }
 
 void App::drawSpoutControls() {
-    ImGui::SeparatorText(tr("Spout (OBS)"));
+    ui::sectionHeader(tr("Spout (OBS)"));
     if (!SpoutOutput::supported()) {
         ImGui::TextDisabled("%s", tr("Spout is only available on Windows."));
         return;
@@ -691,7 +694,7 @@ void App::drawSpoutControls() {
 }
 
 void App::drawNdiControls() {
-    ImGui::SeparatorText(tr("NDI"));
+    ui::sectionHeader(tr("NDI"));
     const bool available = NdiSender::available();
     bool active = ndi_.active();
     ImGui::BeginDisabled(!available);

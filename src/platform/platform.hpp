@@ -53,6 +53,7 @@ double processCpuSeconds();
 int processThreadCount();
 int processHandleCount();
 void sleepPrecise(double seconds);
+void setModalLoopTick(const std::function<void()>& tick);
 void setCurrentThreadBackground(bool background);
 unsigned long currentProcessId();
 bool processAlive(unsigned long pid);

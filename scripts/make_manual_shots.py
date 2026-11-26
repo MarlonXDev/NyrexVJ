@@ -19,13 +19,13 @@ OUT = ROOT / "site" / "assets" / "manual"
 COMMON = ["--fresh", "--no-welcome", "--no-update-check", "--audio-demo", "--frames", "60"]
 
 WIN = (0, 0, 1600, 900)
-DECK = (0, 60, 1024, 424)
-BROWSER = (1190, 482, 410, 262)
-MASTER = (1024, 60, 576, 238)
-CLIP = (1024, 60, 576, 238)
-AUDIO = (890, 482, 302, 262)
-TRANSPORT = (0, 24, 1600, 38)
-STRIP = (0, 742, 1600, 130)
+DECK = (0, 20, 1290, 392)
+BROWSER = (1250, 463, 350, 417)
+MASTER = (497, 463, 388, 417)
+CLIP = (885, 463, 364, 417)
+AUDIO = (1250, 463, 350, 417)
+TRANSPORT = (0, 408, 730, 52)
+STRIP = (1250, 463, 350, 26)
 SETTINGS = (358, 158, 874, 584)
 CREATOR = (138, 58, 1324, 784)
 NODES = (178, 68, 1244, 764)
@@ -95,10 +95,10 @@ FIGURES = [
 ]
 
 CARDS = [
-    ("card-clips", "main", (0, 56, 800, 450)),
+    ("card-clips", "main", (0, 20, 800, 450)),
     ("card-creator", "creator", (150, 70, 1300, 731)),
     ("card-nodes", "nodes", (180, 70, 1240, 690)),
-    ("card-audio", "audio", (640, 482, 720, 405)),
+    ("card-audio", "audio", (1000, 440, 600, 440)),
     ("card-output", "set3", (358, 158, 874, 492)),
     ("card-timeline", "timeline", (208, 278, 996, 560)),
 ]

@@ -1186,6 +1186,83 @@ vec4 effect(vec2 uv, vec4 p) {
     return vec4(col, 1.0);
 }
 )glsl", false, false});
+
+    fx.push_back({"Frosted Glass", {"Frost", "Grain", "Milk", "Beat Pulse"}, {0.5f, 0.5f, 0.35f, 0.3f}, R"glsl(
+vec2 fgHash(vec2 q) {
+    return vec2(hash21(q), hash21(q + 17.31));
+}
+
+vec4 effect(vec2 uv, vec4 p) {
+    float pulse = 1.0 + p.w * 1.5 * exp(-fract(uBeat) * 4.0);
+    float radius = mix(0.002, 0.03, p.x) * pulse;
+    vec2 cell = floor(uv * uRes * 0.5);
+    vec2 jitter = fgHash(cell + floor(uTime * 2.0)) - 0.5;
+    float turn = hash21(cell) * 6.28318;
+    vec3 acc = vec3(0.0);
+    float weight = 0.0;
+    for (int i = 0; i < 28; ++i) {
+        float f = (float(i) + 0.5) / 28.0;
+        float a = float(i) * 2.39996 + turn;
+        float r = sqrt(f);
+        vec2 o = vec2(cos(a), sin(a)) * r * radius * vec2(1.0 / uAspect, 1.0);
+        vec2 g = jitter * p.y * 0.012 * (0.4 + r) * vec2(1.0 / uAspect, 1.0);
+        float w = 1.0 - 0.5 * r;
+        acc += texture(uTex, mrep(uv + o + g)).rgb * w;
+        weight += w;
+    }
+    vec3 col = acc / weight;
+    float frost = vn(uv * uRes * 0.35 + uTime * 0.2);
+    col += (frost - 0.5) * p.y * 0.06;
+    float lift = p.z * 0.35;
+    col = mix(col, vec3(luma(col) * 0.6 + 0.55), lift * 0.5) + vec3(lift * 0.12);
+    return vec4(col, 1.0);
+}
+)glsl", false, false});
+
+    fx.push_back({"Prism Glass", {"Facets", "Refraction", "Dispersion", "Shine"}, {0.4f, 0.35f, 0.4f, 0.35f}, R"glsl(
+vec2 pgHash(vec2 q) {
+    return vec2(hash21(q), hash21(q + 31.7));
+}
+
+vec4 effect(vec2 uv, vec4 p) {
+    float scale = mix(3.0, 14.0, p.x);
+    vec2 q = uv * vec2(uAspect, 1.0) * scale;
+    vec2 base = floor(q);
+    float d1 = 8.0;
+    float d2 = 8.0;
+    vec2 id = vec2(0.0);
+    vec2 center = vec2(0.0);
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            vec2 n = base + vec2(float(x), float(y));
+            vec2 h = pgHash(n);
+            vec2 f = n + 0.5 + (h - 0.5) * (0.7 + 0.15 * sin(uTime * 0.6 + h.x * 6.28318));
+            float d = length(q - f);
+            if (d < d1) {
+                d2 = d1;
+                d1 = d;
+                id = n;
+                center = f;
+            } else if (d < d2) {
+                d2 = d;
+            }
+        }
+    }
+    vec2 dir = (pgHash(id + 7.0) - 0.5) * 2.0;
+    float pulse = 1.0 + 0.6 * exp(-fract(uBeat) * 4.0) * p.w;
+    float refr = mix(0.004, 0.06, p.y);
+    vec2 o = (dir * refr + (center - q) * refr * 0.35) * vec2(1.0 / uAspect, 1.0);
+    float disp = p.z * 0.9;
+    vec3 col = vec3(texture(uTex, mrep(uv + o * (1.0 + disp))).r, texture(uTex, mrep(uv + o)).g, texture(uTex, mrep(uv + o * (1.0 - disp))).b);
+    float tone = 0.82 + 0.3 * hash21(id + 3.0);
+    float rim = 1.0 - ss(0.0, 0.07, d2 - d1);
+    vec3 spark = hc(hash21(id) + uTime * 0.05);
+    col = col * tone + rim * p.w * 0.9 * pulse * mix(vec3(1.0), spark, 0.45);
+    float glint = pow(max(dot(normalize(vec3(dir, 0.8)), normalize(vec3(-0.4, 0.6, 0.7))), 0.0), 18.0);
+    col += glint * p.w * 0.25;
+    return vec4(col, 1.0);
+}
+)glsl", false, false});
 }
 
 }

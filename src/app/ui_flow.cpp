@@ -54,7 +54,7 @@ std::string megabytesText(unsigned long long bytes) {
 void App::drawFlowSettings() {
     auto persist = [this]() { saveSettings(settings_); };
 
-    ImGui::SeparatorText(tr("Optical flow"));
+    ui::sectionHeader(tr("Optical flow"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Estimates how the picture moves between two video frames. It is experimental and off by default, while it is off the videos play exactly as before and nothing extra is created."));
     ImGui::PopTextWrapPos();

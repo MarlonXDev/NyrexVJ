@@ -1,6 +1,7 @@
 #include "app/app.hpp"
 
 #include "app/shortcut_keys.hpp"
+#include "app/fonts.hpp"
 #include "app/theme.hpp"
 #include "app/ui_common.hpp"
 #include "core/log.hpp"
@@ -166,6 +167,7 @@ void App::updateInterfaceStyle() {
         style.FontScaleMain = scale;
         style.FontScaleDpi = dpi;
         applyTheme(themeIndex(settings_.theme), options);
+        useSansFont(!high && std::string(themeInfo(themeIndex(settings_.theme)).id) == "arena");
         appliedSizeScale_ = sizeScale;
         appliedHighContrast_ = high;
         appliedTheme_ = settings_.theme;
@@ -243,7 +245,7 @@ void App::applyPendingWorkspace() {
             note += text;
         };
         if (recoveryFlags_ & kRecoveredLayout) {
-            add(tr("The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored."));
+            add(tr("The saved window layout was damaged. A copy was kept as layout_v8.ini.bad and the default layout was restored."));
         }
         if (recoveryFlags_ & kRecoveredSettings) {
             add(tr("settings.json was damaged. A copy was kept as settings.json.bad and the defaults are used."));
@@ -434,7 +436,7 @@ void App::drawWorkspacePanel() {
 
 void App::drawInterfaceOptions() {
     const float em = ImGui::GetFontSize();
-    ImGui::SeparatorText(tr("Scale"));
+    ui::sectionHeader(tr("Scale"));
     ImGui::SetNextItemWidth(em * 18.0f);
     ui::sliderFloat(trId("Interface size", "optScale"), &uiScaleEdit_, kMinScale, kMaxScale, "%.2f");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
@@ -455,14 +457,14 @@ void App::drawInterfaceOptions() {
         ImGui::SameLine();
         ImGui::TextDisabled("%s: %d%%", tr("Display scale"), static_cast<int>(std::lround(dpiScale_ * 100.0f)));
     }
-    ImGui::SeparatorText(tr("Contrast"));
+    ui::sectionHeader(tr("Contrast"));
     bool high = settings_.uiContrast == "high";
     if (ImGui::Checkbox(trId("High contrast", "optHighContrast"), &high)) {
         settings_.uiContrast = high ? "high" : "standard";
         saveSettings(settings_);
     }
     ImGui::SetItemTooltip("%s", tr("Brighter text, stronger borders and a yellow focus ring."));
-    ImGui::SeparatorText(tr("Keyboard"));
+    ui::sectionHeader(tr("Keyboard"));
     if (ImGui::Checkbox(trId("Keyboard navigation", "optKeyboardNav"), &settings_.uiKeyboardNav)) {
         saveSettings(settings_);
     }
@@ -567,7 +569,7 @@ void App::drawShortcutsPage() {
         shortcutCapture_ = -1;
     }
     ImGui::EndDisabled();
-    ImGui::SeparatorText(tr("Fixed shortcuts"));
+    ui::sectionHeader(tr("Fixed shortcuts"));
     ImGui::BulletText("%s", tr("1 - 8  trigger a column"));
     ImGui::BulletText("%s", tr("Ctrl + 1 - 8  deck 1 - 8"));
     ImGui::BulletText("%s", tr("Ctrl + Shift + 1 - 8  deck 9 - 16"));

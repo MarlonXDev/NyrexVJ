@@ -76,7 +76,7 @@ void App::drawRecovery() {
         ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.45f, 1.0f), "%s", tr("NyrexVJ crashed. A crash report was saved."));
     }
 
-    ImGui::SeparatorText(tr("Autosaves"));
+    ui::sectionHeader(tr("Autosaves"));
     if (recoveryEntries_.empty()) {
         ImGui::TextDisabled("%s", tr("There are no autosaves."));
     } else {

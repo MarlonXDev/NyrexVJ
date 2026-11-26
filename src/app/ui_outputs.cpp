@@ -393,7 +393,7 @@ void App::drawMappingCanvas(OutputSpec& spec, int index) {
 }
 
 void App::drawOutputSlices(OutputSpec& spec) {
-    ImGui::SeparatorText(tr("Slices"));
+    ui::sectionHeader(tr("Slices"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("A slice shows a part of the picture in a part of this output. Add slices to feed several surfaces from one output. Later slices are drawn on top of earlier ones."));
     ImGui::PopTextWrapPos();
@@ -503,7 +503,7 @@ void App::drawMaskImage(SliceMask& mask) {
 }
 
 void App::drawSliceMask(OutputMapping& map) {
-    ImGui::SeparatorText(tr("Mask"));
+    ui::sectionHeader(tr("Mask"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Cuts the slice to a shape, for example around a screen or a pillar. Choose Mask above the canvas, then drag the green points, double-click to add a point and right-click a point to remove it. Choose Freehand to draw the shape with the mouse."));
     ImGui::PopTextWrapPos();
@@ -583,12 +583,12 @@ void App::drawSliceMask(OutputMapping& map) {
 }
 
 void App::drawOutputColor(OutputSpec& spec) {
-    ImGui::SeparatorText(tr("Colour of this output"));
+    ui::sectionHeader(tr("Colour of this output"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Matches the colour of this projector to its neighbours. It applies to all slices of this output but not to the test pattern."));
     ImGui::PopTextWrapPos();
     colorControls(spec.color, "outputColor");
-    ImGui::SeparatorText(tr("Display of this output"));
+    ui::sectionHeader(tr("Display of this output"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Tells NyrexVJ what this screen or projector expects. The default is sRGB with Rec.709 colours and changes nothing. Other settings convert the picture for this output only, the signal stays 8 bit and SDR."));
     ImGui::PopTextWrapPos();
@@ -629,7 +629,7 @@ void App::drawOutputColor(OutputSpec& spec) {
 }
 
 void App::drawSliceColor(OutputMapping& map) {
-    ImGui::SeparatorText(tr("Colour of this slice"));
+    ui::sectionHeader(tr("Colour of this slice"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Corrects the colour of this slice only, for example when two surfaces on one output look different. It is applied first, then the colour of the output. The test pattern is not changed."));
     ImGui::PopTextWrapPos();
@@ -652,7 +652,7 @@ void App::drawOutputBudget() {
 }
 
 void App::drawOutputNdi(OutputSpec& spec, int index) {
-    ImGui::SeparatorText(tr("NDI output"));
+    ui::sectionHeader(tr("NDI output"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Sends this output exactly as the window shows it, with slices, warp, masks, blending and colour, as its own NDI source. It only reads the picture back while a receiver is connected."));
     ImGui::PopTextWrapPos();
@@ -693,7 +693,7 @@ void App::drawOutputMapping(int index) {
     drawOutputSlices(spec);
     OutputMapping& map = sliceMapping(spec, selectedSlice_);
 
-    ImGui::SeparatorText(tr("Picture area"));
+    ui::sectionHeader(tr("Picture area"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Which part of the composition this slice shows. Use it to split one picture over several projectors."));
     ImGui::PopTextWrapPos();
@@ -753,7 +753,7 @@ void App::drawOutputMapping(int index) {
 
     drawSpatialMapping(spec, index, map);
 
-    ImGui::SeparatorText(tr("Corners and warp"));
+    ui::sectionHeader(tr("Corners and warp"));
     ImGui::PushTextWrapPos(0.0f);
     if (map.spatial.enabled) {
         ImGui::TextDisabled("%s", tr("Not used while 3D mapping is on for this slice. The mask below is still drawn on the output."));
@@ -796,7 +796,7 @@ void App::drawOutputMapping(int index) {
     drawSliceMask(map);
     drawSliceColor(map);
 
-    ImGui::SeparatorText(tr("Edge blending"));
+    ui::sectionHeader(tr("Edge blending"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Fades the edge where two projectors overlap, in percent of this output. Set the same overlap on both neighbours."));
     ImGui::PopTextWrapPos();
@@ -827,7 +827,7 @@ void App::drawOutputMapping(int index) {
     ImGui::SetItemTooltip("%s", tr("Projectors never show a true black, so the overlap looks brighter. This lifts the rest of the slice to the same level. It only works together with edge blending."));
     ImGui::PopID();
 
-    ImGui::SeparatorText(tr("Brightness"));
+    ui::sectionHeader(tr("Brightness"));
     percentSlider("##brightness", map.brightness, 0.0f, 1.0f);
     ImGui::SetItemTooltip("%s", tr("Lower it to match this projector to a darker neighbour"));
     normalizeMapping(map);
@@ -885,7 +885,7 @@ bool App::importDroppedVenue(const std::string& path) {
 }
 
 void App::drawVenueControls() {
-    ImGui::SeparatorText(tr("Venue setups"));
+    ui::sectionHeader(tr("Venue setups"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Saves the whole layout of all outputs (displays, slices, masks, warp, blending and colour) under a name so you can switch between venues. You can also drop a venue file onto the window to import it."));
     ImGui::PopTextWrapPos();
@@ -1006,7 +1006,7 @@ void App::drawVenueControls() {
 }
 
 void App::drawOutputControls() {
-    ImGui::SeparatorText(tr("Output windows"));
+    ui::sectionHeader(tr("Output windows"));
     if (ImGui::Button(outputs_.anyOpen() ? tr("Close all") : tr("Open all"))) {
         if (outputs_.anyOpen()) {
             outputs_.closeAll();
@@ -1130,7 +1130,7 @@ void App::drawOutputControls() {
     drawOutputMapping(index);
     ImGui::EndDisabled();
 
-    ImGui::SeparatorText(tr("Frame lock"));
+    ui::sectionHeader(tr("Frame lock"));
     if (ImGui::Checkbox(trId("Show the same frame on all outputs", "frameLock"), &settings_.outputFrameLock)) {
         saveSettings(settings_);
     }
@@ -1177,7 +1177,7 @@ void App::drawOutputControls() {
         ImGui::TextDisabled("%s: %s", tr("Driver extensions"), joinExtensionNames(hardwareSync.names).c_str());
     }
 
-    ImGui::SeparatorText(tr("Several projectors"));
+    ui::sectionHeader(tr("Several projectors"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Splits the picture over a grid of outputs with the right overlap and edge blending. It turns the outputs on and replaces their picture area and blending."));
     ImGui::PopTextWrapPos();

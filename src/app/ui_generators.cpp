@@ -314,7 +314,7 @@ void App::drawGeneratorTextTab() {
         ui::sliderFloat(tr("Animation strength"), &d.textDoc.animAmount, 0.0f, 1.0f, "%.2f");
         ImGui::EndDisabled();
 
-        ImGui::SeparatorText(tr("Save"));
+        ui::sectionHeader(tr("Save"));
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 180.0f);
         ImGui::InputTextWithHint("##textName", tr("Name"), d.textName, sizeof(d.textName));
         ImGui::SameLine();
@@ -517,7 +517,7 @@ void App::drawGeneratorParticleTab() {
             hint(tr("Limit: %d particles per layer, %s of graphics memory"), limit, megabytes(particles::gpuBytes(limit)).c_str());
         }
 
-        ImGui::SeparatorText(tr("Save"));
+        ui::sectionHeader(tr("Save"));
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 180.0f);
         ImGui::InputTextWithHint("##particleName", tr("Name"), d.particleName, sizeof(d.particleName));
         ImGui::SameLine();
@@ -758,7 +758,7 @@ void App::drawChainLibrary() {
         }
 
         if (!d.selected.empty()) {
-            ImGui::SeparatorText(d.selected.c_str());
+            ui::sectionHeader(d.selected.c_str());
             if (!haveSelected) {
                 textLine(kBad, trMessage(loadError));
             } else {
@@ -820,7 +820,7 @@ void App::drawChainLibrary() {
             }
         }
 
-        ImGui::SeparatorText(tr("Save the current effects as a chain"));
+        ui::sectionHeader(tr("Save the current effects as a chain"));
         const int used = chain::usedSlots(slots);
         ImGui::SetNextItemWidth(-FLT_MIN);
         ImGui::InputTextWithHint("##chainName", tr("Name"), d.saveName, sizeof(d.saveName));
@@ -845,7 +845,7 @@ void App::drawChainLibrary() {
             hint("%s", tr("The chosen layer has no effects yet."));
         }
 
-        ImGui::SeparatorText(tr("Import a chain file"));
+        ui::sectionHeader(tr("Import a chain file"));
         ImGui::SetNextItemWidth(ui::px(-130.0f));
         ImGui::InputTextWithHint("##chainImport", tr("Path of a .nyxchain file"), d.importPath, sizeof(d.importPath));
         ImGui::SameLine();

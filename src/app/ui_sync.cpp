@@ -135,22 +135,22 @@ std::string fixed(double value, int digits) {
 }
 
 void App::drawSyncPage() {
-    ImGui::SeparatorText(tr("Beat clock"));
+    ui::sectionHeader(tr("Beat clock"));
     drawSyncClockSection();
     ImGui::Spacing();
-    ImGui::SeparatorText(tr("MIDI clock"));
+    ui::sectionHeader(tr("MIDI clock"));
     drawSyncMidiSection();
     ImGui::Spacing();
-    ImGui::SeparatorText(tr("Timecode"));
+    ui::sectionHeader(tr("Timecode"));
     drawSyncTimecodeSection();
     ImGui::Spacing();
-    ImGui::SeparatorText("Pro DJ Link");
+    ui::sectionHeader("Pro DJ Link");
     drawSyncDjLinkSection();
     ImGui::Spacing();
-    ImGui::SeparatorText(tr("Network sync"));
+    ui::sectionHeader(tr("Network sync"));
     drawSyncNetworkSection();
     ImGui::Spacing();
-    ImGui::SeparatorText(tr("Cue list"));
+    ui::sectionHeader(tr("Cue list"));
     drawSyncCueSection();
 }
 

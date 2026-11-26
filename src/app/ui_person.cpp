@@ -90,7 +90,7 @@ bool percentSlider(const char* label, int& value, const char* tooltip) {
 void App::drawPersonSettings() {
     auto persist = [this]() { saveSettings(settings_); };
 
-    ImGui::SeparatorText(tr("Person detection"));
+    ui::sectionHeader(tr("Person detection"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Finds people in front of a camera without any AI model. It learns what the empty scene looks like and reports everything that differs, as a mask and as modulation sources. It is experimental and off by default, while it is off nothing extra runs and nothing is created."));
     ImGui::PopTextWrapPos();

@@ -74,8 +74,8 @@ struct Settings {
     UpdateChannel channel = UpdateChannel::Nightly;
     std::array<OutputSpec, kMaxOutputs> outputs = defaultOutputs();
     std::string language = "en";
-    std::string theme = "studio";
-    int design = 1;
+    std::string theme = "arena";
+    int design = 2;
     std::string lastSeenVersion;
     std::string audioDevice;
     float audioGain = 1.0f;

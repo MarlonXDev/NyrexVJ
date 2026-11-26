@@ -184,15 +184,21 @@ void App::drawDeck() {
     Composition& comp = engine_.comp;
     const float cellW = 108.0f;
     const float cellH = 61.0f;
-    const ImGuiTableFlags flags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_NoSavedSettings;
+    const bool flat = ui::kFlatLook;
+    ImGuiTableFlags flags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_NoSavedSettings;
+    if (!flat) {
+        flags |= ImGuiTableFlags_BordersInnerV;
+    }
 
-    const ImVec2 tableSize(0.0f, std::max(80.0f, ImGui::GetContentRegionAvail().y));
+    const ImGuiStyle& deckStyle = ImGui::GetStyle();
+    const float transportHeight = (ImGui::GetFrameHeight() + deckStyle.ItemSpacing.y) * 2.0f + deckStyle.ItemSpacing.y;
+    const ImVec2 tableSize(0.0f, std::max(80.0f, ImGui::GetContentRegionAvail().y - transportHeight));
 
     if (ImGui::BeginTable("deck", kColumnCount + 1, flags, tableSize)) {
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableSetupColumn("##layers", ImGuiTableColumnFlags_WidthFixed, 300.0f);
         for (int c = 0; c < kColumnCount; ++c) {
-            ImGui::TableSetupColumn(("##column" + std::to_string(c)).c_str(), ImGuiTableColumnFlags_WidthFixed, cellW + 8.0f);
+            ImGui::TableSetupColumn(("##column" + std::to_string(c)).c_str(), ImGuiTableColumnFlags_WidthFixed, flat ? cellW + 5.0f : cellW + 8.0f);
         }
 
         ImGui::TableNextRow();
@@ -209,13 +215,20 @@ void App::drawDeck() {
                 playing = playing || other.activeColumn == c;
             }
             int headerColors = 0;
-            if (playing) {
-                ImGui::PushStyleColor(ImGuiCol_Button, ui::kAccentDim);
-                ++headerColors;
-            }
-            if (c == selectedColumn_) {
-                ImGui::PushStyleColor(ImGuiCol_Text, ui::kAccentHover);
-                ++headerColors;
+            if (playing && flat) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ui::kAccentHover);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::kAccentHover);
+                ImGui::PushStyleColor(ImGuiCol_Text, ui::kBlack);
+                headerColors += 3;
+            } else {
+                if (playing) {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ui::kAccentDim);
+                    ++headerColors;
+                }
+                if (c == selectedColumn_) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, ui::kAccentHover);
+                    ++headerColors;
+                }
             }
             if (ImGui::Button(label.c_str(), ImVec2(cellW, 0.0f))) {
                 engine_.requestTriggerColumn(c);
@@ -235,40 +248,85 @@ void App::drawDeck() {
 
         for (int row = kLayerCount - 1; row >= 0; --row) {
             Layer& layer = comp.layers[static_cast<size_t>(row)];
-            ImGui::TableNextRow(ImGuiTableRowFlags_None, 84.0f);
+            ImGui::TableNextRow(ImGuiTableRowFlags_None, flat ? 78.0f : 84.0f);
             ImGui::TableSetColumnIndex(0);
             if (row == selectedLayer_) {
                 ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(ui::kSelectionBg));
             }
             ImGui::PushID(row);
-            ImGui::Image(ui::texId(engine_.layerPreview(row)), ImVec2(96.0f, 54.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
-            ImGui::SameLine();
-            ImGui::BeginGroup();
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 3.0f));
-            std::string title = std::string(tr("Layer ")) + std::to_string(row + 1);
-            if (ImGui::Selectable(title.c_str(), row == selectedLayer_, 0, ImVec2(62.0f, 0.0f))) {
-                selectedLayer_ = row;
-            }
-            ImGui::SameLine();
-            ui::toggleButton("B", layer.bypass);
-            ImGui::SameLine();
-            ui::toggleButton("S", layer.solo);
-            ImGui::SameLine();
-            if (ImGui::SmallButton("X")) {
-                engine_.clearLayer(row);
-            }
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            ui::sliderFloat("##opacity", &layer.opacity, 0.0f, 1.0f, "%.2f");
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            if (ImGui::BeginCombo("##blend", tr(blendName(layer.blend)))) {
-                for (int b = 0; b < BlendModeCount; ++b) {
-                    if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
-                        layer.blend = b;
-                    }
+            if (flat) {
+                const ImVec2 start = ImGui::GetCursorScreenPos();
+                ImGui::Image(ui::texId(engine_.layerPreview(row)), ImVec2(96.0f, 54.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+                const ImVec2 nameMin(start.x, start.y + 57.0f);
+                ImGui::GetWindowDrawList()->AddRectFilled(nameMin, ImVec2(nameMin.x + 96.0f, nameMin.y + 17.0f), ImGui::GetColorU32(ImGuiCol_Button));
+                ImGui::SetCursorScreenPos(nameMin);
+                const bool nameSelected = row == selectedLayer_;
+                if (nameSelected) {
+                    ImGui::PushStyleColor(ImGuiCol_Header, ui::kAccentHover);
+                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ui::kAccentHover);
+                    ImGui::PushStyleColor(ImGuiCol_Text, ui::kBlack);
                 }
-                ImGui::EndCombo();
+                const std::string name = std::string(tr("Layer ")) + std::to_string(row + 1);
+                if (ImGui::Selectable(name.c_str(), nameSelected, 0, ImVec2(96.0f, 17.0f))) {
+                    selectedLayer_ = row;
+                }
+                if (nameSelected) {
+                    ImGui::PopStyleColor(3);
+                }
+                ImGui::SetCursorScreenPos(ImVec2(start.x + 102.0f, start.y));
+                ImGui::BeginGroup();
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(3.0f, 3.0f));
+                const float buttonWidth = std::floor((ImGui::GetContentRegionAvail().x - 6.0f) / 3.0f);
+                const ImVec2 buttonSize(buttonWidth, 24.0f);
+                if (ImGui::Button("X", buttonSize)) {
+                    engine_.clearLayer(row);
+                }
+                ImGui::SameLine();
+                ui::toggleButton("B", layer.bypass, buttonSize);
+                ImGui::SameLine();
+                ui::toggleButton("S", layer.solo, buttonSize);
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                if (ImGui::BeginCombo("##blend", tr(blendName(layer.blend)))) {
+                    for (int b = 0; b < BlendModeCount; ++b) {
+                        if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
+                            layer.blend = b;
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                ui::sliderFloat("##opacity", &layer.opacity, 0.0f, 1.0f, "%.2f");
+                ImGui::PopStyleVar();
+            } else {
+                ImGui::Image(ui::texId(engine_.layerPreview(row)), ImVec2(96.0f, 54.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+                ImGui::SameLine();
+                ImGui::BeginGroup();
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 3.0f));
+                std::string title = std::string(tr("Layer ")) + std::to_string(row + 1);
+                if (ImGui::Selectable(title.c_str(), row == selectedLayer_, 0, ImVec2(62.0f, 0.0f))) {
+                    selectedLayer_ = row;
+                }
+                ImGui::SameLine();
+                ui::toggleButton("B", layer.bypass);
+                ImGui::SameLine();
+                ui::toggleButton("S", layer.solo);
+                ImGui::SameLine();
+                if (ImGui::SmallButton("X")) {
+                    engine_.clearLayer(row);
+                }
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                ui::sliderFloat("##opacity", &layer.opacity, 0.0f, 1.0f, "%.2f");
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                if (ImGui::BeginCombo("##blend", tr(blendName(layer.blend)))) {
+                    for (int b = 0; b < BlendModeCount; ++b) {
+                        if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
+                            layer.blend = b;
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::PopStyleVar();
             }
-            ImGui::PopStyleVar();
             ImGui::EndGroup();
             ImGui::PopID();
 
@@ -300,22 +358,22 @@ void App::drawDeck() {
                     GLuint texture = (active && engine_.layerLive(row)) ? engine_.layerPreview(row) : engine_.clipThumbnail(clip);
                     ImU32 tint = (active && !engine_.layerLive(row)) ? IM_COL32(110, 110, 110, 255) : IM_COL32_WHITE;
                     draw->AddImage(ui::texId(texture), pos, max, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f), tint);
-                    draw->AddRectFilled(ImVec2(pos.x, max.y - 16.0f), max, IM_COL32(0, 0, 0, 170));
+                    draw->AddRectFilled(ImVec2(pos.x, max.y - 16.0f), max, flat ? ImGui::GetColorU32(ImGuiCol_Button) : IM_COL32(0, 0, 0, 170));
                     draw->PushClipRect(pos, max, true);
                     draw->AddText(ImVec2(pos.x + 4.0f, max.y - 15.0f), IM_COL32(235, 235, 235, 255), library[static_cast<size_t>(clip)].name.c_str());
                     draw->PopClipRect();
                 } else {
-                    draw->AddRectFilled(pos, max, IM_COL32(19, 19, 22, 255));
+                    draw->AddRectFilled(pos, max, flat ? IM_COL32(27, 26, 25, 255) : IM_COL32(19, 19, 22, 255));
                 }
                 if (row == selectedLayer_ && c == selectedColumn_) {
                     draw->AddTriangleFilled(pos, ImVec2(pos.x + 19.0f, pos.y), ImVec2(pos.x, pos.y + 19.0f), IM_COL32(0, 0, 0, 230));
                     draw->AddTriangleFilled(pos, ImVec2(pos.x + 14.0f, pos.y), ImVec2(pos.x, pos.y + 14.0f), ImGui::GetColorU32(ui::kAccentHover));
                 }
                 if (active) {
-                    draw->AddRect(pos, max, ImGui::GetColorU32(ui::kAccent), 0.0f, 0, 2.5f);
+                    draw->AddRect(pos, max, ImGui::GetColorU32(flat ? ui::kAccentHover : ui::kAccent), 0.0f, 0, 2.5f);
                 } else if (hovered) {
                     draw->AddRect(pos, max, IM_COL32(200, 200, 210, 255), 0.0f, 0, 1.5f);
-                } else {
+                } else if (!flat) {
                     draw->AddRect(pos, max, IM_COL32(50, 50, 58, 255));
                 }
 
@@ -359,6 +417,7 @@ void App::drawDeck() {
         }
         ImGui::EndTable();
     }
+    drawTransportBar();
     ImGui::End();
 }
 

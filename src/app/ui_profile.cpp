@@ -62,7 +62,7 @@ std::string passLabel(const ProfileRow& row) {
 }
 
 void App::drawPassProfiler() {
-    ImGui::SeparatorText(tr("Where the GPU time goes"));
+    ui::sectionHeader(tr("Where the GPU time goes"));
     if (!engine_.gpuTimingAvailable()) {
         ImGui::TextDisabled("%s", tr("GPU timing is not available on this graphics card."));
         return;

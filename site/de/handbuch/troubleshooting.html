@@ -83,6 +83,8 @@
 <h4>Ausgabe und Aufnahme</h4><ul>
 <li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
 </li>
+<li><a href="color.html">Farbe: LUTs, HDR-Videos und die Anzeige</a>
+</li>
 <li><a href="recording.html">Aufnahme</a>
 </li>
 </ul>
@@ -110,7 +112,7 @@
 <li><a href="files.html">Dateien und der Datenordner</a>
 </li>
 <li><a href="troubleshooting.html" aria-current="page">Fehlersuche und häufige Fragen</a>
-<ul><li><a href="#black-picture">Das Bild ist schwarz</a></li><li><a href="#no-reaction">Die Visuals reagieren nicht auf die Musik</a></li><li><a href="#obs-nothing">OBS zeigt nichts</a></li><li><a href="#video-no-play">Ein Video spielt nicht</a></li><li><a href="#shader-error">Ein Shader lässt sich nicht kompilieren</a></li><li><a href="#control-nothing">MIDI oder OSC tut nichts</a></li><li><a href="#crash">Das Programm ist abgestürzt</a></li><li><a href="#faq">Fragen, die oft kommen</a></li></ul>
+<ul><li><a href="#black-picture">Das Bild ist schwarz</a></li><li><a href="#no-reaction">Die Visuals reagieren nicht auf die Musik</a></li><li><a href="#obs-nothing">OBS zeigt nichts</a></li><li><a href="#video-no-play">Ein Video spielt nicht</a></li><li><a href="#hdr-flat">Ein Video sieht flau und grau aus</a></li><li><a href="#shader-error">Ein Shader lässt sich nicht kompilieren</a></li><li><a href="#control-nothing">MIDI oder OSC tut nichts</a></li><li><a href="#crash">Das Programm ist abgestürzt</a></li><li><a href="#faq">Fragen, die oft kommen</a></li></ul>
 </li>
 <li><a href="cli.html">Die Befehlszeile</a>
 </li>
@@ -175,6 +177,8 @@
 <h4>Ausgabe und Aufnahme</h4><ul>
 <li><a href="outputs.html">Ausgänge, Mapping und OBS</a>
 </li>
+<li><a href="color.html">Farbe: LUTs, HDR-Videos und die Anzeige</a>
+</li>
 <li><a href="recording.html">Aufnahme</a>
 </li>
 </ul>
@@ -202,7 +206,7 @@
 <li><a href="files.html">Dateien und der Datenordner</a>
 </li>
 <li><a href="troubleshooting.html" aria-current="page">Fehlersuche und häufige Fragen</a>
-<ul><li><a href="#black-picture">Das Bild ist schwarz</a></li><li><a href="#no-reaction">Die Visuals reagieren nicht auf die Musik</a></li><li><a href="#obs-nothing">OBS zeigt nichts</a></li><li><a href="#video-no-play">Ein Video spielt nicht</a></li><li><a href="#shader-error">Ein Shader lässt sich nicht kompilieren</a></li><li><a href="#control-nothing">MIDI oder OSC tut nichts</a></li><li><a href="#crash">Das Programm ist abgestürzt</a></li><li><a href="#faq">Fragen, die oft kommen</a></li></ul>
+<ul><li><a href="#black-picture">Das Bild ist schwarz</a></li><li><a href="#no-reaction">Die Visuals reagieren nicht auf die Musik</a></li><li><a href="#obs-nothing">OBS zeigt nichts</a></li><li><a href="#video-no-play">Ein Video spielt nicht</a></li><li><a href="#hdr-flat">Ein Video sieht flau und grau aus</a></li><li><a href="#shader-error">Ein Shader lässt sich nicht kompilieren</a></li><li><a href="#control-nothing">MIDI oder OSC tut nichts</a></li><li><a href="#crash">Das Programm ist abgestürzt</a></li><li><a href="#faq">Fragen, die oft kommen</a></li></ul>
 </li>
 <li><a href="cli.html">Die Befehlszeile</a>
 </li>
@@ -213,8 +217,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Nachschlagen und Hilfe</p>
 <h1>Fehlersuche und häufige Fragen</h1>
-<p class="meta">Kapitel 34 von 37 &middot; 2 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#black-picture">Das Bild ist schwarz</a><a href="#no-reaction">Die Visuals reagieren nicht auf die Musik</a><a href="#obs-nothing">OBS zeigt nichts</a><a href="#video-no-play">Ein Video spielt nicht</a><a href="#shader-error">Ein Shader lässt sich nicht kompilieren</a><a href="#control-nothing">MIDI oder OSC tut nichts</a><a href="#crash">Das Programm ist abgestürzt</a><a href="#faq">Fragen, die oft kommen</a></nav>
+<p class="meta">Kapitel 35 von 38 &middot; 3 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#black-picture">Das Bild ist schwarz</a><a href="#no-reaction">Die Visuals reagieren nicht auf die Musik</a><a href="#obs-nothing">OBS zeigt nichts</a><a href="#video-no-play">Ein Video spielt nicht</a><a href="#hdr-flat">Ein Video sieht flau und grau aus</a><a href="#shader-error">Ein Shader lässt sich nicht kompilieren</a><a href="#control-nothing">MIDI oder OSC tut nichts</a><a href="#crash">Das Programm ist abgestürzt</a><a href="#faq">Fragen, die oft kommen</a></nav>
 <h2 id="black-picture"><a class="anchor" href="#black-picture" aria-label="Link">#</a>Das Bild ist schwarz</h2>
 <p>Prüf zuerst die einfachen Dinge. Ist Blackout an, die Taste <code>B</code> schaltet ihn um? Steht der Master-Pegel auf null? Steht die Layer-Deckkraft auf null oder der Layer auf Bypass? Spielt die Zelle wirklich? Ist das Ausgabefenster schwarz, das Fenster Ausgabe aber nicht, prüf die Ausgabe-Einstellungen, das Testbild und das Display.</p>
 <h2 id="no-reaction"><a class="anchor" href="#no-reaction" aria-label="Link">#</a>Die Visuals reagieren nicht auf die Musik</h2>
@@ -223,6 +227,8 @@
 <p>Spout funktioniert nur unter Windows. Hak Per Spout an OBS senden an, installiere das obs-spout2-plugin, füge in OBS eine Quelle Spout2 Capture hinzu und wähl den Sender. Ist es schwarz, prüf den Sendernamen. Als Alternative öffnest du das Ausgabefenster und nimmst es auf, oder nutzt NDI.</p>
 <h2 id="video-no-play"><a class="anchor" href="#video-no-play" aria-label="Link">#</a>Ein Video spielt nicht</h2>
 <p>Video braucht die FFmpeg-Bibliotheken. Sieh ins Clip-Fenster. Sagt es, dass FFmpeg fehlt, nutz FFmpeg einrichten. Spielt das Video ruckelig, sieh dir den Video-Monitor unter Einstellungen, Leistung an und probier eine HAP-Version der Datei.</p>
+<h2 id="hdr-flat"><a class="anchor" href="#hdr-flat" aria-label="Link">#</a>Ein Video sieht flau und grau aus</h2>
+<p>Die Datei ist wahrscheinlich HDR, und der Video-Monitor unter Einstellungen, Leistung sagt das. Schalte unter Einstellungen, Leistung, Farbe HDR-Videos auf SDR abbilden (Tone Mapping) ein und lass Videofarben auf der Grafikkarte umrechnen an. Sieht es dann immer noch falsch aus, ändere Referenzweiß und Spitzenhelligkeit des Videos, oder wandle die Datei vor der Show in SDR um.</p>
 <h2 id="shader-error"><a class="anchor" href="#shader-error" aria-label="Link">#</a>Ein Shader lässt sich nicht kompilieren</h2>
 <p>Das Clip-Fenster zeigt die Meldung mit der Zeilennummer deiner Datei. Korrigiere die Datei und speichere sie, NyrexVJ lädt sie neu. Bis dahin läuft die letzte funktionierende Version weiter.</p>
 <h2 id="control-nothing"><a class="anchor" href="#control-nothing" aria-label="Link">#</a>MIDI oder OSC tut nichts</h2>

@@ -588,6 +588,44 @@ void App::drawOutputColor(OutputSpec& spec) {
     ImGui::TextDisabled("%s", tr("Matches the colour of this projector to its neighbours. It applies to all slices of this output but not to the test pattern."));
     ImGui::PopTextWrapPos();
     colorControls(spec.color, "outputColor");
+    ImGui::SeparatorText(tr("Display of this output"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Tells NyrexVJ what this screen or projector expects. The default is sRGB with Rec.709 colours and changes nothing. Other settings convert the picture for this output only, the signal stays 8 bit and SDR."));
+    ImGui::PopTextWrapPos();
+    ImGui::PushID("outputDisplay");
+    ImGui::TextUnformatted(tr("Colour gamut"));
+    ImGui::SameLine(110.0f);
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::BeginCombo("##gamut", tr(primariesLabel(spec.display.gamut)))) {
+        const Primaries choices[] = {Primaries::Rec709, Primaries::DisplayP3, Primaries::Rec2020};
+        for (const Primaries choice : choices) {
+            if (ImGui::Selectable(tr(primariesLabel(choice)), choice == spec.display.gamut)) {
+                spec.display.gamut = choice;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("The colours the screen can show. Pick Display P3 or Rec.2020 only if the screen really is set to that gamut, otherwise colours look too dull."));
+    ImGui::TextUnformatted(tr("Transfer"));
+    ImGui::SameLine(110.0f);
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::BeginCombo("##transfer", tr(transferLabel(spec.display.transfer)))) {
+        for (int i = 0; i < kDisplayTransferCount; ++i) {
+            const Transfer choice = displayTransferAt(i);
+            if (ImGui::Selectable(tr(transferLabel(choice)), choice == spec.display.transfer)) {
+                spec.display.transfer = choice;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("The brightness curve of the screen. Most monitors use sRGB, many video projectors and TVs use gamma 2.4."));
+    ImGui::PopID();
+    ImGui::BeginDisabled(spec.display.isDefault());
+    if (ImGui::SmallButton(tr("Reset display"))) {
+        spec.display = DisplayColor{};
+    }
+    ImGui::EndDisabled();
+    spec.display = sanitized(spec.display);
 }
 
 void App::drawSliceColor(OutputMapping& map) {

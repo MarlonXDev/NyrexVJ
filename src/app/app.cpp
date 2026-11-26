@@ -740,6 +740,7 @@ void App::frame(double dt) {
     updateAudio(dt);
     serviceLiveBrowse();
     engine_.setVideoSettings(videoDecodeModeFromName(settings_.videoDecoder), settings_.hapDirect, settings_.videoGpuConvert);
+    applyColorSettings();
     engine_.prewarmNext = settings_.prewarmNext;
     engine_.setQuality(settings_.renderQuality, budgetMilliseconds(settings_.perfBudgetFps));
     MemoryPolicy memoryPolicy;

@@ -580,7 +580,7 @@ DXV-Videos aus Resolume brauchen viel Prozessorzeit. NyrexVJ kann im Hintergrund
 
 ## Den Video-Decoder wählen {#decoder}
 
-Unter Einstellungen, Leistung, Videowiedergabe wählst du den Decoder: Automatisch, Hardware bevorzugen oder Software erzwingen. Eine Schaltfläche testet die Hardware-Dekodierung auf deinem Computer. Der Video-Monitor listet jedes laufende Video mit Codec, Decode- und Upload-Zeiten, verworfenen und späten Bildern und seinem Speicher. Sieht ein Video flau aus, weil es HDR ist, sagt der Monitor das: HDR wird ohne Tone Mapping gezeigt.
+Unter Einstellungen, Leistung, Videowiedergabe wählst du den Decoder: Automatisch, Hardware bevorzugen oder Software erzwingen. Eine Schaltfläche testet die Hardware-Dekodierung auf deinem Computer. Der Video-Monitor listet jedes laufende Video mit Codec, Decode- und Upload-Zeiten, verworfenen und späten Bildern und seinem Speicher. Sieht ein Video flau aus, weil es HDR ist, sagt der Monitor das: HDR wird ohne Tone Mapping gezeigt, solange du HDR-Videos auf SDR abbilden (Tone Mapping) nicht einschaltest, siehe das Kapitel zur Farbe.
 
 # Deine eigenen Shader {#shaders}
 
@@ -972,6 +972,46 @@ Jeder Ausgang kann seine eigene NDI-Quelle senden, die den Ausgang genau so trä
 Frame-Lock zeichnet zuerst alle Ausgabefenster und tauscht sie dann direkt nacheinander, damit mehrere Bildschirme dasselbe Bild zeigen. Jeder Ausgang lässt sich um 0 bis 8 Bilder verzögern, um Bildschirme mit unterschiedlicher Verarbeitungszeit auszurichten. Die Einstellungen zeigen die gemessene Tausch-Abweichung, und das Testbild Sync-Balken hilft dir, mehrere Bildschirme zum Vergleich zu filmen. Es ist kein Hardware-Genlock.
 
 > Warnung: Die Mapping-Funktionen wurden mit Testbildern und einem Software-Renderer gebaut und getestet. Einen Test mit echtem Projektor oder mehreren Monitoren gab es noch nicht. Probiere deinen Aufbau im Veranstaltungsort aus, bevor die Show beginnt.
+
+# Farbe: LUTs, HDR-Videos und die Anzeige {#color}
+
+## Wie NyrexVJ mit Farbe umgeht {#color-model}
+
+Ebenen, Mischung und das Hauptbild sind 8 Bit und haben den sRGB-Look: Jedes Bild liegt mit der sRGB-Kurve und den Rec.-709-Farben vor, und Ebenen werden in diesen Werten gemischt, wie es schon immer war. Nichts in diesem Kapitel ändert das, und nichts davon ist an, bevor du es einschaltest, eine fertige Show sieht also genauso aus wie vorher. Drei Werkzeuge sind optional: eine Farbstufe mit LUT, Tone Mapping für HDR-Videos und eine Anzeige-Einstellung für jeden Ausgang. Die Seite docs/COLOR.md im Projekt listet Weg für Weg auf, was welche Bittiefe behält und wie das gemessen wurde.
+
+## Ein Look aus einer .cube-Datei {#color-lut}
+
+Eine LUT ist eine Tabelle, die jede Farbe in eine andere umrechnet, und so geben Grading-Programme einen Look an andere Programme weiter. NyrexVJ liest 3D-Tabellen im `.cube`-Format, das DaVinci Resolve, Adobe-Programme und viele andere ausgeben.
+
+1. Kopiere die `.cube`-Datei in den Ordner `luts` im Datenordner. Die Schaltfläche LUT-Ordner öffnen unter Einstellungen, Leistung, Farbe öffnet ihn für dich.
+2. Hake Farbstufe mit LUT (experimentell) an. Wähle die Datei in der Liste, und drück Liste aktualisieren, falls sie noch nicht auftaucht.
+3. Stell LUT-Stärke ein. 0 ist das Originalbild, 1 ist der volle Look, dazwischen wird gemischt.
+
+Der Look wird einmal auf das fertige Hauptbild angewendet, nach dem Deck-Übergang und vor den Ausgängen, NDI, Spout und der Aufnahme, alles, was das Programm verlässt, hat ihn also. Die Transparenz des Bildes bleibt unberührt. Die Einstellungen zeigen die Größe der Tabelle und den zusätzlichen Grafikspeicher, ein Bild mehr plus die Tabelle. Schaltest du die Stufe aus, ist das Bild genau so, als wäre sie nie an gewesen.
+
+Gelesen werden nur 3D-Tabellen mit 2 bis 65 Punkten pro Seite und bis zu 64 MB. Eine 1D-Tabelle, eine kaputte Datei oder eine Datei mit seltsamem Namen wird mit einer Meldung und möglichst der Zeilennummer abgelehnt; das Bild ändert sich nicht. Tabellen mit wenigen Punkten geben ein gröberes Ergebnis als Tabellen mit 33 Punkten.
+
+## HDR-Videos {#color-hdr}
+
+Manche Videos sind für HDR-Bildschirme gemacht (die Übertragungskurven PQ und HLG). Auf einem normalen Bildschirm sehen sie flau und grau aus, und der Video-Monitor sagt, dass die Datei HDR ist. Schalte unter Einstellungen, Leistung, Farbe HDR-Videos auf SDR abbilden (Tone Mapping) ein, dann macht NyrexVJ daraus ein normales Bild, während die Grafikkarte die Farben des Videos umrechnet.
+
+- Referenzweiß (Nits) sagt, wie hell normales Weiß im Video ist. 203 ist der übliche Wert; kleinere Werte machen das Bild heller.
+- Spitzenhelligkeit des Videos (Nits) ist der hellste Wert, für den das Video gemastert wurde. Dort erreicht das Bild Weiß.
+- Tone Mapping wählt Weiche Schulter, die normale Helligkeit in Ruhe lässt und nur die hellsten Teile abrundet, oder Filmic mit mehr Kontrast.
+
+Farben, die ein normaler Bildschirm nicht zeigen kann, werden nach innen geschoben und nicht einfach abgeschnitten. Das Tone Mapping wirkt nur, solange Videofarben auf der Grafikkarte umrechnen an ist. Videos, die der Prozessor umrechnet, und HAP-Videos bleiben unverändert, und ein normales SDR-Video sieht mit der Option gleich aus. Es ist eine vernünftige Umrechnung, keine kalibrierte: Vergleiche eine Datei, die du kennst, mit einem Referenzplayer und stell die beiden Werte nach Augenmaß ein.
+
+## Die Anzeige eines Ausgangs {#color-display}
+
+Einstellungen, Ausgabe, Anzeige dieses Ausgangs sagt NyrexVJ, was der Bildschirm oder Projektor an diesem Ausgang erwartet. Farbraum kann Rec. 709 sein (der Standard, dasselbe wie sRGB), Display P3 oder Rec. 2020, und die Übertragungskurve sRGB (der Standard), Gamma 2.2, 2.4 oder 2.6. Mit den Standardwerten passiert gar nichts. Mit anderen Werten wird nur das Bild dieses Ausgangs umgerechnet, nach der Farbkorrektur von Slice und Ausgang und vor Kantenüberblendung, Helligkeit und Schwarzwert. Das Testbild und die Sync-Balken werden nicht umgerechnet. Die NDI-Quelle dieses Ausgangs zeigt das umgerechnete Bild, weil sie den Ausgang so überträgt, wie das Fenster ihn zeigt.
+
+Wähle eine Einstellung nur, wenn Bildschirm oder Projektor wirklich so eingestellt ist, zum Beispiel ein Projektor im Display-P3-Modus. Eine falsche Einstellung macht Farben matt oder zu kräftig. Anzeige zurücksetzen bringt den Standard zurück. Die Einstellung steht im Venue-Setup und nur dann, wenn sie nicht der Standard ist.
+
+## Was Farbmanagement nicht kann {#color-limits}
+
+Das Bild bleibt auf jedem Weg 8 Bit und SDR. Es gibt keine 10-Bit-Ausgabe, keine HDR-Ausgabe, keine HDR-Angaben für einen Bildschirm, einen NDI-Empfänger oder eine Capture-Karte und kein SDI. Ein 10-Bit-Video wird beim Zeigen auf 8 Bit reduziert, und eine Aufnahme in einem 10-Bit-Format wie ProRes enthält trotzdem ein 8-Bit-Bild. NyrexVJ liest kein Farbprofil eines Bildschirms. Einstellungen, Leistung, Farbe zeigt die Farbtiefe, die die Grafikkarte für das Hauptbild meldet.
+
+> Warnung: Das Farbmanagement wurde gegen ein Rechenmodell der Farben gebaut und getestet, mit einem Software-Renderer und zwei kurzen HDR-Testclips. Mit einer echten HDR-Datei, einem Bildschirm oder Projektor mit großem Farbraum, einer Capture-Karte oder einer echten Grafikkarte wurde es nicht ausprobiert. Sieh dir das Bild vor der Show auf dem echten Bildschirm an.
 
 # Aufnahme {#recording}
 
@@ -1505,6 +1545,10 @@ Spout funktioniert nur unter Windows. Hak Per Spout an OBS senden an, installier
 ## Ein Video spielt nicht {#video-no-play}
 
 Video braucht die FFmpeg-Bibliotheken. Sieh ins Clip-Fenster. Sagt es, dass FFmpeg fehlt, nutz FFmpeg einrichten. Spielt das Video ruckelig, sieh dir den Video-Monitor unter Einstellungen, Leistung an und probier eine HAP-Version der Datei.
+
+## Ein Video sieht flau und grau aus {#hdr-flat}
+
+Die Datei ist wahrscheinlich HDR, und der Video-Monitor unter Einstellungen, Leistung sagt das. Schalte unter Einstellungen, Leistung, Farbe HDR-Videos auf SDR abbilden (Tone Mapping) ein und lass Videofarben auf der Grafikkarte umrechnen an. Sieht es dann immer noch falsch aus, ändere Referenzweiß und Spitzenhelligkeit des Videos, oder wandle die Datei vor der Show in SDR um.
 
 ## Ein Shader lässt sich nicht kompilieren {#shader-error}
 

@@ -1,6 +1,7 @@
 #include "render/video_gpu.hpp"
 
 #include "core/log.hpp"
+#include "render/color_gpu.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -22,8 +23,7 @@ void main() {
 }
 )glsl";
 
-const char* kConvertFragment = R"glsl(#version 330 core
-in vec2 vUv;
+const char* kConvertFragmentBody = R"glsl(in vec2 vUv;
 out vec4 fragColor;
 uniform sampler2D uY;
 uniform sampler2D uU;
@@ -48,7 +48,7 @@ vec4 convertPacked(vec2 uv) {
     return vec4(y + uCoeff.x * c.y + uCross.x * c.x, y + uCoeff.y * c.x + uCoeff.z * c.y, y + uCoeff.w * c.x + uCross.y * c.y, 1.0);
 }
 
-vec4 convert(vec2 uv) {
+vec4 convertRaw(vec2 uv) {
     if (uMode == 3) {
         return convertPacked(uv);
     }
@@ -58,6 +58,14 @@ vec4 convert(vec2 uv) {
     vec3 rgb = vec3(y + uCoeff.x * c.y + uCross.x * c.x, y + uCoeff.y * c.x + uCoeff.z * c.y, y + uCoeff.w * c.x + uCross.y * c.y);
     float a = uMode == 2 ? texture(uA, uv).r * uAlphaScale : 1.0;
     return vec4(rgb, a);
+}
+
+vec4 convert(vec2 uv) {
+    vec4 raw = convertRaw(uv);
+    if (uHdrMode != 0) {
+        raw.rgb = cmHdrToSdr(clamp(raw.rgb, 0.0, 1.0));
+    }
+    return raw;
 }
 
 void main() {
@@ -148,7 +156,8 @@ bool VideoGpu::create() {
     const GLubyte* renderer = glGetString(GL_RENDERER);
     caps_.renderer = renderer != nullptr ? reinterpret_cast<const char*>(renderer) : "";
     std::string error;
-    program_ = buildProgram(kConvertVertex, kConvertFragment, &error);
+    const std::string fragment = std::string("#version 330 core\n") + colorGlslCommon() + colorGlslHdr() + kConvertFragmentBody;
+    program_ = buildProgram(kConvertVertex, fragment, &error);
     if (program_ != 0) {
         caps_.conversion = true;
         glGenVertexArrays(1, &vao_);
@@ -166,6 +175,7 @@ bool VideoGpu::create() {
         locStep_ = glGetUniformLocation(program_, "uStep");
         locTaps_ = glGetUniformLocation(program_, "uTaps");
         locSrcSize_ = glGetUniformLocation(program_, "uSrcSize");
+        hdrUniforms_.bind(program_);
     } else {
         caps_.note = "the picture conversion shader failed: " + error;
         logLine("Video conversion shader failed: " + error);
@@ -232,6 +242,14 @@ void VideoGpu::beginConversion(const VideoFrame& frame, int outWidth, int outHei
     }
     glUniform1i(locMode_, mode);
     glUniform2i(locSrcSize_, frame.width, frame.height);
+    if (hdr_ && isHdrTransfer(frame.transfer)) {
+        HdrToSdr params = *hdr_;
+        params.source = frame.transfer == 18 ? Transfer::Hlg : Transfer::Pq;
+        params.primaries = frame.primaries == 12 ? Primaries::DisplayP3 : Primaries::Rec2020;
+        hdrUniforms_.upload(&params);
+    } else {
+        hdrUniforms_.upload(nullptr);
+    }
     const int depth = std::clamp(frame.bitDepth, 8, 16);
     const double maxCode = std::pow(2.0, depth) - 1.0;
     const double k = std::pow(2.0, depth - 8);

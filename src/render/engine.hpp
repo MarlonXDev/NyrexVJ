@@ -2,6 +2,8 @@
 
 #include "audio/audio_features.hpp"
 #include "core/beat_clock.hpp"
+#include "core/color_lut.hpp"
+#include "core/color_model.hpp"
 #include "core/composition.hpp"
 #include "core/gpu_diag.hpp"
 #include "core/launch_quantizer.hpp"
@@ -9,6 +11,8 @@
 #include "core/settings.hpp"
 #include "core/shader_editor.hpp"
 #include "render/clip_library.hpp"
+#include "render/color_gpu.hpp"
+#include "render/color_stage.hpp"
 #include "render/dmx_strip.hpp"
 #include "render/gl_util.hpp"
 #include "render/gpu_profiler.hpp"
@@ -25,6 +29,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -150,6 +155,21 @@ public:
     int particleLimit() const { return particleLimit_; }
     void setGpuParticles(bool enabled, int budgetMb);
     bool gpuParticlesEnabled() const { return gpuParticles_; }
+    struct ColorStageStatus {
+        bool requested = false;
+        bool active = false;
+        bool lutLoaded = false;
+        int lutSize = 0;
+        std::string error;
+    };
+    void setColorStage(bool enabled, const CubeLut* lut, float strength);
+    void setColorStrength(float strength);
+    bool colorStageActive() const { return colorActive_; }
+    FramebufferDepth outputDepth() const;
+    const ColorStageStatus& colorStageStatus() const { return colorStatus_; }
+    std::uint64_t colorStageBytes() const;
+    void setHdrToSdr(const std::optional<HdrToSdr>& params) { videoGpu_.setHdr(params); }
+    const std::optional<HdrToSdr>& hdrToSdr() const { return videoGpu_.hdr(); }
     int gpuParticleBudgetMb() const { return gpuParticleBudgetMb_; }
     std::uint64_t gpuParticleBytes() const { return generatorGl_.gpuParticles.budget->used(); }
     bool isGeneratorClip(int clip) const;
@@ -538,6 +558,12 @@ private:
     SpoutProgram spoutProgram_;
     MediaProgram mediaProgram_;
     VideoGpu videoGpu_;
+    ColorStage colorStage_;
+    RenderTarget colorScratch_;
+    ColorStageStatus colorStatus_;
+    bool colorActive_ = false;
+    float colorStrength_ = 1.0f;
+    void applyColorStage();
     VideoDecodeMode videoMode_ = VideoDecodeMode::Auto;
     bool hapDirect_ = true;
     bool gpuConversion_ = true;

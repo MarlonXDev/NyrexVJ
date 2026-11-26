@@ -1,5 +1,6 @@
 #include "app/output_selftest.hpp"
 
+#include "core/color_model.hpp"
 #include "core/dynlib.hpp"
 #include "core/frame_lock.hpp"
 #include "core/log.hpp"
@@ -119,6 +120,28 @@ public:
         }
         glBindTexture(GL_TEXTURE_2D, texture_);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 64, 36, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glFinish();
+    }
+
+    void setQuadrants() {
+        const int w = 64;
+        const int h = 36;
+        std::vector<uint8_t> pixels(static_cast<size_t>(w) * static_cast<size_t>(h) * 4u, 255);
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                const bool top = y >= h / 2;
+                const bool left = x < w / 2;
+                Rgb c = top ? (left ? kRed : kGreen) : (left ? kBlue : kYellow);
+                uint8_t* p = &pixels[(static_cast<size_t>(y) * static_cast<size_t>(w) + static_cast<size_t>(x)) * 4u];
+                p[0] = static_cast<uint8_t>(c.r);
+                p[1] = static_cast<uint8_t>(c.g);
+                p[2] = static_cast<uint8_t>(c.b);
+                p[3] = 255;
+            }
+        }
+        glBindTexture(GL_TEXTURE_2D, texture_);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
         glBindTexture(GL_TEXTURE_2D, 0);
         glFinish();
     }
@@ -901,6 +924,18 @@ void caseNdiOutput(Runner& run) {
     const Rgb wantTint = corrected(spec.color, corrected(spec.map.sliceColor, kYellow));
     run.condition("NDI frame carries both colour corrections", std::abs(tinted.r - wantTint.r) <= 6 && std::abs(tinted.g - wantTint.g) <= 6 && std::abs(tinted.b - wantTint.b) <= 6);
 
+    spec.display = DisplayColor{Primaries::DisplayP3, Transfer::Gamma24};
+    for (int i = 0; i < 5; ++i) {
+        run.draw(spec);
+    }
+    sameAsWindow("NDI frame follows the display conversion");
+    const Rgb converted = fake.at(0.75f, 0.75f);
+    run.condition("the display conversion is inside the NDI frame", std::abs(converted.r - tinted.r) > 3 || std::abs(converted.g - tinted.g) > 3 || std::abs(converted.b - tinted.b) > 3);
+    spec.display = DisplayColor{};
+    for (int i = 0; i < 5; ++i) {
+        run.draw(spec);
+    }
+
     spec.ndiName = "Selftest B";
     for (int i = 0; i < 4; ++i) {
         run.draw(spec);
@@ -1315,6 +1350,71 @@ void caseSpatialMarkers(Runner& run) {
     }
 }
 
+Rgb displayed(const DisplayColor& display, const Rgb& source) {
+    const Color3 out = workingToDisplay({source.r / 255.0, source.g / 255.0, source.b / 255.0}, display);
+    return {static_cast<int>(std::lround(out[0] * 255.0)), static_cast<int>(std::lround(out[1] * 255.0)), static_cast<int>(std::lround(out[2] * 255.0))};
+}
+
+void caseDisplay(Runner& run) {
+    OutputSpec spec = defaultOutputSpec(0);
+    run.draw(spec);
+    quadrants(run, "default display changes nothing", kRed, kGreen, kBlue, kYellow);
+
+    struct Choice {
+        const char* name;
+        DisplayColor display;
+    };
+    const std::array<Choice, 8> choices = {{
+        {"gamma 2.2", {Primaries::Rec709, Transfer::Gamma22}},
+        {"gamma 2.4", {Primaries::Rec709, Transfer::Gamma24}},
+        {"gamma 2.6", {Primaries::Rec709, Transfer::Gamma26}},
+        {"Display P3 with sRGB curve", {Primaries::DisplayP3, Transfer::Srgb}},
+        {"Rec.2020 with sRGB curve", {Primaries::Rec2020, Transfer::Srgb}},
+        {"Display P3 with gamma 2.4", {Primaries::DisplayP3, Transfer::Gamma24}},
+        {"Rec.2020 with gamma 2.6", {Primaries::Rec2020, Transfer::Gamma26}},
+        {"Rec.709 with sRGB curve", {Primaries::Rec709, Transfer::Srgb}},
+    }};
+    const std::array<Rgb, 5> sources = {{{128, 128, 128}, {200, 120, 40}, {40, 150, 160}, {230, 220, 200}, {20, 60, 240}}};
+    int worstSeen = 0;
+    for (const Choice& choice : choices) {
+        spec.display = choice.display;
+        for (const Rgb& source : sources) {
+            run.setSolid(source);
+            run.draw(spec);
+            const Rgb want = displayed(choice.display, source);
+            const Rgb got = run.at(0.5f, 0.5f);
+            worstSeen = std::max({worstSeen, std::abs(got.r - want.r), std::abs(got.g - want.g), std::abs(got.b - want.b)});
+            run.expect((std::string("display ") + choice.name + " on " + describe(source)).c_str(), 0.5f, 0.5f, want, 2);
+        }
+    }
+    logLine("Output self test numbers: display conversion largest difference to the processor model " + std::to_string(worstSeen) + " levels");
+
+    spec.display = {Primaries::DisplayP3, Transfer::Gamma24};
+    spec.color.saturation = 0.7f;
+    spec.color.gamma = 1.2f;
+    run.setSolid({200, 120, 40});
+    run.draw(spec);
+    run.expect("the output colour is applied before the display conversion", 0.5f, 0.5f, displayed(spec.display, corrected(spec.color, {200, 120, 40})), 3);
+
+    spec.color = OutputColor{};
+    spec.map.mask = maskRectangle(0.1f, 0.1f, 0.9f, 0.9f);
+    run.setSolid({128, 128, 128});
+    run.draw(spec);
+    run.expect("the display conversion does not leak outside the mask", 0.05f, 0.05f, kBlack);
+    run.expect("the display conversion still reaches the picture inside the mask", 0.5f, 0.5f, displayed(spec.display, {128, 128, 128}), 3);
+
+    OutputSpec spatial = spatialSpec(fillingWall());
+    spatial.display = {Primaries::Rec2020, Transfer::Gamma26};
+    run.setSolid({200, 120, 40});
+    run.draw(spatial);
+    run.expect("the spatial program converts for the display too", 0.5f, 0.5f, displayed(spatial.display, {200, 120, 40}), 3);
+
+    OutputSpec flatRef = defaultOutputSpec(0);
+    run.draw(flatRef);
+    run.expect("returning to the default display restores the picture", 0.5f, 0.5f, {200, 120, 40}, 2);
+    run.setQuadrants();
+}
+
 void measureHistory() {
     const int width = 1920;
     const int height = 1080;
@@ -1504,6 +1604,7 @@ int runOutputSelfTest(GLFWwindow* share) {
     caseSpatialBlendAndSlices(run);
     caseSpatialSwitching(run);
     caseSpatialMarkers(run);
+    caseDisplay(run);
     caseSyncBars(run);
     caseDelay(run);
     caseFrameLock(run);

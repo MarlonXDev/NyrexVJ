@@ -7,6 +7,7 @@
 #include "app/routing_selftest.hpp"
 #include "app/shader_editor_selftest.hpp"
 #include "app/gpu_particle_selftest.hpp"
+#include "app/color_selftest.hpp"
 #include "app/failover_selftest.hpp"
 #include "app/netsync_selftest.hpp"
 #include "app/output_selftest.hpp"
@@ -91,6 +92,8 @@ struct Options {
     int shaderSelfTestBench = 0;
     std::string pluginSelfTest;
     bool outputSelfTest = false;
+    bool colorSelfTest = false;
+    std::string colorSelfTestDirectory = "tests/data";
     bool noPrewarm = false;
     std::string videoSelfTest;
     std::string sceneSelfTest;
@@ -215,6 +218,11 @@ Options parseOptions(int argc, char** argv) {
             }
         } else if (arg == "--output-selftest") {
             options.outputSelfTest = true;
+        } else if (arg == "--color-selftest") {
+            options.colorSelfTest = true;
+            if (hasValue && argv[i + 1][0] != '-') {
+                options.colorSelfTestDirectory = argv[++i];
+            }
         } else if (arg == "--no-prewarm") {
             options.noPrewarm = true;
         } else if (arg == "--video-selftest" && hasValue) {
@@ -539,7 +547,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.netSyncSelfTest || options.failoverSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.netSyncSelfTest || options.failoverSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || options.colorSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -554,6 +562,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runRecordBenchmark(app.engine(), options.benchRecord, options.benchOut);
         } else if (options.outputSelfTest) {
             benchExit = nvj::runOutputSelfTest(window);
+        } else if (options.colorSelfTest) {
+            benchExit = nvj::runColorSelfTest(app.engine(), options.colorSelfTestDirectory, options.benchOut);
         } else if (!options.pluginSelfTest.empty()) {
             benchExit = nvj::runPluginSelfTest(app.engine(), options.pluginSelfTest, options.benchOut);
         } else if (options.shaderSelfTest) {

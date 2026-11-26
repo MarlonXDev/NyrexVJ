@@ -4,7 +4,7 @@ Problems that are known today, how to see each one, and how it is known. This pa
 
 Checked at version: 0.50.0
 
-KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name.
+KI-9 to KI-11 were added at 0.51.0, and KI-1 to KI-8 were not walked through again at that version; the release did not change the areas they name. KI-15 and KI-16 were added and KI-8 was changed at 0.53.0; the other entries were not walked through again.
 
 How to read an entry: **Known by** says whether it was seen running, found in a test, or read from the source. A problem that was only read from the source says so, because nobody has watched it happen.
 
@@ -74,13 +74,13 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Impact:** only screenshots and tests that want the Routing list at start. The option is internal.
 - **Workaround:** click the button.
 
-### KI-8 HDR video is shown without tone mapping
+### KI-8 HDR video is shown without tone mapping unless you switch it on
 
-- **Area:** video clips
-- **Known by:** [MEDIA.md](MEDIA.md), and the selftest clips `test_hdr_pq.mp4` and `test_hdr_hlg.mp4` decode and convert as designed
-- **What happens:** PQ and HLG files are detected and shown with the matrix and range of the file, without tone mapping, so they look flat.
-- **Steps:** play `tests/data/test_hdr_pq.mp4`.
-- **Workaround:** convert HDR material to SDR before the show.
+- **Area:** video clips, colour
+- **Known by:** a test that ran: `--color-selftest` plays `test_hdr_pq.mp4` and `test_hdr_hlg.mp4` with the option off and on ([COLOR.md](COLOR.md))
+- **What happens:** since 0.53.0 PQ and HLG files can be tone mapped to SDR (Settings, Performance, Colour, **Tone map HDR videos to SDR**), but the option is off by default, so a default show still shows them flat. It acts only while the graphics card converts the colours; videos that the processor converts and HAP videos stay flat even with the option on.
+- **Steps:** play `tests/data/test_hdr_pq.mp4`, then switch the option on.
+- **Workaround:** switch the option on and keep **Convert video colours on the graphics card** on, or convert HDR material to SDR before the show.
 
 ### KI-9 Screen readers do not work with the interface
 
@@ -135,6 +135,24 @@ Before a release, walk through the list ([RELEASE.md](RELEASE.md), step 12): try
 - **Steps:** open an output with a wall and a pillar behind it in the list and check the orange line in the 3D mapping block.
 - **Impact:** a wrong picture where surfaces overlap in the view of the projector, on a driver that gives no depth buffer.
 - **Workaround:** put the nearer surface later in the list.
+
+### KI-15 There is no 10 bit or HDR output
+
+- **Area:** colour, outputs, recording
+- **Known by:** read from the source and measured with software OpenGL ([COLOR.md](COLOR.md)). The master picture and the layers are 8 bit integer; the output window is made without a colour depth hint and was measured as 8/8/8/8 on a virtual screen; NDI is sent as 8 bit RGBX; the recorder reads an 8 bit picture. A real graphics card, a 10 bit screen and an HDR chain were not used.
+- **What happens:** a 10 bit video is reduced to 8 bit when it is converted, HDR is tone mapped to SDR (if switched on) and never sent as PQ or HLG, no HDR metadata is written anywhere, and a 10 bit pixel format of the recorder (ProRes) holds an 8 bit picture. Gradients can show banding on a screen that could show more.
+- **Steps:** run `NyrexVJ --color-selftest` and read the first three checks (frame buffer, master and float target depth); the settings page shows the master depth the graphics card reports.
+- **Impact:** an event that needs a true 10 bit or HDR chain cannot be done with this program.
+- **Workaround:** none. Dither or add a little grain to gradients that band.
+
+### KI-16 Tone mapping and display conversion were compared with a computer model only
+
+- **Area:** colour
+- **Known by:** tests that ran (`nvj_color_tests`, `--color-selftest`, `--output-selftest`). The shaders match the model, the model matches the published curves and matrices, but nothing was compared with a reference player, a measuring device or a real wide gamut screen.
+- **What happens:** unknown: the HDR picture is a sensible conversion, not a calibrated one; the display setting assumes that the screen really is in the gamut and curve you choose.
+- **Steps:** manual tests `M-COLOR-1` to `M-COLOR-4` in [TESTING.md](TESTING.md).
+- **Impact:** an HDR file may look too dark or too bright against another player; a wrong display setting makes colours dull or too strong.
+- **Workaround:** set **Reference white (nits)** and **Video peak (nits)** by eye, and leave the display of an output at Rec. 709 and sRGB unless a screen is known to be set differently.
 
 ## Limits of the evidence, not of the program
 

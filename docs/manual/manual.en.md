@@ -580,7 +580,7 @@ DXV videos from Resolume take a lot of processor time. NyrexVJ can make HAP copi
 
 ## Choosing the video decoder {#decoder}
 
-Settings, Performance, Video playback lets you pick the decoder: Automatic, Prefer hardware or Force software. A button tests the hardware decoding on your computer. The video monitor lists every playing video with its codec, decode and upload times, dropped and late frames and its memory. If a video looks flat because it is HDR, the monitor says so: HDR is shown without tone mapping.
+Settings, Performance, Video playback lets you pick the decoder: Automatic, Prefer hardware or Force software. A button tests the hardware decoding on your computer. The video monitor lists every playing video with its codec, decode and upload times, dropped and late frames and its memory. If a video looks flat because it is HDR, the monitor says so: HDR is shown without tone mapping unless you switch on Tone map HDR videos to SDR, see the chapter on colour.
 
 # Your own shaders {#shaders}
 
@@ -972,6 +972,46 @@ Each output can send its own NDI source that carries the output exactly as the w
 Frame lock draws all output windows first and swaps them right after each other, so several screens show the same frame. Each output can be delayed by 0 to 8 frames to line up screens with different processing time. The settings show the measured swap skew, and the Sync bars test pattern helps you film several screens to compare them. It is not a hardware genlock.
 
 > Warning: The mapping features were built and tested with test pictures and a software renderer. There was no real projector or multi-monitor test yet. Try your setup in the venue before the show.
+
+# Colour: LUTs, HDR videos and the display {#color}
+
+## How NyrexVJ treats colour {#color-model}
+
+Layers, mixing and the main picture are 8 bit and use the sRGB look: every picture is stored with the sRGB curve and the Rec. 709 colours, and layers are blended in those stored values, as they always were. Nothing in this chapter changes that, and nothing here is on until you switch it on, so a show you have already built looks exactly as before. Three tools are optional: a colour stage with a LUT, tone mapping for HDR videos, and a display setting for each output. The page docs/COLOR.md of the project lists, path by path, what keeps which bit depth and how it was measured.
+
+## A look from a .cube file {#color-lut}
+
+A LUT is a table that turns every colour into another one, and it is how grading programs hand a look to other programs. NyrexVJ reads 3D tables in the `.cube` format that DaVinci Resolve, Adobe programs and many others export.
+
+1. Copy the `.cube` file into the `luts` folder of the data folder. The button Open LUT folder in Settings, Performance, Colour opens it for you.
+2. Tick Colour stage with LUT (experimental). Choose the file in the list, and press Refresh list if it does not show up yet.
+3. Set LUT strength. 0 is the original picture, 1 is the look completely, and values in between mix the two.
+
+The look is applied once to the finished main picture, after the deck transition and before the outputs, NDI, Spout and the recording, so everything that leaves the program has it. The transparency of the picture is not touched. The settings show the size of the table and the extra graphics memory, one more picture plus the table. Switch the stage off and the picture is exactly the same as if it had never been on.
+
+Only 3D tables with 2 to 65 points per side and up to 64 MB are read. A 1D table, a damaged file or a file with a strange name is refused with a message and, if possible, the line number; the picture is not changed. Tables with few points give a coarser result than tables with 33 points.
+
+## HDR videos {#color-hdr}
+
+Some videos are made for HDR screens (the transfer curves PQ and HLG). On an ordinary screen they look flat and grey, and the video monitor says that the file is HDR. Switch on Tone map HDR videos to SDR in Settings, Performance, Colour and NyrexVJ turns them into a normal picture while the graphics card converts the colours of the video.
+
+- Reference white (nits) says how bright normal white is inside the video. 203 is the usual value; lower values make the picture brighter.
+- Video peak (nits) is the brightest value the video was mastered for. This is where the picture reaches white.
+- Tone mapping chooses Soft shoulder, which leaves normal brightness alone and only rolls off the brightest parts, or Filmic, which has more contrast.
+
+Colours that an ordinary screen cannot show are moved inwards, not simply cut off. Tone mapping works only while Convert video colours on the graphics card is on. Videos that the processor converts and HAP videos are not changed, and an ordinary SDR video looks the same with the option on. It is a sensible conversion, not a calibrated one: compare a file you know with a reference player and set the two values by eye.
+
+## The display of an output {#color-display}
+
+Settings, Output, Display of this output tells NyrexVJ what the screen or projector on that output expects. Colour gamut can be Rec. 709 (the default, the same as sRGB), Display P3 or Rec. 2020, and Transfer can be sRGB (the default), Gamma 2.2, 2.4 or 2.6. With the defaults nothing is done at all. With other values the picture of that output alone is converted, after the colour correction of the slice and the output and before the edge blending, brightness and black level. The test pattern and the sync bars are not converted. The NDI source of that output shows the converted picture, because it carries the output as the window shows it.
+
+Choose a setting only if the screen or projector really is set to it, for example a projector in a Display P3 mode. A wrong setting makes colours dull or too strong. Reset display returns to the default. The setting is saved in the venue setup and only when it is not the default.
+
+## What colour management does not do {#color-limits}
+
+The picture stays 8 bit and SDR on every path. There is no 10 bit output, no HDR output, no HDR information for a screen, an NDI receiver or a capture card, and no SDI. A 10 bit video is reduced to 8 bit when it is shown, and a recording in a 10 bit format such as ProRes still holds an 8 bit picture. NyrexVJ does not read the colour profile of a screen. Settings, Performance, Colour shows the colour depth that the graphics card reports for the main picture.
+
+> Warning: Colour management was built and tested against a computer model of the colours, with a software renderer and two short HDR test clips. It was not tried with a real HDR file, a wide gamut screen or projector, a capture card or a real graphics card. Look at the picture on the real screen before the show.
 
 # Recording {#recording}
 
@@ -1505,6 +1545,10 @@ Spout works on Windows only. Tick Send to OBS via Spout, install the obs-spout2-
 ## A video does not play {#video-no-play}
 
 Video needs the FFmpeg libraries. Look at the Clip window. If it says that FFmpeg is missing, use Set up FFmpeg. If the video plays slowly, look at the video monitor in Settings, Performance, and try a HAP version of the file.
+
+## A video looks flat and grey {#hdr-flat}
+
+The file is probably HDR, and the video monitor in Settings, Performance says so. Switch on Tone map HDR videos to SDR in Settings, Performance, Colour and keep Convert video colours on the graphics card on. If it still looks wrong, change Reference white and Video peak, or convert the file to SDR before the show.
 
 ## A shader does not compile {#shader-error}
 

@@ -746,6 +746,9 @@ void App::drawNdiControls() {
 }
 
 void App::drawMaster() {
+    if (focusTab_ == 3) {
+        ImGui::SetNextWindowFocus();
+    }
     ImGui::Begin(trId("Master", "master"));
     Composition& comp = engine_.comp;
     ui::sliderFloat(trId("Level", "masterLevel"), &comp.master.level, 0.0f, 1.0f, "%.2f");

@@ -59,7 +59,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         dropTarget->queueDroppedFiles(list);
     });
     ImGuiIO& io = ImGui::GetIO();
-    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v6.ini").string();
+    iniPath_ = (std::filesystem::path(userDataDir()) / "layout_v7.ini").string();
     io.IniFilename = iniPath_.c_str();
     recoverInterfaceFiles(options);
 
@@ -848,8 +848,10 @@ void App::frame(double dt) {
     }
 
     drawMenuBar();
+    drawTransportBar();
     drawStatusBar();
     ImGuiID dock = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+    rootDock_ = dock;
     if (needsLayout_) {
         buildLayout(dock);
         needsLayout_ = false;
@@ -858,10 +860,17 @@ void App::frame(double dt) {
     drawDeck();
     drawOutput();
     drawPreview();
+    drawClipPanel();
     drawMaster();
     drawLayer();
-    drawClipPanel();
+    drawAudioWindow();
     drawBrowser();
+    drawTrigger();
+    drawStripMaster();
+    drawStripAudio();
+    drawStripNetwork();
+    drawStripMidi();
+    drawStripOsc();
     creatorHasFocus_ = false;
     drawCreator();
     drawNodeEditor();
@@ -922,25 +931,120 @@ void App::frame(double dt) {
 void App::buildLayout(ImGuiID dock) {
     ImGui::DockBuilderRemoveNode(dock);
     ImGui::DockBuilderAddNode(dock, ImGuiDockNodeFlags_DockSpace);
-    ImGui::DockBuilderSetNodeSize(dock, ImGui::GetMainViewport()->WorkSize);
-    ImGuiID bottom = 0;
-    ImGuiID top = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.52f, nullptr, &bottom);
-    ImGuiID rest = 0;
-    ImGuiID monitors = ImGui::DockBuilderSplitNode(bottom, ImGuiDir_Left, 0.25f, nullptr, &rest);
-    ImGuiID preview = 0;
-    ImGuiID output = ImGui::DockBuilderSplitNode(monitors, ImGuiDir_Up, 0.56f, nullptr, &preview);
-    ImGuiID rest2 = 0;
-    ImGuiID master = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.34f, nullptr, &rest2);
+    ImGui::DockBuilderSetNodeSize(dock, static_cast<ImGuiViewportP*>(ImGui::GetMainViewport())->GetBuildWorkRect().GetSize());
+    ImGuiID lower = 0;
+    ImGuiID upper = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.52f, nullptr, &lower);
+    ImGuiID strip = 0;
+    ImGuiID row = ImGui::DockBuilderSplitNode(lower, ImGuiDir_Up, 0.67f, nullptr, &strip);
+
+    ImGuiID side = 0;
+    ImGuiID grid = ImGui::DockBuilderSplitNode(upper, ImGuiDir_Left, 0.64f, nullptr, &side);
+    ImGuiID layer = 0;
+    ImGuiID panels = ImGui::DockBuilderSplitNode(side, ImGuiDir_Up, 0.56f, nullptr, &layer);
+
+    ImGuiID rowRest = 0;
+    ImGuiID preview = ImGui::DockBuilderSplitNode(row, ImGuiDir_Left, 0.20f, nullptr, &rowRest);
+    ImGuiID rowRest2 = 0;
+    ImGuiID output = ImGui::DockBuilderSplitNode(rowRest, ImGuiDir_Left, 0.25f, nullptr, &rowRest2);
+    ImGuiID rowRest3 = 0;
+    ImGuiID trigger = ImGui::DockBuilderSplitNode(rowRest2, ImGuiDir_Left, 0.26f, nullptr, &rowRest3);
     ImGuiID browser = 0;
-    ImGuiID clip = ImGui::DockBuilderSplitNode(rest2, ImGuiDir_Left, 0.42f, nullptr, &browser);
-    ImGui::DockBuilderDockWindow("###deck", top);
-    ImGui::DockBuilderDockWindow("###output", output);
+    ImGuiID audio = ImGui::DockBuilderSplitNode(rowRest3, ImGuiDir_Left, 0.42f, nullptr, &browser);
+
+    ImGuiID stripRest = 0;
+    ImGuiID levels = ImGui::DockBuilderSplitNode(strip, ImGuiDir_Left, 0.16f, nullptr, &stripRest);
+    ImGuiID stripRest2 = 0;
+    ImGuiID audioIn = ImGui::DockBuilderSplitNode(stripRest, ImGuiDir_Left, 0.24f, nullptr, &stripRest2);
+    ImGuiID stripRest3 = 0;
+    ImGuiID network = ImGui::DockBuilderSplitNode(stripRest2, ImGuiDir_Left, 0.34f, nullptr, &stripRest3);
+    ImGuiID osc = 0;
+    ImGuiID midi = ImGui::DockBuilderSplitNode(stripRest3, ImGuiDir_Left, 0.5f, nullptr, &osc);
+
+    ImGui::DockBuilderDockWindow("###deck", grid);
+    ImGui::DockBuilderDockWindow("###clip", panels);
+    ImGui::DockBuilderDockWindow("###master", panels);
+    ImGui::DockBuilderDockWindow("###layer", layer);
     ImGui::DockBuilderDockWindow("###preview", preview);
-    ImGui::DockBuilderDockWindow("###master", master);
-    ImGui::DockBuilderDockWindow("###layer", master);
-    ImGui::DockBuilderDockWindow("###clip", clip);
+    ImGui::DockBuilderDockWindow("###output", output);
+    ImGui::DockBuilderDockWindow("###trigger", trigger);
+    ImGui::DockBuilderDockWindow("###audio", audio);
     ImGui::DockBuilderDockWindow("###browser", browser);
+    ImGui::DockBuilderDockWindow("###stripMaster", levels);
+    ImGui::DockBuilderDockWindow("###stripAudio", audioIn);
+    ImGui::DockBuilderDockWindow("###stripNetwork", network);
+    ImGui::DockBuilderDockWindow("###stripMidi", midi);
+    ImGui::DockBuilderDockWindow("###stripOsc", osc);
     ImGui::DockBuilderFinish(dock);
+}
+
+namespace {
+
+void scaleDockSizeRef(ImGuiDockNode* node, int axis, float factor) {
+    if (node == nullptr) {
+        return;
+    }
+    node->SizeRef[axis] *= factor;
+    scaleDockSizeRef(node->ChildNodes[0], axis, factor);
+    scaleDockSizeRef(node->ChildNodes[1], axis, factor);
+}
+
+void releaseDockedWindow(const ImGuiWindow* window) {
+    ImGuiDockNode* node = window ? window->DockNode : nullptr;
+    if (node == nullptr || !node->IsLeafNode() || node->Windows.Size != 1 || node->ParentNode == nullptr) {
+        return;
+    }
+    ImGuiDockNode* parent = node->ParentNode;
+    ImGuiDockNode* sibling = parent->ChildNodes[0] == node ? parent->ChildNodes[1] : parent->ChildNodes[0];
+    const int axis = parent->SplitAxis;
+    if (sibling == nullptr || (axis != 0 && axis != 1) || sibling->Size[axis] < 1.0f || parent->Size[axis] < 1.0f) {
+        return;
+    }
+    scaleDockSizeRef(sibling, axis, parent->Size[axis] / sibling->Size[axis]);
+}
+
+}
+
+void App::applyTimelineDock() {
+    const ImGuiWindow* existing = ImGui::FindWindowByName("###timeline");
+    const bool wasActive = existing != nullptr && existing->LastFrameActive + 1 >= ImGui::GetFrameCount();
+    if (!timelineOpen_) {
+        if (wasActive) {
+            releaseDockedWindow(existing);
+        }
+        timelineDockRequest_ = 0;
+        return;
+    }
+    const int request = timelineDockRequest_;
+    if (request == 0 || rootDock_ == 0) {
+        timelineDockRequest_ = 0;
+        return;
+    }
+    if (request != 3 && !wasActive) {
+        return;
+    }
+    timelineDockRequest_ = 0;
+    releaseDockedWindow(existing);
+    if (request == 3) {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowDockID(0, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(std::min(1180.0f, viewport->WorkSize.x * 0.9f), std::min(560.0f, viewport->WorkSize.y * 0.7f)), ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + viewport->WorkSize.y * 0.62f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        return;
+    }
+    const int axis = request == 1 ? 1 : 0;
+    const ImGuiDockNode* rootNode = ImGui::DockBuilderGetNode(rootDock_);
+    const float before = rootNode ? rootNode->Size[axis] : 0.0f;
+    ImGuiID rest = 0;
+    ImGuiID target = ImGui::DockBuilderSplitNode(rootDock_, request == 1 ? ImGuiDir_Down : ImGuiDir_Right, 0.34f, nullptr, &rest);
+    ImGuiDockNode* restNode = ImGui::DockBuilderGetNode(rest);
+    if (restNode && before > 1.0f && restNode->Size[axis] > 1.0f) {
+        const float factor = restNode->Size[axis] / before;
+        restNode->SizeRef[axis] = restNode->Size[axis];
+        scaleDockSizeRef(restNode->ChildNodes[0], axis, factor);
+        scaleDockSizeRef(restNode->ChildNodes[1], axis, factor);
+    }
+    ImGui::DockBuilderFinish(rootDock_);
+    ImGui::SetNextWindowDockID(target, ImGuiCond_Always);
 }
 
 void App::handleShortcuts() {
@@ -1148,6 +1252,24 @@ void App::drawMenuBar() {
         if (ImGui::MenuItem(tr("Show timeline window"), nullptr, timelineOpen_)) {
             timelineOpen_ = !timelineOpen_;
             timelineFocus_ = timelineOpen_;
+        }
+        if (ImGui::BeginMenu(tr("Place the timeline"))) {
+            if (ImGui::MenuItem(tr("Dock at the bottom"))) {
+                timelineOpen_ = true;
+                timelineFocus_ = true;
+                timelineDockRequest_ = 1;
+            }
+            if (ImGui::MenuItem(tr("Dock on the right"))) {
+                timelineOpen_ = true;
+                timelineFocus_ = true;
+                timelineDockRequest_ = 2;
+            }
+            if (ImGui::MenuItem(tr("Float as a window"))) {
+                timelineOpen_ = true;
+                timelineFocus_ = true;
+                timelineDockRequest_ = 3;
+            }
+            ImGui::EndMenu();
         }
         ImGui::Separator();
         const bool canDrive = settings_.timelineEnabled;

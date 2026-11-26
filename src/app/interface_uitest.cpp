@@ -36,7 +36,7 @@ namespace sc = shortcuts;
 
 constexpr int kMaxFrames = 20000;
 
-const char* const kPanels[] = {"###deck", "###output", "###preview", "###master", "###clip", "###browser"};
+const char* const kPanels[] = {"###deck", "###output", "###preview", "###master", "###clip", "###browser", "###trigger", "###audio", "###stripMaster", "###stripAudio", "###stripNetwork", "###stripMidi", "###stripOsc"};
 constexpr size_t kPanelCount = sizeof(kPanels) / sizeof(kPanels[0]);
 
 struct Rects {
@@ -291,7 +291,9 @@ void App::buildInterfaceTest() {
         record("the default layout shows the six panels inside the window", usable, detail);
         const ImGuiWindow* master = ImGui::FindWindowByName("###master");
         const ImGuiWindow* layer = ImGui::FindWindowByName("###layer");
-        record("the Layer panel is a tab beside Master", master && layer && master->DockId == layer->DockId && master->DockId != 0, master ? "dock " + std::to_string(master->DockId) : "missing");
+        const ImGuiWindow* clip = ImGui::FindWindowByName("###clip");
+        record("Clip and Master are tabs of one panel", clip && master && clip->DockId == master->DockId && master->DockId != 0, master ? "dock " + std::to_string(master->DockId) : "missing");
+        record("the Layer panel sits below Clip and Master", master && layer && layer->DockId != master->DockId && layer->Pos.y >= master->Pos.y + master->Size.y - 2.0f, layer ? describe(layer) : "missing");
         *baseFrame = measuredFrameHeight();
         *basePadding = ImGui::GetStyle().FramePadding.y;
     });
@@ -354,6 +356,75 @@ void App::buildInterfaceTest() {
         std::string detail;
         const Rects now = captureRects();
         record("Reset window layout restores the default arrangement", sameRects(*original, now, 2.0f, detail), detail);
+    });
+
+    add([this]() {
+        timelineOpen_ = true;
+        timelineDockRequest_ = 1;
+    }, 10, nullptr, [record]() {
+        const ImGuiWindow* timeline = ImGui::FindWindowByName("###timeline");
+        const ImGuiWindow* deck = panel(0);
+        const bool docked = timeline && timeline->DockId != 0 && deck && timeline->Pos.y >= deck->Pos.y + deck->Size.y - 2.0f && insideMainWindow(timeline, 2.0f);
+        std::string detail;
+        record("the timeline docks at the bottom of the window", docked && allPanelsUsable(detail), timeline ? describe(timeline) : "missing");
+    });
+    shot("timeline-bottom");
+    add([this]() { timelineDockRequest_ = 2; }, 10, nullptr, [record]() {
+        const ImGuiWindow* timeline = ImGui::FindWindowByName("###timeline");
+        const ImGuiWindow* deck = panel(0);
+        const bool docked = timeline && timeline->DockId != 0 && deck && timeline->Pos.x >= deck->Pos.x + deck->Size.x - 2.0f && insideMainWindow(timeline, 2.0f);
+        std::string detail;
+        record("the timeline docks on the right of the window", docked && allPanelsUsable(detail), timeline ? describe(timeline) : "missing");
+    });
+    shot("timeline-right");
+    add([this]() { timelineDockRequest_ = 3; }, 10, nullptr, [original, record]() {
+        const ImGuiWindow* timeline = ImGui::FindWindowByName("###timeline");
+        std::string detail;
+        record("the timeline can float again as a window", timeline && timeline->DockId == 0 && insideMainWindow(timeline, 2.0f) && allPanelsUsable(detail), timeline ? describe(timeline) : "missing");
+        std::string sizes;
+        const Rects now = captureRects();
+        record("the other panels get their old sizes back when the timeline leaves its dock", sameRects(*original, now, 8.0f, sizes), sizes);
+    });
+    add([this]() { timelineDockRequest_ = 1; }, 10);
+    add([this]() { timelineOpen_ = false; }, 10, nullptr, [original, record]() {
+        std::string sizes;
+        const Rects now = captureRects();
+        record("the other panels get their old sizes back when the docked timeline is closed", sameRects(*original, now, 8.0f, sizes), sizes);
+    });
+    add([this]() {
+        timelineOpen_ = false;
+        resetWindowLayout();
+    }, 8, nullptr, [original, record]() {
+        std::string detail;
+        const Rects now = captureRects();
+        record("Reset window layout also takes the timeline out of the layout", sameRects(*original, now, 2.0f, detail), detail);
+    });
+
+    add([this]() {
+        const ImGuiWindow* strip = ImGui::FindWindowByName("###stripMaster");
+        if (strip) {
+            const float label = std::clamp((strip->ContentRegionRect.GetWidth()) * 0.36f, ui::px(56.0f), ui::px(150.0f));
+            zoomMouse_ = ImVec2(strip->ContentRegionRect.Min.x + label + ui::px(40.0f), strip->ContentRegionRect.Min.y + ImGui::GetFrameHeight() * 0.5f);
+            ImGui::GetIO().AddMousePosEvent(zoomMouse_.x, zoomMouse_.y);
+        }
+    }, 4);
+    add([]() {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddKeyEvent(ImGuiMod_Ctrl, true);
+        io.AddMouseButtonEvent(0, true);
+    }, 2);
+    add([]() {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddMouseButtonEvent(0, false);
+        io.AddKeyEvent(ImGuiMod_Ctrl, false);
+    }, 4, nullptr, [record]() {
+        const ImGuiID active = ImGui::GetActiveID();
+        record("Ctrl+click on a slider opens the field for typing a value", active != 0 && ImGui::TempInputIsActive(active) && ImGui::GetIO().WantTextInput, "active id " + std::to_string(active));
+    });
+    shot("slider-typing");
+    press(ImGuiKey_Escape, false, false);
+    add(nullptr, 4, nullptr, [record]() {
+        record("Esc closes the field and leaves the value as it was", ImGui::GetActiveID() == 0 || !ImGui::TempInputIsActive(ImGui::GetActiveID()), "active id " + std::to_string(ImGui::GetActiveID()));
     });
 
     add([this]() { openSettings(SettingsAppearance); }, 8, nullptr, [this, record]() {
@@ -581,7 +652,7 @@ void App::buildInterfaceTest() {
         sc::Binding space;
         space.key = "Space";
         shortcuts_.set(sc::Action::Blackout, space);
-        ImGui::SetWindowFocus("###deck");
+        ImGui::SetWindowFocus("###trigger");
         blackoutBefore_ = engine_.blackout;
         navSeen_.clear();
     }, 6, nullptr, [record]() {
@@ -596,7 +667,7 @@ void App::buildInterfaceTest() {
     add(nullptr, 2, nullptr, [this, record]() {
         std::set<ImGuiID> distinct(navSeen_.begin(), navSeen_.end());
         distinct.erase(0);
-        record("Tab moves the focus through different controls", distinct.size() >= 4, std::to_string(distinct.size()) + " different controls in 6 presses");
+        record("Tab moves the focus through different controls", distinct.size() >= 4, std::to_string(distinct.size()) + " different controls in 6 presses" + " in " + std::string(ImGui::GetCurrentContext()->NavWindow ? ImGui::GetCurrentContext()->NavWindow->Name : "no window"));
         record("the focus ring is visible while navigating with the keyboard", ImGui::GetIO().NavActive && ImGui::GetIO().NavVisible, std::string("active ") + (ImGui::GetIO().NavActive ? "yes" : "no") + ", visible " + (ImGui::GetIO().NavVisible ? "yes" : "no"));
     });
     shot("keyboard-focus");
@@ -605,11 +676,17 @@ void App::buildInterfaceTest() {
     add(nullptr, 3, nullptr, [this, record]() {
         record("Space does not fire a shortcut while a control has the keyboard focus", engine_.blackout == blackoutBefore_, engine_.blackout ? "blackout on" : "blackout off");
     });
+    auto afterFirstEsc = std::make_shared<std::string>();
+    press(ImGuiKey_Escape, false, false);
+    add(nullptr, 3, nullptr, [afterFirstEsc]() {
+        const ImGuiIO& io = ImGui::GetIO();
+        *afterFirstEsc = std::string("after the first Esc: text input ") + (io.WantTextInput ? "yes" : "no") + ", focus ring " + (io.NavVisible ? "yes" : "no");
+    });
     press(ImGuiKey_Escape, false, false);
     add([this]() { blackoutBefore_ = engine_.blackout; }, 3);
     press(ImGuiKey_Space, false, false);
-    add(nullptr, 3, nullptr, [this, record]() {
-        record("after Esc leaves the control Space fires the shortcut again", engine_.blackout != blackoutBefore_, engine_.blackout ? "blackout on" : "blackout off");
+    add(nullptr, 3, nullptr, [this, record, afterFirstEsc]() {
+        record("after Esc leaves the control Space fires the shortcut again", engine_.blackout != blackoutBefore_, std::string(engine_.blackout ? "blackout on" : "blackout off") + "; " + *afterFirstEsc);
     });
     add([this]() {
         engine_.blackout = false;

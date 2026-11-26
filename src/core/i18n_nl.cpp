@@ -2695,7 +2695,7 @@ const Translation kDutch[] = {
     {"Shortcut", "Sneltoets"},
     {"Smaller interface", "Kleinere interface"},
     {"That shortcut is already used", "Die sneltoets is al in gebruik"},
-    {"The saved window layout was damaged. A copy was kept as layout_v6.ini.bad and the default layout was restored.", "De opgeslagen vensterindeling was beschadigd. Een kopie is bewaard als layout_v6.ini.bad en de standaardindeling is hersteld."},
+    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "De opgeslagen vensterindeling was beschadigd. Een kopie is bewaard als layout_v7.ini.bad en de standaardindeling is hersteld."},
     {"The shortcuts could not be saved", "De sneltoetsen konden niet worden opgeslagen"},
     {"The window layout was reset to the default.", "De vensterindeling is teruggezet naar de standaard."},
     {"View", "Weergave"},
@@ -2918,6 +2918,18 @@ const Translation kDutch[] = {
     {"Not offered by this graphics driver", "Niet aangeboden door deze grafische driver"},
     {"Offered by the driver, not used by NyrexVJ", "Aangeboden door de driver, niet gebruikt door NyrexVJ"},
     {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "Hardware-framelock en genlock vragen een professionele grafische kaart met een synckaart (bijvoorbeeld NVIDIA Quadro Sync of AMD FirePro S400), kabels en een instelling in het configuratiescherm van de driver. Deze regel laat alleen zien of de driver de swap-group-extensies vermeldt. Ze kan niet zeggen of een kaart is aangesloten of vergrendeld. NyrexVJ treedt tot geen enkele swap group toe en wijzigt geen driverinstelling; de software-framelock hierboven werkt in elk geval."},
+    {"Audio input", "Audio-ingang"},
+    {"Clip start", "Clipstart"},
+    {"Dock at the bottom", "Onderaan vastzetten"},
+    {"Dock on the right", "Rechts vastzetten"},
+    {"Float as a window", "Als los venster"},
+    {"Master level", "Masterniveau"},
+    {"Nudge", "Verschuiven"},
+    {"Pauses and restarts the beat count at 1", "Pauzeert en begint de beattelling opnieuw bij 1"},
+    {"Phase", "Fase"},
+    {"Place the timeline", "Tijdlijn plaatsen"},
+    {"Runs the tempo clock and all clip motion", "Laat de tempoklok en alle clipbeweging lopen"},
+    {"Trigger", "Trigger"},
 };
 
 }

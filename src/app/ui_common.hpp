@@ -4,11 +4,14 @@
 #include "core/i18n.hpp"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <string>
 
 namespace nvj::ui {
@@ -100,26 +103,170 @@ inline void sliderBackground(float ratio) {
     draw->AddRect(pos, ImVec2(pos.x + width, pos.y + height), ImGui::GetColorU32(ImGuiCol_Border), rounding);
 }
 
-inline bool sliderFloat(const char* label, float* value, float low, float high, const char* format = "%.3f", ImGuiSliderFlags flags = 0) {
-    sliderBackground(sliderRatio(*value, low, high, (flags & ImGuiSliderFlags_Logarithmic) != 0));
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.05f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(1.0f, 1.0f, 1.0f, 0.08f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    const bool changed = ImGui::SliderFloat(label, value, low, high, format, flags);
-    ImGui::PopStyleColor(4);
+inline float labelColumn(const char* text, const char* end) {
+    const float avail = ImGui::GetContentRegionAvail().x;
+    const float column = std::clamp(avail * 0.36f, px(56.0f), px(150.0f));
+    const float textWidth = ImGui::CalcTextSize(text, end).x;
+    return std::max(column, std::min(textWidth + px(10.0f), avail * 0.5f));
+}
+
+inline void fieldLabel(const char* label) {
+    const float column = labelColumn(label, label + std::strlen(label));
+    const float height = ImGui::GetFrameHeight();
+    const ImVec2 origin = ImGui::GetCursorScreenPos();
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    draw->PushClipRect(origin, ImVec2(origin.x + column - px(6.0f), origin.y + height), true);
+    draw->AddText(ImVec2(origin.x, origin.y + ImGui::GetStyle().FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), label);
+    draw->PopClipRect();
+    ImGui::Dummy(ImVec2(column, height));
+    ImGui::SameLine(0.0f, 0.0f);
+}
+
+namespace detail {
+
+inline const char* labelEnd(const char* label) {
+    const char* hash = std::strstr(label, "##");
+    return hash ? hash : label + std::strlen(label);
+}
+
+template <typename Run, typename Legacy>
+inline bool styledSlider(const char* label, const std::string& valueText, float ratio, Run run, Legacy legacy) {
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const char* end = labelEnd(label);
+    const bool hasLabel = end != label;
+    const float requested = ImGui::CalcItemWidth();
+    const bool explicitWidth = (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth) != 0 || ImGui::GetCurrentWindowRead()->DC.ItemWidth != ImGui::GetCurrentWindowRead()->DC.ItemWidthDefault;
+    const float avail = ImGui::GetContentRegionAvail().x;
+    const float frameHeight = ImGui::GetFrameHeight();
+    float labelWidth = 0.0f;
+    float area = requested;
+    if (hasLabel) {
+        labelWidth = ui::labelColumn(label, end);
+        if (!explicitWidth) {
+            area = std::max(0.0f, avail - labelWidth);
+        }
+    }
+    const float valueWidth = std::max(px(46.0f), ImGui::CalcTextSize(valueText.c_str()).x + px(4.0f));
+    const float gap = px(8.0f);
+    const float trackWidth = area - valueWidth - gap;
+    if (trackWidth < px(56.0f)) {
+        return legacy(label);
+    }
+
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    if (hasLabel) {
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        draw->PushClipRect(origin, ImVec2(origin.x + labelWidth - px(6.0f), origin.y + frameHeight), true);
+        draw->AddText(ImVec2(origin.x, origin.y + style.FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), label, end);
+        draw->PopClipRect();
+        ImGui::Dummy(ImVec2(labelWidth, frameHeight));
+        ImGui::SameLine(0.0f, 0.0f);
+    }
+
+    const float radius = px(6.0f);
+    const std::string id = hasLabel ? std::string("##") + label : std::string(label);
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImGui::SetNextItemWidth(trackWidth);
+    const ImGuiID widgetId = ImGui::GetCurrentWindow()->GetID(id.c_str());
+    const bool typingBefore = ImGui::TempInputIsActive(widgetId);
+    bool changed = false;
+    if (typingBefore) {
+        changed = run(id.c_str(), trackWidth);
+    } else {
+        ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, radius * 2.0f);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        changed = run(id.c_str(), trackWidth);
+        ImGui::PopStyleColor(7);
+        ImGui::PopStyleVar();
+    }
+    const bool hovered = ImGui::IsItemHovered();
+    const bool active = ImGui::IsItemActive();
+    const bool typing = typingBefore || ImGui::TempInputIsActive(widgetId);
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (typing) {
+        window->DC.CursorPosPrevLine.x += gap + valueWidth;
+        window->DC.CursorMaxPos.x = std::max(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
+        return changed;
+    }
+
+    const float centerY = pos.y + frameHeight * 0.5f;
+    const float trackHeight = std::max(3.0f, px(4.0f));
+    const float usableMin = pos.x + 2.0f + radius;
+    const float usableMax = pos.x + trackWidth - 2.0f - radius;
+    const float handleX = usableMin + std::clamp(ratio, 0.0f, 1.0f) * std::max(0.0f, usableMax - usableMin);
+    const ImVec2 trackMin(pos.x, centerY - trackHeight * 0.5f);
+    const ImVec2 trackMax(pos.x + trackWidth, centerY + trackHeight * 0.5f);
+    const ImVec4 trackColor = ImGui::GetStyleColorVec4(hovered || active ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    draw->AddRectFilled(trackMin, trackMax, ImGui::GetColorU32(trackColor), trackHeight * 0.5f);
+    if (kHighContrast) {
+        draw->AddRect(trackMin, trackMax, ImGui::GetColorU32(ImGuiCol_Border), trackHeight * 0.5f);
+    }
+    if (handleX - trackMin.x > 1.0f) {
+        draw->AddRectFilled(trackMin, ImVec2(handleX, trackMax.y), ImGui::GetColorU32(kAccent), trackHeight * 0.5f);
+    }
+    const float handleRadius = active ? radius : (hovered ? radius * 0.95f : radius * 0.85f);
+    draw->AddCircleFilled(ImVec2(handleX, centerY), handleRadius, ImGui::GetColorU32(active ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f) : ImVec4(0.90f, 0.90f, 0.92f, 1.0f)));
+    if (active || hovered || kHighContrast) {
+        draw->AddCircle(ImVec2(handleX, centerY), handleRadius, ImGui::GetColorU32(kAccent), 0, std::max(1.5f, px(1.5f)));
+    }
+
+    const float textWidth = ImGui::CalcTextSize(valueText.c_str()).x;
+    draw->AddText(ImVec2(pos.x + trackWidth + gap + std::max(0.0f, valueWidth - textWidth), pos.y + style.FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), valueText.c_str());
+
+    window->DC.CursorPosPrevLine.x += gap + valueWidth;
+    window->DC.CursorMaxPos.x = std::max(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
     return changed;
 }
 
+}
+
+inline bool sliderFloat(const char* label, float* value, float low, float high, const char* format = "%.3f", ImGuiSliderFlags flags = 0) {
+    const bool logarithmic = (flags & ImGuiSliderFlags_Logarithmic) != 0;
+    char text[64];
+    std::snprintf(text, sizeof(text), format, static_cast<double>(*value));
+    return detail::styledSlider(
+        label,
+        text,
+        sliderRatio(*value, low, high, logarithmic),
+        [&](const char* id, float) { return ImGui::SliderFloat(id, value, low, high, format, flags); },
+        [&](const char* original) {
+            sliderBackground(sliderRatio(*value, low, high, logarithmic));
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.05f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(1.0f, 1.0f, 1.0f, 0.08f));
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+            const bool changed = ImGui::SliderFloat(original, value, low, high, format, flags);
+            ImGui::PopStyleColor(4);
+            return changed;
+        });
+}
+
 inline bool sliderInt(const char* label, int* value, int low, int high, const char* format = "%d", ImGuiSliderFlags flags = 0) {
-    sliderBackground(sliderRatio(*value, low, high, (flags & ImGuiSliderFlags_Logarithmic) != 0));
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.05f));
-    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(1.0f, 1.0f, 1.0f, 0.08f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    const bool changed = ImGui::SliderInt(label, value, low, high, format, flags);
-    ImGui::PopStyleColor(4);
-    return changed;
+    const bool logarithmic = (flags & ImGuiSliderFlags_Logarithmic) != 0;
+    char text[64];
+    std::snprintf(text, sizeof(text), format, *value);
+    return detail::styledSlider(
+        label,
+        text,
+        sliderRatio(*value, low, high, logarithmic),
+        [&](const char* id, float) { return ImGui::SliderInt(id, value, low, high, format, flags); },
+        [&](const char* original) {
+            sliderBackground(sliderRatio(*value, low, high, logarithmic));
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.05f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(1.0f, 1.0f, 1.0f, 0.08f));
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+            const bool changed = ImGui::SliderInt(original, value, low, high, format, flags);
+            ImGui::PopStyleColor(4);
+            return changed;
+        });
 }
 
 inline std::string cellLabel(int layer, int column) {

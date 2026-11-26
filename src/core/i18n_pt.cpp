@@ -2695,7 +2695,7 @@ const Translation kPortuguese[] = {
     {"Shortcut", "Atalho"},
     {"Smaller interface", "Interface menor"},
     {"That shortcut is already used", "Esse atalho já está em uso"},
-    {"The saved window layout was damaged. A copy was kept as layout_v6.ini.bad and the default layout was restored.", "O layout de janelas salvo estava danificado. Uma cópia foi mantida como layout_v6.ini.bad e o layout padrão foi restaurado."},
+    {"The saved window layout was damaged. A copy was kept as layout_v7.ini.bad and the default layout was restored.", "O layout de janelas salvo estava danificado. Uma cópia foi mantida como layout_v7.ini.bad e o layout padrão foi restaurado."},
     {"The shortcuts could not be saved", "Não foi possível salvar os atalhos"},
     {"The window layout was reset to the default.", "O layout das janelas foi redefinido para o padrão."},
     {"View", "Exibir"},
@@ -2918,6 +2918,18 @@ const Translation kPortuguese[] = {
     {"Not offered by this graphics driver", "Não oferecido por este driver gráfico"},
     {"Offered by the driver, not used by NyrexVJ", "Oferecido pelo driver, não usado pelo NyrexVJ"},
     {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "O bloqueio de quadros por hardware e o genlock precisam de uma placa gráfica profissional com placa de sincronização (por exemplo NVIDIA Quadro Sync ou AMD FirePro S400), cabos e uma configuração no painel de controle do driver. Esta linha só mostra se o driver lista as extensões de swap group. Ela não consegue dizer se uma placa está conectada ou travada. O NyrexVJ não entra em nenhum swap group e não altera nenhuma configuração do driver; o bloqueio de quadros por software acima funciona em qualquer caso."},
+    {"Audio input", "Entrada de áudio"},
+    {"Clip start", "Início dos clipes"},
+    {"Dock at the bottom", "Encaixar embaixo"},
+    {"Dock on the right", "Encaixar à direita"},
+    {"Float as a window", "Como janela flutuante"},
+    {"Master level", "Nível master"},
+    {"Nudge", "Deslocar"},
+    {"Pauses and restarts the beat count at 1", "Pausa e reinicia a contagem de batidas em 1"},
+    {"Phase", "Fase"},
+    {"Place the timeline", "Posicionar a linha do tempo"},
+    {"Runs the tempo clock and all clip motion", "Liga o relógio de tempo e todo o movimento dos clipes"},
+    {"Trigger", "Disparo"},
 };
 
 }

@@ -6,7 +6,7 @@
 
 NyrexVJ is a program for live visuals. You play generative clips, 3D models, videos and your own shaders on layers, stack effects on top, let everything follow your music and send the final picture to OBS, a projector or a screen. It was made for VRChat events and parties, and it is small enough to start in a second: one file, no installer, no game engine.
 
-If you know Resolume Arena or similar programs, the layout will feel familiar: a clip grid on top, a deck and tempo row below it, a preview and an output picture, windows for the layer, the clip and the master, and a browser on the right.
+If you know Resolume Arena or similar programs, the layout will feel familiar: a clip grid on the left, the clip, master and layer windows on the right, a transport bar across the top, a row with preview, output, trigger, audio and library below the grid, and a strip with the master level and the inputs and outputs at the bottom.
 
 ## What you can do with it {#what-you-can-do}
 
@@ -79,28 +79,48 @@ This chapter names every part of the main window, so the rest of the manual can 
 | View | Workspaces, Reset window layout, interface size, High contrast, Keyboard navigation, Show status bar |
 | Output | Open or close the output windows, Fullscreen, Outputs and mapping, Start or stop recording, Recording settings, Send to OBS via Spout, Send via NDI, Video routing |
 | Audio | Choose the audio source: Off, Demo signal, System audio, Input, and Refresh devices |
-| Timeline | Run the timeline, Show the timeline window, Play, Pause, Stop, Release hand moves |
+| Timeline | Run the timeline, Show the timeline window, Place the timeline (dock at the bottom, dock on the right, float as a window), Play, Pause, Stop, Release hand moves |
 | Settings | Opens the Settings window |
 | Creator | Open the Clip Creator, New 3D scene, templates, the node effect editor, Text and particles, Effect chains, Shader editor |
 | Help | User manual, What's new, links, Language, Check for updates |
 
-![The main window of NyrexVJ with the clip grid on top, Output and Preview on the left and Master, Clip and Browser at the bottom](main-window.webp)
+![The main window of NyrexVJ with the transport bar on top, the clip grid on the left, Clip, Master and Layer on the right, and Preview, Output, Trigger, Audio and Browser below](main-window.webp)
+
+## The transport bar {#transport-bar}
+
+The bar under the menu holds what you need at every moment: the 16 deck buttons with Previous and Next, the BPM field with minus, plus, /2 and x2, Tap and Resync, then Play, Pause and Stop, and the beat display. Play lets the tempo clock and all clip motion run, Pause freezes them, and Stop pauses and restarts the beat count at 1. The beat display shows the beat in the bar, one tick for every beat of the bar and the position inside the beat as Phase. A thin line along the lower edge shows how far a deck transition has come. In a window narrower than about 1540 pixels (at an interface size of 100 percent) the 16 deck buttons shrink to one button that shows the active deck and opens the list of decks, and in a very narrow window the buttons /2 and x2, Resync and the beat display make room for Play, Pause and Stop.
+
+![The transport bar with the deck buttons, the tempo controls, Play, Pause and Stop and the beat display](transport-bar.webp)
 
 ## The deck window {#deck-window}
 
-The big window at the top is the deck window. It holds the clip grid with 8 columns and 4 layers, the 16 deck buttons, the tempo controls and the transition settings. Everything you play live starts here. See [The clip grid](#clip-grid) and [Decks and transitions](#decks).
+The big window at the top left is the deck window. It holds the clip grid with 8 columns and 4 layers. Everything you play live starts here. See [The clip grid](#clip-grid) and [Decks and transitions](#decks).
 
 ## Preview and output {#preview-output}
 
-Below the deck window, on the left, you find two windows with a picture. The Output window shows the final picture exactly as it leaves NyrexVJ, with its size, the frame rate and the tempo. The Preview window shows a cell that you only looked at: Ctrl+click on a cell shows it there without playing it, and Play now plays it. That way you can prepare the next clip while the audience sees something else.
+In the row below the grid, on the left, you find two windows with a picture. The Output window shows the final picture exactly as it leaves NyrexVJ, with its size, the frame rate and the tempo. The Preview window shows a cell that you only looked at: Ctrl+click on a cell shows it there without playing it, and Play now plays it. That way you can prepare the next clip while the audience sees something else.
 
 ## Layer, Clip and Master {#layer-clip-master}
 
-Next to the pictures are three windows that belong together. The Layer window holds opacity, blend mode, the audio reactions and the four effect slots of the selected layer. The Clip window shows the clip of the selected cell and its controls. The Master window works on the final picture: level, blackout, resolution, colour grade, macros, LFOs and four master effects. They are described in [Layers and blending](#layers), [The Clip window](#clip-window) and [The Master window](#master).
+On the right of the clip grid are three windows that belong together. Clip and Master share one tab bar, the Layer window sits below them. The Layer window holds opacity, blend mode, the audio reactions and the four effect slots of the selected layer. The Clip window shows the clip of the selected cell and its controls. The Master window works on the final picture: level, blackout, resolution, colour grade, macros, LFOs and four master effects. They are described in [Layers and blending](#layers), [The Clip window](#clip-window) and [The Master window](#master).
+
+## The Trigger window {#trigger-window}
+
+The Trigger window sits next to the pictures. Clip start holds Quantize, which decides when a launch happens. Transition holds the type, Beat sync, the length and Auto cycle. Beat grid holds Beats per bar, Nudge, Snap to beat and Bar start here. When an audio source is running, it also holds Sync BPM to audio. See [Starting on the beat](#clip-grid/quantize), [Transitions](#decks/transitions) and [The beat grid](#modulation/beat-grid).
+
+## The Audio window {#audio-window}
+
+The Audio window shows the live spectrum, the meters for Bass, Mid, High and Level, the beat detection and the analysis settings. See [Audio and music](#audio).
 
 ## The Browser {#browser-window}
 
-The Browser on the right has three tabs. Presets holds the factory looks and your own looks, Library holds all clips, effects and files you can use, and Audio holds the audio source, the live spectrum and the beat detection. See [Presets and sessions](#presets), [The Library](#library) and [Audio and music](#audio).
+The Browser at the bottom right has two tabs. Presets holds the factory looks and your own looks, and Library holds all clips, effects and files you can use. See [Presets and sessions](#presets) and [The Library](#library).
+
+## The bottom strip {#bottom-strip}
+
+Five small windows along the bottom show the state at a glance. Master level has the level slider, the level in dB and Blackout. Audio input has the source, Refresh devices and a level meter. Network has the switches for NDI and Spout and the state of the network sync, with a button to its settings. MIDI shows the device, its state and the last message. OSC has the switch for receiving and shows its state and the last message. All options are still in Settings.
+
+![The bottom strip with the windows Master level, Audio input, Network, MIDI and OSC](bottom-strip.webp)
 
 ## The status bar {#status-bar}
 
@@ -108,7 +128,7 @@ The bar at the bottom shows the frame rate, the processor and graphics time, the
 
 ## Moving windows around {#layout}
 
-All windows can be dragged by their title, docked next to each other, stacked as tabs or pulled out to float. NyrexVJ remembers the layout. You can keep named layouts as workspaces and switch between them from the View menu. If you lose a window or the layout got messy, use View, Reset window layout. The size of the whole interface, its contrast and its colours are in Settings, Appearance; all of it is explained in [Interface, workspaces and accessibility](#interface).
+All windows can be dragged by their title, docked next to each other, stacked as tabs or pulled out to float. NyrexVJ remembers the layout. You can keep named layouts as workspaces and switch between them from the View menu. If you lose a window or the layout got messy, use View, Reset window layout. The timeline opens from Timeline, Show timeline window, as a window that floats above the rest. Timeline, Place the timeline docks it at the bottom or on the right of the main window, or lets it float again. You can also drag it by its title into any dock like every other window. The size of the whole interface, its contrast and its colours are in Settings, Appearance; all of it is explained in [Interface, workspaces and accessibility](#interface).
 
 # Your first show in five minutes {#first-show}
 
@@ -118,7 +138,7 @@ These nine steps take you from the first start to a picture that reacts to your 
 
 1. Start NyrexVJ. A look called Neon Club is loaded, so you see a picture right away.
 2. Click a cell in the clip grid. The clip plays on its layer. Press the keys `1` to `8` to trigger whole columns.
-3. Open the Audio tab in the Browser. Choose System audio and pick the output your music plays on. Start your DJ program or a music player and watch the Bass, Mid, High and Level meters move. No music at hand? Choose Demo signal.
+3. Open the Audio input window at the bottom. Choose System audio and pick the output your music plays on. Start your DJ program or a music player and watch the Bass, Mid, High and Level meters move. No music at hand? Choose Demo signal.
 4. Open the Library tab, switch to Effects and click an effect. It is added to the selected layer. Move its sliders and watch the picture change.
 5. Open the Layer window. In the Audio reactivity section pick Bass as a source for Scale or Brightness and raise the amount. The picture now breathes with your kick.
 6. Press `Space` a few times in the beat of your music. This is the tap tempo. The clips that follow the beat now follow yours.
@@ -164,7 +184,7 @@ At the start of each row you see the name of the layer, its opacity slider, its 
 
 ## Starting on the beat {#quantize}
 
-The Quantize menu in the transport bar above the grid decides when a launch happens. Off starts everything at once, as before. Beat, Bar, 2 bars and 4 bars hold a launch back until the next beat, bar, two bars or four bars of the beat clock, so a clip or a whole column comes in exactly on the grid, even if you press a little early or late.
+The Quantize menu in the Trigger window decides when a launch happens. Off starts everything at once, as before. Beat, Bar, 2 bars and 4 bars hold a launch back until the next beat, bar, two bars or four bars of the beat clock, so a clip or a whole column comes in exactly on the grid, even if you press a little early or late.
 
 It applies to every way of starting something: a click on a cell or a column header, the keys `1` to `8`, a deck button, MIDI, OSC, the web interface, cues and the timeline. Play now in the Preview window, putting a clip into a cell from the Library, and starting from the command line stay immediate, because there you asked for the clip right now. A small counter next to the menu shows how many launches are waiting. If you start the same layer or column twice before the beat, only the last one counts.
 
@@ -190,7 +210,7 @@ The row of 16 buttons above the clip grid switches decks. Each deck is a complet
 | Spin | Both pictures rotate into each other |
 | Slide | The new deck pushes in from the side |
 
-Choose the transition and its length next to the deck buttons. Set the length in seconds, or tick Beat sync to count in beats so the change follows the tempo. If you switch again in the middle of a transition, NyrexVJ freezes the picture you see and fades from there, so there is never a jump.
+Choose the transition and its length in the Trigger window. Set the length in seconds, or tick Beat sync to count in beats so the change follows the tempo. If you switch again in the middle of a transition, NyrexVJ freezes the picture you see and fades from there, so there is never a jump.
 
 ## Auto cycle {#auto-cycle}
 
@@ -454,7 +474,7 @@ Edit, Undo and Redo, or `Ctrl+Z` and `Ctrl+Y` (`Ctrl+Shift+Z` also redoes), step
 
 Level at the top is the brightness of the final picture from 0 to 1, a master fader. Blackout turns the whole picture black at once and back again, also with the key `B`. It is the emergency stop of your show and it is available by MIDI and OSC as well.
 
-![The Master window with level, blackout, resolution and the effect slots](master-window.webp)
+![The Master window with level, blackout, resolution and the colour grade](master-window.webp)
 
 ## Resolution {#resolution}
 
@@ -470,7 +490,7 @@ The Grade section has Hue, Saturation, Brightness and Contrast for the whole pic
 
 ## Choosing a source {#sources}
 
-Open the Audio tab in the Browser, or Settings, Audio, or the Audio menu.
+Choose the source in the Audio input window at the bottom, or in Settings, Audio, or the Audio menu.
 
 | Source | What it listens to |
 | --- | --- |
@@ -479,13 +499,13 @@ Open the Audio tab in the Browser, or Settings, Audio, or the Audio menu.
 | Demo signal | A built-in beat, so you can build looks without music |
 | Off | Nothing. Clips and effects follow the BPM clock instead |
 
-The tab shows the live spectrum, the meters for Bass, Mid, High and Level, the beat detection and a detected tempo. If the chosen device delivers no sound for a few seconds, the tab and the status bar say so and suggest to play something or to pick another source.
+The Audio window shows the live spectrum, the meters for Bass, Mid, High and Level, the beat detection and a detected tempo. If the chosen device delivers no sound for a few seconds, the Audio input window and the status bar say so and suggest to play something or to pick another source.
 
-![The Audio tab with the audio source, the spectrum and the Bass, Mid, High and Level meters](audio-tab.webp)
+![The Audio window with the spectrum and the Bass, Mid, High and Level meters](audio-tab.webp)
 
 ## Analysis settings {#analysis}
 
-Gain raises or lowers the level that the analysis sees, Smoothing makes the bands calmer, and Beat sensitivity decides how easily a beat is found. They are in the Audio tab and in Settings, Audio. If the meters hit the top all the time, lower the gain; if the beat is found in every sound, lower the sensitivity.
+Gain raises or lowers the level that the analysis sees, Smoothing makes the bands calmer, and Beat sensitivity decides how easily a beat is found. They are in the Audio window and in Settings, Audio. If the meters hit the top all the time, lower the gain; if the beat is found in every sound, lower the sensitivity.
 
 Detected tempo shows the estimate, and Use takes it over as the tempo. Sync BPM to audio keeps the tempo locked to the detected beat all the time. It works best with music that has a clear kick. For a steady show with a DJ it is often better to tap the tempo yourself or to follow a clock, see [Show sync and timecode](#sync).
 
@@ -528,14 +548,14 @@ An LFO is a repeating movement. NyrexVJ has four, with the shapes Sine, Triangle
 
 ## Tempo and the beat clock {#tempo}
 
-Below the clip grid is the tempo row: the BPM field with the buttons minus, plus, /2 and x2, then Tap and Resync, then Pause. Tap sets the tempo from your taps, also with the `Space` key. Resync restarts the beat count at 1, which is useful when the picture is off by a beat. Pause freezes the tempo clock and all clip motion. The tempo can also come from the audio, from MIDI clock, from timecode or from Pro DJ Link, see [Show sync and timecode](#sync).
+In the transport bar you find the BPM field with the buttons minus, plus, /2 and x2, then Tap and Resync, then Play, Pause and Stop. Tap sets the tempo from your taps, also with the `Space` key. Resync restarts the beat count at 1, which is useful when the picture is off by a beat. Play lets the clock run again, Pause freezes the tempo clock and all clip motion, and Stop pauses and restarts the beat count at 1. The tempo can also come from the audio, from MIDI clock, from timecode or from Pro DJ Link, see [Show sync and timecode](#sync).
 
 ## The beat grid {#beat-grid}
 
-Click the beat display next to the tempo controls to open the beat grid.
+The beat grid is in the Trigger window, under Beat grid.
 
 - Beats per bar, from 2 to 8, sets how long a bar is.
-- The buttons for earlier and later move the grid by a sixteenth of a beat. Use them when your beat is slightly off the music.
+- Nudge with the buttons for earlier and later moves the grid by a sixteenth of a beat. Use them when your beat is slightly off the music.
 - Snap to beat aligns the grid to the nearest beat without changing the count.
 - Bar start here makes the nearest beat the first beat of a bar.
 
@@ -1448,7 +1468,7 @@ A power cut or a hand edit can leave a file unreadable. At the start NyrexVJ che
 
 | File | What happens when it is damaged |
 | --- | --- |
-| `layout_v6.ini` (the window layout) | It is renamed to `layout_v6.ini.bad` and the default layout is built. A layout whose window positions are far outside any screen counts as damaged. |
+| `layout_v7.ini` (the window layout) | It is renamed to `layout_v7.ini.bad` and the default layout is built. A layout whose window positions are far outside any screen counts as damaged. |
 | `settings.json` | It is renamed to `settings.json.bad` and the defaults are used. A single wrong value, such as an interface size of 99, does not make the file damaged; that value is brought into its range. |
 | `shortcuts.json` | It is renamed to `shortcuts.json.bad` and the default shortcuts are used. A file that was written by a newer version of NyrexVJ is left alone and the default shortcuts are used. If you then change a shortcut, a copy of the newer file is kept as `shortcuts.json.bad` first. |
 
@@ -1604,7 +1624,7 @@ Check the simple things first. Is Blackout on, the key `B` toggles it? Is the Ma
 
 ## The visuals do not react to the music {#no-reaction}
 
-Choose an audio source in the Audio tab. The meters must move. If they do not, the tab says that no sound arrives on this device. Play something on the chosen output, or pick another source. Then check that a layer, the master or an effect has a band set with an amount above zero. Without a source the clips follow the BPM clock.
+Choose an audio source in the Audio input window. The meters must move. If they do not, the window says that no sound arrives on this device. Play something on the chosen output, or pick another source. Then check that a layer, the master or an effect has a band set with an amount above zero. Without a source the clips follow the BPM clock.
 
 ## OBS shows nothing {#obs-nothing}
 
@@ -1677,7 +1697,7 @@ NyrexVJ can be started with options. Most are for tests and screenshots, a few a
 | `--shader-editor [FILE]` | Open the shader editor on start, with a file of the shaders folder if you give one, otherwise with a template |
 | `--shader-editor-selftest [FRAMES]` | Check the shader editor in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |
 | `--shader-editor-uitest` | Drive the shader editor with real key and mouse events, check what it holds and exit with code 0 or 1, with `--bench-out FILE.json` for the result |
-| `--reset-layout` | Set the saved window layout aside as `layout_v6.ini.bad` and build the default layout, for a window that can no longer be used |
+| `--reset-layout` | Set the saved window layout aside as `layout_v7.ini.bad` and build the default layout, for a window that can no longer be used |
 | `--reset-interface` | Like `--reset-layout`, and also set the shortcuts file aside and reset interface size, display scale, contrast and keyboard navigation |
 | `--interface-uitest` | Drive the interface with real key and mouse events (workspaces, shortcuts, sizes, high contrast, keyboard navigation, node canvas zoom), check the result and exit with code 0 or 1, with `--bench-out FILE.json` for the result; use `NYREXVJ_DATA_DIR` |
 | `--routing-selftest [FRAMES]` | Check video routing in the real engine and exit, with a number of frames after it for a benchmark and `--bench-out FILE.json` for the result |

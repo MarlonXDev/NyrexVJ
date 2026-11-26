@@ -3,10 +3,12 @@
 #include "core/color_model.hpp"
 #include "core/dynlib.hpp"
 #include "core/frame_lock.hpp"
+#include "core/hardware_sync.hpp"
 #include "core/log.hpp"
 #include "core/mask_images.hpp"
 #include "core/output_map.hpp"
 #include "core/spatial_mesh.hpp"
+#include "render/hardware_sync_probe.hpp"
 #include "render/output_manager.hpp"
 #include "render/texture_history.hpp"
 
@@ -513,6 +515,11 @@ void caseFrameLock(Runner& run) {
     run.manager().resetSkew();
     run.render();
     run.condition("no skew with one output", run.manager().skew().count() == 0);
+
+    const HardwareSyncStatus hardware = assessHardwareSync(readHardwareSyncProbe());
+    logLine(std::string("Output self test hardware frame lock: ") + hardwareSyncStateName(hardware.state) + ", graphics " + graphicsVendorName(hardware.vendor) + ", driver lists " + (hardware.names.empty() ? std::string("nothing") : joinExtensionNames(hardware.names)));
+    run.condition("hardware frame lock status is read from the driver", hardware.state != HardwareSyncState::Unknown);
+    run.condition("the software frame lock stays on whatever the driver offers", run.manager().frameLock());
 }
 
 Rgb sourceAt(float fx, float fy) {

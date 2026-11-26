@@ -1,6 +1,7 @@
 #include "app/gpu_diag_selftest.hpp"
 
 #include "core/gpu_diag.hpp"
+#include "core/hardware_sync.hpp"
 #include "core/log.hpp"
 #include "media/video_types.hpp"
 #include "render/asset_import.hpp"
@@ -238,6 +239,21 @@ bool stateIsClean() {
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
     glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &buffer);
     return program == 0 && vao == 0 && buffer == 0;
+}
+
+void testHardwareSync(Report& report, Engine& engine, json& summary) {
+    const HardwareSyncStatus& status = engine.hardwareSync();
+    const std::string renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    const bool softwareByName = renderer.find("llvmpipe") != std::string::npos || renderer.find("softpipe") != std::string::npos || renderer.find("swrast") != std::string::npos;
+    json entry = json::object();
+    entry["state"] = hardwareSyncStateName(status.state);
+    entry["graphics"] = graphicsVendorName(status.vendor);
+    entry["driverLists"] = joinExtensionNames(status.names);
+    summary["hardwareFrameLock"] = entry;
+    report.record("the hardware frame lock status was read from the driver", status.state != HardwareSyncState::Unknown, std::string("state: ") + hardwareSyncStateName(status.state) + ", graphics: " + graphicsVendorName(status.vendor) + ", driver lists: " + (status.names.empty() ? std::string("nothing") : joinExtensionNames(status.names)));
+    report.record("a software renderer is never reported as offering hardware frame lock", !status.softwareRenderer || status.state == HardwareSyncState::NotOffered, renderer);
+    report.record("the software renderer is recognised by the status", !softwareByName || status.softwareRenderer, renderer);
+    report.record("the state agrees with the names the driver lists", (status.state == HardwareSyncState::OfferedByDriver) == (!status.names.empty() && !status.softwareRenderer), "names: " + std::to_string(status.names.size()));
 }
 
 void testDriver(Report& report, Engine& engine, json& summary) {
@@ -497,6 +513,7 @@ int runGpuDiagSelfTest(Engine& engine, int benchFrames, const std::string& outpu
     setPolicy(engine, 0, true, false);
     Probe probe;
     if (prepareProbe(engine, checks, probe)) {
+        testHardwareSync(checks, engine, summary);
         testDriver(checks, engine, summary);
         testUpload(checks, engine);
         testOff(checks, engine, probe, summary);

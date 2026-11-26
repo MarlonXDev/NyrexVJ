@@ -1035,7 +1035,7 @@ Each output can send its own NDI source that carries the output exactly as the w
 
 ## Frame lock and delay {#frame-lock}
 
-Frame lock draws all output windows first and swaps them right after each other, so several screens show the same frame. Each output can be delayed by 0 to 8 frames to line up screens with different processing time. The settings show the measured swap skew, and the Sync bars test pattern helps you film several screens to compare them. It is not a hardware genlock.
+Frame lock draws all output windows first and swaps them right after each other, so several screens show the same frame. Each output can be delayed by 0 to 8 frames to line up screens with different processing time. The settings show the measured swap skew, and the Sync bars test pattern helps you film several screens to compare them. It is not a hardware genlock. Below the swap skew, the line **Hardware frame lock** says whether your graphics driver lists the extensions that professional cards with a sync board offer: "Not offered by this graphics driver" is normal for most graphics cards. "Offered by the driver, not used by NyrexVJ" only means that the driver lists them. NyrexVJ cannot see a sync board or a lock and does not switch any of it on; set up a sync board in the driver's own control panel and film the Sync bars to see what you get.
 
 > Warning: The mapping features were built and tested with test pictures and a software renderer. There was no real projector or multi-monitor test yet. Try your setup in the venue before the show.
 

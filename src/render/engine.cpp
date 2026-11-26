@@ -2,6 +2,7 @@
 
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
+#include "render/hardware_sync_probe.hpp"
 #include "core/log.hpp"
 #include "core/modulation.hpp"
 #include "core/node_compile.hpp"
@@ -1236,6 +1237,8 @@ int Engine::loadedSceneCount() const {
 }
 
 bool Engine::init() {
+    hardwareSync_ = assessHardwareSync(readHardwareSyncProbe());
+    logLine(std::string("Hardware frame lock: ") + hardwareSyncStateName(hardwareSync_.state) + " (graphics: " + graphicsVendorName(hardwareSync_.vendor) + (hardwareSync_.names.empty() ? "" : ", driver lists " + joinExtensionNames(hardwareSync_.names)) + "); the software frame lock is the one in use");
     triangle_.create();
     videoGpu_.create();
     strip_.init();

@@ -2912,6 +2912,12 @@ const Translation kFrench[] = {
     {"the picture changed completely, learning the background again", "l'image a complètement changé, le fond est appris à nouveau"},
     {"the analysis is too slow for this computer and was switched off", "l'analyse est trop lente pour cet ordinateur et a été désactivée"},
     {"no source is set for this input", "aucune source n'est réglée pour cette entrée"},
+    {"Driver extensions", "Extensions du pilote"},
+    {"Hardware frame lock", "Verrouillage d'images matériel"},
+    {"Not checked", "Non vérifié"},
+    {"Not offered by this graphics driver", "Non proposé par ce pilote graphique"},
+    {"Offered by the driver, not used by NyrexVJ", "Proposé par le pilote, non utilisé par NyrexVJ"},
+    {"Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way.", "Le verrouillage d'images matériel et le genlock demandent une carte graphique professionnelle avec une carte de synchronisation (par exemple NVIDIA Quadro Sync ou AMD FirePro S400), des câbles et une configuration dans le panneau de contrôle du pilote. Cette ligne indique seulement si le pilote liste les extensions de swap group. Elle ne peut pas dire si une carte est branchée ou verrouillée. NyrexVJ ne rejoint aucun swap group et ne modifie aucun réglage du pilote ; le verrouillage d'images logiciel ci-dessus fonctionne dans tous les cas."},
 };
 
 }

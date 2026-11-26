@@ -1612,6 +1612,58 @@
       "test": "A-PERSON-2",
       "command": "NyrexVJ --fresh --no-update-check --no-welcome --person-selftest --bench-out person.json",
       "notes": "25 checks passed, 0 failed: detection off creates nothing and Person Key is a pass-through (largest channel difference 0 of 255); the empty scene is learned and reports nobody; a person at the top left of a 16:9 camera picture is found at x 0.25 and y 0.82; the mask lies upright and not mirrored in both modes and for a 4:3 camera on a 16:9 output (a deliberate vertical flip of the shader made 4 checks fail); the signals fall to 0 after 3.4 s without camera pictures and the person is found again; learning again clears the person; the mask is counted in the graphics memory report (14400 bytes); analysis 0.92 ms on average and 3.67 ms p95 against a budget of 8.33 ms; 14.2 ms per step with the module off and 22.7 ms with it on at 960x540 and a 1280x720 camera picture; software OpenGL and computer-made camera pictures, so no graphics card number, no real camera, no Windows, no VRChat"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.57.0 (branch feature/hardware-sync-status, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hardware-sync",
+      "test": "A-GENLOCK-1",
+      "command": "ctest -R nvj_hardware_sync_tests",
+      "notes": "60 checks passed, 0 failed (no OpenGL): software renderer names, vendor classes, no context gives not checked, consumer card gives not offered, cards that list names give offered by the driver, a software renderer is never offered, bounded text; ctest, whole suite 60 of 60 passed"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.57.0 (branch feature/hardware-sync-status, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hardware-sync",
+      "test": "A-GENLOCK-2",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --gpu-diag-selftest (clean NYREXVJ_DATA_DIR)",
+      "notes": "21 checks passed, 0 failed; the status read at start-up was: not offered, graphics software renderer, driver lists nothing (llvmpipe, LLVM 20.1.2); the report carries summary.hardwareFrameLock; software OpenGL only, so nothing about a real driver"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.57.0 (branch feature/hardware-sync-status, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hardware-sync",
+      "test": "A-GENLOCK-3",
+      "command": "NyrexVJ --fresh --no-update-check --no-welcome --output-selftest (clean NYREXVJ_DATA_DIR)",
+      "notes": "604 checks, 0 failed, including the two new ones (status read from the driver, software frame lock still on afterwards); NDI cases were skipped because no fake NDI library was set; software OpenGL only"
+    },
+    {
+      "platform": "linux",
+      "gpu": "software",
+      "state": "automated",
+      "outcome": "passed",
+      "date": "2026-11-26",
+      "build": "0.57.0 (branch feature/hardware-sync-status, release build)",
+      "environment": "Linux x86-64 cloud container, 2 cores, 8 GB, Xvfb, Mesa llvmpipe (software OpenGL 4.5), no graphics card",
+      "area": "hardware-sync",
+      "test": "A-GENLOCK-4",
+      "command": "python3 -B scripts/check_i18n.py",
+      "notes": "all 2913 translation keys are covered in the seven tables, with the same printf specifiers"
     }
   ]
 }

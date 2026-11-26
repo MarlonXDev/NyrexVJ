@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.56.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.57.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -235,6 +235,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/edit_history.cpp
     src/core/frame_pacer.cpp
     src/core/frame_lock.cpp
+    src/core/hardware_sync.cpp
     src/core/render_policy.cpp
     src/core/frame_stats.cpp
     src/core/growth_check.cpp
@@ -427,6 +428,7 @@ set(NYREXVJ_APP_SOURCES
     src/render/flow_session.cpp
     src/render/person_session.cpp
     src/render/texture_history.cpp
+    src/render/hardware_sync_probe.cpp
     src/render/output_manager.cpp
     src/render/ndi_output.cpp
     src/render/recorder.cpp
@@ -576,6 +578,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_frame_lock_tests PRIVATE nvj_core)
     target_include_directories(nvj_frame_lock_tests PRIVATE tests)
     add_test(NAME nvj_frame_lock_tests COMMAND nvj_frame_lock_tests)
+    add_executable(nvj_hardware_sync_tests tests/test_hardware_sync.cpp)
+    target_link_libraries(nvj_hardware_sync_tests PRIVATE nvj_core)
+    target_include_directories(nvj_hardware_sync_tests PRIVATE tests)
+    add_test(NAME nvj_hardware_sync_tests COMMAND nvj_hardware_sync_tests)
     add_executable(nvj_soak_tests tests/test_soak.cpp)
     target_link_libraries(nvj_soak_tests PRIVATE nvj_core)
     target_include_directories(nvj_soak_tests PRIVATE tests)

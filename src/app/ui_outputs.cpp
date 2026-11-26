@@ -1157,6 +1157,26 @@ void App::drawOutputControls() {
     ImGui::TextDisabled("%s", tr("Measured when the swap is handed to the graphics driver. Delay inside projectors and screens is not included."));
     ImGui::PopTextWrapPos();
 
+    const HardwareSyncStatus& hardwareSync = engine_.hardwareSync();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Hardware frame lock"));
+    ImGui::SameLine();
+    switch (hardwareSync.state) {
+    case HardwareSyncState::NotOffered:
+        ImGui::TextUnformatted(tr("Not offered by this graphics driver"));
+        break;
+    case HardwareSyncState::OfferedByDriver:
+        ImGui::TextUnformatted(tr("Offered by the driver, not used by NyrexVJ"));
+        break;
+    case HardwareSyncState::Unknown:
+        ImGui::TextUnformatted(tr("Not checked"));
+        break;
+    }
+    ImGui::SetItemTooltip("%s", tr("Hardware frame lock and genlock need a professional graphics card with a sync board (for example NVIDIA Quadro Sync or AMD FirePro S400), cables and a setup in the driver's control panel. This line only shows whether the driver lists the swap group extensions. It cannot tell whether a board is connected or locked. NyrexVJ does not join swap groups and changes no driver setting; the software frame lock above runs either way."));
+    if (!hardwareSync.names.empty()) {
+        ImGui::TextDisabled("%s: %s", tr("Driver extensions"), joinExtensionNames(hardwareSync.names).c_str());
+    }
+
     ImGui::SeparatorText(tr("Several projectors"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Splits the picture over a grid of outputs with the right overlap and edge blending. It turns the outputs on and replaces their picture area and blending."));

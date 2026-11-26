@@ -51,7 +51,7 @@ void App::drawWelcome() {
     if (welcomeFirstRun_) {
         ImGui::TextWrapped("%s", tr("NyrexVJ is a live visuals program for VRChat events and parties. Trigger clips, stack effects, let everything follow your music and send the picture to OBS."));
         ImGui::Spacing();
-        ImGui::SeparatorText(tr("Quick start"));
+        ui::sectionHeader(tr("Quick start"));
         ImGui::BulletText("%s", tr("Pick a preset in the Browser or press 1 - 8 to trigger a column."));
         ImGui::BulletText("%s", tr("Choose an audio source in the Audio tab so the visuals follow your music."));
         ImGui::BulletText("%s", tr("Send the picture to OBS with Spout in Settings, Output, or use the output window (F11)."));
@@ -61,7 +61,7 @@ void App::drawWelcome() {
     }
 
     ImGui::Spacing();
-    ImGui::SeparatorText(tr("What's new"));
+    ui::sectionHeader(tr("What's new"));
     const float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y * 2.0f;
     ImGui::BeginChild("##welcomeNotes", ImVec2(0.0f, -footer), ImGuiChildFlags_Borders);
     const std::vector<ChangelogEntry>& entries = changelog(currentLanguage() == Language::German);

@@ -129,17 +129,17 @@ void App::drawControlPage() {
         ImGui::EndChild();
         ImGui::Spacing();
     }
-    ImGui::SeparatorText("OSC");
+    ui::sectionHeader("OSC");
     drawOscSection();
-    ImGui::SeparatorText(tr("Web interface"));
+    ui::sectionHeader(tr("Web interface"));
     drawApiSection();
-    ImGui::SeparatorText(tr("OSC output"));
+    ui::sectionHeader(tr("OSC output"));
     drawOscOutSection();
-    ImGui::SeparatorText("MIDI");
+    ui::sectionHeader("MIDI");
     drawMidiSection();
-    ImGui::SeparatorText(tr("Controller profiles"));
+    ui::sectionHeader(tr("Controller profiles"));
     drawProfilesSection();
-    ImGui::SeparatorText(tr("Mappings"));
+    ui::sectionHeader(tr("Mappings"));
     drawBindingsSection();
 }
 

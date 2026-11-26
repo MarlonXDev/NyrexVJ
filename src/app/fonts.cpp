@@ -36,6 +36,77 @@ std::vector<std::string> candidatePaths() {
     return paths;
 }
 
+
+std::vector<std::string> sansCandidates() {
+    std::vector<std::string> paths;
+#if defined(_WIN32)
+    const char* windir = std::getenv("WINDIR");
+    const std::string root = std::string(windir && *windir ? windir : "C:\\Windows") + "\\Fonts\\";
+    for (const char* name : {"segoeui.ttf", "tahoma.ttf", "arial.ttf"}) {
+        paths.push_back(root + name);
+    }
+#elif defined(__APPLE__)
+    paths.push_back("/System/Library/Fonts/Supplemental/Arial.ttf");
+    paths.push_back("/Library/Fonts/Arial.ttf");
+    paths.push_back("/System/Library/Fonts/Helvetica.ttc");
+#else
+    paths.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    paths.push_back("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf");
+    paths.push_back("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf");
+    paths.push_back("/usr/share/fonts/noto/NotoSans-Regular.ttf");
+    paths.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf");
+    paths.push_back("/usr/share/fonts/dejavu/DejaVuSans.ttf");
+#endif
+    return paths;
+}
+
+ImFont* sansFont = nullptr;
+std::string cjkMergedPath;
+
+bool mergeInto(ImFont* font, const std::string& path) {
+    ImFontConfig config;
+    config.MergeMode = true;
+    config.DstFont = font;
+    return ImGui::GetIO().Fonts->AddFontFromFileTTF(path.c_str(), 0.0f, &config) != nullptr;
+}
+
+}
+
+std::string findSansFontPath() {
+    for (const std::string& path : sansCandidates()) {
+        std::error_code error;
+        if (std::filesystem::is_regular_file(std::filesystem::path(path), error)) {
+            return path;
+        }
+    }
+    return std::string();
+}
+
+bool useSansFont(bool enable) {
+    ImGuiIO& io = ImGui::GetIO();
+    if (!enable) {
+        io.FontDefault = nullptr;
+        return true;
+    }
+    if (!sansFont) {
+        const std::string path = findSansFontPath();
+        if (path.empty()) {
+            return false;
+        }
+        if (io.Fonts->Fonts.Size == 0) {
+            io.Fonts->AddFontDefault();
+        }
+        ImFontConfig config;
+        sansFont = io.Fonts->AddFontFromFileTTF(path.c_str(), 0.0f, &config);
+        if (!sansFont) {
+            return false;
+        }
+        if (!cjkMergedPath.empty()) {
+            mergeInto(sansFont, cjkMergedPath);
+        }
+    }
+    io.FontDefault = sansFont;
+    return true;
 }
 
 std::string findCjkFontPath() {
@@ -53,9 +124,12 @@ bool mergeCjkFont(const std::string& path) {
     if (io.Fonts->Fonts.Size == 0) {
         io.Fonts->AddFontDefault();
     }
-    ImFontConfig config;
-    config.MergeMode = true;
-    return io.Fonts->AddFontFromFileTTF(path.c_str(), 0.0f, &config) != nullptr;
+    cjkMergedPath = path;
+    const bool base = mergeInto(io.Fonts->Fonts[0], path);
+    if (sansFont) {
+        mergeInto(sansFont, path);
+    }
+    return base;
 }
 
 }

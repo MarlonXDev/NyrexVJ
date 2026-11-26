@@ -272,6 +272,7 @@ const Translation kFrench[] = {
     {"Mix", "Mélange"},
     {"Mode", "Mode"},
     {"Mono", "Mono"},
+    {"Arena", "Arena"},
     {"Move a knob or press a key for", "Tournez un potard ou appuyez sur une touche pour"},
     {"Multiply", "Multiplier"},
     {"My presets", "Mes presets"},

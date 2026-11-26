@@ -224,7 +224,7 @@ void App::drawPluginsPage() {
     }
     ImGui::PopTextWrapPos();
 
-    ImGui::SeparatorText(tr("Installed plugins"));
+    ui::sectionHeader(tr("Installed plugins"));
     if (ImGui::Button(tr("Open plugins folder"))) {
         const std::filesystem::path folder = pluginsFolder(userDataDir());
         std::error_code ec;
@@ -244,7 +244,7 @@ void App::drawPluginsPage() {
         drawPluginEntry(host, info);
     }
 
-    ImGui::SeparatorText(tr("Modulation sources"));
+    ui::sectionHeader(tr("Modulation sources"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Pick a plugin source for Plugin 1 to Plugin 8. Then choose it as the source of a modulation or an effect reaction."));
     ImGui::PopTextWrapPos();
@@ -284,7 +284,7 @@ void App::drawPluginsPage() {
         ImGui::PopID();
     }
 
-    ImGui::SeparatorText(tr("Image sources"));
+    ui::sectionHeader(tr("Image sources"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("These feed the clips Plugin Source 1 to Plugin Source 4."));
     ImGui::PopTextWrapPos();

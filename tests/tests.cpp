@@ -505,7 +505,7 @@ void testPresetFiles() {
     CHECK(repaired.videoDecoder == "auto" && repaired.fpsLimit == 90);
     CHECK(repaired.convertMode == "ask" && repaired.convertFormat == "auto" && repaired.convertCacheMb == 256);
 
-    CHECK(defaults.design == 1 && defaults.theme == "studio");
+    CHECK(defaults.design == 2 && defaults.theme == "arena");
     {
         std::ofstream legacy(dir / "settings.json", std::ios::binary | std::ios::trunc);
         legacy << R"({"theme":"orange","language":"de"})";

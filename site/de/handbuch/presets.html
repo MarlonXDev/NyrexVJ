@@ -54,7 +54,7 @@
 <li><a href="library.html">Die Bibliothek</a>
 </li>
 <li><a href="presets.html" aria-current="page">Presets und Sitzungen</a>
-<ul><li><a href="#factory-looks">Werks-Looks</a></li><li><a href="#own-presets">Eigene Presets</a></li><li><a href="#session">Die Sitzung</a></li><li><a href="#show-packages">Show-Pakete</a></li><li><a href="#community-packages">Community-Pakete</a></li><li><a href="#undo">Rückgängig und Wiederherstellen</a></li></ul>
+<ul><li><a href="#factory-looks">Werks-Looks</a></li><li><a href="#own-presets">Eigene Presets</a></li><li><a href="#session">Die Sitzung</a></li><li><a href="#show-packages">Show-Pakete</a></li><li><a href="#community-packages">Community-Pakete</a></li><li><a href="#resoport">Import aus Resolume (ResoPort)</a></li><li><a href="#undo">Rückgängig und Wiederherstellen</a></li></ul>
 </li>
 <li><a href="master.html">Das Master-Fenster</a>
 </li>
@@ -148,7 +148,7 @@
 <li><a href="library.html">Die Bibliothek</a>
 </li>
 <li><a href="presets.html" aria-current="page">Presets und Sitzungen</a>
-<ul><li><a href="#factory-looks">Werks-Looks</a></li><li><a href="#own-presets">Eigene Presets</a></li><li><a href="#session">Die Sitzung</a></li><li><a href="#show-packages">Show-Pakete</a></li><li><a href="#community-packages">Community-Pakete</a></li><li><a href="#undo">Rückgängig und Wiederherstellen</a></li></ul>
+<ul><li><a href="#factory-looks">Werks-Looks</a></li><li><a href="#own-presets">Eigene Presets</a></li><li><a href="#session">Die Sitzung</a></li><li><a href="#show-packages">Show-Pakete</a></li><li><a href="#community-packages">Community-Pakete</a></li><li><a href="#resoport">Import aus Resolume (ResoPort)</a></li><li><a href="#undo">Rückgängig und Wiederherstellen</a></li></ul>
 </li>
 <li><a href="master.html">Das Master-Fenster</a>
 </li>
@@ -217,12 +217,12 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Visuals spielen</p>
 <h1>Presets und Sitzungen</h1>
-<p class="meta">Kapitel 11 von 38 &middot; 10 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#factory-looks">Werks-Looks</a><a href="#own-presets">Eigene Presets</a><a href="#session">Die Sitzung</a><a href="#show-packages">Show-Pakete</a><a href="#community-packages">Community-Pakete</a><a href="#undo">Rückgängig und Wiederherstellen</a></nav>
+<p class="meta">Kapitel 11 von 38 &middot; 12 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#factory-looks">Werks-Looks</a><a href="#own-presets">Eigene Presets</a><a href="#session">Die Sitzung</a><a href="#show-packages">Show-Pakete</a><a href="#community-packages">Community-Pakete</a><a href="#resoport">Import aus Resolume (ResoPort)</a><a href="#undo">Rückgängig und Wiederherstellen</a></nav>
 <h2 id="factory-looks"><a class="anchor" href="#factory-looks" aria-label="Link">#</a>Werks-Looks</h2>
 <p>Der Tab Presets beginnt mit den Werks-Looks. Ein Klick lädt den Look ins aktuelle Deck, mit Rechtsklick lädst du ihn in ein anderes Deck. Es gibt 18: Neon Club, Milky Red, Crystal Cavern, Crystal Lines, Acid Rainbow, Deep Space, Synthwave Night, Laser Show, Minimal Mono, 3D Showcase, Warp Tunnel, Audio Reactor, Fractal Dream, Cyber Rain, Inferno, 3D Worlds, Crystal Cube und Pop Art.</p>
 <p>Die Schaltfläche Decks mit Werks-Looks füllen legt 16 Looks in die 16 Decks, ein schneller Weg, für jede Stimmung etwas bereit zu haben.</p>
-<figure class="shot"><a href="../../assets/manual/de/presets.webp"><img src="../../assets/manual/de/presets.webp" width="410" height="262" loading="lazy" alt="Der Tab Presets mit den Werks-Looks"></a><figcaption>Der Tab Presets mit den Werks-Looks</figcaption></figure>
+<figure class="shot"><a href="../../assets/manual/de/presets.webp"><img src="../../assets/manual/de/presets.webp" width="350" height="417" loading="lazy" alt="Der Tab Presets mit den Werks-Looks"></a><figcaption>Der Tab Presets mit den Werks-Looks</figcaption></figure>
 <h2 id="own-presets"><a class="anchor" href="#own-presets" aria-label="Link">#</a>Eigene Presets</h2>
 <p>Gib unter Aktuellen Look speichern einen Namen ein und drück Speichern. Ein gespeichertes Preset enthält alle 16 Decks mit ihren Layern, Clips, Effekten, Farben, den Master, Makros und LFOs und die Tempo-Einstellungen. Die Liste Meine Presets zeigt, was du gespeichert hast. Ein Klick lädt ein Preset, und ein Rechtsklick bietet Mit aktuellem Look überschreiben und Löschen.</p>
 <p>Datei, Als Preset speichern macht dasselbe aus dem Menü. Presets sind kleine Dateien im Ordner presets, du kannst sie also auf einen anderen Computer kopieren.</p>
@@ -266,6 +266,13 @@
 }</code></pre>
 <p><strong>Sicherheit.</strong> Ein Paket sind nur Daten. Jede Datei hat eine Prüfsumme, die geprüft wird, bevor etwas an seinen Platz kommt. Dateinamen müssen einfache Namen ohne Ordner sein und der Ordner richtet sich nach der Art der Datei, ein Paket kann also nicht außerhalb des Datenordners schreiben. Dateien werden ohne Kompression gespeichert und jede Art hat eine Größengrenze, ein kleines Paket kann sich also nicht zu etwas Riesigem entpacken. Ein Paket, das abgeschnitten, verändert, zu groß, in einem neueren Format oder im falschen Format ist, wird abgelehnt und auf deinem Computer ändert sich nichts. Pakete sind nicht signiert: Der Fingerabdruck zeigt, dass eine Datei die ist, die jemand veröffentlicht hat, nicht, dass ihr Inhalt sicher ist. Einen Online-Katalog gibt es nicht, du bekommst ein Paket von jemandem und installierst es selbst.</p>
 <figure class="shot"><a href="../../assets/manual/de/community-packages.webp"><img src="../../assets/manual/de/community-packages.webp" width="788" height="672" loading="lazy" alt="Das Fenster Community-Pakete"></a><figcaption>Das Fenster Community-Pakete</figcaption></figure>
+<h2 id="resoport"><a class="anchor" href="#resoport" aria-label="Link">#</a>Import aus Resolume (ResoPort)</h2>
+<p>ResoPort liest eine Komposition, die Resolume gespeichert hat (eine Datei mit der Endung <code>.avc</code>), und baut daraus eine NyrexVJ-Komposition. Öffne es mit Datei, Resolume-Komposition importieren (ResoPort)... oder zieh eine <code>.avc</code>-Datei auf das NyrexVJ-Fenster.</p>
+<ol><li>Tippe oder füge den Pfad der <code>.avc</code>-Datei ein. Liegen die Medien der Komposition woanders, gib diesen Ordner im zweiten Feld an. Drücke <strong>Datei prüfen</strong>.</li><li>Lies den Bericht. Er sagt, mit welcher Resolume-Version die Datei gemacht wurde, wie viele Clips importiert werden und was nicht: Medien, die nicht gefunden wurden (die ersten Namen stehen dabei), Dateien, die NyrexVJ nicht abspielen kann, Generator-Clips und Clips aus anderen Quellen, Effekte, Ebenen nach der vierten, Decks nach dem sechzehnten, Clips außerhalb der vier Ebenen und acht Spalten, Blendmodi, die NyrexVJ nicht kennt, und eine Bildgröße, die NyrexVJ nicht hat. Es hat sich noch nichts geändert.</li><li>Drücke <strong>Importieren</strong>. Die gefundenen Medien werden in die Bibliothek kopiert und die Komposition wird gebaut.</li></ol>
+<p><strong>Übernommen wird:</strong> Medien-Clips (Videos und Bilder) an derselben Ebene und Spalte, Deckkraft und Blendmodus jeder Ebene, die Namen der Decks, der Name der Komposition, das Tempo (wenn es zwischen 40 und 240 BPM liegt) und die Bildgröße (wenn NyrexVJ dieselbe Größe hat). <strong>Nicht übernommen wird:</strong> Effekte, Generatoren, Clips aus anderen Quellen und jede andere Resolume-Einstellung; sie werden im Bericht gezählt, damit du weißt, was fehlt. Ein Blendmodus, dessen Namen NyrexVJ nicht kennt, wird zu Normal und im Bericht genannt.</p>
+<p>ResoPort sucht jedes Medium neben der <code>.avc</code>-Datei, am Pfad, den Resolume aufgezeichnet hat, und im zusätzlichen Ordner. Ein Medium, das nicht gefunden wird, lässt seine Zelle leer; leg die Medien neben die Datei und prüfe noch einmal. DXV-Filme werden wie jede andere Datei kopiert und dann von der Einstellung DXV-Videos in HAP umwandeln behandelt, die im Kapitel über Video-Clips steht.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p><strong>Der Import ersetzt die offene Komposition</strong>, wie das Laden eines Presets, und lässt sich nicht rückgängig machen. Speichere vorher als Preset, was du behalten willst.</p></aside>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>ResoPort wurde nach einigen Beispieldateien von Resolume Arena 7.22 und nach Testdateien geschrieben. Es wurde an keiner großen Show-Komposition ausprobiert. Prüfe das Ergebnis, bevor du dich darauf verlässt, und sag den Maintainern, was es falsch gemacht hat.</p></aside>
 <h2 id="undo"><a class="anchor" href="#undo" aria-label="Link">#</a>Rückgängig und Wiederherstellen</h2>
 <p>Bearbeiten, Rückgängig und Wiederherstellen, oder <code>Strg+Z</code> und <code>Strg+Y</code> (auch <code>Strg+Umschalt+Z</code> stellt wieder her), gehen durch deine Änderungen an Reglern, Clips, Effekten und Decks. Einen Clip abspielen, eine Spalte starten und die Makro-Regler bewegen sind Performance-Aktionen und gehören nicht zu Rückgängig. In der Zeitleiste und im Node-Editor wirken dieselben Tasten auf ihren eigenen Verlauf, solange diese Fenster den Fokus haben.</p>
 <nav class="pager" aria-label="Pager"><a class="prev" href="library.html"><small>Zurück</small><span>Die Bibliothek</span></a><a class="next" href="master.html"><small>Weiter</small><span>Das Master-Fenster</span></a></nav>

@@ -450,6 +450,7 @@ private:
     Recorder recorder_;
     GLFWwindow* window_ = nullptr;
     std::string iniPath_;
+    int tabFocusFrames_ = 0;
     bool needsLayout_ = false;
     shortcuts::Table shortcuts_;
     std::string shortcutsPath_;

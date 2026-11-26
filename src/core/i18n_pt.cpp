@@ -272,6 +272,7 @@ const Translation kPortuguese[] = {
     {"Mix", "Mix"},
     {"Mode", "Modo"},
     {"Mono", "Mono"},
+    {"Arena", "Arena"},
     {"Move a knob or press a key for", "Mova um botão ou pressione uma tecla para"},
     {"Multiply", "Multiplicar"},
     {"My presets", "Minhas predefinições"},

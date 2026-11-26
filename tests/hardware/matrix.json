@@ -2475,6 +2475,19 @@
           ],
           "measure": "whether the playback keeps running while the window is moved, where the timeline is after the restart, and whether the reset brings the default layout back",
           "criteria": "Proposed: playback is not interrupted by docking, the placement is remembered after a restart, and the reset restores the default layout."
+        },
+        {
+          "id": "M-UI-8",
+          "title": "The Arena look and the Resolume arrangement next to Resolume Arena",
+          "needs": "A PC with this build and Resolume Arena (or a screenshot of it), a screen of 1920x1080 or more, and Windows for the system font",
+          "steps": [
+            "Start with --reset-layout and the default theme (Arena) and put the window next to Resolume Arena with a similar composition.",
+            "Compare the arrangement (grid on top, deck buttons and transport bar below it, Output over Preview, Master and Layer, Clip and Trigger, the Browser with the other windows as tabs), the sliders, the section bands, the layer block and the colours of the selected layer and the playing column.",
+            "Check that the system font loads on Windows (Segoe UI) and that Japanese text still shows when the language is Japanese.",
+            "Run a short set at 100, 125 and 150 percent and note every control that is hard to read, hit or find."
+          ],
+          "measure": "a list of the differences from Resolume that disturb you, whether any control is hard to read or hit, and whether the font looks right on Windows",
+          "criteria": "Proposed: no control is cut off or unreachable, every function from the old layout can still be found (the Audio window, Master level, Audio input, Network, MIDI and OSC are tabs on the right), and the differences left are ones that you accept"
         }
       ]
     },
@@ -3236,6 +3249,112 @@
           ],
           "measure": "the log line about the busy port (once, not repeatedly), the time until the plugin connects after the port is free, the states during the firewall block, and whether the controls arrive",
           "criteria": "Proposed: one log line, connected within the retry time plus 2 seconds, Lost during the block and Connected again after it, controls arrive."
+        }
+      ]
+    },
+    {
+      "id": "resoport-and-output",
+      "title": "ResoPort (Resolume import), translucent 3D meshes, output while the window is minimized or moved, the 15 transitions and the glass effects: real Resolume compositions, real Windows, real graphics cards",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/manual/manual.en.md",
+        "docs/TESTING.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0054-resoport-glass-effects-transitions-and-minimized-output.md"
+      ],
+      "sources": [
+        "src/core/resoport.cpp",
+        "src/app/ui_resoport.cpp",
+        "tests/test_resoport.cpp",
+        "src/app/shader_selftest.cpp",
+        "src/app/scene_selftest.cpp",
+        "src/app/interface_uitest.cpp",
+        "src/render/scene_player.cpp",
+        "src/platform/platform_win.cpp",
+        "src/main.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-RP-1",
+          "kind": "ctest",
+          "name": "nvj_resoport_tests",
+          "note": "the XML reader (entities, comments, CDATA, a document type declaration with definitions, limits), a Resolume composition read into a document, a cut and a randomly changed file (3,000 rounds), the blend names, the media finder (next to the file, recorded path, extra folder, only media file names) and the build of a composition with its report"
+        },
+        {
+          "id": "A-RP-2",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest",
+          "note": "the real engine draws every one of the 15 transition types (it must run, start on the old clip and end on the new clip); it does not measure the look of the middle of a transition"
+        },
+        {
+          "id": "A-RP-3",
+          "kind": "cli",
+          "command": "NyrexVJ --scene-selftest tests/data/models",
+          "note": "the 3D scene player, including the model with one solid mesh in blend mode (the branches must not show through each other)"
+        },
+        {
+          "id": "A-RP-4",
+          "kind": "cli",
+          "command": "NYREXVJ_DATA_DIR=dir NyrexVJ --fresh --no-update-check --no-welcome --audio-demo --frames 100000 --interface-uitest --bench-out result.json",
+          "note": "the whole ResoPort import in the real window (open, check a file, report, import, the composition and the library afterwards) and that the engine keeps counting frames while the interface is not drawn; on a virtual screen with software OpenGL, so it proves the logic and not how a real minimized window behaves"
+        },
+        {
+          "id": "A-RP-5",
+          "kind": "cli",
+          "command": "NYREXVJ_DATA_DIR=dir NyrexVJ --fresh --no-update-check --check-shaders",
+          "note": "every clip, effect and transition shader compiles, including Prism Glass and Frosted Glass; it says nothing about how they look. Use an empty data folder: media left in a data folder show up as video clips that this check counts as failures"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-RP-1",
+          "title": "A real Resolume show composition",
+          "needs": "A composition saved by Resolume Arena or Avenue (a show you really use) with its media, and this build",
+          "steps": [
+            "Open File, Resolume import (ResoPort)... and give the .avc file; press Check file and read the report against the composition in Resolume (clips, layers, decks).",
+            "Press Import and play a few cells of every layer.",
+            "Note every clip, layer setting or name that Resolume has and NyrexVJ does not show."
+          ],
+          "measure": "clips counted in the report against clips in Resolume, cells that are empty or in the wrong place, layers whose blend mode or opacity differs, the tempo, and the time the check and the import took",
+          "criteria": "Proposed: every media clip lands at the same layer and column, nothing is reported as imported that is not, and everything that is skipped is named in the report."
+        },
+        {
+          "id": "M-RP-2",
+          "title": "Resolume blend names and the tempo in a real file",
+          "needs": "Resolume with a composition of four layers, each with another blend mode (Add, Multiply, Screen, Overlay, Soft Light, Difference and others in turn), a tempo of 133 BPM, saved as .avc",
+          "steps": [
+            "Save the composition from Resolume and import it with ResoPort.",
+            "Read the line with the blend modes that are not known and look at the layer panel after the import.",
+            "Repeat with other blend modes until every mode of Resolume that you use has been seen."
+          ],
+          "measure": "the names Resolume writes for each blend mode, which of them ResoPort maps and which it lists as unknown, and whether the tempo is taken over",
+          "criteria": "Proposed: a blend mode that has a counterpart is mapped, one that has none is listed by name, and the tempo of the composition is the tempo after the import."
+        },
+        {
+          "id": "M-RP-3",
+          "title": "DXV media in an imported composition",
+          "needs": "A Resolume composition whose clips are DXV movies, FFmpeg for the conversion, this build",
+          "steps": [
+            "Import the composition with ResoPort and watch the conversion that the library starts.",
+            "Play the converted cells next to the original in Resolume."
+          ],
+          "measure": "whether the DXV files are found and copied, whether the HAP copies are made and used, and whether picture and speed match Resolume",
+          "criteria": "Proposed: the movies play after the conversion at the right speed and the cells hold the converted clips."
+        },
+        {
+          "id": "M-WIN-1",
+          "title": "Output while the window is minimized, moved or a menu is open (Windows)",
+          "needs": "A Windows PC with a second display or OBS taking the Spout output, a playing clip with motion and this build",
+          "steps": [
+            "Start NyrexVJ with an output window on the second display (or Spout into OBS) and play a clip.",
+            "Minimize the main window and watch the output for a minute.",
+            "Restore it, then drag the main window by its title bar for ten seconds, drag its edge to change the size for ten seconds, and keep a menu open for ten seconds."
+          ],
+          "measure": "whether the output keeps moving in each case, any frozen stretch in seconds and the frame counter of OBS or the output",
+          "criteria": "Proposed: the output never freezes for more than a fraction of a second in any of the four cases, and the interface is drawn again after the restore."
         }
       ]
     }

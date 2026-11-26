@@ -50,7 +50,7 @@
 <li><a href="clip-window.html">Das Clip-Fenster</a>
 </li>
 <li><a href="effects.html" aria-current="page">Effekte</a>
-<ul><li><a href="#slots">Effekt-Slots</a></li><li><a href="#adding-effects">Effekte hinzufügen</a></li><li><a href="#effect-react">Auf die Musik reagieren</a></li><li><a href="#own-effects">Eigene Effekte</a></li></ul>
+<ul><li><a href="#slots">Effekt-Slots</a></li><li><a href="#adding-effects">Effekte hinzufügen</a></li><li><a href="#effect-react">Auf die Musik reagieren</a></li><li><a href="#glass-effects">Glas-Effekte</a></li><li><a href="#own-effects">Eigene Effekte</a></li></ul>
 </li>
 <li><a href="library.html">Die Bibliothek</a>
 </li>
@@ -144,7 +144,7 @@
 <li><a href="clip-window.html">Das Clip-Fenster</a>
 </li>
 <li><a href="effects.html" aria-current="page">Effekte</a>
-<ul><li><a href="#slots">Effekt-Slots</a></li><li><a href="#adding-effects">Effekte hinzufügen</a></li><li><a href="#effect-react">Auf die Musik reagieren</a></li><li><a href="#own-effects">Eigene Effekte</a></li></ul>
+<ul><li><a href="#slots">Effekt-Slots</a></li><li><a href="#adding-effects">Effekte hinzufügen</a></li><li><a href="#effect-react">Auf die Musik reagieren</a></li><li><a href="#glass-effects">Glas-Effekte</a></li><li><a href="#own-effects">Eigene Effekte</a></li></ul>
 </li>
 <li><a href="library.html">Die Bibliothek</a>
 </li>
@@ -218,18 +218,20 @@
 <p class="crumb"><a href="index.html">Handbuch</a> / Visuals spielen</p>
 <h1>Effekte</h1>
 <p class="meta">Kapitel 9 von 38 &middot; 2 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#slots">Effekt-Slots</a><a href="#adding-effects">Effekte hinzufügen</a><a href="#effect-react">Auf die Musik reagieren</a><a href="#own-effects">Eigene Effekte</a></nav>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#slots">Effekt-Slots</a><a href="#adding-effects">Effekte hinzufügen</a><a href="#effect-react">Auf die Musik reagieren</a><a href="#glass-effects">Glas-Effekte</a><a href="#own-effects">Eigene Effekte</a></nav>
 <h2 id="slots"><a class="anchor" href="#slots" aria-label="Link">#</a>Effekt-Slots</h2>
 <p>Jeder Layer hat vier Effekt-Slots, und der Master auch. Die Effekte laufen von Slot 1 bis Slot 4, die Reihenfolge ist also wichtig: Ein Blur vor einer Farbänderung sieht anders aus als eine Farbänderung vor einem Blur. Die Effekte eines Layers verändern nur diesen Layer, die Effekte des Masters verändern das fertige Bild.</p>
 <p>Jeder Slot hat ein Häkchen zum Ein- und Ausschalten, eine Liste zur Wahl des Effekts (tipp in die Liste, um zu suchen), bis zu vier Regler und eine Zeile für die Musikreaktion. Ein Regler, den du bewegt hast, geht mit Rechtsklick auf seinen Standardwert zurück. Effekte, die dreidimensional zeichnen, tragen in der Liste die Markierung [3D].</p>
 <h2 id="adding-effects"><a class="anchor" href="#adding-effects" aria-label="Link">#</a>Effekte hinzufügen</h2>
 <ul><li>Öffne die Bibliothek, wechsel zu Effekte und klick einen Effekt an: Er kommt in den ersten freien Slot des gewählten Layers. Sind alle vier Slots belegt, sagt dir NyrexVJ das.</li><li>Zieh einen Effekt aus der Bibliothek auf einen Slot, um ihn genau dort abzulegen.</li><li>Klick mit rechts auf einen Effekt in der Bibliothek, um ihn zu einem gewählten Layer oder zum Master hinzuzufügen.</li><li>Wähl einen Effekt aus der Liste im Slot selbst.</li></ul>
-<figure class="shot"><a href="../../assets/manual/de/effects-library.webp"><img src="../../assets/manual/de/effects-library.webp" width="410" height="262" loading="lazy" alt="Der Tab Bibliothek in der Ansicht Effekte"></a><figcaption>Der Tab Bibliothek in der Ansicht Effekte</figcaption></figure>
+<figure class="shot"><a href="../../assets/manual/de/effects-library.webp"><img src="../../assets/manual/de/effects-library.webp" width="350" height="417" loading="lazy" alt="Der Tab Bibliothek in der Ansicht Effekte"></a><figcaption>Der Tab Bibliothek in der Ansicht Effekte</figcaption></figure>
 <h2 id="effect-react"><a class="anchor" href="#effect-react" aria-label="Link">#</a>Auf die Musik reagieren</h2>
 <p>Unter den Reglern eines Slots findest du eine Band-Liste, einen Modus und ein Ziel. Wähl Bass, Mitten, Höhen, Pegel oder Kick (oder ein Makro, einen LFO, Beat oder Bar) als Band. Dann bestimmst du, wie es wirkt:</p>
 <ul><li><strong>Parameter</strong> bewegt einen Wert des Effekts, den du als Ziel wählst, um die eingestellte Stärke.</li><li><strong>Gate</strong> zeigt den Effekt nur, solange das Band laut ist, und blendet ihn in der Stille aus. Der eingestellte Wert bestimmt, wie empfindlich das Gate ist.</li></ul>
 <p>Mit Gate baust du schnell ein Stroboskop oder einen Glitch, der nur auf den Beat trifft.</p>
 <aside class="note tip"><strong class="note-label">Tipp</strong><p>Leg einen langsamen LFO auf einen Parameter und Kick auf einen zweiten Effekt. Das Bild hat dann eine ruhige Bewegung und einen Puls zugleich.</p></aside>
+<h2 id="glass-effects"><a class="anchor" href="#glass-effects" aria-label="Link">#</a>Glas-Effekte</h2>
+<p>Zwei Effekte lassen das Bild aussehen, als sähe man es durch Glas. <strong>Prism Glass</strong> bricht das Bild in Prismenfacetten: Facetten bestimmt, wie viele es sind, Brechung, wie weit jede Facette das Bild ablenkt, Streuung, wie stark sich die Farben an der Kante trennen, und Glanz, wie hell die Kanten sind und wie stark sie im Beat aufblitzen. <strong>Frosted Glass</strong> verwischt das Bild wie Milchglas: Frost bestimmt die Unschärfe, Körnung fügt feine Körnung hinzu, Milchigkeit hellt das Bild auf und verschleiert es, und Beat-Puls lässt die Unschärfe mit jedem Beat anschwellen. Beide haben vier Regler von 0 bis 1 und stehen in der Bibliothek unter Effekte.</p>
 <h2 id="own-effects"><a class="anchor" href="#own-effects" aria-label="Link">#</a>Eigene Effekte</h2>
 <p>Neben den eingebauten Effekten gibt es Effekte, die du selbst baust oder installierst: Node-Effekte aus dem Node-Editor (angezeigt als Node: Name) und ISF-Filter aus deinem Shader-Ordner (angezeigt als ISF: Name). Sie funktionieren in den Slots wie jeder andere Effekt. Siehe <a href="nodes.html">Der Node-Effekt-Editor</a> und <a href="shaders.html">Deine eigenen Shader</a>. Um vier Effekte zusammenzuhalten, speichere sie als Kette, siehe <a href="generators.html#effect-chains">Effektketten</a>.</p>
 <nav class="pager" aria-label="Pager"><a class="prev" href="clip-window.html"><small>Zurück</small><span>Das Clip-Fenster</span></a><a class="next" href="library.html"><small>Weiter</small><span>Die Bibliothek</span></a></nav>

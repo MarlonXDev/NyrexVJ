@@ -272,6 +272,7 @@ const Translation kItalian[] = {
     {"Mix", "Mix"},
     {"Mode", "Modalità"},
     {"Mono", "Mono"},
+    {"Arena", "Arena"},
     {"Move a knob or press a key for", "Muovi una manopola o premi un tasto per"},
     {"Multiply", "Moltiplica"},
     {"My presets", "I miei preset"},

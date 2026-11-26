@@ -6,7 +6,7 @@
 
 NyrexVJ ist ein Programm für Live-Visuals. Du spielst generative Clips, 3D-Modelle, Videos und eigene Shader auf Layern ab, legst Effekte darüber, lässt alles auf deine Musik reagieren und schickst das fertige Bild an OBS, einen Projektor oder einen Bildschirm. Es ist für VRChat-Events und Partys gemacht und so klein, dass es in einer Sekunde startet: eine Datei, kein Installer, keine Game-Engine.
 
-Wenn du Resolume Arena oder ähnliche Programme kennst, kommt dir die Aufteilung bekannt vor: links ein Clip-Raster, rechts die Fenster für Clip, Master und Layer, oben quer eine Transportleiste, unter dem Raster eine Reihe mit Vorschau, Ausgabe, Trigger, Audio und Bibliothek und unten eine Leiste mit dem Master-Pegel und den Ein- und Ausgängen.
+Wenn du Resolume Arena oder ähnliche Programme kennst, kommt dir die Aufteilung bekannt vor: oben quer das Clip-Raster mit den Deck-Knöpfen und der Transportleiste direkt darunter und darunter eine Reihe mit Ausgabe über Vorschau links, dann den Bereichen Master und Layer, dann Clip und Trigger und rechts dem Browser, in dessen Reiterleiste auch das Audio-Fenster, der Master-Pegel, der Audio-Eingang und die Verbindungen liegen.
 
 ## Was du damit machen kannst {#what-you-can-do}
 
@@ -74,7 +74,7 @@ Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Han
 
 | Menü | Was drin ist |
 | --- | --- |
-| Datei | Neue leere Komposition, Als Preset speichern, Datenordner öffnen, Beenden |
+| Datei | Neue leere Komposition, Als Preset speichern, Resolume-Komposition importieren (ResoPort)..., Datenordner öffnen, Beenden |
 | Bearbeiten | Rückgängig und Wiederherstellen |
 | Ansicht | Arbeitsbereiche, Fensteranordnung zurücksetzen, Oberflächengröße, Hoher Kontrast, Tastaturbedienung, Statusleiste zeigen |
 | Ausgabe | Ausgabefenster öffnen oder schließen, Vollbild, Ausgänge und Mapping, Aufnahme starten oder beenden, Aufnahme-Einstellungen, Per Spout an OBS senden, Über NDI senden, Video-Routing |
@@ -84,43 +84,43 @@ Dieses Kapitel benennt jeden Teil des Hauptfensters, damit sich der Rest des Han
 | Creator | Clip Creator öffnen, Neue 3D-Szene, Vorlagen, der Node-Effekt-Editor, Text und Partikel, Effektketten, Shader-Editor |
 | Hilfe | Handbuch, Was ist neu, Links, Sprache, Nach Updates suchen |
 
-![Das Hauptfenster von NyrexVJ mit der Transportleiste oben, dem Clip-Raster links, Clip, Master und Layer rechts und Vorschau, Ausgabe, Trigger, Audio und Browser darunter](main-window.webp)
+![Das Hauptfenster von NyrexVJ mit dem Clip-Raster, den Deck-Knöpfen und der Transportleiste oben und Ausgabe, Vorschau, Master und Layer, Clip und Trigger und dem Browser darunter](main-window.webp)
 
 ## Die Transportleiste {#transport-bar}
 
-Die Leiste unter dem Menü enthält, was du in jedem Moment brauchst: die 16 Deck-Knöpfe mit Zurück und Weiter, das BPM-Feld mit Minus, Plus, /2 und x2, Tap und Neu sync, dann Abspielen, Pause und Stopp und die Beat-Anzeige. Abspielen lässt die Tempo-Clock und alle Clip-Bewegung laufen, Pause friert sie ein, und Stopp hält an und beginnt die Beat-Zählung wieder bei 1. Die Beat-Anzeige zeigt den Beat im Takt, einen Strich für jeden Beat des Takts und die Position innerhalb des Beats als Phase. Eine dünne Linie am unteren Rand zeigt, wie weit ein Deck-Übergang ist. In einem Fenster, das schmaler als etwa 1540 Pixel ist (bei einer Oberflächengröße von 100 Prozent), werden die 16 Deck-Knöpfe zu einem Knopf, der das aktive Deck zeigt und die Liste der Decks öffnet, und in einem sehr schmalen Fenster machen die Knöpfe /2 und x2, Neu sync und die Beat-Anzeige Platz für Abspielen, Pause und Stopp.
+Die zwei Zeilen direkt unter dem Clip-Raster enthalten, was du in jedem Moment brauchst. Die erste Zeile hat die 16 Deck-Knöpfe mit Zurück und Weiter. Die zweite Zeile hat das BPM-Feld mit Minus, Plus, /2 und x2, Tap und Neu sync, dann Abspielen, Pause und Stopp und die Beat-Anzeige. Abspielen lässt die Tempo-Clock und alle Clip-Bewegung laufen, Pause friert sie ein, und Stopp hält an und beginnt die Beat-Zählung wieder bei 1. Die Beat-Anzeige zeigt den Beat im Takt, einen Strich für jeden Beat des Takts und die Position innerhalb des Beats als Phase. Eine dünne Linie am unteren Rand des Deck-Fensters zeigt, wie weit ein Deck-Übergang ist. In einem Fenster, das schmaler als etwa 1500 Pixel ist (bei einer Oberflächengröße von 100 Prozent), werden die 16 Deck-Knöpfe zu einem Knopf, der das aktive Deck zeigt und die Liste der Decks öffnet, und in einem sehr schmalen Fenster machen die Knöpfe /2 und x2, Neu sync und die Beat-Anzeige Platz für Abspielen, Pause und Stopp.
 
 ![Die Transportleiste mit den Deck-Knöpfen, den Tempo-Reglern, Abspielen, Pause und Stopp und der Beat-Anzeige](transport-bar.webp)
 
 ## Das Deck-Fenster {#deck-window}
 
-Das große Fenster oben links ist das Deck-Fenster. Es enthält das Clip-Raster mit 8 Spalten und 4 Layern. Alles, was du live spielst, beginnt hier. Siehe [Das Clip-Raster](#clip-grid) und [Decks und Übergänge](#decks).
+Das große Fenster oben quer ist das Deck-Fenster. Es enthält das Clip-Raster mit 8 Spalten und 4 Layern und direkt unter dem Raster die Deck-Knöpfe und die Transportleiste. Vor jeder Layer-Zeile stehen die Knöpfe X (leert den Layer), B (Bypass) und S (Solo), der Mischmodus, die Deckkraft und der Name des Layers, der mintgrün wird, wenn der Layer gewählt ist. Alles, was du live spielst, beginnt hier. Siehe [Das Clip-Raster](#clip-grid) und [Decks und Übergänge](#decks).
 
 ## Vorschau und Ausgabe {#preview-output}
 
-In der Reihe unter dem Raster findest du links zwei Fenster mit einem Bild. Das Fenster Ausgabe zeigt das fertige Bild genau so, wie es NyrexVJ verlässt, mit Größe, Bildrate und Tempo. Das Fenster Vorschau zeigt eine Zelle, die du dir nur angesehen hast: Strg+Klick auf eine Zelle zeigt sie dort, ohne sie abzuspielen, und Jetzt abspielen spielt sie ab. So bereitest du den nächsten Clip vor, während das Publikum etwas anderes sieht.
+In der Reihe unter dem Raster findest du links zwei Fenster mit einem Bild, Ausgabe oben und Vorschau unten. Das Fenster Ausgabe zeigt das fertige Bild genau so, wie es NyrexVJ verlässt, mit Größe, Bildrate und Tempo. Das Fenster Vorschau zeigt eine Zelle, die du dir nur angesehen hast: Strg+Klick auf eine Zelle zeigt sie dort, ohne sie abzuspielen, und Jetzt abspielen spielt sie ab. So bereitest du den nächsten Clip vor, während das Publikum etwas anderes sieht.
 
 ## Layer, Clip und Master {#layer-clip-master}
 
-Rechts vom Clip-Raster liegen drei Fenster, die zusammengehören. Clip und Master teilen sich eine Tab-Leiste, das Layer-Fenster liegt darunter. Das Layer-Fenster (in der Oberfläche heißt es Ebene) enthält Deckkraft, Mischmodus, die Audio-Reaktionen und die vier Effekt-Slots des gewählten Layers. Das Clip-Fenster zeigt den Clip der gewählten Zelle und seine Regler. Das Master-Fenster wirkt auf das fertige Bild: Pegel, Blackout, Auflösung, Farbkorrektur, Makros, LFOs und vier Master-Effekte. Sie sind in [Layer und Mischmodi](#layers), [Das Clip-Fenster](#clip-window) und [Das Master-Fenster](#master) beschrieben.
+Neben den beiden Bildern liegen die Bereiche, die zusammengehören. Master und Layer teilen sich eine Tab-Leiste, Clip und Trigger die nächste. Das Layer-Fenster (in der Oberfläche heißt es Ebene) enthält Deckkraft, Mischmodus, die Audio-Reaktionen und die vier Effekt-Slots des gewählten Layers. Das Clip-Fenster zeigt den Clip der gewählten Zelle und seine Regler. Das Master-Fenster wirkt auf das fertige Bild: Pegel, Blackout, Auflösung, Farbkorrektur, Makros, LFOs und vier Master-Effekte. Sie sind in [Layer und Mischmodi](#layers), [Das Clip-Fenster](#clip-window) und [Das Master-Fenster](#master) beschrieben.
 
 ## Das Trigger-Fenster {#trigger-window}
 
-Das Trigger-Fenster liegt neben den Bildern. Unter Clip-Start steht die Quantisierung, die bestimmt, wann ein Start passiert. Unter Übergang stehen Typ, Beat-Sync, Länge und Auto-Wechsel. Unter Beat-Raster stehen Schläge pro Takt, Verschieben, Auf Schlag einrasten und Takt beginnt hier. Läuft eine Audioquelle, steht dort unter Tempo auch BPM mit Audio synchronisieren. Siehe [Auf dem Beat starten](#clip-grid/quantize), [Übergänge](#decks/transitions) und [Das Beat-Raster](#modulation/beat-grid).
+Das Trigger-Fenster ist der zweite Reiter neben Clip. Unter Clip-Start steht die Quantisierung, die bestimmt, wann ein Start passiert. Unter Übergang stehen Typ, Beat-Sync, Länge und Auto-Wechsel. Unter Beat-Raster stehen Schläge pro Takt, Verschieben, Auf Schlag einrasten und Takt beginnt hier. Läuft eine Audioquelle, steht dort unter Tempo auch BPM mit Audio synchronisieren. Siehe [Auf dem Beat starten](#clip-grid/quantize), [Übergänge](#decks/transitions) und [Das Beat-Raster](#modulation/beat-grid).
 
 ## Das Audio-Fenster {#audio-window}
 
-Das Audio-Fenster zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und die Analyse-Einstellungen. Siehe [Audio und Musik](#audio).
+Das Audio-Fenster ist ein Reiter in der Reiterleiste des Browsers. Es zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und die Analyse-Einstellungen. Siehe [Audio und Musik](#audio).
 
 ## Der Browser {#browser-window}
 
-Der Browser unten rechts hat zwei Tabs. Presets enthält die Werks-Looks und deine eigenen Looks, und Bibliothek enthält alle Clips, Effekte und Dateien, die du nutzen kannst. Siehe [Presets und Sitzungen](#presets) und [Die Bibliothek](#library).
+Der Browser unten rechts hat zwei eigene Tabs. Presets enthält die Werks-Looks und deine eigenen Looks, und Bibliothek enthält alle Clips, Effekte und Dateien, die du nutzen kannst. Siehe [Presets und Sitzungen](#presets) und [Die Bibliothek](#library).
 
-## Die untere Leiste {#bottom-strip}
+## Die Reiter neben dem Browser {#bottom-strip}
 
-Fünf kleine Fenster am unteren Rand zeigen den Zustand auf einen Blick. Master-Pegel hat den Pegel-Regler, den Pegel in dB und Blackout. Audio-Eingang hat die Quelle, Geräte aktualisieren und eine Pegelanzeige. Netzwerk hat die Schalter für NDI und Spout und den Zustand des Netzwerk-Syncs, mit einem Knopf zu dessen Einstellungen. MIDI zeigt das Gerät, seinen Zustand und die letzte Nachricht. OSC hat den Schalter zum Empfangen und zeigt seinen Zustand und die letzte Nachricht. Alle Optionen stehen weiterhin unter Einstellungen.
+Die Reiterleiste der rechten Spalte enthält außer dem Browser und dem Audio-Fenster fünf kleine Fenster, die den Zustand auf einen Blick zeigen. Master-Pegel hat den Pegel-Regler, den Pegel in dB und Blackout. Audio-Eingang hat die Quelle, Geräte aktualisieren und eine Pegelanzeige. Netzwerk hat die Schalter für NDI und Spout und den Zustand des Netzwerk-Syncs, mit einem Knopf zu dessen Einstellungen; MIDI zeigt das Gerät, seinen Zustand und die letzte Nachricht; OSC hat den Schalter zum Empfangen und zeigt seinen Zustand und die letzte Nachricht. Es sind Fenster wie alle anderen, du kannst also einen Reiter herausziehen und hinlegen, wohin du willst, zum Beispiel unter die Bilder. Alle Optionen stehen weiterhin unter Einstellungen.
 
-![Die untere Leiste mit den Fenstern Master-Pegel, Audio-Eingang, Netzwerk, MIDI und OSC](bottom-strip.webp)
+![Die Reiterleiste neben dem Browser mit den Reitern Audio, Browser, Master-Pegel und Audio-Eingang](bottom-strip.webp)
 
 ## Die Statusleiste {#status-bar}
 
@@ -209,6 +209,14 @@ Die Reihe mit 16 Knöpfen über dem Clip-Raster wechselt die Decks. Jedes Deck i
 | Radial | Ein Kreis, der sich von der Mitte aus öffnet |
 | Spin | Beide Bilder drehen sich ineinander |
 | Slide | Das neue Deck schiebt sich von der Seite herein |
+| Pixelate (Pixel) | Das Bild zerfällt beim Wechsel in grobe Blöcke und setzt sich wieder zusammen |
+| Glitch | Zerrissene Streifen mit Farbversatz, einige zeigen schon das neue Deck |
+| Blinds (Jalousie) | Senkrechte Streifen, die sich wie eine Jalousie öffnen |
+| Ripple (Wellen) | Eine Welle läuft von der Mitte nach außen und trägt das neue Bild herein |
+| Flash (Blitz) | Ein weißer Blitz deckt den Schnitt |
+| Blur (Weichzeichner) | Das alte Bild verwischt, das neue wird scharf |
+| Checker (Schachbrett) | Ein Raster aus Kacheln kippt in einer diagonalen Welle vom alten ins neue Bild |
+| Frost | Das Bild friert zu und taut ins neue auf |
 
 Wähl den Übergang und seine Länge im Trigger-Fenster. Stell die Länge in Sekunden ein, oder hak Beat-Sync an, um in Beats zu zählen, damit der Wechsel dem Tempo folgt. Wenn du mitten in einem Übergang noch einmal wechselst, friert NyrexVJ das Bild ein, das du gerade siehst, und blendet von dort aus über, es gibt also nie einen Sprung.
 
@@ -312,6 +320,10 @@ Unter den Reglern eines Slots findest du eine Band-Liste, einen Modus und ein Zi
 Mit Gate baust du schnell ein Stroboskop oder einen Glitch, der nur auf den Beat trifft.
 
 > Tipp: Leg einen langsamen LFO auf einen Parameter und Kick auf einen zweiten Effekt. Das Bild hat dann eine ruhige Bewegung und einen Puls zugleich.
+
+## Glas-Effekte {#glass-effects}
+
+Zwei Effekte lassen das Bild aussehen, als sähe man es durch Glas. **Prism Glass** bricht das Bild in Prismenfacetten: Facetten bestimmt, wie viele es sind, Brechung, wie weit jede Facette das Bild ablenkt, Streuung, wie stark sich die Farben an der Kante trennen, und Glanz, wie hell die Kanten sind und wie stark sie im Beat aufblitzen. **Frosted Glass** verwischt das Bild wie Milchglas: Frost bestimmt die Unschärfe, Körnung fügt feine Körnung hinzu, Milchigkeit hellt das Bild auf und verschleiert es, und Beat-Puls lässt die Unschärfe mit jedem Beat anschwellen. Beide haben vier Regler von 0 bis 1 und stehen in der Bibliothek unter Effekte.
 
 ## Eigene Effekte {#own-effects}
 
@@ -464,6 +476,22 @@ Ein Community-Paket ist eine einzelne Datei, die auf `.nyxpack` endet. Jemand ha
 
 ![Das Fenster Community-Pakete](community-packages.webp)
 
+## Import aus Resolume (ResoPort) {#resoport}
+
+ResoPort liest eine Komposition, die Resolume gespeichert hat (eine Datei mit der Endung `.avc`), und baut daraus eine NyrexVJ-Komposition. Öffne es mit Datei, Resolume-Komposition importieren (ResoPort)... oder zieh eine `.avc`-Datei auf das NyrexVJ-Fenster.
+
+1. Tippe oder füge den Pfad der `.avc`-Datei ein. Liegen die Medien der Komposition woanders, gib diesen Ordner im zweiten Feld an. Drücke **Datei prüfen**.
+2. Lies den Bericht. Er sagt, mit welcher Resolume-Version die Datei gemacht wurde, wie viele Clips importiert werden und was nicht: Medien, die nicht gefunden wurden (die ersten Namen stehen dabei), Dateien, die NyrexVJ nicht abspielen kann, Generator-Clips und Clips aus anderen Quellen, Effekte, Ebenen nach der vierten, Decks nach dem sechzehnten, Clips außerhalb der vier Ebenen und acht Spalten, Blendmodi, die NyrexVJ nicht kennt, und eine Bildgröße, die NyrexVJ nicht hat. Es hat sich noch nichts geändert.
+3. Drücke **Importieren**. Die gefundenen Medien werden in die Bibliothek kopiert und die Komposition wird gebaut.
+
+**Übernommen wird:** Medien-Clips (Videos und Bilder) an derselben Ebene und Spalte, Deckkraft und Blendmodus jeder Ebene, die Namen der Decks, der Name der Komposition, das Tempo (wenn es zwischen 40 und 240 BPM liegt) und die Bildgröße (wenn NyrexVJ dieselbe Größe hat). **Nicht übernommen wird:** Effekte, Generatoren, Clips aus anderen Quellen und jede andere Resolume-Einstellung; sie werden im Bericht gezählt, damit du weißt, was fehlt. Ein Blendmodus, dessen Namen NyrexVJ nicht kennt, wird zu Normal und im Bericht genannt.
+
+ResoPort sucht jedes Medium neben der `.avc`-Datei, am Pfad, den Resolume aufgezeichnet hat, und im zusätzlichen Ordner. Ein Medium, das nicht gefunden wird, lässt seine Zelle leer; leg die Medien neben die Datei und prüfe noch einmal. DXV-Filme werden wie jede andere Datei kopiert und dann von der Einstellung DXV-Videos in HAP umwandeln behandelt, die im Kapitel über Video-Clips steht.
+
+> **Der Import ersetzt die offene Komposition**, wie das Laden eines Presets, und lässt sich nicht rückgängig machen. Speichere vorher als Preset, was du behalten willst.
+
+> Hinweis: ResoPort wurde nach einigen Beispieldateien von Resolume Arena 7.22 und nach Testdateien geschrieben. Es wurde an keiner großen Show-Komposition ausprobiert. Prüfe das Ergebnis, bevor du dich darauf verlässt, und sag den Maintainern, was es falsch gemacht hat.
+
 ## Rückgängig und Wiederherstellen {#undo}
 
 Bearbeiten, Rückgängig und Wiederherstellen, oder `Strg+Z` und `Strg+Y` (auch `Strg+Umschalt+Z` stellt wieder her), gehen durch deine Änderungen an Reglern, Clips, Effekten und Decks. Einen Clip abspielen, eine Spalte starten und die Makro-Regler bewegen sind Performance-Aktionen und gehören nicht zu Rückgängig. In der Zeitleiste und im Node-Editor wirken dieselben Tasten auf ihren eigenen Verlauf, solange diese Fenster den Fokus haben.
@@ -499,7 +527,7 @@ Wähle die Quelle im Fenster Audio-Eingang unten, oder unter Einstellungen, Audi
 | Demo-Signal | Ein eingebauter Beat, damit du Looks ohne Musik bauen kannst |
 | Aus | Nichts. Clips und Effekte folgen stattdessen dem BPM-Takt |
 
-Das Audio-Fenster zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und ein erkanntes Tempo. Liefert das gewählte Gerät einige Sekunden lang keinen Ton, sagen das das Fenster Audio-Eingang und die Statusleiste und schlagen vor, etwas abzuspielen oder eine andere Quelle zu wählen.
+Das Audio-Fenster ist ein Reiter in der Reiterleiste des Browsers. Es zeigt das Live-Spektrum, die Anzeigen für Bass, Mitten, Höhen und Pegel, die Beat-Erkennung und ein erkanntes Tempo. Liefert das gewählte Gerät einige Sekunden lang keinen Ton, sagen das das Fenster Audio-Eingang und die Statusleiste und schlagen vor, etwas abzuspielen oder eine andere Quelle zu wählen.
 
 ![Das Audio-Fenster mit Spektrum und den Anzeigen für Bass, Mitten, Höhen und Pegel](audio-tab.webp)
 
@@ -986,6 +1014,10 @@ Einstellungen, Ausgabe hat einen Tab für jeden von bis zu vier Ausgängen. Ausg
 
 ![Die Seite Ausgabe in den Einstellungen](settings-output.webp)
 
+## Wenn das Fenster minimiert oder bewegt wird {#minimized}
+
+Das Bild bleibt nicht stehen, wenn du das Hauptfenster minimierst. Die Engine und jede Ausgabe (die Ausgabefenster, Spout, NDI, die Aufnahme, der Netzwerk-Sync, MIDI und OSC) laufen weiter; nur die Oberfläche wird nicht gezeichnet, das spart Arbeit. Unter Windows läuft außerdem eine eigene Schleife des Systems, solange du das Fenster ziehst, seine Größe änderst oder ein Menü offen hältst; NyrexVJ lässt die Engine auch in dieser Zeit weiterlaufen. Der Windows-Teil wurde beim Schreiben nur kompiliert und nicht ausgeführt. Friert eine Ausgabe ein, während du das Fenster bewegst, sag es den Maintainern.
+
 ## Slices und Bildausschnitt {#slices}
 
 Ein Ausgang enthält bis zu acht Slices. Ein Slice zeigt einen Teil des Bildes in einem Teil des Ausgangs. Slice hinzufügen, Duplizieren und Entfernen verwalten sie. Der Bildausschnitt legt fest, welchen Teil der Komposition ein Slice zeigt, als Links, Oben, Breite und Höhe in Prozent oder mit den Schaltflächen Ganzes Bild und den vier Hälften. So verteilst du ein Bild auf mehrere Projektoren. Ganzes Fenster füllen streckt es, Horizontal spiegeln und Vertikal spiegeln drehen es für Rückprojektion.
@@ -1380,7 +1412,7 @@ Der C-Header, ein Beispiel-Plugin und die vollständige Referenz stehen in docs/
 
 ## Aussehen {#settings-appearance}
 
-Das Farbthema ändert den Akzent der ganzen Oberfläche. Es gibt zehn Themen: Studio (der Standard, ein neutrales Dunkel mit rot-orangem Akzent), Orange, Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono. Die Oberflächengröße skaliert alle Fenster und Texte, und Zurücksetzen stellt sie wieder her. Dieselbe Seite hat die Bildschirmskalierung, den hohen Kontrast, die Tastaturbedienung, das Zurücksetzen der Fensteranordnung und die Arbeitsbereiche; siehe [Oberfläche, Arbeitsbereiche und Barrierefreiheit](#interface).
+Das Farbthema ändert den Akzent der ganzen Oberfläche. Es gibt elf Themen: Arena (der Standard), Studio (ein neutrales Dunkel mit rot-orangem Akzent, runden Ecken und schlanken Reglern), Orange, Blau, Rot, Grün, Lila, Pink, Cyan, Gold und Mono. Arena folgt dem Aussehen von Resolume Arena: neutrale Grautöne ohne Farbstich, flache Ecken, flache Balken als Regler mit dem Namen rechtsbündig und einer dünnen Marke, dunkle Bänder mit einem kleinen Dreieck über jeder Gruppe von Reglern, eine mintgrüne Hervorhebung mit dunklem Text für den gewählten Layer und die laufende Spalte, ein dunkler türkisgrüner Akzent und die Sans-Serif-Schrift des Systems statt der eingebauten Pixelschrift. Eine Einrichtung, die vor 0.60.0 Studio benutzt hat, wird einmal auf Arena umgestellt; wähle hier Studio, um zurückzukehren. Die Oberflächengröße skaliert alle Fenster und Texte, und Zurücksetzen stellt sie wieder her. Dieselbe Seite hat die Bildschirmskalierung, den hohen Kontrast, die Tastaturbedienung, das Zurücksetzen der Fensteranordnung und die Arbeitsbereiche; siehe [Oberfläche, Arbeitsbereiche und Barrierefreiheit](#interface).
 
 # Oberfläche, Arbeitsbereiche und Barrierefreiheit {#interface}
 

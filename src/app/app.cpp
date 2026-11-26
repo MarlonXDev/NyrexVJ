@@ -79,6 +79,13 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
         }
         saveSettings(settings_);
     }
+    if (settings_.design < 2) {
+        settings_.design = 2;
+        if (settings_.theme == "studio") {
+            settings_.theme = "arena";
+        }
+        saveSettings(settings_);
+    }
     applyTheme(themeIndex(settings_.theme));
     outputs_.attach(&settings_.outputs);
     savedOutputs_ = settings_.outputs;
@@ -855,7 +862,6 @@ void App::frame(double dt, bool drawUi) {
     }
 
     drawMenuBar();
-    drawTransportBar();
     drawStatusBar();
     ImGuiID dock = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
     rootDock_ = dock;
@@ -896,6 +902,12 @@ void App::frame(double dt, bool drawUi) {
     drawConversionCards();
     drawWelcome();
     drawRecovery();
+
+    if (tabFocusFrames_ > 0 && --tabFocusFrames_ == 0) {
+        ImGui::SetWindowFocus("###clip");
+        ImGui::SetWindowFocus("###layer");
+        ImGui::SetWindowFocus("###browser");
+    }
 
     history_.observe(engine_.comp, dt, ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsAnyItemActive());
 
@@ -942,42 +954,30 @@ void App::buildLayout(ImGuiID dock) {
     ImGui::DockBuilderSetNodeSize(dock, static_cast<ImGuiViewportP*>(ImGui::GetMainViewport())->GetBuildWorkRect().GetSize());
     ImGuiID lower = 0;
     ImGuiID upper = ImGui::DockBuilderSplitNode(dock, ImGuiDir_Up, 0.52f, nullptr, &lower);
-    ImGuiID strip = 0;
-    ImGuiID row = ImGui::DockBuilderSplitNode(lower, ImGuiDir_Up, 0.67f, nullptr, &strip);
-
-    ImGuiID side = 0;
-    ImGuiID grid = ImGui::DockBuilderSplitNode(upper, ImGuiDir_Left, 0.64f, nullptr, &side);
-    ImGuiID layer = 0;
-    ImGuiID panels = ImGui::DockBuilderSplitNode(side, ImGuiDir_Up, 0.56f, nullptr, &layer);
-
-    ImGuiID rowRest = 0;
-    ImGuiID preview = ImGui::DockBuilderSplitNode(row, ImGuiDir_Left, 0.20f, nullptr, &rowRest);
-    ImGuiID rowRest2 = 0;
-    ImGuiID output = ImGui::DockBuilderSplitNode(rowRest, ImGuiDir_Left, 0.25f, nullptr, &rowRest2);
-    ImGuiID rowRest3 = 0;
-    ImGuiID trigger = ImGui::DockBuilderSplitNode(rowRest2, ImGuiDir_Left, 0.26f, nullptr, &rowRest3);
+    ImGuiID rest = 0;
+    ImGuiID monitors = ImGui::DockBuilderSplitNode(lower, ImGuiDir_Left, 0.31f, nullptr, &rest);
+    ImGuiID preview = 0;
+    ImGuiID output = ImGui::DockBuilderSplitNode(monitors, ImGuiDir_Up, 0.58f, nullptr, &preview);
+    ImGuiID rest2 = 0;
+    ImGuiID layer = ImGui::DockBuilderSplitNode(rest, ImGuiDir_Left, 0.35f, nullptr, &rest2);
     ImGuiID browser = 0;
-    ImGuiID audio = ImGui::DockBuilderSplitNode(rowRest3, ImGuiDir_Left, 0.42f, nullptr, &browser);
+    ImGuiID clip = ImGui::DockBuilderSplitNode(rest2, ImGuiDir_Left, 0.51f, nullptr, &browser);
 
-    ImGuiID stripRest = 0;
-    ImGuiID levels = ImGui::DockBuilderSplitNode(strip, ImGuiDir_Left, 0.22f, nullptr, &stripRest);
-    ImGuiID connections = 0;
-    ImGuiID audioIn = ImGui::DockBuilderSplitNode(stripRest, ImGuiDir_Left, 0.38f, nullptr, &connections);
-
-    ImGui::DockBuilderDockWindow("###deck", grid);
-    ImGui::DockBuilderDockWindow("###clip", panels);
-    ImGui::DockBuilderDockWindow("###master", panels);
-    ImGui::DockBuilderDockWindow("###layer", layer);
-    ImGui::DockBuilderDockWindow("###preview", preview);
+    ImGui::DockBuilderDockWindow("###deck", upper);
     ImGui::DockBuilderDockWindow("###output", output);
-    ImGui::DockBuilderDockWindow("###trigger", trigger);
-    ImGui::DockBuilderDockWindow("###audio", audio);
+    ImGui::DockBuilderDockWindow("###preview", preview);
+    ImGui::DockBuilderDockWindow("###master", layer);
+    ImGui::DockBuilderDockWindow("###layer", layer);
+    ImGui::DockBuilderDockWindow("###clip", clip);
+    ImGui::DockBuilderDockWindow("###trigger", clip);
     ImGui::DockBuilderDockWindow("###browser", browser);
-    ImGui::DockBuilderDockWindow("###stripMaster", levels);
-    ImGui::DockBuilderDockWindow("###stripAudio", audioIn);
-    ImGui::DockBuilderDockWindow("###stripNetwork", connections);
-    ImGui::DockBuilderDockWindow("###stripMidi", connections);
-    ImGui::DockBuilderDockWindow("###stripOsc", connections);
+    ImGui::DockBuilderDockWindow("###audio", browser);
+    ImGui::DockBuilderDockWindow("###stripMaster", browser);
+    ImGui::DockBuilderDockWindow("###stripAudio", browser);
+    ImGui::DockBuilderDockWindow("###stripNetwork", browser);
+    ImGui::DockBuilderDockWindow("###stripMidi", browser);
+    ImGui::DockBuilderDockWindow("###stripOsc", browser);
+    tabFocusFrames_ = 3;
     ImGui::DockBuilderFinish(dock);
 }
 

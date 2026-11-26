@@ -311,7 +311,7 @@ void App::drawConversionCards() {
 }
 
 void App::drawFfmpegSection() {
-    ImGui::SeparatorText("FFmpeg");
+    ui::sectionHeader("FFmpeg");
     if (!ffmpegCapsKnown_) {
         ImGui::TextDisabled("%s", tr("Checking FFmpeg..."));
         return;
@@ -445,7 +445,7 @@ void App::drawConversionSettings() {
         saveSettings(settings_);
         applyConvertSettings();
     };
-    ImGui::SeparatorText(tr("Convert DXV videos to HAP"));
+    ui::sectionHeader(tr("Convert DXV videos to HAP"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("DXV videos need much more processor time than HAP videos. NyrexVJ can make a HAP copy in the background and play that copy instead. Your original files are never changed."));
     ImGui::PopTextWrapPos();

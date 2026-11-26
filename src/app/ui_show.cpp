@@ -582,7 +582,7 @@ void App::drawShowImport() {
     if (d.checked && d.importPlan.ok) {
         const show::Manifest& manifest = d.importPlan.manifest;
         ImGui::Spacing();
-        ImGui::SeparatorText(manifest.name.empty() ? tr("Show package") : manifest.name.c_str());
+        ui::sectionHeader(manifest.name.empty() ? tr("Show package") : manifest.name.c_str());
         if (!manifest.created.empty()) {
             ImGui::TextDisabled("%s", (manifest.appVersion.empty() ? withText(tr("Made %s"), manifest.created) : withTwoTexts(tr("Made %s with NyrexVJ %s"), manifest.created, manifest.appVersion)).c_str());
         }
@@ -688,7 +688,7 @@ void App::drawShowImport() {
 
         if (d.hasResult) {
             ImGui::Spacing();
-            ImGui::SeparatorText(tr("Imported"));
+            ui::sectionHeader(tr("Imported"));
             ImGui::TextUnformatted(withCount(tr("%zu files added"), d.imported.copied).c_str());
             if (d.imported.renamed > 0) {
                 ImGui::TextUnformatted(withCount(tr("%zu added under a new name"), d.imported.renamed).c_str());
@@ -721,7 +721,7 @@ void App::drawShowImport() {
         const bool anyMissing = d.importPlan.count(show::State::NotIncluded) > 0;
         if (anyMissing) {
             ImGui::Spacing();
-            ImGui::SeparatorText(tr("Find missing files"));
+            ui::sectionHeader(tr("Find missing files"));
             ImGui::PushTextWrapPos(0.0f);
             ImGui::TextDisabled("%s", tr("Some files are not in the package. Point to a folder where they might be, for example the original media drive. Files are only taken when they are the same as the ones the package knew."));
             ImGui::PopTextWrapPos();

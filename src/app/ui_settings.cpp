@@ -240,7 +240,7 @@ void App::drawSettingsPage(int page) {
     ImGui::Spacing();
 
     if (page == SettingsGeneral) {
-        ImGui::SeparatorText(tr("Language"));
+        ui::sectionHeader(tr("Language"));
         ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::BeginCombo("##language", languageLabel(currentLanguage()))) {
             for (int i = 0; i < languageCount(); ++i) {
@@ -284,7 +284,7 @@ void App::drawSettingsPage(int page) {
             }
             toast(message);
         }
-        ImGui::SeparatorText(tr("Startup"));
+        ui::sectionHeader(tr("Startup"));
         if (ImGui::Checkbox(trId("Restore last session on start", "optRestore"), &settings_.restoreSession)) {
             persist();
         }
@@ -292,12 +292,12 @@ void App::drawSettingsPage(int page) {
         if (ImGui::Checkbox(trId("Open the output window on start", "optOpenOutput"), &settings_.openOutputOnStart)) {
             persist();
         }
-        ImGui::SeparatorText(tr("Decks"));
+        ui::sectionHeader(tr("Decks"));
         ImGui::TextWrapped("%s", tr("You can set up to 16 decks and switch between them with a smooth transition. Click a deck button above the clip grid, right click it for rename, duplicate and more."));
         ImGui::TextWrapped("%s", tr("Choosing a factory look in Presets loads it into the current deck."));
     } else if (page == SettingsAudio) {
         drawAudioSource();
-        ImGui::SeparatorText(tr("Analysis"));
+        ui::sectionHeader(tr("Analysis"));
         ImGui::SetNextItemWidth(ui::px(-170.0f));
         ui::sliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
         ImGui::SetNextItemWidth(ui::px(-170.0f));
@@ -311,7 +311,7 @@ void App::drawSettingsPage(int page) {
         ImGui::TextWrapped("%s", tr("Effects can react to the music in two ways. Parameter moves one value with a band. Gate shows the effect only while that band is loud."));
     } else if (page == SettingsOutput) {
         drawOutputControls();
-        ImGui::SeparatorText(tr("Quality"));
+        ui::sectionHeader(tr("Quality"));
         Composition& comp = engine_.comp;
         ImGui::SetNextItemWidth(ui::px(220.0f));
         if (ImGui::BeginCombo(trId("Resolution", "resolution"), kResolutions[comp.resolution].label)) {
@@ -340,10 +340,10 @@ void App::drawSettingsPage(int page) {
     } else if (page == SettingsUpdates) {
         drawUpdateSection();
     } else if (page == SettingsAppearance) {
-        ImGui::SeparatorText(tr("Theme"));
+        ui::sectionHeader(tr("Theme"));
         drawThemePicker();
         drawInterfaceOptions();
-        ImGui::SeparatorText(tr("Layout"));
+        ui::sectionHeader(tr("Layout"));
         if (ImGui::Checkbox(trId("Show status bar", "optStatusBar"), &settings_.showStatusBar)) {
             persist();
         }
@@ -351,7 +351,7 @@ void App::drawSettingsPage(int page) {
             resetWindowLayout();
         }
         ImGui::SetItemTooltip("%s", tr("Puts all panels back to their default places."));
-        ImGui::SeparatorText(tr("Workspaces"));
+        ui::sectionHeader(tr("Workspaces"));
         drawWorkspacePanel();
     } else if (page == SettingsPerformance) {
         drawPerformancePage();
@@ -389,7 +389,7 @@ void App::drawSettingsPage(int page) {
 
 void App::drawUpdateSection() {
     auto persist = [this]() { saveSettings(settings_); };
-    ImGui::SeparatorText(tr("Channel"));
+    ui::sectionHeader(tr("Channel"));
     int channel = settings_.channel == UpdateChannel::Nightly ? 0 : 1;
     const char* channelNames[2] = {tr("Latest build (every commit)"), tr("Stable releases")};
     ImGui::SetNextItemWidth(-FLT_MIN);
@@ -403,7 +403,7 @@ void App::drawUpdateSection() {
         }
         ImGui::EndCombo();
     }
-    ImGui::SeparatorText(tr("Automatic updates"));
+    ui::sectionHeader(tr("Automatic updates"));
     if (ImGui::Checkbox(trId("Check for updates on start", "optCheck"), &settings_.checkUpdates)) {
         persist();
     }
@@ -414,7 +414,7 @@ void App::drawUpdateSection() {
     ImGui::EndDisabled();
     ImGui::SetItemTooltip("%s", tr("The new version is prepared in the background. You decide when to restart."));
 
-    ImGui::SeparatorText(tr("Status"));
+    ui::sectionHeader(tr("Status"));
     UpdateStatus update = updater_.status();
     ImGui::BeginDisabled(updater_.busy());
     if (ImGui::Button(trId("Check now", "updCheck"))) {
@@ -589,7 +589,7 @@ void App::drawPerformancePage() {
     auto persist = [this]() { saveSettings(settings_); };
     const double budget = budgetMilliseconds(settings_.perfBudgetFps);
 
-    ImGui::SeparatorText(tr("Frame rate"));
+    ui::sectionHeader(tr("Frame rate"));
     drawFrameRateLimit();
     if (ImGui::Checkbox(trId("Sync to display refresh (VSync)", "optVsync"), &settings_.vsync)) {
         persist();
@@ -602,7 +602,7 @@ void App::drawPerformancePage() {
     drawConversionSettings();
     drawVideoMonitor();
 
-    ImGui::SeparatorText(tr("Frame budget"));
+    ui::sectionHeader(tr("Frame budget"));
     static const int kBudgets[] = {30, 45, 60, 90, 120, 144};
     char current[48];
     std::snprintf(current, sizeof(current), "%d FPS  (%.1f ms)", settings_.perfBudgetFps, budget);
@@ -623,7 +623,7 @@ void App::drawPerformancePage() {
         persist();
     }
 
-    ImGui::SeparatorText(tr("Render quality"));
+    ui::sectionHeader(tr("Render quality"));
     ImGui::SetNextItemWidth(ui::px(220.0f));
     if (ImGui::BeginCombo(trId("Layer resolution", "optQuality"), qualityLabel(settings_.renderQuality))) {
         for (int mode = 0; mode < QualityModeCount; ++mode) {
@@ -642,7 +642,7 @@ void App::drawPerformancePage() {
         ImGui::TextDisabled(tr("Layers are drawn at %d × %d (%d %%)"), engine_.layerWidth(), engine_.layerHeight(), static_cast<int>(engine_.layerScale() * 100.0f + 0.5f));
     }
 
-    ImGui::SeparatorText(tr("Text and particles"));
+    ui::sectionHeader(tr("Text and particles"));
     {
         int limit = settings_.particleLimit;
         ImGui::SetNextItemWidth(ui::px(220.0f));
@@ -676,7 +676,7 @@ void App::drawPerformancePage() {
         ImGui::SetItemTooltip("%s", tr("Turn this off if you never use them. The change applies the next time NyrexVJ starts."));
     }
 
-    ImGui::SeparatorText(tr("Measured"));
+    ui::sectionHeader(tr("Measured"));
     if (ImGui::BeginTable("##perf", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("##name", ImGuiTableColumnFlags_WidthStretch, 1.6f);
         ImGui::TableSetupColumn(tr("Average"));
@@ -733,7 +733,7 @@ void App::drawPerformancePage() {
 
     drawPassProfiler();
 
-    ImGui::SeparatorText(tr("Memory"));
+    ui::sectionHeader(tr("Memory"));
     const GpuMemory memory = engine_.gpuMemory();
     const auto megabytes = [](unsigned long long bytes) { return static_cast<double>(bytes) / (1024.0 * 1024.0); };
     ImGui::Text("%s: %.0f MB", tr("GPU memory (estimate)"), megabytes(memory.total()));
@@ -760,7 +760,7 @@ void App::drawPerformancePage() {
 
     drawGpuDiagnostics();
 
-    ImGui::SeparatorText(tr("Load"));
+    ui::sectionHeader(tr("Load"));
     const RenderCost cost = estimateRenderCost(engine_.comp);
     ImGui::Text("%s: %d", tr("Layers on air"), cost.layers());
     ImGui::Text("%s: %d", tr("Effect passes"), cost.layerEffects + cost.masterEffects);

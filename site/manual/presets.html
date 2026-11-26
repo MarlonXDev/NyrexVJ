@@ -54,7 +54,7 @@
 <li><a href="library.html">The Library</a>
 </li>
 <li><a href="presets.html" aria-current="page">Presets and sessions</a>
-<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#show-packages">Show packages</a></li><li><a href="#community-packages">Community packages</a></li><li><a href="#undo">Undo and redo</a></li></ul>
+<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#show-packages">Show packages</a></li><li><a href="#community-packages">Community packages</a></li><li><a href="#resoport">Importing from Resolume (ResoPort)</a></li><li><a href="#undo">Undo and redo</a></li></ul>
 </li>
 <li><a href="master.html">The Master window</a>
 </li>
@@ -148,7 +148,7 @@
 <li><a href="library.html">The Library</a>
 </li>
 <li><a href="presets.html" aria-current="page">Presets and sessions</a>
-<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#show-packages">Show packages</a></li><li><a href="#community-packages">Community packages</a></li><li><a href="#undo">Undo and redo</a></li></ul>
+<ul><li><a href="#factory-looks">Factory looks</a></li><li><a href="#own-presets">Your own presets</a></li><li><a href="#session">The session</a></li><li><a href="#show-packages">Show packages</a></li><li><a href="#community-packages">Community packages</a></li><li><a href="#resoport">Importing from Resolume (ResoPort)</a></li><li><a href="#undo">Undo and redo</a></li></ul>
 </li>
 <li><a href="master.html">The Master window</a>
 </li>
@@ -217,12 +217,12 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Playing visuals</p>
 <h1>Presets and sessions</h1>
-<p class="meta">Chapter 11 of 38 &middot; 11 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#factory-looks">Factory looks</a><a href="#own-presets">Your own presets</a><a href="#session">The session</a><a href="#show-packages">Show packages</a><a href="#community-packages">Community packages</a><a href="#undo">Undo and redo</a></nav>
+<p class="meta">Chapter 11 of 38 &middot; 13 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#factory-looks">Factory looks</a><a href="#own-presets">Your own presets</a><a href="#session">The session</a><a href="#show-packages">Show packages</a><a href="#community-packages">Community packages</a><a href="#resoport">Importing from Resolume (ResoPort)</a><a href="#undo">Undo and redo</a></nav>
 <h2 id="factory-looks"><a class="anchor" href="#factory-looks" aria-label="Link">#</a>Factory looks</h2>
 <p>The Presets tab starts with the factory looks. A click loads the look into the current deck, a right click lets you load it into another deck. There are 18: Neon Club, Milky Red, Crystal Cavern, Crystal Lines, Acid Rainbow, Deep Space, Synthwave Night, Laser Show, Minimal Mono, 3D Showcase, Warp Tunnel, Audio Reactor, Fractal Dream, Cyber Rain, Inferno, 3D Worlds, Crystal Cube and Pop Art.</p>
 <p>The button Fill the decks with factory looks puts 16 looks into the 16 decks, a quick way to have something for every mood.</p>
-<figure class="shot"><a href="../assets/manual/en/presets.webp"><img src="../assets/manual/en/presets.webp" width="410" height="262" loading="lazy" alt="The Presets tab with the factory looks"></a><figcaption>The Presets tab with the factory looks</figcaption></figure>
+<figure class="shot"><a href="../assets/manual/en/presets.webp"><img src="../assets/manual/en/presets.webp" width="350" height="417" loading="lazy" alt="The Presets tab with the factory looks"></a><figcaption>The Presets tab with the factory looks</figcaption></figure>
 <h2 id="own-presets"><a class="anchor" href="#own-presets" aria-label="Link">#</a>Your own presets</h2>
 <p>Under Save current look, type a name and press Save. A saved preset contains all 16 decks, with their layers, clips, effects, colours, the master, macros and LFOs and the tempo settings. The list My presets shows what you saved. A click loads a preset, and a right click gives Overwrite with current and Delete.</p>
 <p>File, Save as preset does the same from the menu. Presets are small files in the presets folder, so you can copy them to another computer.</p>
@@ -266,6 +266,13 @@
 }</code></pre>
 <p><strong>Safety.</strong> A package is only data. Every file has a checksum that is checked before anything is moved into place. File names must be plain names without folders and the folder is chosen by the kind of file, so a package cannot write outside the data folder. Files are stored without compression and every kind has a size limit, so a small package cannot unpack into something huge. A package that is cut off, changed, too large, in a newer format or in the wrong format is refused and nothing on your computer is changed. Packages are not signed: the fingerprint shows that a file is the one somebody published, not that its content is safe. There is no online catalogue, you get a package from somebody and install it yourself.</p>
 <figure class="shot"><a href="../assets/manual/en/community-packages.webp"><img src="../assets/manual/en/community-packages.webp" width="788" height="672" loading="lazy" alt="The Community packages window"></a><figcaption>The Community packages window</figcaption></figure>
+<h2 id="resoport"><a class="anchor" href="#resoport" aria-label="Link">#</a>Importing from Resolume (ResoPort)</h2>
+<p>ResoPort reads a composition that Resolume saved (a file that ends in <code>.avc</code>) and builds a NyrexVJ composition from it. Open it with File, Import Resolume composition (ResoPort)..., or drop an <code>.avc</code> file onto the NyrexVJ window.</p>
+<ol><li>Type or paste the path of the <code>.avc</code> file. If the media of the composition lie in another place, enter that folder in the second field. Press <strong>Check file</strong>.</li><li>Read the report. It says which Resolume version made the file, how many clips will be imported, and what will not be: media that were not found (the first names are listed), files that NyrexVJ cannot play, generator clips and clips from other sources, effects, layers beyond the fourth, decks beyond the sixteenth, clips outside the four layers and eight columns, blend modes that NyrexVJ does not know, and a picture size that NyrexVJ does not have. Nothing has changed yet.</li><li>Press <strong>Import</strong>. The media that were found are copied into the library and the composition is built.</li></ol>
+<p><strong>What is taken over:</strong> media clips (videos and images) at the same layer and column, the opacity and blend mode of each layer, the names of the decks, the name of the composition, the tempo (when it is between 40 and 240 BPM) and the picture size (when NyrexVJ has the same size). <strong>What is not taken over:</strong> effects, generators, clips from other sources, and every other Resolume setting; they are counted in the report so that you know what is missing. A blend mode whose name NyrexVJ does not know becomes Normal and is named in the report.</p>
+<p>ResoPort looks for each medium next to the <code>.avc</code> file, at the path that Resolume recorded, and in the extra folder. A medium that is not found leaves its cell empty; put the media next to the file and check again. DXV movies are copied like any other file and are then handled by the DXV to HAP setting described in the chapter on video clips.</p>
+<aside class="note note"><strong class="note-label">Note</strong><p><strong>Import replaces the composition that is open</strong>, like loading a preset, and it cannot be undone. Save what you want to keep as a preset first.</p></aside>
+<aside class="note note"><strong class="note-label">Note</strong><p>ResoPort was written from a few sample files of Resolume Arena 7.22 and from test files. It was not tried on a large show composition. Check the result before you rely on it, and tell the maintainers what it got wrong.</p></aside>
 <h2 id="undo"><a class="anchor" href="#undo" aria-label="Link">#</a>Undo and redo</h2>
 <p>Edit, Undo and Redo, or <code>Ctrl+Z</code> and <code>Ctrl+Y</code> (<code>Ctrl+Shift+Z</code> also redoes), step through your changes to sliders, clips, effects and decks. Playing a clip, triggering a column and moving the macro knobs are performance actions and are not part of undo. In the timeline and the node editor the same keys work on their own history while those windows have the focus.</p>
 <nav class="pager" aria-label="Pager"><a class="prev" href="library.html"><small>Previous</small><span>The Library</span></a><a class="next" href="master.html"><small>Next</small><span>The Master window</span></a></nav>

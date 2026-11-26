@@ -108,7 +108,7 @@ void App::drawPresetsTab() {
         toast(std::string(tr("Deleted ")) + toDelete);
     }
 
-    ImGui::SeparatorText(tr("Save current look"));
+    ui::sectionHeader(tr("Save current look"));
     const char* saveLabel = tr("Save");
     const float saveWidth = ImGui::CalcTextSize(saveLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x + 4.0f;
     ImGui::SetNextItemWidth(-saveWidth);
@@ -292,7 +292,7 @@ void App::drawMediaDetails(const MediaPlayer& player, bool tooltip) {
 }
 
 void App::drawMediaControls(MediaPlayer& player) {
-    ImGui::SeparatorText(player.isVideo() ? tr("Video") : tr("Image"));
+    ui::sectionHeader(player.isVideo() ? tr("Video") : tr("Image"));
     drawMediaDetails(player, false);
     if (player.state() == MediaState::Failed) {
         if (player.isVideo()) {
@@ -353,7 +353,7 @@ void App::drawPlaybackControls(MediaPlayer& player, ClipPlayback& playback) {
     const double duration = player.videoInfo().duration;
     const double period = player.framePeriod();
     const double position = player.position();
-    ImGui::SeparatorText(tr("Playback"));
+    ui::sectionHeader(tr("Playback"));
     ImGui::Text("%s / %s", timecodeText(position).c_str(), timecodeText(duration).c_str());
     ImGui::SameLine();
     ImGui::TextDisabled(tr("Frame %d"), static_cast<int>(std::lround(position / period)));
@@ -898,7 +898,7 @@ void App::drawLibraryAssets() {
     }
     ImGui::BeginChild("assetRows", ImVec2(0.0f, 0.0f), ImGuiChildFlags_None);
     const auto section = [&](const char* title, const std::vector<AssetFile>& files, bool models) {
-        ImGui::SeparatorText(title);
+        ui::sectionHeader(title);
         if (files.empty()) {
             ImGui::TextDisabled("%s", tr("Nothing found"));
         }
@@ -919,7 +919,7 @@ void App::drawLibraryAssets() {
     };
     section(tr("Models"), assetModels_, true);
     section(tr("Textures"), assetTextures_, false);
-    ImGui::SeparatorText(tr("Images and videos"));
+    ui::sectionHeader(tr("Images and videos"));
     if (assetMedia_.empty()) {
         ImGui::TextDisabled("%s", tr("Nothing found"));
     }
@@ -942,7 +942,7 @@ void App::drawLibraryAssets() {
         ImGui::SetItemTooltip("%s", tr("Click to put it into the selected cell"));
         ImGui::PopID();
     }
-    ImGui::SeparatorText(tr("Your scenes"));
+    ui::sectionHeader(tr("Your scenes"));
     if (assetPacks_.empty()) {
         ImGui::TextDisabled("%s", tr("No saved scenes yet"));
     }
@@ -1091,7 +1091,7 @@ void App::drawAudioSource() {
                 }
                 bool& header = pass == 0 ? loopbackHeader : inputHeader;
                 if (!header) {
-                    ImGui::SeparatorText(pass == 0 ? tr("System audio (what your PC plays)") : tr("Inputs (microphone, line-in)"));
+                    ui::sectionHeader(pass == 0 ? tr("System audio (what your PC plays)") : tr("Inputs (microphone, line-in)"));
                     header = true;
                 }
                 ImGui::PushID(device.id.c_str());
@@ -1175,7 +1175,7 @@ void App::drawAudioTab() {
     }
     ImGui::Checkbox(trId("Sync BPM to audio", "audioSyncBpm"), &settings_.audioSyncBpm);
 
-    ImGui::SeparatorText(tr("Analysis"));
+    ui::sectionHeader(tr("Analysis"));
     ui::sliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
     ui::sliderFloat(trId("Smoothing", "audioSmoothing"), &settings_.audioSmoothing, 0.0f, 1.0f, "%.2f");
     ui::sliderFloat(trId("Beat sensitivity", "audioSensitivity"), &settings_.audioBeatSensitivity, 0.0f, 1.0f, "%.2f");

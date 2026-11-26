@@ -30,115 +30,104 @@ void meterRow(const char* label, float value) {
 
 void App::drawTransportBar() {
     Composition& comp = engine_.comp;
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    const float height = ImGui::GetFrameHeight() + ui::px(14.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(ui::px(10.0f), ui::px(7.0f)));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.06f, 0.06f, 0.068f, 1.0f));
-    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav;
-    if (ImGui::BeginViewportSideBar("##transportbar", const_cast<ImGuiViewport*>(viewport), ImGuiDir_Up, height, flags)) {
-        drawDeckBar();
+    drawDeckBar();
 
-        ImGui::SameLine(0.0f, ui::px(22.0f));
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextDisabled("BPM");
-        ImGui::SameLine();
-        float bpm = comp.bpm;
-        ImGui::SetNextItemWidth(ui::px(74.0f));
-        if (ImGui::DragFloat("##bpm", &bpm, 0.1f, 40.0f, 240.0f, "%.1f")) {
-            comp.bpm = std::clamp(bpm, 40.0f, 240.0f);
-        }
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("BPM");
+    ImGui::SameLine();
+    float bpm = comp.bpm;
+    ImGui::SetNextItemWidth(ui::px(74.0f));
+    if (ImGui::DragFloat("##bpm", &bpm, 0.1f, 40.0f, 240.0f, "%.1f")) {
+        comp.bpm = std::clamp(bpm, 40.0f, 240.0f);
+    }
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ImGui::Button("-")) {
+        comp.bpm = std::clamp(comp.bpm - 1.0f, 40.0f, 240.0f);
+    }
+    ImGui::SameLine(0.0f, 2.0f);
+    if (ImGui::Button("+")) {
+        comp.bpm = std::clamp(comp.bpm + 1.0f, 40.0f, 240.0f);
+    }
+    if (ImGui::GetContentRegionAvail().x > ui::px(640.0f)) {
         ImGui::SameLine(0.0f, 4.0f);
-        if (ImGui::Button("-")) {
-            comp.bpm = std::clamp(comp.bpm - 1.0f, 40.0f, 240.0f);
+        if (ImGui::Button("/2")) {
+            comp.bpm = std::clamp(comp.bpm * 0.5f, 40.0f, 240.0f);
         }
         ImGui::SameLine(0.0f, 2.0f);
-        if (ImGui::Button("+")) {
-            comp.bpm = std::clamp(comp.bpm + 1.0f, 40.0f, 240.0f);
-        }
-        if (ImGui::GetContentRegionAvail().x > ui::px(640.0f)) {
-            ImGui::SameLine(0.0f, 4.0f);
-            if (ImGui::Button("/2")) {
-                comp.bpm = std::clamp(comp.bpm * 0.5f, 40.0f, 240.0f);
-            }
-            ImGui::SameLine(0.0f, 2.0f);
-            if (ImGui::Button("x2")) {
-                comp.bpm = std::clamp(comp.bpm * 2.0f, 40.0f, 240.0f);
-            }
-        }
-        ImGui::SameLine(0.0f, ui::px(10.0f));
-        if (ImGui::Button(trId("Tap", "tap"))) {
-            engine_.tap();
-        }
-        ImGui::SetItemTooltip("%s", tr("Tap the tempo (Space)"));
-        if (ImGui::GetContentRegionAvail().x > ui::px(300.0f)) {
-            ImGui::SameLine(0.0f, 4.0f);
-            if (ImGui::Button(trId("Resync", "resync"))) {
-                engine_.resync();
-            }
-            ImGui::SetItemTooltip("%s", tr("Restart the beat count at 1"));
-        }
-
-        ImGui::SameLine(0.0f, ui::px(18.0f));
-        if (ui::accentButton(trId("Play", "play"), !engine_.paused)) {
-            engine_.paused = false;
-        }
-        ImGui::SetItemTooltip("%s", tr("Runs the tempo clock and all clip motion"));
-        ImGui::SameLine(0.0f, 4.0f);
-        if (ui::accentButton(trId("Pause", "pause"), engine_.paused)) {
-            engine_.paused = !engine_.paused;
-        }
-        ImGui::SetItemTooltip("%s", tr("Freezes the tempo clock and all clip motion"));
-        ImGui::SameLine(0.0f, 4.0f);
-        if (ImGui::Button(trId("Stop", "stop"))) {
-            engine_.paused = true;
-            engine_.resync();
-        }
-        ImGui::SetItemTooltip("%s", tr("Pauses and restarts the beat count at 1"));
-
-        const int bar = clampBeatsPerBar(comp.beatsPerBar);
-        const double beat = engine_.beat();
-        const int index = static_cast<int>(std::floor(beat)) % bar;
-        const float phase = static_cast<float>(beat - std::floor(beat));
-        if (ImGui::GetContentRegionAvail().x > ui::px(130.0f)) {
-            ImGui::SameLine(0.0f, ui::px(18.0f));
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled("%s %d/%d", tr("Beat"), index + 1, bar);
-        }
-
-        const float segment = ui::px(16.0f);
-        const float gap = ui::px(3.0f);
-        const float ticks = static_cast<float>(bar) * (segment + gap);
-        if (ImGui::GetContentRegionAvail().x > ticks + ui::px(90.0f)) {
-            ImGui::SameLine(0.0f, ui::px(12.0f));
-            const ImVec2 origin = ImGui::GetCursorScreenPos();
-            const float frame = ImGui::GetFrameHeight();
-            ImGui::Dummy(ImVec2(ticks - gap, frame));
-            ImDrawList* draw = ImGui::GetWindowDrawList();
-            const float top = origin.y + (frame - ui::px(8.0f)) * 0.5f;
-            const float bottom = top + ui::px(8.0f);
-            for (int i = 0; i < bar; ++i) {
-                const float x0 = origin.x + static_cast<float>(i) * (segment + gap);
-                const float fill = i < index ? 1.0f : (i == index ? phase : 0.0f);
-                draw->AddRectFilled(ImVec2(x0, top), ImVec2(x0 + segment, bottom), IM_COL32(40, 40, 46, 255), 2.0f);
-                if (fill > 0.0f) {
-                    const ImVec4 color = i == 0 ? ui::kAccentHover : ui::kAccent;
-                    draw->AddRectFilled(ImVec2(x0, top), ImVec2(x0 + segment * fill, bottom), ImGui::GetColorU32(color), 2.0f);
-                }
-            }
-            ImGui::SameLine(0.0f, ui::px(12.0f));
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled("%s %.2f", tr("Phase"), phase);
-        }
-
-        if (engine_.transitioning()) {
-            const ImVec2 pos = ImGui::GetWindowPos();
-            const ImVec2 size = ImGui::GetWindowSize();
-            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x, pos.y + size.y - 3.0f), ImVec2(pos.x + size.x * engine_.transitionProgress(), pos.y + size.y), ImGui::GetColorU32(ui::kAccent));
+        if (ImGui::Button("x2")) {
+            comp.bpm = std::clamp(comp.bpm * 2.0f, 40.0f, 240.0f);
         }
     }
-    ImGui::End();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
+    ImGui::SameLine(0.0f, ui::px(10.0f));
+    if (ImGui::Button(trId("Tap", "tap"))) {
+        engine_.tap();
+    }
+    ImGui::SetItemTooltip("%s", tr("Tap the tempo (Space)"));
+    if (ImGui::GetContentRegionAvail().x > ui::px(300.0f)) {
+        ImGui::SameLine(0.0f, 4.0f);
+        if (ImGui::Button(trId("Resync", "resync"))) {
+            engine_.resync();
+        }
+        ImGui::SetItemTooltip("%s", tr("Restart the beat count at 1"));
+    }
+
+    ImGui::SameLine(0.0f, ui::px(18.0f));
+    if (ui::accentButton(trId("Play", "play"), !engine_.paused)) {
+        engine_.paused = false;
+    }
+    ImGui::SetItemTooltip("%s", tr("Runs the tempo clock and all clip motion"));
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ui::accentButton(trId("Pause", "pause"), engine_.paused)) {
+        engine_.paused = !engine_.paused;
+    }
+    ImGui::SetItemTooltip("%s", tr("Freezes the tempo clock and all clip motion"));
+    ImGui::SameLine(0.0f, 4.0f);
+    if (ImGui::Button(trId("Stop", "stop"))) {
+        engine_.paused = true;
+        engine_.resync();
+    }
+    ImGui::SetItemTooltip("%s", tr("Pauses and restarts the beat count at 1"));
+
+    const int bar = clampBeatsPerBar(comp.beatsPerBar);
+    const double beat = engine_.beat();
+    const int index = static_cast<int>(std::floor(beat)) % bar;
+    const float phase = static_cast<float>(beat - std::floor(beat));
+    if (ImGui::GetContentRegionAvail().x > ui::px(130.0f)) {
+        ImGui::SameLine(0.0f, ui::px(18.0f));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextDisabled("%s %d/%d", tr("Beat"), index + 1, bar);
+    }
+
+    const float segment = ui::px(16.0f);
+    const float gap = ui::px(3.0f);
+    const float ticks = static_cast<float>(bar) * (segment + gap);
+    if (ImGui::GetContentRegionAvail().x > ticks + ui::px(90.0f)) {
+        ImGui::SameLine(0.0f, ui::px(12.0f));
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        const float frame = ImGui::GetFrameHeight();
+        ImGui::Dummy(ImVec2(ticks - gap, frame));
+        ImDrawList* draw = ImGui::GetWindowDrawList();
+        const float top = origin.y + (frame - ui::px(8.0f)) * 0.5f;
+        const float bottom = top + ui::px(8.0f);
+        for (int i = 0; i < bar; ++i) {
+            const float x0 = origin.x + static_cast<float>(i) * (segment + gap);
+            const float fill = i < index ? 1.0f : (i == index ? phase : 0.0f);
+            draw->AddRectFilled(ImVec2(x0, top), ImVec2(x0 + segment, bottom), IM_COL32(40, 40, 46, 255), 2.0f);
+            if (fill > 0.0f) {
+                const ImVec4 color = i == 0 ? ui::kAccentHover : ui::kAccent;
+                draw->AddRectFilled(ImVec2(x0, top), ImVec2(x0 + segment * fill, bottom), ImGui::GetColorU32(color), 2.0f);
+            }
+        }
+        ImGui::SameLine(0.0f, ui::px(12.0f));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextDisabled("%s %.2f", tr("Phase"), phase);
+    }
+
+    if (engine_.transitioning()) {
+        const ImVec2 pos = ImGui::GetWindowPos();
+        const ImVec2 size = ImGui::GetWindowSize();
+        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x, pos.y + size.y - 3.0f), ImVec2(pos.x + size.x * engine_.transitionProgress(), pos.y + size.y), ImGui::GetColorU32(ui::kAccent));
+    }
 }
 
 void App::drawTrigger() {
@@ -149,7 +138,7 @@ void App::drawTrigger() {
     Composition& comp = engine_.comp;
     DeckSettings& settings = comp.deckSettings;
 
-    ImGui::SeparatorText(tr("Clip start"));
+    ui::sectionHeader(tr("Clip start"));
     ui::fieldLabel(tr("Quantize"));
     {
         const char* gridLabels[kQuantizeGridCount] = {tr("Off"), tr("Beat"), tr("Bar"), tr("2 bars"), tr("4 bars")};
@@ -172,7 +161,7 @@ void App::drawTrigger() {
         }
     }
 
-    ImGui::SeparatorText(tr("Transition"));
+    ui::sectionHeader(tr("Transition"));
     ui::fieldLabel(tr("Type"));
     {
         ImGui::SetNextItemWidth(-FLT_MIN);
@@ -198,7 +187,7 @@ void App::drawTrigger() {
         ui::sliderInt(tr("every"), &settings.cycleBeats, 4, 128, "%d beats");
     }
 
-    ImGui::SeparatorText(tr("Beat grid"));
+    ui::sectionHeader(tr("Beat grid"));
     int beatsPerBar = comp.beatsPerBar;
     if (ui::sliderInt(tr("Beats per bar"), &beatsPerBar, kMinBeatsPerBar, kMaxBeatsPerBar)) {
         comp.beatsPerBar = clampBeatsPerBar(beatsPerBar);
@@ -225,7 +214,7 @@ void App::drawTrigger() {
     ImGui::SetItemTooltip("%s", tr("Make the nearest beat the first beat of the bar"));
 
     if (audio_.active()) {
-        ImGui::SeparatorText(tr("Tempo"));
+        ui::sectionHeader(tr("Tempo"));
         ImGui::Checkbox(trId("Sync BPM to audio", "syncBpm"), &settings_.audioSyncBpm);
         const AudioFeatures& features = audio_.features();
         if (features.bpm > 0.0f) {

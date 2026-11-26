@@ -272,6 +272,7 @@ const Translation kDutch[] = {
     {"Mix", "Mix"},
     {"Mode", "Modus"},
     {"Mono", "Mono"},
+    {"Arena", "Arena"},
     {"Move a knob or press a key for", "Draai aan een knop of druk op een toets voor"},
     {"Multiply", "Vermenigvuldigen"},
     {"My presets", "Mijn presets"},

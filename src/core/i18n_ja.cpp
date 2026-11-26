@@ -272,6 +272,7 @@ const Translation kJapanese[] = {
     {"Mix", "ミックス"},
     {"Mode", "モード"},
     {"Mono", "モノ"},
+    {"Arena", "Arena"},
     {"Move a knob or press a key for", "ノブを動かすかキーを押してください:"},
     {"Multiply", "乗算"},
     {"My presets", "マイプリセット"},

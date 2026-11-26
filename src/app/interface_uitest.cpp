@@ -297,8 +297,8 @@ void App::buildInterfaceTest() {
         const ImGuiWindow* master = ImGui::FindWindowByName("###master");
         const ImGuiWindow* layer = ImGui::FindWindowByName("###layer");
         const ImGuiWindow* clip = ImGui::FindWindowByName("###clip");
-        record("Clip and Master are tabs of one panel", clip && master && clip->DockId == master->DockId && master->DockId != 0, master ? "dock " + std::to_string(master->DockId) : "missing");
-        record("the Layer panel sits below Clip and Master", master && layer && layer->DockId != master->DockId && layer->Pos.y >= master->Pos.y + master->Size.y - 2.0f, layer ? describe(layer) : "missing");
+        record("Master and Layer are tabs of one panel", layer && master && layer->DockId == master->DockId && master->DockId != 0, master ? "dock " + std::to_string(master->DockId) : "missing");
+        record("the Clip panel sits to the right of Layer and Master", clip && master && clip->DockId != master->DockId && clip->Pos.x >= master->Pos.x + master->Size.x - 2.0f, clip ? describe(clip) : "missing");
         *baseFrame = measuredFrameHeight();
         *basePadding = ImGui::GetStyle().FramePadding.y;
     });
@@ -405,11 +405,14 @@ void App::buildInterfaceTest() {
         record("Reset window layout also takes the timeline out of the layout", sameRects(*original, now, 2.0f, detail), detail);
     });
 
+    add([]() {
+        ImGui::SetWindowFocus("###stripMaster");
+    }, 4);
     add([this]() {
         const ImGuiWindow* strip = ImGui::FindWindowByName("###stripMaster");
         if (strip) {
             const float label = std::clamp((strip->ContentRegionRect.GetWidth()) * 0.36f, ui::px(56.0f), ui::px(150.0f));
-            zoomMouse_ = ImVec2(strip->ContentRegionRect.Min.x + label + ui::px(40.0f), strip->ContentRegionRect.Min.y + ImGui::GetFrameHeight() * 0.5f);
+            zoomMouse_ = ImVec2(strip->ContentRegionRect.Min.x + label + ui::px(76.0f), strip->ContentRegionRect.Min.y + ImGui::GetFrameHeight() * 0.5f);
             ImGui::GetIO().AddMousePosEvent(zoomMouse_.x, zoomMouse_.y);
         }
     }, 4);

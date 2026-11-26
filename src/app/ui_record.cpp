@@ -343,7 +343,7 @@ void App::drawRecordingPage() {
         settings_.recordProfile = info.id;
     }
 
-    ImGui::SeparatorText(tr("Format"));
+    ui::sectionHeader(tr("Format"));
     ImGui::BeginDisabled(running);
     ImGui::SetNextItemWidth(ui::px(260.0f));
     if (ImGui::BeginCombo(trId("Format", "recFormat"), profileLabel(current))) {
@@ -364,7 +364,7 @@ void App::drawRecordingPage() {
     }
     ImGui::PopTextWrapPos();
 
-    ImGui::SeparatorText(tr("Picture"));
+    ui::sectionHeader(tr("Picture"));
     if (recordSizeChoice_ < 0) {
         recordSizeChoice_ = kSizeSameAsOutput;
         if (settings_.recordWidth > 0 && settings_.recordHeight > 0) {
@@ -457,7 +457,7 @@ void App::drawRecordingPage() {
         ImGui::TextDisabled("%s", tr("This format has a fixed quality."));
     }
 
-    ImGui::SeparatorText(tr("Sound"));
+    ui::sectionHeader(tr("Sound"));
     const bool deviceAudio = audio_.deviceActive();
     bool wantAudio = settings_.recordAudio && info.audio != RecordAudioCodec::None;
     ImGui::BeginDisabled(info.audio == RecordAudioCodec::None);
@@ -476,7 +476,7 @@ void App::drawRecordingPage() {
     }
     ImGui::PopTextWrapPos();
 
-    ImGui::SeparatorText(tr("File"));
+    ui::sectionHeader(tr("File"));
     if (info.fragmentable) {
         bool safe = settings_.recordCrashSafe;
         if (ImGui::Checkbox(trId("Keep the file readable after a crash", "recCrashSafe"), &safe)) {
@@ -535,7 +535,7 @@ void App::drawRecordingPage() {
         ImGui::PopTextWrapPos();
     }
 
-    ImGui::SeparatorText(tr("Recording"));
+    ui::sectionHeader(tr("Recording"));
     if (!running) {
         ImGui::BeginDisabled(!check.valid);
         if (ui::accentButton(trId("Start recording", "recStart"), true)) {

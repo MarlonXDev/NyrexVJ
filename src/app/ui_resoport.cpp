@@ -216,7 +216,7 @@ void App::drawResoPort() {
         const resoport::Document& doc = d.check.document;
         const resoport::Report& r = d.preview;
         ImGui::Spacing();
-        ImGui::SeparatorText(doc.name.empty() ? tr("Resolume composition") : doc.name.c_str());
+        ui::sectionHeader(doc.name.empty() ? tr("Resolume composition") : doc.name.c_str());
         if (!doc.application.empty()) {
             ImGui::TextDisabled("%s", formatted(tr("Made with %s %d.%d"), doc.application.c_str(), doc.versionMajor, doc.versionMinor).c_str());
         }

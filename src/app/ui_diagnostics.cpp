@@ -79,7 +79,7 @@ void App::drawGpuDiagnostics() {
     auto persist = [this]() { saveSettings(settings_); };
     const Diagnostics& d = engine_.diagnostics();
 
-    ImGui::SeparatorText(tr("Graphics memory and traffic"));
+    ui::sectionHeader(tr("Graphics memory and traffic"));
     ImGui::TextUnformatted(tr("Measured by the graphics driver"));
     if (d.driver.measured()) {
         if (d.driver.hasTotal) {
@@ -149,7 +149,7 @@ void App::drawGpuDiagnostics() {
         (void)window;
     }
 
-    ImGui::SeparatorText(tr("Warnings"));
+    ui::sectionHeader(tr("Warnings"));
     const std::vector<gpudiag::Warning>& active = diagMonitor_->tracker().active();
     if (active.empty()) {
         ImGui::TextDisabled("%s", tr("No warnings."));

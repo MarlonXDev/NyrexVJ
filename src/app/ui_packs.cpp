@@ -472,7 +472,7 @@ void App::drawPackInstall() {
     const show::Manifest& manifest = plan.manifest;
     const show::PackMeta& meta = manifest.meta;
     ImGui::Spacing();
-    ImGui::SeparatorText((manifest.name + "  " + meta.version).c_str());
+    ui::sectionHeader((manifest.name + "  " + meta.version).c_str());
     if (d.previewTexture != 0) {
         const float width = std::min(260.0f, ImGui::GetContentRegionAvail().x);
         const float height = width * static_cast<float>(d.previewHeight) / static_cast<float>(std::max(1, d.previewWidth));
@@ -513,7 +513,7 @@ void App::drawPackInstall() {
     }
 
     ImGui::Spacing();
-    ImGui::SeparatorText(tr("What will happen"));
+    ui::sectionHeader(tr("What will happen"));
     for (const pack::Finding& finding : plan.findings) {
         ImVec4 color = severityColor(finding.severity);
         if (finding.severity == pack::Severity::Consent && finding.accepted) {
@@ -655,7 +655,7 @@ void App::drawPackInstalled() {
     }
     const pack::Record& record = *selected;
     ImGui::Spacing();
-    ImGui::SeparatorText(record.name.c_str());
+    ui::sectionHeader(record.name.c_str());
     ImGui::TextDisabled("%s", with1(tr("Id: %s"), record.id).c_str());
     ImGui::TextUnformatted(with1(tr("Version %s"), record.version).c_str());
     if (!record.author.empty()) {

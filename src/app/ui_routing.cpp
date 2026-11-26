@@ -136,7 +136,7 @@ void App::drawRoutingWindow() {
 
     ImGui::TextWrapped("%s", tr("A route clip shows the picture of another layer, of several layers together or of the master. Find them in the library under the Routing filter. The picture is copied on the graphics card and never goes through the processor."));
 
-    ImGui::SeparatorText(tr("Sources"));
+    ui::sectionHeader(tr("Sources"));
     constexpr float kTileWidth = 144.0f;
     constexpr float kTileHeight = 81.0f;
     const float spacing = ImGui::GetStyle().ItemSpacing.x;
@@ -171,7 +171,7 @@ void App::drawRoutingWindow() {
         ImGui::PopID();
     }
 
-    ImGui::SeparatorText(tr("Route clips in the layers"));
+    ui::sectionHeader(tr("Route clips in the layers"));
     bool any = false;
     for (const routing::Resolved& resolved : engine_.routePlan().consumers) {
         if (resolved.consumer.kind != routing::ConsumerKind::Layer) {
@@ -188,7 +188,7 @@ void App::drawRoutingWindow() {
         ImGui::TextDisabled("%s", tr("No layer plays a route clip right now."));
     }
 
-    ImGui::SeparatorText(tr("Pictures sent to other programs"));
+    ui::sectionHeader(tr("Pictures sent to other programs"));
     const char* senderNames[routing::kSenderCount] = {tr("Spout"), tr("NDI"), tr("Recording")};
     std::string* keys[routing::kSenderCount] = {&settings_.senderSpout, &settings_.senderNdi, &settings_.senderRecord};
     for (int k = 0; k < routing::kSenderCount; ++k) {
@@ -228,7 +228,7 @@ void App::drawRoutingWindow() {
     ImGui::TextDisabled("%s", tr("Master sends the finished picture. Any other source sends an opaque copy of that layer or group without the master effects."));
     ImGui::PopTextWrapPos();
 
-    ImGui::SeparatorText(tr("Memory"));
+    ui::sectionHeader(tr("Memory"));
     ImGui::Text(tr("%.1f MB for routed pictures in %d copies"), megabytes(engine_.routeBytes()), engine_.routeCapturesAlive());
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("A copy is only made while a route clip or a sender needs it, and it is released about a second and a half after the last user is gone."));

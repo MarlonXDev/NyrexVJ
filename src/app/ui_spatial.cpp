@@ -150,7 +150,7 @@ void App::drawSpatialMapping(OutputSpec& spec, int index, OutputMapping& map) {
         spatialDrag_ = -1;
         spatialMeshValid_ = false;
     }
-    ImGui::SeparatorText(tr("3D mapping"));
+    ui::sectionHeader(tr("3D mapping"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Lights real surfaces in space, such as a wall, a pillar or a box. You describe the projector and the surfaces in metres and the picture is projected onto them with the right perspective. While it is on, the corners and the warp of this slice are not used. Masks, edge blending and colour still work."));
     ImGui::PopTextWrapPos();
@@ -196,10 +196,10 @@ void App::drawSpatialMapping(OutputSpec& spec, int index, OutputMapping& map) {
     }
     ImGui::TextDisabled("%s", tr("Coordinates: X to the right, Y up, Z towards the audience, metres, angles in degrees."));
 
-    ImGui::SeparatorText(tr("Projector"));
+    ui::sectionHeader(tr("Projector"));
     deviceControls(spatial.projector, "projector", spatial);
     if (spatial.source == SpatialSource::ViewerCamera) {
-        ImGui::SeparatorText(tr("Viewer"));
+        ui::sectionHeader(tr("Viewer"));
         ImGui::PushTextWrapPos(0.0f);
         ImGui::TextDisabled("%s", tr("The spot from which the picture is meant to be seen. Its field of view and aspect set how much of the picture the viewer sees."));
         ImGui::PopTextWrapPos();
@@ -209,7 +209,7 @@ void App::drawSpatialMapping(OutputSpec& spec, int index, OutputMapping& map) {
     drawSpatialSurfaces(spatial);
     drawSpatialCalibration(index, spatial);
 
-    ImGui::SeparatorText(tr("Views"));
+    ui::sectionHeader(tr("Views"));
     ImGui::TextDisabled("%s", tr("Output view: what the projector draws. Top view: the room seen from above."));
     drawSpatialOutputView(spatial);
     drawSpatialTopView(spatial);
@@ -217,7 +217,7 @@ void App::drawSpatialMapping(OutputSpec& spec, int index, OutputMapping& map) {
 }
 
 void App::drawSpatialSurfaces(SpatialMapping& spatial) {
-    ImGui::SeparatorText(tr("Surfaces"));
+    ui::sectionHeader(tr("Surfaces"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("The real things that the projector lights. Describe each one by its four corners in metres, in this order as seen from the front: top left, top right, bottom right, bottom left. The front is the side that the projector has to be on."));
     ImGui::PopTextWrapPos();
@@ -317,7 +317,7 @@ void App::drawSpatialSurfaces(SpatialMapping& spatial) {
 }
 
 void App::drawSpatialCalibration(int index, SpatialMapping& spatial) {
-    ImGui::SeparatorText(tr("Calibration"));
+    ui::sectionHeader(tr("Calibration"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", tr("Finds the position and angles of the projector from points that you know. For each point enter where it is in space, switch on the markers and the test pattern, then move the green cross until the light lands on the real spot. With four or more points that do not lie on one line, Solve computes the projector pose. It needs six points when the field of view is solved as well."));
     ImGui::PopTextWrapPos();

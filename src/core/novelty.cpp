@@ -57,6 +57,8 @@ constexpr Entry kEffects[] = {
     {"Image Terrain", 0, 8},
     {"Hyperspace", 0, 8},
     {"Shatter", 0, 8},
+    {"Prism Glass", 0, 60},
+    {"Frosted Glass", 0, 60},
 };
 
 constexpr Entry kPresets[] = {

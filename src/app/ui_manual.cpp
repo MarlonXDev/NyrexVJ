@@ -418,7 +418,7 @@ void App::drawManual() {
             ImGui::PopID();
         }
     } else {
-        ImGui::SeparatorText(tr("Contents"));
+        ui::sectionHeader(tr("Contents"));
         for (size_t c = 0; c < m.chapters.size(); ++c) {
             ImGui::PushID(static_cast<int>(c));
             const bool current = c == manualView_.chapter;

@@ -7,6 +7,7 @@
 #include "app/manual_view.hpp"
 #include "app/node_editor.hpp"
 #include "app/pack_dialog.hpp"
+#include "app/resoport_dialog.hpp"
 #include "app/show_dialog.hpp"
 #include "app/timeline_view.hpp"
 #include "audio/audio_system.hpp"
@@ -292,6 +293,11 @@ private:
     void importCommunityPackage(const std::string& path);
     void afterPackChange();
     void drawShowPackages();
+    void drawResoPort();
+    void serviceResoPort();
+    void openResoPort(const std::string& path);
+    void startResoPortCheck();
+    void startResoPortImport();
     void drawShowExport();
     void drawShowImport();
     void drawShowProgress();
@@ -413,6 +419,7 @@ private:
     ImGuiID rootDock_ = 0;
     bool manualOpen_ = false;
     ShowDialog showDialog_;
+    ResoPortDialog resoPort_;
     PackDialog packDialog_;
     GeneratorDialog generatorDialog_;
     ShaderEditorDialog shaderEditor_;

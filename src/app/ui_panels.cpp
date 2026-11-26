@@ -309,7 +309,9 @@ void App::drawLayer() {
 
     ImGui::SeparatorText(tr("Video"));
     ui::sliderFloat(trId("Opacity", "layerOpacity"), &layer.opacity, 0.0f, 1.0f, "%.2f");
-    if (ImGui::BeginCombo(trId("Blend", "layerBlend"), tr(blendName(layer.blend)))) {
+    ui::fieldLabel(tr("Blend"));
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::BeginCombo("##layerBlendMode", tr(blendName(layer.blend)))) {
         for (int b = 0; b < BlendModeCount; ++b) {
             if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
                 layer.blend = b;
@@ -317,6 +319,7 @@ void App::drawLayer() {
         }
         ImGui::EndCombo();
     }
+    ui::fieldLabel("");
     ui::toggleButton("B", layer.bypass);
     ImGui::SetItemTooltip("%s", tr("Bypass: skip this layer"));
     ImGui::SameLine();

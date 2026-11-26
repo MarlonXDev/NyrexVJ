@@ -489,6 +489,8 @@ void App::queueDroppedFiles(const std::vector<std::string>& paths) {
             importDroppedVenue(path);
         } else if (extension == ".nyxfx") {
             importNodeGraph(path);
+        } else if (extension == ".avc") {
+            openResoPort(path);
         } else {
             pendingImports_.push_back(path);
         }
@@ -882,6 +884,7 @@ void App::frame(double dt, bool drawUi) {
     drawTimeline();
     drawManual();
     drawShowPackages();
+    drawResoPort();
     drawCommunityPackages();
     drawGeneratorStudio();
     drawShaderEditor();
@@ -957,13 +960,9 @@ void App::buildLayout(ImGuiID dock) {
     ImGuiID audio = ImGui::DockBuilderSplitNode(rowRest3, ImGuiDir_Left, 0.42f, nullptr, &browser);
 
     ImGuiID stripRest = 0;
-    ImGuiID levels = ImGui::DockBuilderSplitNode(strip, ImGuiDir_Left, 0.16f, nullptr, &stripRest);
-    ImGuiID stripRest2 = 0;
-    ImGuiID audioIn = ImGui::DockBuilderSplitNode(stripRest, ImGuiDir_Left, 0.24f, nullptr, &stripRest2);
-    ImGuiID stripRest3 = 0;
-    ImGuiID network = ImGui::DockBuilderSplitNode(stripRest2, ImGuiDir_Left, 0.34f, nullptr, &stripRest3);
-    ImGuiID osc = 0;
-    ImGuiID midi = ImGui::DockBuilderSplitNode(stripRest3, ImGuiDir_Left, 0.5f, nullptr, &osc);
+    ImGuiID levels = ImGui::DockBuilderSplitNode(strip, ImGuiDir_Left, 0.22f, nullptr, &stripRest);
+    ImGuiID connections = 0;
+    ImGuiID audioIn = ImGui::DockBuilderSplitNode(stripRest, ImGuiDir_Left, 0.38f, nullptr, &connections);
 
     ImGui::DockBuilderDockWindow("###deck", grid);
     ImGui::DockBuilderDockWindow("###clip", panels);
@@ -976,9 +975,9 @@ void App::buildLayout(ImGuiID dock) {
     ImGui::DockBuilderDockWindow("###browser", browser);
     ImGui::DockBuilderDockWindow("###stripMaster", levels);
     ImGui::DockBuilderDockWindow("###stripAudio", audioIn);
-    ImGui::DockBuilderDockWindow("###stripNetwork", network);
-    ImGui::DockBuilderDockWindow("###stripMidi", midi);
-    ImGui::DockBuilderDockWindow("###stripOsc", osc);
+    ImGui::DockBuilderDockWindow("###stripNetwork", connections);
+    ImGui::DockBuilderDockWindow("###stripMidi", connections);
+    ImGui::DockBuilderDockWindow("###stripOsc", connections);
     ImGui::DockBuilderFinish(dock);
 }
 
@@ -1150,6 +1149,9 @@ void App::drawMenuBar() {
         }
         if (ImGui::MenuItem(tr("Import show package..."))) {
             openShowPackages(1);
+        }
+        if (ImGui::MenuItem(tr("Import Resolume composition (ResoPort)..."))) {
+            openResoPort(std::string());
         }
         ImGui::Separator();
         if (ImGui::MenuItem(tr("Install community package..."))) {

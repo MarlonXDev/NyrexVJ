@@ -1145,11 +1145,14 @@ void App::drawAudioTab() {
     const char* names[4] = {tr("Bass"), tr("Mid"), tr("High"), tr("Level")};
     const float values[4] = {features.bass, features.mid, features.high, features.level};
     for (int i = 0; i < 4; ++i) {
-        ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ui::kAccent);
-        ImGui::ProgressBar(std::clamp(values[i], 0.0f, 1.0f), ImVec2(-FLT_MIN, 12.0f), "");
-        ImGui::PopStyleColor();
-        ImGui::SameLine(8.0f);
-        ImGui::TextUnformatted(names[i]);
+        ui::fieldLabel(names[i]);
+        const ImVec2 start = ImGui::GetCursorScreenPos();
+        const float width = std::max(1.0f, ImGui::GetContentRegionAvail().x);
+        const float height = ui::px(8.0f);
+        const float top = start.y + (ImGui::GetFrameHeight() - height) * 0.5f;
+        draw->AddRectFilled(ImVec2(start.x, top), ImVec2(start.x + width, top + height), IM_COL32(14, 14, 17, 255), 2.0f);
+        draw->AddRectFilled(ImVec2(start.x, top), ImVec2(start.x + width * std::clamp(values[i], 0.0f, 1.0f), top + height), ImGui::GetColorU32(ui::kAccent), 2.0f);
+        ImGui::Dummy(ImVec2(width, ImGui::GetFrameHeight()));
     }
 
     ImVec2 dot = ImGui::GetCursorScreenPos();

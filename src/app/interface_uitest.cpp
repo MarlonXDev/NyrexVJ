@@ -6,6 +6,8 @@
 #include "core/log.hpp"
 #include "core/shortcuts.hpp"
 #include "core/workspace.hpp"
+#include "render/clip_library.hpp"
+#include "scene3d/scene_pack.hpp"
 
 #include <GLFW/glfw3.h>
 #include <glad/gl.h>
@@ -100,6 +102,9 @@ bool allPanelsUsable(std::string& detail) {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     for (size_t i = 0; i < kPanelCount; ++i) {
         const ImGuiWindow* window = panel(i);
+        if (window && window->DockNode && window->DockNode->Windows.Size > 1 && !window->DockTabIsVisible) {
+            continue;
+        }
         if (!window || window->Size.x < 24.0f || window->Size.y < 24.0f || !insideMainWindow(window, 2.0f)) {
             detail = std::string(kPanels[i] + 3) + " " + describe(window) + " in " + std::to_string(static_cast<int>(viewport->Size.x)) + "x" + std::to_string(static_cast<int>(viewport->Size.y));
             return false;
@@ -765,6 +770,56 @@ void App::buildInterfaceTest() {
         std::error_code ec;
         fs::remove(graphs / "New effect.nyxfx", ec);
     }, 4);
+
+    const auto resoDir = std::make_shared<fs::path>(fs::path(userDataDir()) / "resoport_uitest");
+    add([this, resoDir]() {
+        std::error_code ec;
+        fs::remove_all(*resoDir, ec);
+        fs::create_directories(*resoDir, ec);
+        std::vector<unsigned char> pixels(8 * 8 * 3, 0);
+        for (size_t i = 0; i < pixels.size(); i += 3) {
+            pixels[i] = 220;
+        }
+        stbi_write_png(pathToUtf8(*resoDir / "Red Square.png").c_str(), 8, 8, 3, pixels.data(), 24);
+        std::ofstream avc(*resoDir / "demo.avc", std::ios::binary);
+        avc << "<?xml version='1.0' encoding='utf-8'?>\n"
+               "<Composition name=\"Demo Import\" numDecks=\"1\" numLayers=\"2\" numColumns=\"3\">\n"
+               "<versionInfo name=\"Resolume Arena\" majorVersion=\"7\" minorVersion=\"22\" />\n"
+               "<CompositionInfo name=\"Demo Import\" width=\"1280\" height=\"720\" />\n"
+               "<Layer layerIndex=\"0\"><VideoTrack><ChoosableMixer name=\"Blend\"><RenderPass type=\"Add\" baseType=\"Mixer\"><Params><ParamRange name=\"Opacity\" value=\"0.5\" /></Params></RenderPass></ChoosableMixer></VideoTrack></Layer>\n"
+               "<Layer layerIndex=\"1\"><VideoTrack><ChoosableMixer name=\"Blend\"><RenderPass type=\"Alpha\" baseType=\"Mixer\" /></ChoosableMixer></VideoTrack></Layer>\n"
+               "<Deck><Params><Param name=\"Name\" value=\"Opener\" /></Params>\n"
+               "<Clip layerIndex=\"0\" columnIndex=\"0\"><VideoTrack><PrimarySource><VideoSource type=\"VideoFormatReaderSource\" fileName=\"C:\\Elsewhere\\Red Square.png\" /></PrimarySource></VideoTrack></Clip>\n"
+               "<Clip layerIndex=\"1\" columnIndex=\"1\"><VideoTrack><PrimarySource><VideoSource type=\"VideoFormatReaderSource\" fileName=\"C:\\Elsewhere\\gone.mp4\" /></PrimarySource></VideoTrack></Clip>\n"
+               "<Clip layerIndex=\"1\" columnIndex=\"2\"><VideoTrack><PrimarySource><VideoSource type=\"GeneratorVideoSource\" /></PrimarySource></VideoTrack></Clip>\n"
+               "</Deck></Composition>\n";
+        avc.close();
+        queueDroppedFiles({pathToUtf8(*resoDir / "demo.avc")});
+    }, 400, [this]() { return resoPort_.checked; }, [this, record]() {
+        const resoport::Report& r = resoPort_.preview;
+        record("dropping an .avc file opens ResoPort and checks it", resoPort_.open && resoPort_.checked && resoPort_.check.document.name == "Demo Import", resoPort_.message);
+        saveShot("resoport-check");
+        record("ResoPort finds the media next to the file and reports what is missing", r.clipsImported == 1 && r.clipsMissing == 1 && r.clipsGenerator == 1 && r.missing.size() == 1 && r.missing[0] == "gone.mp4", std::to_string(r.clipsImported) + " found, " + std::to_string(r.clipsMissing) + " missing, " + std::to_string(r.clipsGenerator) + " generators");
+    });
+    add([this]() {
+        startResoPortImport();
+    }, 600, [this]() { return !resoPort_.importJob.valid() && resoPort_.messageGood; }, [this, record, resoDir]() {
+        saveShot("resoport-imported");
+        const Composition& comp = engine_.comp;
+        const int clip = clipIndexByName(imageClipName("Red Square"));
+        const bool placed = clip >= 0 && comp.layers[0].cells[0] == clip;
+        record("importing a Resolume composition builds the composition", comp.name == "Demo Import" && placed && comp.layers[1].cells[1] == -1 && comp.deckNames[0] == "Opener", comp.name + ", clip " + std::to_string(clip));
+        record("the Resolume layer blend modes and opacity are taken over", comp.layers[0].blend == BlendAdd && std::fabs(comp.layers[0].opacity - 0.5f) < 0.001f && comp.layers[1].blend == BlendNormal && comp.resolution == resolutionIndexFor(1280, 720), "blend " + std::to_string(comp.layers[0].blend) + ", opacity " + std::to_string(comp.layers[0].opacity));
+        std::error_code ec;
+        record("the media file was copied into the library", fs::exists(pathFromUtf8(mediaDirectory()) / "Red Square.png", ec), mediaDirectory());
+    });
+    add([this, resoDir]() {
+        resoPort_.open = false;
+        loadComposition(Composition{}, std::string());
+        std::error_code ec;
+        fs::remove_all(*resoDir, ec);
+        fs::remove(pathFromUtf8(mediaDirectory()) / "Red Square.png", ec);
+    }, 6);
 
     const auto hidden = std::make_shared<std::array<double, 2>>();
     add([this, hidden]() {

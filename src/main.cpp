@@ -65,6 +65,7 @@ struct Options {
     std::string convertKeep;
     std::string benchSwitch;
     std::string benchLive;
+    std::string streamSelfTest;
     std::string benchRecord;
     bool recordSelfTest = false;
     bool apiSelfTest = false;
@@ -175,6 +176,8 @@ Options parseOptions(int argc, char** argv) {
             options.pluginSelfTest = argv[++i];
         } else if (arg == "--live-selftest") {
             options.liveSelfTest = true;
+        } else if (arg == "--stream-selftest" && hasValue) {
+            options.streamSelfTest = argv[++i];
         } else if (arg == "--shader-selftest") {
             options.shaderSelfTest = true;
             if (hasValue && argv[i + 1][0] != '-') {
@@ -555,7 +558,7 @@ int main(int argc, char** argv) {
     int frameCount = 0;
     int exitCode = 0;
 
-    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.netSyncSelfTest || options.failoverSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || options.colorSelfTest || options.flowSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
+    if (!options.benchScene.empty() || !options.benchVideo.empty() || !options.benchSwitch.empty() || !options.benchLive.empty() || !options.streamSelfTest.empty() || !options.benchRecord.empty() || options.recordSelfTest || options.apiSelfTest || !options.benchApi.empty() || options.liveSelfTest || options.shaderSelfTest || options.generatorSelfTest || options.gpuParticleSelfTest || options.gpuDiagSelfTest || options.routingSelfTest || options.netSyncSelfTest || options.failoverSelfTest || options.shaderEditorSelfTest || !options.pluginSelfTest.empty() || options.outputSelfTest || options.colorSelfTest || options.flowSelfTest || !options.videoSelfTest.empty() || !options.sceneSelfTest.empty() || options.benchComp > 0 || options.benchShaders > 0 || options.benchNodes > 0 || options.benchMemory || !options.soak.empty()) {
         glfwSwapInterval(0);
         int benchExit = 0;
         app.engine().setVideoSettings(nvj::videoDecodeModeFromName(options.videoMode), !options.noHapDirect, !options.noGpuConvert);
@@ -594,6 +597,8 @@ int main(int argc, char** argv) {
             benchExit = nvj::runShaderEditorSelfTest(app.engine(), options.shaderEditorSelfTestBench, options.benchOut);
         } else if (options.liveSelfTest) {
             benchExit = nvj::runLiveSelfTest(app.engine(), options.benchOut);
+        } else if (!options.streamSelfTest.empty()) {
+            benchExit = nvj::runStreamSelfTest(app.engine(), options.streamSelfTest, options.benchOut);
         } else if (!options.benchLive.empty()) {
             benchExit = nvj::runLiveBenchmark(app.engine(), options.benchLive, options.benchOut);
         } else if (!options.benchSwitch.empty()) {

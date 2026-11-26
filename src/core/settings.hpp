@@ -101,6 +101,9 @@ struct Settings {
     bool spoutInputFlip = false;
     std::array<std::string, kLiveInputSlots> ndiInputs;
     std::array<std::string, kLiveInputSlots> cameraInputs;
+    bool streamInputEnabled = false;
+    std::array<std::string, kLiveInputSlots> streamInputs;
+    int streamProfile = 1;
     int cameraWidth = 1280;
     int cameraHeight = 720;
     int cameraFps = 30;

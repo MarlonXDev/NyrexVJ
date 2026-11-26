@@ -146,7 +146,7 @@ jobs:
       - name: Install build and test packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0 binutils
+          sudo apt-get install -y --no-install-recommends ninja-build xvfb xauth libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0 binutils gdb valgrind
 
       - name: Get the FFmpeg headers and libraries
         continue-on-error: true
@@ -190,6 +190,15 @@ jobs:
           fi
           ctest --test-dir build --output-on-failure
 
+      - name: Check the picture conversion for writes past its buffer
+        continue-on-error: true
+        run: |
+          if [ -n "${FFMPEG_SDK:-}" ]; then
+            export NYREXVJ_REQUIRE_VIDEO=1
+            export LD_LIBRARY_PATH="$PWD/build/ffmpeg"
+            valgrind -q --error-exitcode=9 build/nvj_picture_convert_tests
+          fi
+
       - name: Check the shaders and start the program
         run: |
           if [ -n "${FFMPEG_SDK:-}" ]; then
@@ -205,6 +214,10 @@ jobs:
           test -s "$RUNNER_TEMP/color.json"
           NYREXVJ_REQUIRE_VIDEO="${FFMPEG_SDK:+1}" NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-flow" build/NyrexVJ --fresh --no-update-check --no-welcome --flow-selftest tests/data --bench-out "$RUNNER_TEMP/flow.json"
           test -s "$RUNNER_TEMP/flow.json"
+          if [ -n "${FFMPEG_SDK:-}" ]; then
+            NYREXVJ_REQUIRE_VIDEO=1 python3 -B scripts/test_stream_input.py --binary build/NyrexVJ --ffmpeg "$FFMPEG_SDK/bin/ffmpeg" --out "$RUNNER_TEMP/stream.json"
+            test -s "$RUNNER_TEMP/stream.json"
+          fi
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_REQUIRE_VIDEO=1 NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-record" build/NyrexVJ --fresh --no-update-check --no-welcome --record-selftest
           fi

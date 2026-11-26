@@ -879,6 +879,20 @@ Four clips, NDI Input 1 to 4, show the picture of another program or computer on
 
 Four clips, Camera 1 to 4, show a webcam or a capture card. The Clip window lists the cameras with a Refresh button. Resolution and frame rate are requests to the device, and cameras answer with their closest mode. Cameras need the FFmpeg libraries including the device library.
 
+## Network streams: RTSP, SRT and UDP {#network-streams}
+
+Four clips, Stream Input 1 to 4, show a video stream from the network, for example an IP camera (RTSP), an encoder or another computer (SRT) or a program that sends MPEG-TS packets (UDP). They are off by default. Select a Stream Input clip and tick Allow network stream inputs in the Clip window. As long as the box is off, no connection is made and no port is opened.
+
+Type the address into the Address field and press Enter. NyrexVJ only accepts three kinds of address: rtsp:// (read over TCP, with user name and password in the address if the camera needs them), srt:// and udp://. Examples: rtsp://192.168.1.20:8554/live, srt://host:9000, srt://:9000?mode=listener and udp://@:5000. Anything else, such as a file, a web page or a command, is refused with a message. A password in the address is hidden in the window and in the log.
+
+A UDP address and an SRT address with mode=listener open a port on this computer and wait for a sender. The Clip window shows the port in orange. Anyone who can reach the computer on that port can send a picture, so use it only on a network you trust and allow the port in the firewall on purpose. If you can, let NyrexVJ connect to the sender instead.
+
+The Profile sets how much delay you accept. Low latency keeps almost no buffer and can stutter on a bad network. Balanced is the default. Smooth buffers about a second and rides out bursts. The state, the size, the codec, the frame rate, the delay from decoding to upload, the jitter and the number of catch-ups are shown in the Clip window. When the stream falls too far behind, NyrexVJ jumps to the next key frame and counts a catch-up. When the sender stops, the last picture or the placeholder stays and the input reconnects by itself.
+
+A stream has no audio here, only the picture. HDR and 10 bit streams are shown as normal 8 bit video without tone mapping. Streams are limited on purpose: video only, the codecs H.264, H.265, AV1, MJPEG, MPEG-2, VP8 and VP9, and at most 8192 pixels per side. A stream outside these limits is refused with a message. The input needs the FFmpeg libraries, and the FFmpeg build must contain the protocol, for example SRT.
+
+NyrexVJ was tested with generated senders (FFmpeg and a small test server) on one computer, not with real cameras, a real network, Windows or next to VRChat. Test your stream before the show. The NDI settings now show which version the NDI runtime reports, or that it reports none. The details, the numbers and the limits are in docs/STREAMS.md of the project.
+
 ## State and reconnecting {#live-state}
 
 The Clip window shows the state of a live source: Searching, Connecting, Live, Signal lost or Reconnecting, together with the size, the frame rate, the dropped pictures and the latency from arrival to the end of the upload. A lost source is searched for again by itself, first after half a second and then with growing pauses up to 10 seconds. The last picture stays on the layer meanwhile.

@@ -2,6 +2,7 @@
 
 #include "core/live_source.hpp"
 #include "core/settings.hpp"
+#include "core/stream_url.hpp"
 #include "media/camera_capture.hpp"
 #include "render/video_gpu.hpp"
 
@@ -15,12 +16,13 @@ constexpr double kLiveIdleSeconds = 3.0;
 
 class PluginHost;
 
-enum class LiveKind { Ndi, Camera, Plugin };
+enum class LiveKind { Ndi, Camera, Plugin, Stream };
 
 struct LiveInputConfig {
     std::string source;
     std::string excluded;
     CameraMode camera;
+    stream::Profile streamProfile = stream::Profile::Balanced;
     ReconnectPolicy policy;
     int maxDimension = 1920;
     PluginHost* plugins = nullptr;

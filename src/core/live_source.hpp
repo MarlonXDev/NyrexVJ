@@ -98,6 +98,9 @@ struct LiveStatus {
     unsigned long long dropped = 0;
     unsigned long long unsupported = 0;
     int attempts = 0;
+    double jitterMs = 0.0;
+    unsigned long long resyncs = 0;
+    std::string detail;
 };
 
 class LiveSource {

@@ -78,7 +78,7 @@
 <li><a href="nodes.html">The node effect editor</a>
 </li>
 <li><a href="live-sources.html" aria-current="page">Live sources: Spout, NDI and cameras</a>
-<ul><li><a href="#spout-input">Spout input</a></li><li><a href="#ndi-input">NDI input</a></li><li><a href="#cameras">Cameras and capture cards</a></li><li><a href="#live-state">State and reconnecting</a></li></ul>
+<ul><li><a href="#spout-input">Spout input</a></li><li><a href="#ndi-input">NDI input</a></li><li><a href="#cameras">Cameras and capture cards</a></li><li><a href="#network-streams">Network streams: RTSP, SRT and UDP</a></li><li><a href="#live-state">State and reconnecting</a></li></ul>
 </li>
 </ul>
 <h4>Output and recording</h4><ul>
@@ -172,7 +172,7 @@
 <li><a href="nodes.html">The node effect editor</a>
 </li>
 <li><a href="live-sources.html" aria-current="page">Live sources: Spout, NDI and cameras</a>
-<ul><li><a href="#spout-input">Spout input</a></li><li><a href="#ndi-input">NDI input</a></li><li><a href="#cameras">Cameras and capture cards</a></li><li><a href="#live-state">State and reconnecting</a></li></ul>
+<ul><li><a href="#spout-input">Spout input</a></li><li><a href="#ndi-input">NDI input</a></li><li><a href="#cameras">Cameras and capture cards</a></li><li><a href="#network-streams">Network streams: RTSP, SRT and UDP</a></li><li><a href="#live-state">State and reconnecting</a></li></ul>
 </li>
 </ul>
 <h4>Output and recording</h4><ul>
@@ -217,8 +217,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Your own content</p>
 <h1>Live sources: Spout, NDI and cameras</h1>
-<p class="meta">Chapter 21 of 38 &middot; 2 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#spout-input">Spout input</a><a href="#ndi-input">NDI input</a><a href="#cameras">Cameras and capture cards</a><a href="#live-state">State and reconnecting</a></nav>
+<p class="meta">Chapter 21 of 38 &middot; 4 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#spout-input">Spout input</a><a href="#ndi-input">NDI input</a><a href="#cameras">Cameras and capture cards</a><a href="#network-streams">Network streams: RTSP, SRT and UDP</a><a href="#live-state">State and reconnecting</a></nav>
 <h2 id="spout-input"><a class="anchor" href="#spout-input" aria-label="Link">#</a>Spout input</h2>
 <p>Four clips, Spout Input 1 to 4, show the picture another program sends through Spout, for example Unreal Engine, TouchDesigner or a game. Put one into a cell, select it and pick the sender in the Clip window. Automatic takes the first sender that is not the output of NyrexVJ itself.</p>
 <p>The picture is fitted into the layer without stretching and goes through the layer effects like any clip. It reconnects when the sender comes back and shows a placeholder while there is none. If the image arrives upside down, tick Flip the image vertically. Spout works on Windows only.</p>
@@ -226,6 +226,13 @@
 <p>Four clips, NDI Input 1 to 4, show the picture of another program or computer on the network. NDI senders are listed automatically. Automatic takes the first sender that is not the output of NyrexVJ. NDI needs the NDI runtime, which NyrexVJ does not ship. Install the free NDI Tools from ndi.video. The Clip window has a button for the download page.</p>
 <h2 id="cameras"><a class="anchor" href="#cameras" aria-label="Link">#</a>Cameras and capture cards</h2>
 <p>Four clips, Camera 1 to 4, show a webcam or a capture card. The Clip window lists the cameras with a Refresh button. Resolution and frame rate are requests to the device, and cameras answer with their closest mode. Cameras need the FFmpeg libraries including the device library.</p>
+<h2 id="network-streams"><a class="anchor" href="#network-streams" aria-label="Link">#</a>Network streams: RTSP, SRT and UDP</h2>
+<p>Four clips, Stream Input 1 to 4, show a video stream from the network, for example an IP camera (RTSP), an encoder or another computer (SRT) or a program that sends MPEG-TS packets (UDP). They are off by default. Select a Stream Input clip and tick Allow network stream inputs in the Clip window. As long as the box is off, no connection is made and no port is opened.</p>
+<p>Type the address into the Address field and press Enter. NyrexVJ only accepts three kinds of address: rtsp:// (read over TCP, with user name and password in the address if the camera needs them), srt:// and udp://. Examples: rtsp://192.168.1.20:8554/live, srt://host:9000, srt://:9000?mode=listener and udp://@:5000. Anything else, such as a file, a web page or a command, is refused with a message. A password in the address is hidden in the window and in the log.</p>
+<p>A UDP address and an SRT address with mode=listener open a port on this computer and wait for a sender. The Clip window shows the port in orange. Anyone who can reach the computer on that port can send a picture, so use it only on a network you trust and allow the port in the firewall on purpose. If you can, let NyrexVJ connect to the sender instead.</p>
+<p>The Profile sets how much delay you accept. Low latency keeps almost no buffer and can stutter on a bad network. Balanced is the default. Smooth buffers about a second and rides out bursts. The state, the size, the codec, the frame rate, the delay from decoding to upload, the jitter and the number of catch-ups are shown in the Clip window. When the stream falls too far behind, NyrexVJ jumps to the next key frame and counts a catch-up. When the sender stops, the last picture or the placeholder stays and the input reconnects by itself.</p>
+<p>A stream has no audio here, only the picture. HDR and 10 bit streams are shown as normal 8 bit video without tone mapping. Streams are limited on purpose: video only, the codecs H.264, H.265, AV1, MJPEG, MPEG-2, VP8 and VP9, and at most 8192 pixels per side. A stream outside these limits is refused with a message. The input needs the FFmpeg libraries, and the FFmpeg build must contain the protocol, for example SRT.</p>
+<p>NyrexVJ was tested with generated senders (FFmpeg and a small test server) on one computer, not with real cameras, a real network, Windows or next to VRChat. Test your stream before the show. The NDI settings now show which version the NDI runtime reports, or that it reports none. The details, the numbers and the limits are in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/STREAMS.md" target="_blank" rel="noopener noreferrer">docs/STREAMS.md</a> of the project.</p>
 <h2 id="live-state"><a class="anchor" href="#live-state" aria-label="Link">#</a>State and reconnecting</h2>
 <p>The Clip window shows the state of a live source: Searching, Connecting, Live, Signal lost or Reconnecting, together with the size, the frame rate, the dropped pictures and the latency from arrival to the end of the upload. A lost source is searched for again by itself, first after half a second and then with growing pauses up to 10 seconds. The last picture stays on the layer meanwhile.</p>
 <p>A source is opened when a layer shows its clip and closed three seconds after the last use, so it costs nothing while unused. The details and what was not tested yet, such as real capture cards, are in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/LIVE.md" target="_blank" rel="noopener noreferrer">docs/LIVE.md</a> of the project.</p>

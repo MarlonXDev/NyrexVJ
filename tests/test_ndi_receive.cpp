@@ -505,9 +505,23 @@ void testTwoReceiversShareFinder() {
 
 }
 
+void testRuntimeVersion() {
+    loadFake();
+    const nvj::ndi::RuntimeInfo info = nvj::ndi::runtimeInfo();
+    CHECK(info.version == "NDI SDK FAKE 6.0.1 (test library)");
+    CHECK(info.library == NYREXVJ_FAKE_NDI_PATH);
+    CHECK(!info.captureV3);
+    CHECK(nvj::ndi::sanitizeVersion(nullptr).empty());
+    CHECK(nvj::ndi::sanitizeVersion("NDI 6.0") == "NDI 6.0");
+    CHECK(nvj::ndi::sanitizeVersion("a\x01\x1b[31mb\n c  ") == "a[31mb  c");
+    CHECK(nvj::ndi::sanitizeVersion("caf\xc3\xa9") == "caf");
+    CHECK(nvj::ndi::sanitizeVersion(std::string(500, 'x').c_str()).size() == 160u);
+}
+
 int main() {
     testPick();
     testMissingLibrary();
+    testRuntimeVersion();
     testDiscovery();
     testReceiveByName();
     testNewestOnly();

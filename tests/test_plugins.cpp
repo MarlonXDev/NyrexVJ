@@ -22,6 +22,7 @@ const AbiEntry* abi_current_entry(size_t index);
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -1768,6 +1769,32 @@ int crashChild(const std::string& dataDir) {
     return 3;
 }
 
+#if defined(__GLIBC__) && !defined(__SANITIZE_ADDRESS__)
+int heapCrashChild(const std::string& dataDir) {
+    const fs::path dir(dataDir);
+    std::error_code ec;
+    fs::create_directories(recoveryDirectory(dir), ec);
+    installCrashHandler(crashReportPath(dir).string(), "test");
+    std::thread idle([]() { std::this_thread::sleep_for(std::chrono::seconds(30)); });
+    idle.detach();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    volatile size_t request = 24;
+    for (int i = 0; i < 512; ++i) {
+        volatile unsigned char* block = static_cast<volatile unsigned char*>(std::malloc(request));
+        for (int k = 0; k < 32; ++k) {
+            block[k] = 0xff;
+        }
+    }
+    for (int round = 0; round < 100000; ++round) {
+        void* more = std::malloc(24 + static_cast<size_t>(round % 200));
+        if (round % 3 == 0) {
+            std::free(more);
+        }
+    }
+    return 3;
+}
+#endif
+
 int runChild(const fs::path& dir) {
     std::string command = "\"" + gSelf + "\" --crash-child \"" + dir.string() + "\"";
 #ifdef _WIN32
@@ -1775,6 +1802,20 @@ int runChild(const fs::path& dir) {
 #endif
     return std::system(command.c_str());
 }
+
+#if defined(__GLIBC__) && !defined(__SANITIZE_ADDRESS__)
+void testCrashInsideTheMemoryManager() {
+    const fs::path dir = freshDir("child_heap");
+    const std::string command = "timeout 60 \"" + gSelf + "\" --heap-crash-child \"" + dir.string() + "\" > /dev/null 2>&1";
+    const int code = std::system(command.c_str());
+    CHECK(code != 0);
+    CHECK(code != 124 * 256);
+    std::string report;
+    CHECK(readWholeFile(crashReportPath(dir), report));
+    CHECK(report.find("reason: program aborted (SIGABRT)") != std::string::npos);
+    CHECK(report.find("NyrexVJ test") == 0);
+}
+#endif
 
 void testCrashLeadsToSafeMode() {
     struct Case {
@@ -1850,6 +1891,11 @@ int main(int argc, char** argv) {
     if (argc >= 3 && std::string(argv[1]) == "--crash-child") {
         return crashChild(argv[2]);
     }
+#if defined(__GLIBC__) && !defined(__SANITIZE_ADDRESS__)
+    if (argc >= 3 && std::string(argv[1]) == "--heap-crash-child") {
+        return heapCrashChild(argv[2]);
+    }
+#endif
     testManifest();
     testConfigAndSafeList();
     testCrashMarkers();
@@ -1883,6 +1929,9 @@ int main(int argc, char** argv) {
     testFuzzCrashReports();
     testFuzzPluginTables();
     testCrashLeadsToSafeMode();
+#if defined(__GLIBC__) && !defined(__SANITIZE_ADDRESS__)
+    testCrashInsideTheMemoryManager();
+#endif
     testSlowLoadStaysResponsive();
     testHangStaysResponsive();
     testAbandonedLimit();

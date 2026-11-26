@@ -39,6 +39,8 @@ void* findSymbol(Handle handle, const char* name) {
 struct State {
     Handle handle = nullptr;
     std::string path;
+    std::string version;
+    bool captureV3 = false;
     Api api;
     bool initialized = false;
 
@@ -117,6 +119,7 @@ bool loadLocked() {
         next.handle = handle;
         next.path = candidate;
         Api& api = next.api;
+        api.version = symbol<VersionFn>(handle, "NDIlib_version");
         api.initialize = symbol<InitializeFn>(handle, "NDIlib_initialize");
         api.destroy = symbol<DestroyFn>(handle, "NDIlib_destroy");
         api.sendCreate = symbol<SendCreateFn>(handle, "NDIlib_send_create");
@@ -132,6 +135,10 @@ bool loadLocked() {
         api.recvCapture = symbol<RecvCaptureFn>(handle, "NDIlib_recv_capture_v2");
         api.recvFreeVideo = symbol<RecvFreeVideoFn>(handle, "NDIlib_recv_free_video_v2");
         api.recvConnections = symbol<RecvConnectionsFn>(handle, "NDIlib_recv_get_no_connections");
+        if (api.recvCapture == nullptr) {
+            api.recvCapture = symbol<RecvCaptureFn>(handle, "NDIlib_recv_capture_v3");
+            next.captureV3 = api.recvCapture != nullptr;
+        }
         if (!api.initialize || (!api.canSend() && !api.canReceive())) {
             loadErrorText = candidate + ": functions missing";
             continue;
@@ -143,11 +150,13 @@ bool loadLocked() {
         next.initialized = true;
         state.handle = next.handle;
         state.path = next.path;
+        state.captureV3 = next.captureV3;
+        state.version = api.version != nullptr ? sanitizeVersion(api.version()) : std::string();
         state.api = next.api;
         state.initialized = true;
         next.initialized = false;
         loaded = true;
-        logLine("NDI runtime loaded: " + candidate);
+        logLine("NDI runtime loaded: " + candidate + (state.version.empty() ? std::string(" (no version reported)") : " (" + state.version + ")") + (state.captureV3 ? std::string(", capture through NDIlib_recv_capture_v3") : std::string()));
         return true;
     }
     if (loadErrorText.empty()) {
@@ -156,6 +165,25 @@ bool loadLocked() {
     return false;
 }
 
+}
+
+std::string sanitizeVersion(const char* text) {
+    std::string clean;
+    if (text == nullptr) {
+        return clean;
+    }
+    for (size_t i = 0; text[i] != '\0' && i < 160; ++i) {
+        const unsigned char c = static_cast<unsigned char>(text[i]);
+        if (c >= 0x20 && c < 0x7f) {
+            clean += static_cast<char>(c);
+        } else if (c == '\t' || c == '\n' || c == '\r') {
+            clean += ' ';
+        }
+    }
+    while (!clean.empty() && clean.back() == ' ') {
+        clean.pop_back();
+    }
+    return clean;
 }
 
 bool available() {
@@ -173,6 +201,17 @@ void recheck() {
 std::string loadedLibrary() {
     std::lock_guard<std::mutex> lock(stateMutex);
     return loaded ? state.path : std::string();
+}
+
+RuntimeInfo runtimeInfo() {
+    std::lock_guard<std::mutex> lock(stateMutex);
+    RuntimeInfo info;
+    if (loaded) {
+        info.library = state.path;
+        info.version = state.version;
+        info.captureV3 = state.captureV3;
+    }
+    return info;
 }
 
 std::string loadError() {

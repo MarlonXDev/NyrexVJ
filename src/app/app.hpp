@@ -358,6 +358,7 @@ private:
     RecordSettings recordSettingsFromConfig() const;
     void drawSpoutInputControls(int slot);
     void drawLiveInputControls(const ClipDef& def);
+    void drawStreamControls(int slot);
     void serviceLiveBrowse();
     void loadComposition(const Composition& comp, const std::string& message);
     void saveCurrentPreset();
@@ -547,6 +548,9 @@ private:
     bool ndiBrowsing_ = false;
     double ndiBrowseTouch_ = 0.0;
     std::vector<CameraDevice> cameraList_;
+    std::array<std::array<char, 1100>, kLiveInputSlots> streamText_{};
+    std::array<bool, kLiveInputSlots> streamTyping_{};
+    std::array<std::string, kLiveInputSlots> streamProblem_;
     double cameraListedAt_ = -1.0e9;
     char ndiName_[64] = {};
     std::future<RecordCapabilities> recordProbe_;

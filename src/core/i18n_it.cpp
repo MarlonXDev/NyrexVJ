@@ -2980,6 +2980,16 @@ const Translation kItalian[] = {
     {"Resolution %d x %d is not available, %s is used", "La risoluzione %d x %d non è disponibile, viene usata %s"},
     {"Tempo %.1f BPM is taken over", "Viene ripreso il tempo di %.1f BPM"},
     {"This file cannot be read as a Resolume composition", "Questo file non può essere letto come composizione Resolume"},
+    {"Beat tracking", "Rilevamento del beat"},
+    {"Classic", "Classico"},
+    {"Improved", "Migliorato"},
+    {"Audio latency", "Latenza audio"},
+    {"Bass and mid split", "Divisione tra bassi e medi"},
+    {"Mid and high split", "Divisione tra medi e alti"},
+    {"Improved follows the tempo from every hit, keeps the beat through short breaks and puts the beats on a steady grid. Classic is the earlier detector.", "Migliorato segue il tempo da ogni colpo, mantiene il beat durante le pause brevi e mette i beat su una griglia regolare. Classico è il rilevatore precedente."},
+    {"How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved.", "Quanto impiega il suono ad arrivare all'analisi. I valori positivi anticipano i beat, quelli negativi li ritardano. Funziona solo con Migliorato."},
+    {"Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz.", "Dove si incontrano le bande Bassi, Medi e Alti. I valori predefiniti sono 150 Hz e 2000 Hz."},
+    {"This input always listens to both channels mixed.", "Questo ingresso ascolta sempre i due canali mescolati."},
 };
 
 }

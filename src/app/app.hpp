@@ -326,6 +326,7 @@ private:
     void drawProfilesSection();
     void drawBindingsSection();
     void drawAudioSource();
+    void drawAudioTracking();
     void drawUpdateCard();
     void drawStatusBar();
     void openSettings(int page);

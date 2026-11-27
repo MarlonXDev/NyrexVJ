@@ -1,5 +1,7 @@
 #pragma once
 
+#include "audio/audio_channels.hpp"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,6 +23,8 @@ public:
     virtual bool running() const = 0;
     virtual int sampleRate() const = 0;
     virtual void drain(std::vector<float>& mono) = 0;
+    virtual bool supportsChannel() const { return false; }
+    virtual void setChannel(AudioChannel) {}
 };
 
 std::unique_ptr<AudioInput> createAudioInput();

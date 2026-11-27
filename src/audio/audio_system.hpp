@@ -33,6 +33,13 @@ public:
     void setGain(float gain);
     void setSmoothing(float smoothing);
     void setBeatSensitivity(float sensitivity);
+    void setImprovedTracking(bool improved);
+    void setCrossovers(float low, float high);
+    void setLatency(double seconds);
+    void setChannel(AudioChannel channel);
+    AudioChannel channel() const { return channel_; }
+    bool channelSupported() const { return input_ != nullptr && input_->supportsChannel(); }
+    bool improvedTracking() const { return analyzer_.improved(); }
     const AudioFeatures& features() const { return analyzer_.features(); }
 
 private:
@@ -46,6 +53,7 @@ private:
     std::string selected_;
     std::string error_;
     Mode mode_ = Mode::Off;
+    AudioChannel channel_ = AudioChannel::Mix;
     double demoCarry_ = 0.0;
     double silentFor_ = 0.0;
     AudioSink* sink_ = nullptr;

@@ -42,6 +42,7 @@ bool AudioSystem::select(const std::string& id) {
         return true;
     }
     std::string message;
+    input_->setChannel(channel_);
     if (!input_->start(id, message)) {
         mode_ = Mode::Off;
         selected_.clear();
@@ -97,6 +98,29 @@ void AudioSystem::setSmoothing(float smoothing) {
 
 void AudioSystem::setBeatSensitivity(float sensitivity) {
     analyzer_.setBeatSensitivity(sensitivity);
+}
+
+void AudioSystem::setImprovedTracking(bool improved) {
+    analyzer_.setImproved(improved);
+}
+
+void AudioSystem::setCrossovers(float low, float high) {
+    analyzer_.setCrossovers(low, high);
+}
+
+void AudioSystem::setLatency(double seconds) {
+    analyzer_.setLatency(seconds);
+}
+
+void AudioSystem::setChannel(AudioChannel channel) {
+    if (channel == channel_) {
+        return;
+    }
+    channel_ = channel;
+    if (mode_ == Mode::Device && input_->supportsChannel()) {
+        const std::string id = selected_;
+        select(id);
+    }
 }
 
 }

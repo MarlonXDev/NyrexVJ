@@ -2980,6 +2980,16 @@ const Translation kDutch[] = {
     {"Resolution %d x %d is not available, %s is used", "De resolutie %d x %d is niet beschikbaar, %s wordt gebruikt"},
     {"Tempo %.1f BPM is taken over", "Het tempo van %.1f BPM wordt overgenomen"},
     {"This file cannot be read as a Resolume composition", "Dit bestand kan niet als Resolume-compositie worden gelezen"},
+    {"Beat tracking", "Beat volgen"},
+    {"Classic", "Klassiek"},
+    {"Improved", "Verbeterd"},
+    {"Audio latency", "Audiolatentie"},
+    {"Bass and mid split", "Scheiding bas en midden"},
+    {"Mid and high split", "Scheiding midden en hoog"},
+    {"Improved follows the tempo from every hit, keeps the beat through short breaks and puts the beats on a steady grid. Classic is the earlier detector.", "Verbeterd volgt het tempo uit elke slag, houdt de beat vast tijdens korte pauzes en zet de beats op een vast raster. Klassiek is de eerdere detector."},
+    {"How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved.", "Hoe lang het geluid erover doet om de analyse te bereiken. Positieve waarden zetten de beats eerder, negatieve later. Werkt alleen met Verbeterd."},
+    {"Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz.", "Waar de banden Bas, Midden en Hoog samenkomen. De standaardwaarden zijn 150 Hz en 2000 Hz."},
+    {"This input always listens to both channels mixed.", "Deze ingang luistert altijd naar beide kanalen gemixt."},
 };
 
 }

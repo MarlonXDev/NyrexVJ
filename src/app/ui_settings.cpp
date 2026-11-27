@@ -304,6 +304,7 @@ void App::drawSettingsPage(int page) {
         if (ImGui::Checkbox(trId("Sync BPM to audio", "audioSyncBpm"), &settings_.audioSyncBpm)) {
             persist();
         }
+        drawAudioTracking();
         ImGui::Spacing();
         ImGui::TextWrapped("%s", tr("Effects can react to the music in two ways. Parameter moves one value with a band. Gate shows the effect only while that band is loud."));
     } else if (page == SettingsOutput) {

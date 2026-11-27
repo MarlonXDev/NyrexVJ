@@ -537,6 +537,12 @@ Verstärkung hebt oder senkt den Pegel, den die Analyse sieht, Glättung macht d
 
 Erkanntes Tempo zeigt die Schätzung, und Verwenden übernimmt sie als Tempo. BPM mit Audio synchronisieren hält das Tempo dauerhaft am erkannten Beat. Das klappt am besten mit Musik mit klarer Kick. Für eine gleichmäßige Show mit einem DJ ist es oft besser, das Tempo selbst zu tappen oder einer Clock zu folgen, siehe [Show-Sync und Timecode](#sync).
 
+Auf derselben Seite gibt es einen Abschnitt **Beat-Verfolgung** mit drei weiteren Dingen. Das Feld **Beat-Verfolgung** wählt das Verfahren: **Klassisch** ist der Erkenner, der immer da war, **Verbessert** ergänzt einen Tracker, der das Tempo aus jedem Schlag der letzten zehn Sekunden findet, sodass eine fehlende Kick ihn nicht aus dem Takt bringt. Er zeigt, ob er eingerastet ist, die Tempo-Sicherheit und die Beat-Sicherheit, und solange er eingerastet ist, kommen die Beats auf einem gleichmäßigen Raster, das eine kurze Pause überbrückt und nach anderthalb Sekunden Stille anhält. Klassisch bleibt die Vorgabe, und damit ist nichts anders als in der Version davor.
+
+Bei Verbessert verschiebt **Audio-Latenz** (-250 bis +250 ms) die Beats mit einem positiven Wert früher und mit einem negativen später. Nimm sie, wenn dein Audio-Interface oder ein Loopback hinterherhinkt, und schau auf Bild und Ton, bis beides zusammenpasst. **Trennung Bass und Mitten** und **Trennung Mitten und Höhen** verschieben die Grenzen der drei Bänder, am Anfang 150 Hz und 2000 Hz, für beide Verfahren. **Kanal** wählt Mischung, Links oder Rechts bei Geräten mit zwei Kanälen; das Feld ist beim Demo-Signal und bei Eingängen, die das nicht können, grau, und eine Änderung startet die Aufnahme des Geräts neu.
+
+> Hinweis: Der Tracker wurde mit synthetischen Stücken getestet, noch nicht mit echten DJ-Mixen und nicht unter Windows. Ein Stück ohne gleichmäßigen Beat bekommt eine niedrige Sicherheit, und unter einem Viertel davon kommen die Beats wieder vom klassischen Erkenner.
+
 ![Die Seite Audio in den Einstellungen](settings-audio.webp)
 
 ## Visuals reagieren lassen {#making-react}

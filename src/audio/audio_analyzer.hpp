@@ -1,6 +1,7 @@
 #pragma once
 
 #include "audio/audio_features.hpp"
+#include "audio/beat_tracker.hpp"
 
 #include <cstddef>
 #include <deque>
@@ -21,6 +22,11 @@ public:
     void setSmoothing(float smoothing) { smoothing_ = smoothing; }
     void setBeatSensitivity(float sensitivity) { sensitivity_ = sensitivity; }
     void setActive(bool active) { features_.active = active; }
+    void setImproved(bool improved);
+    void setCrossovers(float low, float high);
+    void setLatency(double seconds);
+    bool improved() const { return improved_; }
+    double lastOnsetTime() const { return lastOnsetAt_; }
 
     const AudioFeatures& features() const { return features_; }
 
@@ -28,8 +34,9 @@ private:
     static constexpr int kFftSize = 2048;
 
     void computeSpectrum();
-    void detectBeat(double dt, float lowEnergy);
+    void detectBeat(double dt, float lowEnergy, bool emit);
     void estimateTempo();
+    void detectOnsets(double dt, bool active);
 
     int sampleRate_ = 48000;
     float gain_ = 1.0f;
@@ -56,6 +63,22 @@ private:
     double lastBeatTime_ = -10.0;
     std::deque<double> intervals_;
     float bpmSmoothed_ = 0.0f;
+    float crossLow_ = 150.0f;
+    float crossHigh_ = 2000.0f;
+    bool improved_ = false;
+    BeatTracker tracker_;
+    std::array<float, kSpectrumBins> previousRaw_{};
+    float onsetOlder_ = 0.0f;
+    float onsetPrevious_ = 0.0f;
+    float onsetThresholdPrevious_ = 0.0f;
+    double previousTime_ = 0.0;
+    double humpStart_ = 0.0;
+    bool inHump_ = false;
+    float onsetMean_ = 0.0f;
+    float onsetDeviation_ = 0.0f;
+    float onsetPeak_ = 0.0f;
+    double lastOnsetTime_ = -10.0;
+    double lastOnsetAt_ = 0.0;
     AudioFeatures features_;
 };
 

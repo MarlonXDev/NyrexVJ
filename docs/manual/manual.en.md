@@ -537,6 +537,12 @@ Gain raises or lowers the level that the analysis sees, Smoothing makes the band
 
 Detected tempo shows the estimate, and Use takes it over as the tempo. Sync BPM to audio keeps the tempo locked to the detected beat all the time. It works best with music that has a clear kick. For a steady show with a DJ it is often better to tap the tempo yourself or to follow a clock, see [Show sync and timecode](#sync).
 
+The same page has a section **Beat tracking** with three more things. The box **Beat tracking** chooses the method: **Classic** is the detector that was always there, **Improved** adds a tracker that finds the tempo from every hit of the last ten seconds, so one missing kick does not break it. It shows whether it is locked, the tempo confidence and the beat confidence, and while it is locked the beats come on a steady grid that goes on through a short break and stops after a second and a half of silence. Classic stays the default, and with it nothing is different from the version before.
+
+With Improved on, **Audio latency** (-250 to +250 ms) moves the beats earlier with a positive value and later with a negative one. Use it when your audio interface or a loopback is late, and look at the picture next to the sound until they agree. **Bass and mid split** and **Mid and high split** move the borders of the three bands, 150 Hz and 2000 Hz at the start, for both methods. **Channel** chooses Mix, Left or Right for devices that have two channels; the box is grey for the demo signal and for inputs that cannot do it, and a change restarts the capture of the device.
+
+> Note: the tracker was tested with synthetic tracks and not yet with real DJ mixes or on Windows. A track without a steady beat gets a low confidence, and below a quarter of it the beats come from the classic detection again.
+
 ![The Audio page of the settings](settings-audio.webp)
 
 ## Making visuals react {#making-react}

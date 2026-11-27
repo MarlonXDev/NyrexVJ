@@ -249,8 +249,10 @@ public:
         if (!ensureLoaded(error)) {
             return false;
         }
-        const SampleSpec spec{kSampleFloat32, static_cast<uint32_t>(kSampleRate), 1};
-        const BufferAttr attr{UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX, static_cast<uint32_t>(kChunkFrames * sizeof(float))};
+        activeChannel_ = channel_.load();
+        captureChannels_ = activeChannel_ == AudioChannel::Mix ? 1 : 2;
+        const SampleSpec spec{kSampleFloat32, static_cast<uint32_t>(kSampleRate), static_cast<uint8_t>(captureChannels_)};
+        const BufferAttr attr{UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX, static_cast<uint32_t>(kChunkFrames * sizeof(float) * static_cast<size_t>(captureChannels_))};
         const char* device = (id.empty() || id == kDefaultSource) ? nullptr : id.c_str();
         int code = 0;
         stream_ = api_.simpleNew(nullptr, "NyrexVJ", kStreamRecord, device, "Audio analysis", &spec, nullptr, &attr, &code);
@@ -287,6 +289,10 @@ public:
 
     int sampleRate() const override { return kSampleRate; }
 
+    bool supportsChannel() const override { return true; }
+
+    void setChannel(AudioChannel channel) override { channel_.store(channel); }
+
     void drain(std::vector<float>& mono) override {
         mono.clear();
         std::lock_guard<std::mutex> lock(mutex_);
@@ -306,7 +312,9 @@ private:
     }
 
     void run() {
-        std::vector<float> chunk(kChunkFrames);
+        const int channels = captureChannels_;
+        std::vector<float> chunk(kChunkFrames * static_cast<size_t>(channels));
+        std::vector<float> mono;
         while (!stopFlag_.load()) {
             int code = 0;
             if (api_.simpleRead(stream_, chunk.data(), chunk.size() * sizeof(float), &code) < 0) {
@@ -315,11 +323,17 @@ private:
                 running_.store(false);
                 return;
             }
+            const std::vector<float>* block = &chunk;
+            if (channels > 1) {
+                mono.clear();
+                appendChannel(chunk.data(), kChunkFrames, channels, activeChannel_, mono);
+                block = &mono;
+            }
             std::lock_guard<std::mutex> lock(mutex_);
-            if (samples_.size() + chunk.size() > kMaxBuffered) {
+            if (samples_.size() + block->size() > kMaxBuffered) {
                 samples_.clear();
             }
-            samples_.insert(samples_.end(), chunk.begin(), chunk.end());
+            samples_.insert(samples_.end(), block->begin(), block->end());
         }
     }
 
@@ -329,6 +343,9 @@ private:
     std::thread thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stopFlag_{false};
+    std::atomic<AudioChannel> channel_{AudioChannel::Mix};
+    AudioChannel activeChannel_ = AudioChannel::Mix;
+    int captureChannels_ = 1;
     std::mutex mutex_;
     std::vector<float> samples_;
 };

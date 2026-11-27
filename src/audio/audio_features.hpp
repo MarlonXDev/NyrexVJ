@@ -19,6 +19,10 @@ struct AudioFeatures {
     float bpmConfidence = 0.0f;
     bool beatNow = false;
     std::uint32_t beatCount = 0;
+    float beatConfidence = 0.0f;
+    float beatPhase = -1.0f;
+    float onsetStrength = 0.0f;
+    bool tracking = false;
     std::array<float, kSpectrumBins> spectrum{};
     std::array<float, kWaveSamples> wave{};
 

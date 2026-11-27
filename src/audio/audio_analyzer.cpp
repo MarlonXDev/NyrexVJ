@@ -121,6 +121,19 @@ void AudioAnalyzer::reset() {
     lastBeatTime_ = -10.0;
     intervals_.clear();
     bpmSmoothed_ = 0.0f;
+    tracker_.reset();
+    previousRaw_.fill(0.0f);
+    onsetOlder_ = 0.0f;
+    onsetPrevious_ = 0.0f;
+    onsetThresholdPrevious_ = 0.0f;
+    previousTime_ = 0.0;
+    humpStart_ = 0.0;
+    inHump_ = false;
+    onsetMean_ = 0.0f;
+    onsetDeviation_ = 0.0f;
+    onsetPeak_ = 0.0f;
+    lastOnsetTime_ = -10.0;
+    lastOnsetAt_ = 0.0;
     bool active = features_.active;
     features_ = AudioFeatures{};
     features_.active = active;
@@ -180,7 +193,36 @@ void AudioAnalyzer::computeSpectrum() {
     }
 }
 
-void AudioAnalyzer::detectBeat(double dt, float lowEnergy) {
+void AudioAnalyzer::setImproved(bool improved) {
+    if (improved_ == improved) {
+        return;
+    }
+    improved_ = improved;
+    tracker_.reset();
+    previousRaw_.fill(0.0f);
+    onsetOlder_ = 0.0f;
+    onsetPrevious_ = 0.0f;
+    onsetThresholdPrevious_ = 0.0f;
+    onsetMean_ = 0.0f;
+    onsetDeviation_ = 0.0f;
+    onsetPeak_ = 0.0f;
+    lastOnsetTime_ = -10.0;
+    features_.beatConfidence = 0.0f;
+    features_.beatPhase = -1.0f;
+    features_.onsetStrength = 0.0f;
+    features_.tracking = false;
+}
+
+void AudioAnalyzer::setCrossovers(float low, float high) {
+    crossLow_ = std::clamp(low, 60.0f, 400.0f);
+    crossHigh_ = std::clamp(high, crossLow_ + 200.0f, 6000.0f);
+}
+
+void AudioAnalyzer::setLatency(double seconds) {
+    tracker_.setLatency(std::clamp(seconds, -0.5, 0.5));
+}
+
+void AudioAnalyzer::detectBeat(double dt, float lowEnergy, bool emit) {
     const float flux = std::max(0.0f, lowEnergy - previousLow_);
     previousLow_ = lowEnergy;
     const float tau = 0.8f;
@@ -191,7 +233,9 @@ void AudioAnalyzer::detectBeat(double dt, float lowEnergy) {
 
     const float factor = 1.0f + (1.0f - std::clamp(sensitivity_, 0.0f, 1.0f)) * 3.0f;
     const float threshold = fluxMean_ + fluxDeviation_ * factor + 0.015f;
-    features_.beatNow = false;
+    if (emit) {
+        features_.beatNow = false;
+    }
     if (flux > threshold && lowEnergy > 0.04f && clock_ - lastBeatTime_ > 0.27) {
         if (lastBeatTime_ > 0.0) {
             double interval = clock_ - lastBeatTime_;
@@ -205,11 +249,71 @@ void AudioAnalyzer::detectBeat(double dt, float lowEnergy) {
             }
         }
         lastBeatTime_ = clock_;
-        features_.beatNow = true;
-        features_.kick = 1.0f;
-        features_.beatCount += 1;
+        if (emit) {
+            features_.beatNow = true;
+            features_.kick = 1.0f;
+            features_.beatCount += 1;
+        }
         estimateTempo();
     }
+}
+
+void AudioAnalyzer::detectOnsets(double dt, bool active) {
+    float flux[3] = {0.0f, 0.0f, 0.0f};
+    int bins[3] = {0, 0, 0};
+    for (int i = 0; i < kSpectrumBins; ++i) {
+        const size_t index = static_cast<size_t>(i);
+        const float frequency = binFrequency_[index];
+        const int band = frequency < crossLow_ ? 0 : (frequency < crossHigh_ ? 1 : 2);
+        const float rise = rawSpectrum_[index] - previousRaw_[index];
+        if (rise > 0.0f) {
+            flux[band] += rise;
+        }
+        bins[band] += 1;
+        previousRaw_[index] = rawSpectrum_[index];
+    }
+    const float weights[3] = {1.0f, 0.6f, 0.4f};
+    float onset = 0.0f;
+    for (int b = 0; b < 3; ++b) {
+        if (bins[b] > 0) {
+            onset += weights[b] * flux[b] / static_cast<float>(bins[b]);
+        }
+    }
+    onset *= static_cast<float>(std::clamp((1.0 / 60.0) / dt, 0.25, 4.0));
+    const float blend = 1.0f - std::exp(-static_cast<float>(dt) / 0.8f);
+    const float deviation = std::fabs(onset - onsetMean_);
+    onsetMean_ += (onset - onsetMean_) * blend;
+    onsetDeviation_ += (deviation - onsetDeviation_) * blend;
+    onsetPeak_ = std::max(onset, onsetPeak_ * std::exp(-static_cast<float>(dt) / 4.0f));
+    const float factor = 1.0f + (1.0f - std::clamp(sensitivity_, 0.0f, 1.0f)) * 3.0f;
+    const float threshold = onsetMean_ + onsetDeviation_ * factor + 0.01f;
+
+    features_.onsetStrength *= std::exp(-static_cast<float>(dt) * 8.0f);
+    const double now = clock_;
+    if (onset > threshold) {
+        if (!inHump_) {
+            inHump_ = true;
+            const float rise = onset - onsetPrevious_;
+            const double fraction = rise > 1e-9f ? std::clamp(static_cast<double>((threshold - onsetPrevious_) / rise), 0.0, 1.0) : 1.0;
+            humpStart_ = previousTime_ + fraction * (now - previousTime_);
+        }
+    } else {
+        inHump_ = false;
+    }
+    const bool peak = onsetPrevious_ > onsetThresholdPrevious_ && onsetPrevious_ >= onsetOlder_ && onsetPrevious_ > onset;
+    if (active && peak && previousTime_ - lastOnsetTime_ > 0.1) {
+        const float strength = std::clamp(onsetPrevious_ / std::max(onsetPeak_, 0.02f), 0.0f, 1.0f);
+        if (strength >= 0.15f) {
+            lastOnsetTime_ = previousTime_;
+            lastOnsetAt_ = humpStart_;
+            features_.onsetStrength = std::max(features_.onsetStrength, strength);
+            tracker_.addOnset(humpStart_, strength);
+        }
+    }
+    onsetOlder_ = onsetPrevious_;
+    onsetPrevious_ = onset;
+    onsetThresholdPrevious_ = threshold;
+    previousTime_ = now;
 }
 
 void AudioAnalyzer::estimateTempo() {
@@ -282,7 +386,7 @@ void AudioAnalyzer::advance(double dt) {
         float& shown = features_.spectrum[index];
         shown += (value - shown) * (value > shown ? attackBlend : releaseBlend);
         const float frequency = binFrequency_[index];
-        const int band = frequency < 150.0f ? 0 : (frequency < 2000.0f ? 1 : 2);
+        const int band = frequency < crossLow_ ? 0 : (frequency < crossHigh_ ? 1 : 2);
         if (frequency < 10000.0f) {
             bandPeak[band] = std::max(bandPeak[band], value);
         }
@@ -318,9 +422,34 @@ void AudioAnalyzer::advance(double dt) {
     }
     lowEnergy = lowCount > 0 ? lowEnergy / static_cast<float>(lowCount) : 0.0f;
     features_.kick *= std::exp(-static_cast<float>(dt) * 5.0f);
-    detectBeat(dt, lowEnergy);
-    if (clock_ - lastBeatTime_ > 4.0) {
-        features_.bpmConfidence *= 0.98f;
+    if (!improved_) {
+        detectBeat(dt, lowEnergy, true);
+        if (clock_ - lastBeatTime_ > 4.0) {
+            features_.bpmConfidence *= 0.98f;
+        }
+        return;
+    }
+    const bool heard = rms > 0.0015f;
+    detectOnsets(dt, heard);
+    const int grid = tracker_.advance(clock_, heard);
+    const TrackerState& tracked = tracker_.state();
+    detectBeat(dt, lowEnergy, !tracked.locked);
+    if (tracked.locked && grid > 0) {
+        features_.beatNow = true;
+        features_.kick = 1.0f;
+        features_.beatCount += 1;
+    } else if (tracked.locked) {
+        features_.beatNow = false;
+    }
+    features_.tracking = tracked.locked;
+    features_.beatPhase = tracked.phase;
+    features_.beatConfidence = tracked.beatConfidence;
+    if (tracked.hasTempo) {
+        features_.bpm = tracked.bpm;
+        features_.bpmConfidence = tracked.tempoConfidence;
+    } else {
+        features_.bpm = 0.0f;
+        features_.bpmConfidence = 0.0f;
     }
 }
 

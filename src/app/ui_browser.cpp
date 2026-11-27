@@ -1121,6 +1121,52 @@ void App::drawAudioSource() {
     }
 }
 
+void App::drawAudioTracking() {
+    ui::sectionHeader(tr("Beat tracking"));
+    const char* methods[2] = {tr("Classic"), tr("Improved")};
+    const int method = settings_.audioTracking == "improved" ? 1 : 0;
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ui::beginCombo("##audioTracking", methods[method])) {
+        for (int i = 0; i < 2; ++i) {
+            if (ImGui::Selectable(methods[i], method == i)) {
+                settings_.audioTracking = i == 1 ? "improved" : "classic";
+                saveSettings(settings_);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("Improved follows the tempo from every hit, keeps the beat through short breaks and puts the beats on a steady grid. Classic is the earlier detector."));
+    if (method == 1) {
+        const AudioFeatures& features = audio_.features();
+        if (audio_.active()) {
+            ImGui::TextDisabled("%s  %s %d%%  %s %d%%", features.tracking ? tr("Locked") : tr("Searching"), tr("Tempo"), static_cast<int>(features.bpmConfidence * 100.0f), tr("Beat"), static_cast<int>(features.beatConfidence * 100.0f));
+        }
+        ui::sliderFloat(trId("Audio latency", "audioLatency"), &settings_.audioLatencyMs, -250.0f, 250.0f, "%.0f ms");
+        ImGui::SetItemTooltip("%s", tr("How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved."));
+    }
+    ui::fieldLabel(tr("Channel"));
+    const char* channels[kAudioChannelCount] = {tr("Mix"), tr("Left"), tr("Right")};
+    const int channel = static_cast<int>(audioChannelFromName(settings_.audioChannel.c_str()));
+    ImGui::BeginDisabled(!audio_.channelSupported());
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ui::beginCombo("##audioChannel", channels[channel])) {
+        for (int i = 0; i < kAudioChannelCount; ++i) {
+            if (ImGui::Selectable(channels[i], channel == i)) {
+                settings_.audioChannel = audioChannelName(static_cast<AudioChannel>(i));
+                saveSettings(settings_);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::EndDisabled();
+    if (!audio_.channelSupported()) {
+        ImGui::SetItemTooltip("%s", tr("This input always listens to both channels mixed."));
+    }
+    ui::sliderFloat(trId("Bass and mid split", "audioCrossLow"), &settings_.audioCrossLow, 60.0f, 400.0f, "%.0f Hz");
+    ImGui::SetItemTooltip("%s", tr("Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz."));
+    ui::sliderFloat(trId("Mid and high split", "audioCrossHigh"), &settings_.audioCrossHigh, 800.0f, 6000.0f, "%.0f Hz");
+}
+
 void App::drawAudioTab() {
     const AudioFeatures& features = engine_.audio();
     ImGui::Spacing();
@@ -1179,6 +1225,7 @@ void App::drawAudioTab() {
     ui::sliderFloat(trId("Gain", "audioGain"), &settings_.audioGain, 0.1f, 8.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
     ui::sliderFloat(trId("Smoothing", "audioSmoothing"), &settings_.audioSmoothing, 0.0f, 1.0f, "%.2f");
     ui::sliderFloat(trId("Beat sensitivity", "audioSensitivity"), &settings_.audioBeatSensitivity, 0.0f, 1.0f, "%.2f");
+    drawAudioTracking();
 
     ImGui::Spacing();
     ImGui::TextWrapped("%s", tr("System audio listens to everything your PC plays, for example a DJ program or a music player. Inputs are microphones, line-in and audio interfaces."));

@@ -23,7 +23,7 @@ The table is generated from the results file by `python3 scripts/check_test_matr
 | NVIDIA | no hardware run recorded | no hardware run recorded |
 | AMD | no hardware run recorded | no hardware run recorded |
 | Intel | no hardware run recorded | no hardware run recorded |
-| Software OpenGL (CI, containers, virtual machines) | software OpenGL, automated 0 of 147 checks, not hardware | software OpenGL, automated 132 of 144 checks, not hardware |
+| Software OpenGL (CI, containers, virtual machines) | software OpenGL, automated 0 of 149 checks, not hardware | software OpenGL, automated 132 of 146 checks, not hardware |
 <!-- vendors:end -->
 
 Reading it today: no hardware run is recorded for any card on any system. The program is built and unit tested on Windows and Linux for every change. It was run (self tests, soak, screenshots) on Linux with software OpenGL only. No test starts it on Windows.
@@ -101,5 +101,7 @@ The rules for every file and protocol are in [INTERFACES.md](INTERFACES.md). The
 | Show and community packages, clip packs, scene documents | version numbers, checked | see [INTERFACES.md](INTERFACES.md) | Refused with a message that names the version (read from the code; not part of `nvj_compat_tests`) |
 
 Two kinds of fixtures are kept. Files named `*_v0.50.0.json` were written by the code of 0.50.0 and are frozen: the test loads them, checks values, and checks that the current code writes the same JSON again, so a change of the writer fails the test until somebody writes fixtures for the new version on purpose. Files named `*_older*.json` or `venue_no_version.json` were written by hand to show an older shape. **They were not written by an older release.** They show what the loader accepts today, not what 0.30.0 really wrote. No file of an older release has been collected yet; when one comes in, it belongs into `tests/data/compat` with the release number in its name.
+
+Since 0.64.0 the settings fixture is `settings_v0.64.0.json` (five audio keys were added); `settings_v0.50.0.json` is kept and loaded as a settings file of an earlier release, with the new keys at their defaults.
 
 What nobody has checked: opening a file of 0.49.0 or older on a real user's machine with real media, and opening a 0.50.0 preset in an older program.

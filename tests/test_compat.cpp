@@ -28,6 +28,7 @@ namespace fs = std::filesystem;
 namespace {
 
 const char* const kNewest = "0.50.0";
+const char* const kSettingsNewest = "0.64.0";
 
 fs::path compatDirectory() {
     return fs::path(NYREXVJ_TEST_DATA) / "compat";
@@ -47,7 +48,7 @@ bool writeText(const fs::path& file, const std::string& text) {
 }
 
 std::string frozen(const std::string& kind) {
-    return kind + "_v" + kNewest + ".json";
+    return kind + "_v" + (kind == "settings" ? kSettingsNewest : kNewest) + ".json";
 }
 
 nlohmann::json parsed(const std::string& text) {
@@ -90,6 +91,11 @@ nvj::Settings makeSettings() {
     settings.convertMode = "automatic";
     settings.design = 1;
     settings.theme = "studio";
+    settings.audioTracking = "improved";
+    settings.audioChannel = "left";
+    settings.audioLatencyMs = 40.0f;
+    settings.audioCrossLow = 180.0f;
+    settings.audioCrossHigh = 2500.0f;
     return settings;
 }
 
@@ -215,7 +221,27 @@ void testSettings() {
     CHECK(loaded.particleLimit == 4096);
     CHECK(!loaded.showStatusBar);
     CHECK(loaded.convertMode == "automatic");
+    CHECK(loaded.audioTracking == "improved");
+    CHECK(loaded.audioChannel == "left");
+    CHECK(loaded.audioLatencyMs == 40.0f);
+    CHECK(loaded.audioCrossLow == 180.0f);
+    CHECK(loaded.audioCrossHigh == 2500.0f);
     CHECK(parsed(settingsText(scratch)) == parsed(text));
+
+    useDataDir(scratch);
+    const std::string fromFifty = readText(compatDirectory() / "settings_v0.50.0.json");
+    CHECK(!fromFifty.empty());
+    CHECK(writeText(scratch / "settings.json", fromFifty));
+    nvj::Settings fifty;
+    CHECK(nvj::loadSettings(fifty));
+    CHECK(!fifty.checkUpdates);
+    CHECK(fifty.fpsLimit == 60);
+    CHECK(fifty.convertMode == "automatic");
+    CHECK(fifty.audioTracking == "classic");
+    CHECK(fifty.audioChannel == "mix");
+    CHECK(fifty.audioLatencyMs == 0.0f);
+    CHECK(fifty.audioCrossLow == 150.0f);
+    CHECK(fifty.audioCrossHigh == 2000.0f);
 
     useDataDir(scratch);
     CHECK(writeText(scratch / "settings.json", readText(compatDirectory() / "settings_older.json")));

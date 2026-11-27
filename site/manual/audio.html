@@ -217,7 +217,7 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Music and motion</p>
 <h1>Audio and music</h1>
-<p class="meta">Chapter 13 of 38 &middot; 2 min read</p>
+<p class="meta">Chapter 13 of 38 &middot; 3 min read</p>
 <nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#sources">Choosing a source</a><a href="#analysis">Analysis settings</a><a href="#making-react">Making visuals react</a></nav>
 <h2 id="sources"><a class="anchor" href="#sources" aria-label="Link">#</a>Choosing a source</h2>
 <p>Choose the source in the Audio input window at the bottom, or in Settings, Audio, or the Audio menu.</p>
@@ -227,6 +227,9 @@
 <h2 id="analysis"><a class="anchor" href="#analysis" aria-label="Link">#</a>Analysis settings</h2>
 <p>Gain raises or lowers the level that the analysis sees, Smoothing makes the bands calmer, and Beat sensitivity decides how easily a beat is found. They are in the Audio window and in Settings, Audio. If the meters hit the top all the time, lower the gain; if the beat is found in every sound, lower the sensitivity.</p>
 <p>Detected tempo shows the estimate, and Use takes it over as the tempo. Sync BPM to audio keeps the tempo locked to the detected beat all the time. It works best with music that has a clear kick. For a steady show with a DJ it is often better to tap the tempo yourself or to follow a clock, see <a href="sync.html">Show sync and timecode</a>.</p>
+<p>The same page has a section <strong>Beat tracking</strong> with three more things. The box <strong>Beat tracking</strong> chooses the method: <strong>Classic</strong> is the detector that was always there, <strong>Improved</strong> adds a tracker that finds the tempo from every hit of the last ten seconds, so one missing kick does not break it. It shows whether it is locked, the tempo confidence and the beat confidence, and while it is locked the beats come on a steady grid that goes on through a short break and stops after a second and a half of silence. Classic stays the default, and with it nothing is different from the version before.</p>
+<p>With Improved on, <strong>Audio latency</strong> (-250 to +250 ms) moves the beats earlier with a positive value and later with a negative one. Use it when your audio interface or a loopback is late, and look at the picture next to the sound until they agree. <strong>Bass and mid split</strong> and <strong>Mid and high split</strong> move the borders of the three bands, 150 Hz and 2000 Hz at the start, for both methods. <strong>Channel</strong> chooses Mix, Left or Right for devices that have two channels; the box is grey for the demo signal and for inputs that cannot do it, and a change restarts the capture of the device.</p>
+<aside class="note note"><strong class="note-label">Note</strong><p>the tracker was tested with synthetic tracks and not yet with real DJ mixes or on Windows. A track without a steady beat gets a low confidence, and below a quarter of it the beats come from the classic detection again.</p></aside>
 <figure class="shot"><a href="../assets/manual/en/settings-audio.webp"><img src="../assets/manual/en/settings-audio.webp" width="874" height="584" loading="lazy" alt="The Audio page of the settings"></a><figcaption>The Audio page of the settings</figcaption></figure>
 <h2 id="making-react"><a class="anchor" href="#making-react" aria-label="Link">#</a>Making visuals react</h2>
 <p>Reactivity is set in three places:</p>

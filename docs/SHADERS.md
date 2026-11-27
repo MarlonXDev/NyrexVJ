@@ -147,6 +147,40 @@ A control you never touched uses the value from the file, so changing a default 
 - A filter can have buffers and several passes exactly like a clip. Its buffers are held per effect slot, are freed after four seconds without use and count in the 512 MiB budget.
 - An error stays with the effect: the picture passes through unchanged, the effect panel shows the message in red with the line number of the file, and the other effects and layers keep running.
 
+## Your own transitions (v0.65.0)
+
+`#pragma nyrexvj transition` makes the file a deck transition. It is then in the transition lists (the transport bar and the Trigger window) under the heading **Your transitions**, not in the Library and not in the effect list. The 15 built-in transitions are not touched; a deck that does not name a file of its own still uses one of them. Up to 32 transition files are listed.
+
+```glsl
+#pragma nyrexvj transition
+#pragma nyrexvj param softness float "Softness" 0 0.5 0.15
+void main() {
+    float t = mix(-softness, 1.0 + softness, uProgress);
+    float m = 1.0 - ss(t - softness, t + softness, vUv.x);
+    fragColor = mix(colFrom(vUv), colTo(vUv), m);
+}
+```
+
+What the file can use, beyond the NyrexVJ style (`vUv`, `uTime`, `uBeat`, `uBpm`, `uRes`, `ss`, the `param` names):
+
+- `uProgress`, a float from 0 to 1 over the length of the transition. It is the plain progress of the deck switch; the built-in transitions ease it inside their own shader, a file of your own gets it as it is, so ease it yourself (`ss(0.0, 1.0, uProgress)`) when you want the same feel.
+- `colFrom(uv)` and `colTo(uv)`: the finished picture of the outgoing deck and of the incoming deck (all layers, effects, colour and the look of the deck, as the built-in transitions see them). `uFrom` and `uTo` are the two samplers behind them (`uChannel0` and `uChannel1`).
+- Controls with `#pragma nyrexvj param` work like in a clip: the values are stored with the deck settings, show in the Trigger window under **Shader controls** and keep the default of the file until you move them.
+- The file has exactly one image pass. Buffers, `picture`, media channels, `alpha` and `filter` are refused with a message (`channel 0 from` and `channel 1 to` are what a transition file has by itself and are not written).
+- The result is always opaque. Whatever alpha the file writes, the picture leaves with alpha 1, because the picture of a deck is opaque before it reaches the transition.
+
+The reserved names `uProgress`, `uFrom`, `uTo`, `colFrom` and `colTo` cannot be used as parameter names.
+
+**ISF transitions** (`startImage`, `endImage` and a float input `progress`) are read as transitions since 0.65.0 and appear in the same list; `progress` becomes `uProgress`. An ISF transition cannot also have an `inputImage`, import pictures or use passes with a `TARGET`; each is refused with a message.
+
+**In the lists.** Choosing a built-in transition clears the file name of the deck, choosing a file sets it and starts with the defaults of the file. The Trigger window shows the controls of the file, a preview with a progress slider (it shows two clip pictures, Plasma and Tunnel, so you see the shape and not your show) and the buttons **Create example transition** (writes `example_transition.glsl` into the shaders folder) and **Edit in shader editor**. A file that has a mistake stays in the list marked with `(!)` and shows its message in red.
+
+**Safe fallbacks.** If the file is gone, is changed into something that is not a transition, or does not compile, the deck switch uses the built-in transition that is set next to it, the message stays visible and nothing else changes. A file you repair is picked up while the program runs and the next deck switch uses it. If the file changes while a transition runs, the transition goes on with the new version of the file from the next frame, or with the built-in one when the new version is broken.
+
+**Switching during a transition.** The rules of the built-in transitions stay: a new deck switch while a transition runs freezes the picture you see and fades from there, whichever kind (built-in or file) was running and whichever kind starts.
+
+Examples are in `docs/shaders/`: `transition_iris.glsl` (an opening circle with a soft edge and a centre you can move) and `isf_transition_slide.fs` (an ISF transition that pushes the new picture in from one of four sides).
+
 ## ISF files (v0.37.0)
 
 ISF ("Interactive Shader Format", the format of VIDVOX and the Syphon world) is read directly. Put a `.fs` file into the shaders folder. A file that starts with a `/*{ ... }*/` header is read as ISF, everything else works as before. NyrexVJ turns the ISF file into the same plan as a Shader 2.0 file (buffers, channels, controls) and runs it with the same code, so memory budget, release of buffers, hot reload, errors and thumbnails behave the same. Error lines count from the first line of your file.
@@ -172,7 +206,7 @@ A file with an input named `inputImage` is a filter and goes into the effect lis
 What is not supported, and what happens:
 
 - **Vertex shaders and old OpenGL.** NyrexVJ reads only the fragment part and uses OpenGL 3.3. A file that uses `varying`, `attribute`, `isf_vertShaderInit`, `gl_TexCoord`, `gl_Vertex`, the old matrices, `ftransform`, `sampler2DRect` or `texture2DRect` is refused with the name of the first one found. `.vs` files are not read.
-- **Transitions** (`startImage` and `endImage`): refused. NyrexVJ has its own deck transitions.
+- **Transitions** (`startImage` and `endImage`): read as deck transitions since 0.65.0, see [Your own transitions](#your-own-transitions-v0650). Only one of the two, an `inputImage` next to them, imported pictures and passes with a `TARGET` are refused.
 - **`audio` and `audioFFT` inputs, cube map imports and other image inputs than `inputImage`:** the shader still runs, these read transparent black, and the Clip window lists each one. (The audio of NyrexVJ is available to the NyrexVJ style as `uAudio` and as channel 0, but it is not wired to ISF inputs.)
 - **`DATE`** has the fixed value year 2026, month 1, day 1, 0 seconds; the real date and time of day are not available.
 - **More than 8 controls or 16 numbers:** the rest are fixed to their default values (the file keeps working, the Clip window lists them). **More than four controls in a filter:** the first four are on the effect, the rest keep the defaults.
@@ -230,4 +264,4 @@ If a shader does not compile, its tile stays dark and the Clip window shows the 
 
 ## Not built
 
-In the editor: autocompletion, search and replace, several open files at once, a shader debugger, recovery files for unsaved text, a preview of image filters, and media channels in the preview. Also not built: ISF vertex shaders, ISF transitions, ISF audio inputs, and moving the controls of a clip with audio, LFOs, MIDI or OSC (they are set by hand in the Clip window; the four controls of a filter can be moved because they are effect controls).
+In the editor: autocompletion, search and replace, several open files at once, a shader debugger, recovery files for unsaved text, a preview of image filters, and media channels in the preview. Also not built: ISF vertex shaders, ISF audio inputs, and moving the controls of a clip with audio, LFOs, MIDI or OSC (they are set by hand in the Clip window; the four controls of a filter can be moved because they are effect controls).

@@ -240,8 +240,12 @@ struct DeckData {
     bool operator==(const DeckData&) const = default;
 };
 
+constexpr size_t kMaxTransitionName = 96;
+
 struct DeckSettings {
     int transition = TransitionFade;
+    std::string customTransition;
+    std::array<float, kClipValueCount> transitionValues = unsetClipValues();
     float seconds = 1.5f;
     int beats = 4;
     bool syncBeats = false;

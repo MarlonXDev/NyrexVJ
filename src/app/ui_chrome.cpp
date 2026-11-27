@@ -4,11 +4,14 @@
 #include "core/modulation.hpp"
 #include "core/ndi_sender.hpp"
 #include "render/spout_output.hpp"
+#include "scene3d/scene_pack.hpp"
+#include "render/transition_library.hpp"
 
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <string>
 
 namespace nvj {
@@ -18,6 +21,41 @@ namespace {
 const ImVec4 kGood(0.45f, 0.85f, 0.45f, 1.0f);
 const ImVec4 kBad(1.0f, 0.4f, 0.35f, 1.0f);
 const ImVec4 kWarn(1.0f, 0.65f, 0.2f, 1.0f);
+
+std::string customLabel(const std::string& name) {
+    const size_t colon = name.find(": ");
+    return colon == std::string::npos ? name : name.substr(colon + 2);
+}
+
+bool transitionCombo(const char* id, DeckSettings& settings) {
+    const std::string preview = settings.customTransition.empty() ? std::string(tr(transitionName(settings.transition))) : customLabel(settings.customTransition);
+    bool changed = false;
+    if (ui::beginCombo(id, preview.c_str())) {
+        for (int t = 0; t < TransitionTypeCount; ++t) {
+            if (ImGui::Selectable(tr(transitionName(t)), settings.customTransition.empty() && settings.transition == t)) {
+                settings.transition = t;
+                settings.customTransition.clear();
+                changed = true;
+            }
+        }
+        const std::vector<TransitionDef>& custom = transitionLibrary();
+        if (!custom.empty()) {
+            ImGui::SeparatorText(tr("Your transitions"));
+            for (const TransitionDef& def : custom) {
+                const std::string label = customLabel(def.name) + (def.usable() ? "" : "  (!)");
+                if (ImGui::Selectable(label.c_str(), settings.customTransition == def.name)) {
+                    if (settings.customTransition != def.name) {
+                        settings.transitionValues = unsetClipValues();
+                    }
+                    settings.customTransition = def.name;
+                    changed = true;
+                }
+            }
+        }
+        ImGui::EndCombo();
+    }
+    return changed;
+}
 
 void meterRow(const char* label, float value) {
     ui::fieldLabel(label);
@@ -130,14 +168,7 @@ void App::drawTransportBar() {
         ImGui::TextDisabled("%s", tr("Transition"));
         ImGui::SameLine(0.0f, ui::px(6.0f));
         ImGui::SetNextItemWidth(ui::px(104.0f));
-        if (ui::beginCombo("##tbTransition", tr(transitionName(deckSettings.transition)))) {
-            for (int t = 0; t < TransitionTypeCount; ++t) {
-                if (ImGui::Selectable(tr(transitionName(t)), deckSettings.transition == t)) {
-                    deckSettings.transition = t;
-                }
-            }
-            ImGui::EndCombo();
-        }
+        transitionCombo("##tbTransition", deckSettings);
         if (ImGui::GetContentRegionAvail().x > ui::px(1180.0f)) {
             ImGui::SameLine(0.0f, ui::px(10.0f));
             ImGui::Checkbox(trId("Beat sync", "tbSync"), &deckSettings.syncBeats);
@@ -152,6 +183,62 @@ void App::drawTransportBar() {
         const ImVec2 pos = ImGui::GetWindowPos();
         const ImVec2 size = ImGui::GetWindowSize();
         ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x, pos.y + size.y - 3.0f), ImVec2(pos.x + size.x * engine_.transitionProgress(), pos.y + size.y), ImGui::GetColorU32(ui::kAccent));
+    }
+}
+
+void App::drawTransitionDesigner() {
+    DeckSettings& settings = engine_.comp.deckSettings;
+    const int customIndex = settings.customTransition.empty() ? -1 : customTransitionIndex(settings.customTransition);
+    const TransitionDef* def = customIndex >= 0 ? &transitionLibrary()[static_cast<size_t>(customIndex)] : nullptr;
+    std::string problem;
+    if (!settings.customTransition.empty()) {
+        problem = def ? engine_.customTransitionError(settings.customTransition) : std::string("The transition file is not in the shaders folder");
+        if (problem.empty() && def && !def->usable()) {
+            problem = def->error;
+        }
+    }
+    if (!settings.customTransition.empty() && !problem.empty()) {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextColored(kBad, "%s", tr("This transition cannot run. The built-in transition is used instead."));
+        ImGui::TextDisabled("%s", trMessage(problem).c_str());
+        ImGui::PopTextWrapPos();
+    }
+    if (def && problem.empty() && def->plan) {
+        drawShaderControlValues(*def->plan, settings.transitionValues);
+    }
+
+    ui::sectionHeader(tr("Preview"));
+    ImGui::Checkbox(tr("Play"), &transitionPreviewPlay_);
+    ImGui::SameLine();
+    if (transitionPreviewPlay_) {
+        transitionPreviewProgress_ = static_cast<float>(std::fmod(ImGui::GetTime() * 0.5, 1.0));
+    }
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    ui::sliderFloat("##transPreviewProgress", &transitionPreviewProgress_, 0.0f, 1.0f, "%.2f");
+    ShaderValues values = unsetShaderValues();
+    if (def && def->plan && problem.empty()) {
+        values = resolveShaderValues(*def->plan, settings.transitionValues);
+    }
+    engine_.requestTransitionPreview(problem.empty() ? settings.customTransition : std::string(), settings.transition, transitionPreviewProgress_, values);
+    if (engine_.transitionPreviewTexture() != 0) {
+        const float width = std::min(ImGui::GetContentRegionAvail().x, ui::px(240.0f));
+        ImGui::Image(ui::texId(engine_.transitionPreviewTexture()), ImVec2(width, width * 9.0f / 16.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+    }
+    if (ImGui::SmallButton(tr("Create example transition"))) {
+        const std::string created = createExampleTransition();
+        if (created.empty()) {
+            toast(tr("The example transition could not be created"));
+        } else {
+            syncNodeEffects(std::string());
+            toast(std::string(tr("Created: ")) + created);
+        }
+    }
+    ImGui::SetItemTooltip("%s", tr("Writes a small transition file into the shaders folder. Edit it in the shader editor and it shows up in the list above."));
+    if (def && !settings.customTransition.empty()) {
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Edit in shader editor"))) {
+            openShaderEditor(std::filesystem::path(pathFromUtf8(def->path)).filename().string());
+        }
     }
 }
 
@@ -190,14 +277,7 @@ void App::drawTrigger() {
     ui::fieldLabel(tr("Type"));
     {
         ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ui::beginCombo("##transition", tr(transitionName(settings.transition)))) {
-            for (int t = 0; t < TransitionTypeCount; ++t) {
-                if (ImGui::Selectable(tr(transitionName(t)), settings.transition == t)) {
-                    settings.transition = t;
-                }
-            }
-            ImGui::EndCombo();
-        }
+        transitionCombo("##transition", settings);
     }
     ImGui::Checkbox(trId("Beat sync", "transSync"), &settings.syncBeats);
     ImGui::SetItemTooltip("%s", tr("Transition length follows the tempo"));
@@ -211,6 +291,7 @@ void App::drawTrigger() {
     if (settings.autoCycle) {
         ui::sliderInt(tr("every"), &settings.cycleBeats, 4, 128, "%d beats");
     }
+    drawTransitionDesigner();
 
     ui::sectionHeader(tr("Beat grid"));
     int beatsPerBar = comp.beatsPerBar;

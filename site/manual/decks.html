@@ -44,7 +44,7 @@
 <li><a href="clip-grid.html">The clip grid</a>
 </li>
 <li><a href="decks.html" aria-current="page">Decks and transitions</a>
-<ul><li><a href="#sixteen">Sixteen decks</a></li><li><a href="#transitions">Transitions</a></li><li><a href="#auto-cycle">Auto cycle</a></li><li><a href="#deck-menu">Working with decks</a></li></ul>
+<ul><li><a href="#sixteen">Sixteen decks</a></li><li><a href="#transitions">Transitions</a></li><li><a href="#custom-transitions">Your own transitions</a></li><li><a href="#auto-cycle">Auto cycle</a></li><li><a href="#deck-menu">Working with decks</a></li></ul>
 </li>
 <li><a href="layers.html">Layers and blending</a>
 </li>
@@ -138,7 +138,7 @@
 <li><a href="clip-grid.html">The clip grid</a>
 </li>
 <li><a href="decks.html" aria-current="page">Decks and transitions</a>
-<ul><li><a href="#sixteen">Sixteen decks</a></li><li><a href="#transitions">Transitions</a></li><li><a href="#auto-cycle">Auto cycle</a></li><li><a href="#deck-menu">Working with decks</a></li></ul>
+<ul><li><a href="#sixteen">Sixteen decks</a></li><li><a href="#transitions">Transitions</a></li><li><a href="#custom-transitions">Your own transitions</a></li><li><a href="#auto-cycle">Auto cycle</a></li><li><a href="#deck-menu">Working with decks</a></li></ul>
 </li>
 <li><a href="layers.html">Layers and blending</a>
 </li>
@@ -217,13 +217,19 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Playing visuals</p>
 <h1>Decks and transitions</h1>
-<p class="meta">Chapter 6 of 38 &middot; 2 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#sixteen">Sixteen decks</a><a href="#transitions">Transitions</a><a href="#auto-cycle">Auto cycle</a><a href="#deck-menu">Working with decks</a></nav>
+<p class="meta">Chapter 6 of 38 &middot; 3 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#sixteen">Sixteen decks</a><a href="#transitions">Transitions</a><a href="#custom-transitions">Your own transitions</a><a href="#auto-cycle">Auto cycle</a><a href="#deck-menu">Working with decks</a></nav>
 <h2 id="sixteen"><a class="anchor" href="#sixteen" aria-label="Link">#</a>Sixteen decks</h2>
 <p>The row of 16 buttons above the clip grid switches decks. Each deck is a complete set: four layers, eight columns, effects, colours. The deck you are on is orange, empty decks are dim and start blank when you click them. A new deck takes over with a transition instead of a cut.</p>
 <h2 id="transitions"><a class="anchor" href="#transitions" aria-label="Link">#</a>Transitions</h2>
 <div class="tablewrap"><table><thead><tr><th scope="col">Transition</th><th scope="col">Look</th></tr></thead><tbody><tr><td>Fade</td><td>Smooth crossfade</td></tr><tr><td>Dissolve</td><td>Noisy burn-through with a glowing edge</td></tr><tr><td>Zoom</td><td>Pulls through the old picture into the new one</td></tr><tr><td>Wipe</td><td>Soft diagonal wipe</td></tr><tr><td>Radial</td><td>A circle that opens from the centre</td></tr><tr><td>Spin</td><td>Both pictures rotate into each other</td></tr><tr><td>Slide</td><td>The new deck pushes in from the side</td></tr><tr><td>Pixelate</td><td>The picture breaks into coarse blocks and back while it changes</td></tr><tr><td>Glitch</td><td>Torn bands with a colour split, some of them already show the new deck</td></tr><tr><td>Blinds</td><td>Vertical strips that open like blinds</td></tr><tr><td>Ripple</td><td>A wave runs out from the centre and carries the new picture in</td></tr><tr><td>Flash</td><td>A white flash covers the cut</td></tr><tr><td>Blur</td><td>The old picture blurs out and the new one comes into focus</td></tr><tr><td>Checker</td><td>A grid of tiles flips from old to new in a diagonal wave</td></tr><tr><td>Frost</td><td>The picture frosts over and thaws into the new one</td></tr></tbody></table></div>
 <p>Choose the transition and its length in the Trigger window. Set the length in seconds, or tick Beat sync to count in beats so the change follows the tempo. If you switch again in the middle of a transition, NyrexVJ freezes the picture you see and fades from there, so there is never a jump.</p>
+<h2 id="custom-transitions"><a class="anchor" href="#custom-transitions" aria-label="Link">#</a>Your own transitions</h2>
+<p>A shader file with the line <code>#pragma nyrexvj transition</code> is a transition of your own, and so is an ISF file with the inputs <code>startImage</code> and <code>endImage</code>. Put it into the shaders folder (see <a href="shaders.html">Your own shaders</a>) and it shows up in the transition list, in the transport bar and in the Trigger window, under Your transitions. Choose it like a built-in one. The 15 built-in transitions stay exactly as they were.</p>
+<p>In the file, <code>colFrom(vUv)</code> is the picture of the outgoing deck, <code>colTo(vUv)</code> the picture of the incoming deck and <code>uProgress</code> runs from 0 to 1 while the transition goes. The <code>param</code> lines of the file become sliders under Shader controls in the Trigger window, and their values are saved with the deck settings. The Trigger window shows the controls and the preview.</p>
+<figure class="shot"><a href="../assets/manual/en/trigger-window.webp"><img src="../assets/manual/en/trigger-window.webp" width="364" height="417" loading="lazy" alt="The Trigger window with a transition of your own, its sliders and the preview"></a><figcaption>The Trigger window with a transition of your own, its sliders and the preview</figcaption></figure>
+<p>Under the controls is a preview with a progress slider (it shows two example pictures, not your show), the button Create example transition, which writes a small working file into the shaders folder, and Edit in shader editor.</p>
+<p>If the file is deleted, has a mistake or does not compile, the deck switch uses the built-in transition that is chosen next to it, the Trigger window says why in red, and the show goes on. You repair the file and the next switch uses it. What the file can use and what it cannot is in the document <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/SHADERS.md" target="_blank" rel="noopener noreferrer">docs/SHADERS.md</a> of the project, in the section Your own transitions.</p>
 <h2 id="auto-cycle"><a class="anchor" href="#auto-cycle" aria-label="Link">#</a>Auto cycle</h2>
 <p>Tick Auto cycle and choose a number of beats from 4 to 128. NyrexVJ then steps through the used decks by itself and changes at that interval. It is good for the quiet hour of a party when you want to hand the controls to somebody else.</p>
 <h2 id="deck-menu"><a class="anchor" href="#deck-menu" aria-label="Link">#</a>Working with decks</h2>

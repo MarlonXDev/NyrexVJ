@@ -334,7 +334,18 @@ void modulatorsFromJson(const json& node, Modulators& modulators) {
 }
 
 json deckSettingsToJson(const DeckSettings& settings) {
-    return json{{"transition", transitionName(settings.transition)}, {"seconds", settings.seconds}, {"beats", settings.beats}, {"syncBeats", settings.syncBeats}, {"autoCycle", settings.autoCycle}, {"cycleBeats", settings.cycleBeats}};
+    json node{{"transition", transitionName(settings.transition)}, {"seconds", settings.seconds}, {"beats", settings.beats}, {"syncBeats", settings.syncBeats}, {"autoCycle", settings.autoCycle}, {"cycleBeats", settings.cycleBeats}};
+    if (!settings.customTransition.empty()) {
+        node["customTransition"] = settings.customTransition;
+        if (std::any_of(settings.transitionValues.begin(), settings.transitionValues.end(), [](float value) { return value != kClipValueUnset; })) {
+            json values = json::array();
+            for (const float value : settings.transitionValues) {
+                values.push_back(value == kClipValueUnset ? json(nullptr) : json(value));
+            }
+            node["transitionValues"] = values;
+        }
+    }
+    return node;
 }
 
 DeckSettings deckSettingsFromJson(const json& node) {
@@ -345,6 +356,19 @@ DeckSettings deckSettingsFromJson(const json& node) {
     settings.syncBeats = readBool(node, "syncBeats", false);
     settings.autoCycle = readBool(node, "autoCycle", false);
     settings.cycleBeats = static_cast<int>(readNumber(node, "cycleBeats", 16.0f, 4.0f, 128.0f));
+    const std::string custom = readString(node, "customTransition");
+    if (custom.rfind("Transition: ", 0) == 0 && custom.size() <= kMaxTransitionName) {
+        settings.customTransition = custom;
+        if (node.contains("transitionValues") && node["transitionValues"].is_array()) {
+            const json& values = node["transitionValues"];
+            for (size_t i = 0; i < values.size() && i < settings.transitionValues.size(); ++i) {
+                if (values[i].is_number()) {
+                    const double value = values[i].get<double>();
+                    settings.transitionValues[i] = std::isfinite(value) && std::fabs(value) <= 1.0e6 ? static_cast<float>(value) : kClipValueUnset;
+                }
+            }
+        }
+    }
     return settings;
 }
 

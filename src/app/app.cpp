@@ -123,6 +123,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     initConversion();
     refreshNodeEffects();
     refreshIsfEffects();
+    refreshCustomTransitions();
     if (!engine_.init()) {
         logLine("Engine initialisation failed");
         return false;
@@ -201,7 +202,9 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
             ++slot;
         }
     }
-    if (!options.transition.empty()) {
+    if (options.transition.rfind("Transition: ", 0) == 0) {
+        start.deckSettings.customTransition = options.transition;
+    } else if (!options.transition.empty()) {
         start.deckSettings.transition = transitionFromName(options.transition);
     }
     if (options.transitionSeconds >= 0.0f) {
@@ -221,6 +224,7 @@ bool App::init(GLFWwindow* window, const StartOptions& options) {
     if (options.column >= 0) {
         engine_.triggerColumn(options.column);
     }
+    startFocusTrigger_ = options.triggerTab;
     if (options.selectLayer >= 0 && options.selectLayer < kLayerCount) {
         selectedLayer_ = options.selectLayer;
     }
@@ -471,6 +475,10 @@ void App::autosaveTick(double dt) {
 
 void App::syncNodeEffects(const std::string& forceName) {
     NodeScan scan = refreshNodeEffects(forceName);
+    const TransitionScan transitions = refreshCustomTransitions();
+    if (!transitions.changed.empty()) {
+        assetsDirty_ = true;
+    }
     const IsfScan isf = refreshIsfEffects();
     scan.added += isf.added;
     scan.changed.insert(scan.changed.end(), isf.changed.begin(), isf.changed.end());
@@ -913,6 +921,9 @@ void App::frame(double dt, bool drawUi) {
         ImGui::SetWindowFocus("###clip");
         ImGui::SetWindowFocus("###layer");
         ImGui::SetWindowFocus("###browser");
+        if (startFocusTrigger_) {
+            ImGui::SetWindowFocus("###trigger");
+        }
     }
 
     history_.observe(engine_.comp, dt, ImGui::IsMouseDown(ImGuiMouseButton_Left) || ImGui::IsAnyItemActive());

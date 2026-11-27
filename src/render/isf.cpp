@@ -350,7 +350,7 @@ struct Candidate {
 
 struct ImageUse {
     std::string name;
-    enum class Kind { Picture, Media, Buffer, None } kind = Kind::None;
+    enum class Kind { Picture, Media, Buffer, From, To, None } kind = Kind::None;
     std::string media;
     int buffer = -1;
 };
@@ -677,12 +677,38 @@ IsfResult translateIsf(const std::string& text) {
             startImage = startImage || name == "startImage";
             endImage = endImage || name == "endImage";
         }
-        if (startImage && endImage) {
-            fail("This ISF file is a transition (startImage and endImage). NyrexVJ has its own deck transitions and does not import ISF transitions");
+        const bool transition = startImage || endImage;
+        if (transition && !(startImage && endImage)) {
+            fail("This ISF file has only one of startImage and endImage. A transition needs both");
+        }
+        if (transition && pictureInput) {
+            fail("An ISF transition cannot also have an inputImage");
+        }
+        if (transition && header.contains("IMPORTED")) {
+            fail("An ISF transition cannot import pictures. NyrexVJ transitions read the outgoing and the incoming picture only");
+        }
+        if (transition) {
+            for (auto it = candidates.begin(); it != candidates.end();) {
+                if (it->param.name == "progress" && it->param.kind == ShaderParamKind::Float) {
+                    it = candidates.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
 
         std::vector<ImageUse> uses;
         const auto used = [&](const std::string& name) { return body.idents.count(name) > 0; };
+        if (transition) {
+            ImageUse from;
+            from.name = "startImage";
+            from.kind = ImageUse::Kind::From;
+            uses.push_back(from);
+            ImageUse to;
+            to.name = "endImage";
+            to.kind = ImageUse::Kind::To;
+            uses.push_back(to);
+        }
         if (pictureInput && used("inputImage")) {
             ImageUse use;
             use.name = "inputImage";
@@ -740,6 +766,9 @@ IsfResult translateIsf(const std::string& text) {
         }
         for (size_t n = 0; n < images.size(); ++n) {
             if (images[n] == "inputImage" && imageTypes[n] == "image") {
+                continue;
+            }
+            if (transition && (images[n] == "startImage" || images[n] == "endImage")) {
                 continue;
             }
             const std::string& type = imageTypes[n];
@@ -829,6 +858,13 @@ IsfResult translateIsf(const std::string& text) {
             }
             ++buffer;
         }
+        if (transition) {
+            for (const PassInfo& pass : passes) {
+                if (!pass.target.empty()) {
+                    fail("An ISF transition cannot have passes with a TARGET. NyrexVJ transitions have one pass and no buffers");
+                }
+            }
+        }
         if (static_cast<int>(uses.size()) > kShaderChannels) {
             fail("The ISF shader reads " + std::to_string(uses.size()) + " different pictures, NyrexVJ can read " + std::to_string(kShaderChannels) + " in one shader");
         }
@@ -900,6 +936,9 @@ IsfResult translateIsf(const std::string& text) {
         for (size_t n = 0; n < uses.size(); ++n) {
             out += "#define " + uses[n].name + " uChannel" + std::to_string(n) + "\n";
         }
+        if (transition) {
+            out += "#define progress uProgress\n";
+        }
         out += baked;
         out += "#line " + std::to_string(lineOf(text, headEnd)) + "\n";
         out += body.text;
@@ -907,7 +946,9 @@ IsfResult translateIsf(const std::string& text) {
             out.push_back('\n');
         }
         out += "#pragma nyrexvj plain\n";
-        if (filter) {
+        if (transition) {
+            out += "#pragma nyrexvj transition\n";
+        } else if (filter) {
             out += "#pragma nyrexvj filter\n";
         } else {
             out += "#pragma nyrexvj alpha\n";
@@ -947,6 +988,12 @@ IsfResult translateIsf(const std::string& text) {
                 switch (uses[n].kind) {
                 case ImageUse::Kind::Picture:
                     lines += "picture";
+                    break;
+                case ImageUse::Kind::From:
+                    lines += "from";
+                    break;
+                case ImageUse::Kind::To:
+                    lines += "to";
                     break;
                 case ImageUse::Kind::Media:
                     lines += "media \"" + uses[n].media + "\"";

@@ -2990,6 +2990,15 @@ const Translation kItalian[] = {
     {"How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved.", "Quanto impiega il suono ad arrivare all'analisi. I valori positivi anticipano i beat, quelli negativi li ritardano. Funziona solo con Migliorato."},
     {"Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz.", "Dove si incontrano le bande Bassi, Medi e Alti. I valori predefiniti sono 150 Hz e 2000 Hz."},
     {"This input always listens to both channels mixed.", "Questo ingresso ascolta sempre i due canali mescolati."},
+    {"Your transitions", "Le tue transizioni"},
+    {"This transition cannot run. The built-in transition is used instead.", "Questa transizione non può essere eseguita. Viene usata la transizione integrata."},
+    {"Create example transition", "Crea transizione di esempio"},
+    {"The example transition could not be created", "Impossibile creare la transizione di esempio"},
+    {"Writes a small transition file into the shaders folder. Edit it in the shader editor and it shows up in the list above.", "Crea un piccolo file di transizione nella cartella degli shader. Modificalo nell'editor di shader e comparirà nell'elenco qui sopra."},
+    {"The transition file is not in the shaders folder", "Il file della transizione non è nella cartella degli shader"},
+    {"The transition file is gone", "Il file della transizione non c'è più"},
+    {"This file is not a transition any more", "Questo file non è più una transizione"},
+    {"The transition cannot be used", "La transizione non può essere usata"},
 };
 
 }

@@ -220,6 +220,18 @@ The row of 16 buttons above the clip grid switches decks. Each deck is a complet
 
 Choose the transition and its length in the Trigger window. Set the length in seconds, or tick Beat sync to count in beats so the change follows the tempo. If you switch again in the middle of a transition, NyrexVJ freezes the picture you see and fades from there, so there is never a jump.
 
+## Your own transitions {#custom-transitions}
+
+A shader file with the line `#pragma nyrexvj transition` is a transition of your own, and so is an ISF file with the inputs `startImage` and `endImage`. Put it into the shaders folder (see [Your own shaders](#shaders)) and it shows up in the transition list, in the transport bar and in the Trigger window, under Your transitions. Choose it like a built-in one. The 15 built-in transitions stay exactly as they were.
+
+In the file, `colFrom(vUv)` is the picture of the outgoing deck, `colTo(vUv)` the picture of the incoming deck and `uProgress` runs from 0 to 1 while the transition goes. The `param` lines of the file become sliders under Shader controls in the Trigger window, and their values are saved with the deck settings. The Trigger window shows the controls and the preview.
+
+![The Trigger window with a transition of your own, its sliders and the preview](trigger-window.webp)
+
+Under the controls is a preview with a progress slider (it shows two example pictures, not your show), the button Create example transition, which writes a small working file into the shaders folder, and Edit in shader editor.
+
+If the file is deleted, has a mistake or does not compile, the deck switch uses the built-in transition that is chosen next to it, the Trigger window says why in red, and the show goes on. You repair the file and the next switch uses it. What the file can use and what it cannot is in the document docs/SHADERS.md of the project, in the section Your own transitions.
+
 ## Auto cycle {#auto-cycle}
 
 Tick Auto cycle and choose a number of beats from 4 to 128. NyrexVJ then steps through the used decks by itself and changes at that interval. It is good for the quiet hour of a party when you want to hand the controls to somebody else.
@@ -678,7 +690,7 @@ A line `#pragma nyrexvj alpha` makes the clip transparent. Sections called `buff
 
 ## ISF files {#isf}
 
-ISF files, the format of VDMX and others with a header between `/*{` and `}*/`, are read from the same folder. A file with an `inputImage` input becomes an effect named ISF: file name. Any other ISF file becomes a clip. The inputs of the file show as controls in the Clip window, or as the four controls of the effect. What an ISF file cannot do, like vertex shaders, transitions and audio inputs, is listed in the Clip window.
+ISF files, the format of VDMX and others with a header between `/*{` and `}*/`, are read from the same folder. A file with an `inputImage` input becomes an effect named ISF: file name. Any other ISF file becomes a clip. The inputs of the file show as controls in the Clip window, or as the four controls of the effect. An ISF file with the inputs `startImage` and `endImage` is a deck transition and shows in the transition list (see [Your own transitions](#decks/custom-transitions)). What an ISF file cannot do, like vertex shaders and audio inputs, is listed in the Clip window.
 
 ## Controls for your shader {#shader-controls}
 

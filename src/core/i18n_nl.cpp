@@ -2990,6 +2990,15 @@ const Translation kDutch[] = {
     {"How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved.", "Hoe lang het geluid erover doet om de analyse te bereiken. Positieve waarden zetten de beats eerder, negatieve later. Werkt alleen met Verbeterd."},
     {"Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz.", "Waar de banden Bas, Midden en Hoog samenkomen. De standaardwaarden zijn 150 Hz en 2000 Hz."},
     {"This input always listens to both channels mixed.", "Deze ingang luistert altijd naar beide kanalen gemixt."},
+    {"Your transitions", "Je overgangen"},
+    {"This transition cannot run. The built-in transition is used instead.", "Deze overgang kan niet draaien. In plaats daarvan wordt de ingebouwde overgang gebruikt."},
+    {"Create example transition", "Voorbeeldovergang maken"},
+    {"The example transition could not be created", "De voorbeeldovergang kon niet worden gemaakt"},
+    {"Writes a small transition file into the shaders folder. Edit it in the shader editor and it shows up in the list above.", "Maakt een klein overgangsbestand in de shadermap. Bewerk het in de shader-editor en het verschijnt in de lijst hierboven."},
+    {"The transition file is not in the shaders folder", "Het overgangsbestand staat niet in de shadermap"},
+    {"The transition file is gone", "Het overgangsbestand is verdwenen"},
+    {"This file is not a transition any more", "Dit bestand is geen overgang meer"},
+    {"The transition cannot be used", "De overgang kan niet worden gebruikt"},
 };
 
 }

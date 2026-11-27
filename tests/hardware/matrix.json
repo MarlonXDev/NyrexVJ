@@ -3462,6 +3462,83 @@
           "criteria": "Proposed: Locked within 5 s on steady music, the tempo within 1 BPM, grid beats within 40 ms of the kicks after the latency setting, no lock on the ambient track, no crash when the channel changes, and no measurable change of the frame time between Classic and Improved."
         }
       ]
+    },
+    {
+      "id": "transition-designer",
+      "title": "Transition designer: deck transitions of your own as GLSL or ISF files (outgoing and incoming picture, progress, controls, preview, fallback to the built-in transition)",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SHADERS.md",
+        "docs/manual/manual.en.md",
+        "docs/INTERFACES.md",
+        "docs/TESTING.md",
+        "docs/adr/0059-transition-designer-custom-glsl-and-isf-transitions.md"
+      ],
+      "sources": [
+        "src/render/transition_library.cpp",
+        "src/render/shader_source.cpp",
+        "src/render/clip_library.cpp",
+        "src/render/isf.cpp",
+        "src/render/engine.cpp",
+        "src/core/composition.cpp",
+        "src/core/preset.cpp",
+        "src/app/ui_chrome.cpp",
+        "src/app/shader_selftest.cpp",
+        "tests/test_transitions.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-TRN-1",
+          "kind": "ctest",
+          "name": "nvj_transition_tests",
+          "note": "the transition pragma and its limits, ISF transitions, the example files, the file scan (new, changed, broken, gone, over the limit), the preset round trip of the name and the values, and hostile names"
+        },
+        {
+          "id": "A-TRN-2",
+          "kind": "ctest",
+          "name": "nvj_isf_tests",
+          "note": "the ISF cases that must still be refused (one picture only, an input image next to the pictures, a pass with a target)"
+        },
+        {
+          "id": "A-TRN-3",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest",
+          "note": "renders custom transitions through a real OpenGL context: start and end on the right deck, a hard wipe in the middle, the progress value, a control with its default and a stored value, a switch while a transition runs, six quick switches, a change to a built-in transition, a compile error, a deleted file, an unknown name, a repaired file, a deck with alpha, a transition that writes alpha 0, a deck with feedback buffers, the preview at three progress values, and the built-in transitions next to them"
+        },
+        {
+          "id": "A-TRN-4",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest 60",
+          "note": "adds the frame time of no transition, two built-in transitions and three custom ones (one with sixteen taps)"
+        },
+        {
+          "id": "A-TRN-5",
+          "kind": "ctest",
+          "name": "nvj_compat_tests",
+          "note": "the frozen settings and preset fixtures are still written byte for byte as before when no transition file is chosen"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-TRN-1",
+          "title": "Custom transitions on a real graphics card, a real output and a real show",
+          "needs": "A PC with a graphics card, an output window or Spout or NDI to OBS, two decks with different clips (one with feedback effects and one with a layer that has alpha), and the example files from docs/shaders",
+          "steps": [
+            "Copy transition_iris.glsl and isf_transition_slide.fs into the shaders folder, open the Trigger window and check that both are listed under Your transitions, that the sliders show and that the preview moves with the progress slider.",
+            "Choose each of them, switch between the two decks with beat sync on and off and with several lengths, and compare the picture in the output (and in OBS) with the preview and with a built-in transition of the same length.",
+            "Switch decks again in the middle of a custom transition, switch back and forth quickly, change the transition type during a run, and look for jumps, flashes or a black frame.",
+            "Edit the file in the shader editor while a transition runs, save a version that does not compile, then repair it, and check that the show never stops and that the red message appears and goes away.",
+            "Delete the file while the deck uses it and switch decks; check that the built-in transition next to it runs; then put the file back and check that it is used again.",
+            "Use a sixteen-tap shader and a transition on two decks with video and effects at the output size you play at and look at the frame time and the graphics memory during the transition and after it.",
+            "Save a preset and the session with a custom transition and sliders moved, restart, and check name and values; load the same preset on a PC that does not have the file and check that the built-in transition runs and nothing is lost."
+          ],
+          "measure": "the frame time and graphics time during a custom transition against a built-in one of the same length, the graphics memory, any visible jump or black frame, the compile time of a file the first time it is used, and the behaviour of the output (Spout, NDI, recording) during a transition",
+          "criteria": "Proposed: no visible jump or black frame at the start or end, the frame time during a custom transition within 10 percent of a built-in one with the same number of taps, a broken file never stops the output, and the choice survives a restart."
+        }
+      ]
     }
   ]
 }

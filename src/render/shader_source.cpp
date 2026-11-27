@@ -230,6 +230,10 @@ bool parseChannel(const Directive& directive, int line, ShaderInput& input, int&
         next = 4;
     } else if (source == "picture") {
         input.kind = ShaderInputKind::Picture;
+    } else if (source == "from") {
+        input.kind = ShaderInputKind::From;
+    } else if (source == "to") {
+        input.kind = ShaderInputKind::To;
     } else if (source == "media") {
         if (t.size() < 4 || unquoted(t[3]).empty()) {
             error = lineError(line, "channel media needs the name of an image or video clip, for example: channel 2 media \"Video: loop\"");
@@ -239,7 +243,7 @@ bool parseChannel(const Directive& directive, int line, ShaderInput& input, int&
         input.media = unquoted(t[3]);
         next = 4;
     } else {
-        error = lineError(line, "unknown channel source '" + t[2] + "', use audio, buffer, media, picture or none");
+        error = lineError(line, "unknown channel source '" + t[2] + "', use audio, buffer, media, picture, from, to or none");
         return false;
     }
     for (; next < t.size(); ++next) {
@@ -530,6 +534,12 @@ bool buildPlan(const std::string& cleaned, const std::string& code, ShaderSource
                 return true;
             }
             plan->filter = true;
+        } else if (d.name == "transition") {
+            if (d.tokens.size() != 1) {
+                result.error = lineError(line, "transition takes no words");
+                return true;
+            }
+            plan->transition = true;
         } else if (d.name == "param") {
             ShaderParam param;
             std::string error;
@@ -602,10 +612,10 @@ bool buildPlan(const std::string& cleaned, const std::string& code, ShaderSource
             }
             current.inputs[static_cast<size_t>(channel)] = input;
         } else if (d.name.empty()) {
-            result.error = lineError(line, "#pragma nyrexvj needs a directive: alpha, plain, filter, param, common, buffer, image or channel");
+            result.error = lineError(line, "#pragma nyrexvj needs a directive: alpha, plain, filter, transition, param, common, buffer, image or channel");
             return true;
         } else {
-            result.error = lineError(line, "unknown directive '" + d.tokens[0] + "', use alpha, plain, filter, param, common, buffer, image or channel");
+            result.error = lineError(line, "unknown directive '" + d.tokens[0] + "', use alpha, plain, filter, transition, param, common, buffer, image or channel");
             return true;
         }
     }
@@ -676,6 +686,41 @@ bool buildPlan(const std::string& cleaned, const std::string& code, ShaderSource
     if (plan->usesPicture() && !plan->filter) {
         result.error = "channel ... picture needs the line #pragma nyrexvj filter";
         return true;
+    }
+    if (plan->transition) {
+        if (plan->filter || plan->alpha) {
+            result.error = "A transition cannot also be a filter or use alpha: the picture of a transition is always opaque";
+            return true;
+        }
+        if (plan->usesPicture()) {
+            result.error = "A transition reads the outgoing and the incoming picture (channel 0 and 1), not the picture of a filter";
+            return true;
+        }
+        if (plan->bufferCount() != 0 || plan->passes.size() != 1) {
+            result.error = "A transition has one image section and no buffers";
+            return true;
+        }
+        for (ShaderPassSource& pass : plan->passes) {
+            for (size_t c = 0; c < pass.inputs.size(); ++c) {
+                const ShaderInputKind kind = pass.inputs[c].kind;
+                if (kind == ShaderInputKind::Buffer || kind == ShaderInputKind::Media) {
+                    result.error = "A transition cannot read buffers, images or videos";
+                    return true;
+                }
+            }
+            pass.inputs = {};
+            pass.inputs[0].kind = ShaderInputKind::From;
+            pass.inputs[1].kind = ShaderInputKind::To;
+        }
+    } else {
+        for (const ShaderPassSource& pass : plan->passes) {
+            for (const ShaderInput& input : pass.inputs) {
+                if (input.kind == ShaderInputKind::From || input.kind == ShaderInputKind::To) {
+                    result.error = "channel ... from and to need the line #pragma nyrexvj transition";
+                    return true;
+                }
+            }
+        }
     }
     if (plan->filter && plan->bufferCount() == 0 && plan->passes.size() != 1) {
         result.error = "A filter needs an image section";
@@ -853,7 +898,7 @@ bool isReservedShaderName(const std::string& name) {
         "mat2", "mat3", "mat4", "sampler2D", "sampler3D", "samplerCube", "if", "else", "for", "while", "do", "return", "break", "continue", "discard",
         "struct", "uniform", "in", "out", "inout", "const", "layout", "precision", "highp", "mediump", "lowp", "true", "false", "texture", "vUv",
         "fragColor", "uTime", "uBeat", "uBpm", "uRes", "uColorA", "uColorB", "uRainbow", "uScale", "uAudio", "uKick", "uAudioTex", "uPerson", "uPersonOn", "uPersonFit", "personMask", "uChannel0",
-        "uChannel1", "uChannel2", "uChannel3", "uChannelRes", "uChannelTime", "uFrame", "uDelta", "uMix", "uPicture", "iResolution", "iTime",
+        "uChannel1", "uChannel2", "uChannel3", "uChannelRes", "uChannelTime", "uFrame", "uDelta", "uMix", "uPicture", "uProgress", "uFrom", "uTo", "colFrom", "colTo", "iResolution", "iTime",
         "iFrame", "iTimeDelta", "iMouse", "iDate", "iSampleRate", "iChannel0", "iChannel1", "iChannel2", "iChannel3", "iChannelResolution",
         "iChannelTime", "mainImage", "attribute", "varying", "switch", "case", "default", "sampler2DRect", "flat", "smooth", "centroid", "patch",
         "input", "output", "filter", "long", "short", "half", "fixed", "common", "active", "partition", "template", "this", "packed", "public",

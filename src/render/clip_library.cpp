@@ -332,6 +332,10 @@ bool fillShaderDef(ClipDef& def, const std::filesystem::path& file) {
         def.error = "This file is an image filter. It is in the effect list as ISF or filter effect, not in the clip library";
         return true;
     }
+    if (prepared.plan && prepared.plan->transition) {
+        def.error = "This file is a transition. It is in the transition list of the deck, not in the clip library";
+        return true;
+    }
     def.body = prepared.body;
     def.shadertoy = prepared.shadertoy;
     def.plan = prepared.plan;
@@ -654,6 +658,17 @@ uniform int uFrame;
 uniform float uDelta;
 )glsl";
 
+const char* kTransitionUniforms = R"glsl(uniform float uProgress;
+#define uFrom uChannel0
+#define uTo uChannel1
+vec4 colFrom(vec2 uv) {
+    return texture(uChannel0, uv);
+}
+vec4 colTo(vec2 uv) {
+    return texture(uChannel1, uv);
+}
+)glsl";
+
 const char* kShadertoyMain = R"glsl(
 void main() {
     vec4 shaderColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -711,12 +726,18 @@ std::string advancedHeader(const ShaderPlan& plan, bool shadertoy) {
     if (plan.filter) {
         text += "uniform sampler2D uPicture;\nuniform float uMix;\n";
     }
+    if (plan.transition) {
+        text += kTransitionUniforms;
+    }
     return text + paramUniforms(plan);
 }
 
 std::string passTail(const ShaderPlan& plan, bool imagePass, bool shadertoy) {
     if (!imagePass) {
         return shadertoy ? "    fragColor = shaderColor;\n}\n" : std::string();
+    }
+    if (plan.transition && !shadertoy) {
+        return "\n#undef main\nvoid main() {\n    nyrexUserMain();\n    fragColor = vec4(fragColor.rgb, 1.0);\n}\n";
     }
     if (plan.filter) {
         const char* mixed = "uMix >= 0.999 ? SRC : mix(texture(uPicture, vUv), SRC, clamp(uMix, 0.0, 1.0))";
@@ -1327,7 +1348,7 @@ std::string planPassFragmentSource(const ShaderPlan& plan, bool shadertoy, int p
     if (!plan.common.empty()) {
         text += "#line " + std::to_string(plan.commonLine) + "\n" + plan.common + "\n";
     }
-    const bool alphaMain = source.image && (plan.alpha || plan.filter) && !shadertoy;
+    const bool alphaMain = source.image && (plan.alpha || plan.filter || plan.transition) && !shadertoy;
     if (alphaMain) {
         text += "#define main nyrexUserMain\n";
     }

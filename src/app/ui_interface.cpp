@@ -6,6 +6,8 @@
 #include "app/ui_common.hpp"
 #include "core/log.hpp"
 #include "core/workspace.hpp"
+#include "platform/platform.hpp"
+#include "scene3d/scene_pack.hpp"
 
 #include <GLFW/glfw3.h>
 #include <imgui_impl_glfw.h>
@@ -290,6 +292,35 @@ void App::deleteWorkspace(const std::string& name) {
     workspaceMessage_ = result.ok ? std::string(tr("Workspace deleted")) + ": " + name : translatedReason(result.error);
 }
 
+void App::exportWorkspace(const std::string& name, bool openFolder) {
+    std::filesystem::path written;
+    const std::string folderText = workspaceExportFolder_;
+    const std::filesystem::path destination = folderText.empty() ? std::filesystem::path() : pathFromUtf8(folderText);
+    const workspace::Result result = workspace::exportTo(userDataDir(), name, destination, &written);
+    if (result.ok) {
+        workspaceMessage_ = std::string(tr("Workspace exported")) + ": " + pathToUtf8(written);
+        if (openFolder) {
+            platform::openFolder(pathToUtf8(written.parent_path()));
+        }
+    } else {
+        workspaceMessage_ = translatedReason(result.error);
+    }
+    toast(workspaceMessage_);
+}
+
+void App::importWorkspaceFile(const std::string& path) {
+    std::string name;
+    const workspace::Result result = workspace::importFile(userDataDir(), pathFromUtf8(path), &name);
+    workspacesStale_ = true;
+    if (result.ok) {
+        workspaceMessage_ = std::string(tr("Workspace imported")) + ": " + name + ". " + tr("Load it from View, Workspaces.");
+        workspaceImportPath_[0] = '\0';
+    } else {
+        workspaceMessage_ = translatedReason(result.error);
+    }
+    toast(workspaceMessage_);
+}
+
 void App::resetWindowLayout() {
     needsLayout_ = true;
     toast(tr("Window layout reset"));
@@ -396,11 +427,12 @@ void App::drawWorkspacePanel() {
     }
     ImGui::EndDisabled();
     if (!workspaceMessage_.empty()) {
+        ImGui::PushTextWrapPos(0.0f);
         ImGui::TextDisabled("%s", workspaceMessage_.c_str());
+        ImGui::PopTextWrapPos();
     }
     if (workspaces_.empty()) {
         ImGui::TextDisabled("%s", tr("No saved workspaces yet"));
-        return;
     }
     for (size_t i = 0; i < workspaces_.size(); ++i) {
         const workspace::Entry& entry = workspaces_[i];
@@ -418,6 +450,12 @@ void App::drawWorkspacePanel() {
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
+        ImGui::BeginDisabled(!entry.valid);
+        if (ImGui::Button(tr("Export"))) {
+            exportWorkspace(entry.name, true);
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
         const bool armed = workspaceDeleteArmed_ == entry.name;
         if (ImGui::Button(armed ? tr("Really delete?") : tr("Delete"))) {
             if (armed) {
@@ -431,6 +469,32 @@ void App::drawWorkspacePanel() {
             ImGui::TextDisabled("%s: %s", tr("Damaged"), translatedReason(entry.problem).c_str());
         }
         ImGui::PopID();
+    }
+    ImGui::Spacing();
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextDisabled("%s", tr("Share a workspace: Export writes a .nyxlayout file that you can send to a friend. To use a file you received, drop it onto the window or enter its path below."));
+    ImGui::PopTextWrapPos();
+    const char* importLabel = tr("Import layout");
+    const float importWidth = ImGui::CalcTextSize(importLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    ImGui::SetNextItemWidth(-(importWidth + ImGui::GetStyle().ItemSpacing.x));
+    ImGui::InputTextWithHint("##workspaceImportPath", tr("Path of a .nyxlayout file"), workspaceImportPath_, sizeof(workspaceImportPath_));
+    ImGui::SameLine();
+    ImGui::BeginDisabled(workspaceImportPath_[0] == '\0');
+    if (ImGui::Button(importLabel)) {
+        importWorkspaceFile(workspaceImportPath_);
+    }
+    ImGui::EndDisabled();
+    const char* openLabel = tr("Open export folder");
+    const float openWidth = ImGui::CalcTextSize(openLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    ImGui::SetNextItemWidth(-(openWidth + ImGui::GetStyle().ItemSpacing.x));
+    ImGui::InputTextWithHint("##workspaceExportFolder", tr("Export folder (optional)"), workspaceExportFolder_, sizeof(workspaceExportFolder_));
+    ImGui::SameLine();
+    if (ImGui::Button(openLabel)) {
+        const std::string folderText = workspaceExportFolder_;
+        const std::filesystem::path target = folderText.empty() ? workspace::exportFolder(userDataDir()) : pathFromUtf8(folderText);
+        std::error_code ec;
+        std::filesystem::create_directories(target, ec);
+        platform::openFolder(pathToUtf8(target));
     }
 }
 

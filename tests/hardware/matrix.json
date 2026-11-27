@@ -2341,7 +2341,7 @@
     },
     {
       "id": "interface-accessibility",
-      "title": "Interface and accessibility: workspaces, your own shortcuts, interface size and display scale, high contrast, keyboard navigation, zoom of the node canvas, and recovery from damaged layout, settings and shortcut files",
+      "title": "Interface and accessibility: workspaces and the export and import of layouts, your own shortcuts, interface size and display scale, high contrast, keyboard navigation, zoom of the node canvas, and recovery from damaged layout, settings and shortcut files",
       "platforms": {
         "windows": true,
         "linux": true
@@ -2502,6 +2502,22 @@
           ],
           "measure": "which colours you tried, any difference to Resolume that disturbs you in the panels, sliders or tabs, whether holding the plus field keeps raising the value, and whether Escape closes every tool window",
           "criteria": "Proposed: every colour gives the same shapes with its own accent, the stepper fields move a slider by one percent of its range, no tool window shows a close button and Escape closes it, and high contrast keeps its outlines."
+        },
+        {
+          "id": "M-UI-10",
+          "title": "Giving a layout to a friend: export, send, drop onto the window, load",
+          "needs": "Two PCs with this build, or one PC with a second data folder; a way to send a file between them",
+          "steps": [
+            "On the first PC arrange the panels, then View, Workspaces, Save current layout as... and give it a name.",
+            "Open Settings, Appearance, Workspaces and press Export next to it; check that the folder opens and holds a file that ends in .nyxlayout.",
+            "Send the file to the second PC and drop it from the file manager onto the NyrexVJ window; check the message and that the layout is listed under View, Workspaces.",
+            "Load it from the list and check that the panels sit as on the first PC, also when the screen has another size or another display scale.",
+            "Drop the same file again and check that it is added as a second entry with the number 2 and that nothing of your own was replaced.",
+            "Drop a text file renamed to .nyxlayout and a layout file that you cut in half; check that both are refused with a message and nothing is added.",
+            "Enter a folder in the field Export folder (optional), export again and check that the file goes there and that Open export folder opens it."
+          ],
+          "measure": "whether the drop from the file manager works on Windows, how the layout looks on a screen of another size, and whether any step was unclear",
+          "criteria": "Proposed: the exported file loads on the other PC with the same arrangement, an import never replaces a layout of yours, and a damaged or foreign file is refused without a change."
         }
       ]
     },

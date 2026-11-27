@@ -1395,7 +1395,7 @@ Open Settings with the menu Settings or with `Ctrl+,`. The window has a list of 
 | Page | What you find |
 | --- | --- |
 | General | Language, restore the last session, open the output window on start, decks |
-| Appearance | Theme colour, interface size and display scale, contrast, keyboard navigation, status bar, reset the window layout and your workspaces |
+| Appearance | Theme colour, interface size and display scale, contrast, keyboard navigation, status bar, reset the window layout and your workspaces (also export and import) |
 | Audio | Audio source, gain, smoothing, beat sensitivity, sync BPM to audio |
 | Output | Quality and resolution, Spout, NDI, up to four output windows with slices, mapping, blending, venue setups and frame lock |
 | Recording | Format, size, frame rate, quality, sound, folder and the record buttons |
@@ -1435,13 +1435,23 @@ The View menu sits between Edit and Output. It holds everything in this chapter 
 
 A workspace remembers where every panel sits and how big it is: which panels are docked next to each other or stacked as tabs, and the position and size of the windows that float. It does not hold clips, decks, presets or settings. Loading a workspace changes the arrangement and nothing else.
 
-To save one, choose View, Workspaces, Save current layout as..., type a name and press Enter. You can also do it in Settings, Appearance, in the block Workspaces, which also lists every workspace with its screen size, a Load button and a Delete button. Delete asks once more (Really delete?) before it removes the file.
+To save one, choose View, Workspaces, Save current layout as..., type a name and press Enter. You can also do it in Settings, Appearance, in the block Workspaces, which also lists every workspace with its screen size, a Load button, an Export button and a Delete button. Delete asks once more (Really delete?) before it removes the file.
 
 - A name is cut to 40 bytes. Characters that a file name cannot hold (`/ \ : * ? " < > |`) turn into spaces and repeated spaces become one. A name that is empty after that, or that Windows reserves (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`), is refused with a message. You can keep up to 32 workspaces.
 - Saving under a name that exists replaces that workspace. Upper and lower case count as the same name.
 - The files are plain text, one per workspace, in the folder `workspaces` of the data folder, for example `workspaces/Projector night.ini`. You can copy one to another PC. The first lines say which program and which window size it was saved at.
 - A file that is damaged, too large or made by a newer version of NyrexVJ is listed as Damaged with the reason and cannot be loaded. The program never deletes or changes it.
 - Docked panels keep their proportions when you load a workspace into a window of another size. Floating windows keep the position they were saved at. If one ends up out of reach, Reset window layout brings the main panels back.
+
+### Giving a workspace to a friend {#workspaces-share}
+
+Export turns a saved workspace into one file that ends in `.nyxlayout`, for example `Projector night.nyxlayout`. It is written to the folder `layouts_out` of the data folder, and the folder opens so that you can send the file on. If you enter another folder in the field Export folder (optional) first, the file goes there, and Open export folder opens that folder. To share the layout you have right now, save it as a workspace first.
+
+To use a file you received, drop it onto the NyrexVJ window, or enter its path in the field Path of a .nyxlayout file in Settings, Appearance, Workspaces and press Import layout. The layout is added to your list; you load it from there or from View, Workspaces. Nothing changes on screen until you load it, so your own arrangement is safe.
+
+- An imported layout never replaces one of yours. If the name is taken, a number is added (`Projector night 2`). A file name that is empty or reserved becomes `Imported layout`.
+- The file is checked like a saved workspace before it is added. A file that is not a layout, is damaged, is larger than 256 KB or comes from a newer version of NyrexVJ is refused with a message and nothing is added. You can keep up to 32 workspaces; at that limit an import asks you to delete one first.
+- A layout holds only the arrangement and the window size it was saved at, no clips, no paths and no settings, so it is safe to send. If your friend's screen has another size, docked panels keep their proportions.
 
 ## Interface size and display scale {#interface-size}
 

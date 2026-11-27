@@ -229,6 +229,130 @@ void testStore() {
     fs::remove_all(dir, ec);
 }
 
+void testShare() {
+    const fs::path dir = scratch("share");
+    const fs::path out = scratch("share-out");
+    CHECK(ws::save(dir, "Projector night", kLayout, 1920, 1080, "0.62.0").ok);
+    CHECK(ws::save(dir, "Gr\xC3\xB6\xC3\x9F" "e", kLayout, 1280, 720, "0.62.0").ok);
+
+    fs::path written;
+    CHECK(ws::exportTo(dir, "projector NIGHT", out, &written).ok);
+    CHECK(written == out / "Projector night.nyxlayout");
+    CHECK(fs::is_regular_file(written));
+    CHECK(ws::inspectFile(readAll(written)).ok);
+    CHECK(readAll(written) == readAll(ws::folder(dir) / "Projector night.ini"));
+    CHECK(ws::exportTo(dir, "Gr\xC3\xB6\xC3\x9F" "e", out, &written).ok);
+    CHECK(fs::is_regular_file(out / fs::path(std::u8string(u8"Gr\u00F6\u00DFe.nyxlayout"))));
+    CHECK(ws::exportTo(dir, "Projector night", out).ok);
+
+    const fs::path fallback = ws::exportFolder(dir);
+    CHECK(ws::exportTo(dir, "Projector night", fs::path(), &written).ok);
+    CHECK(written == fallback / "Projector night.nyxlayout");
+
+    const ws::Result missing = ws::exportTo(dir, "nothing", out);
+    CHECK(!missing.ok);
+    CHECK(!missing.error.empty());
+    writeAll(ws::folder(dir) / "Broken.ini", "[Window][broken\nPos=");
+    CHECK(!ws::exportTo(dir, "Broken", out).ok);
+    CHECK(!fs::exists(out / "Broken.nyxlayout"));
+    writeAll(out / "blocker", "a file where a folder should be");
+    CHECK(!ws::exportTo(dir, "Projector night", out / "blocker").ok);
+
+    const fs::path other = scratch("share-other");
+    std::string name;
+    CHECK(ws::importFile(other, out / "Projector night.nyxlayout", &name).ok);
+    CHECK(name == "Projector night");
+    std::string layout;
+    ws::Header header;
+    CHECK(ws::load(other, "Projector night", layout, &header).ok);
+    CHECK(header.width == 1920);
+    CHECK(header.height == 1080);
+    CHECK(header.app == "0.62.0");
+    CHECK(layout == readAll(out / "Projector night.nyxlayout"));
+
+    CHECK(ws::importFile(other, out / "Projector night.nyxlayout", &name).ok);
+    CHECK(name == "Projector night 2");
+    CHECK(ws::importFile(other, out / "Projector night.nyxlayout", &name).ok);
+    CHECK(name == "Projector night 3");
+    CHECK(ws::list(other).size() == 3);
+    CHECK(ws::load(other, "projector night", layout).ok);
+    CHECK(ws::importFile(other, out / fs::path(std::u8string(u8"Gr\u00F6\u00DFe.nyxlayout")), &name).ok);
+    CHECK(name == "Gr\xC3\xB6\xC3\x9F" "e");
+
+    const std::string longName(60, 'A');
+    const fs::path longFile = out / (longName + ".nyxlayout");
+    writeAll(longFile, readAll(out / "Projector night.nyxlayout"));
+    CHECK(ws::importFile(other, longFile, &name).ok);
+    CHECK(name.size() == ws::kMaxNameBytes);
+    CHECK(ws::importFile(other, longFile, &name).ok);
+    CHECK(name.size() <= ws::kMaxNameBytes);
+    CHECK(name.size() >= 2 && name.substr(name.size() - 2) == " 2");
+    CHECK(ws::list(other).size() == 6);
+
+    const std::string umlauts = "\xC3\xA4\xC3\xB6\xC3\xBC\xC3\xA4\xC3\xB6\xC3\xBC\xC3\xA4\xC3\xB6\xC3\xBC\xC3\xA4\xC3\xB6\xC3\xBC\xC3\xA4\xC3\xB6\xC3\xBC\xC3\xA4\xC3\xB6\xC3\xBC\xC3\xA4\xC3\xB6\xC3\xBC\xC3\xA4\xC3\xB6\xC3\xBC";
+    const fs::path umlautFile = out / fs::path(std::u8string(umlauts.begin(), umlauts.end()) + u8".nyxlayout");
+    writeAll(umlautFile, readAll(out / "Projector night.nyxlayout"));
+    CHECK(ws::importFile(other, umlautFile, &name).ok);
+    CHECK(ws::importFile(other, umlautFile, &name).ok);
+    CHECK(validUtf8(name));
+    CHECK(name.size() <= ws::kMaxNameBytes);
+    CHECK(name.substr(name.size() - 2) == " 2");
+
+    const size_t before = ws::list(other).size();
+    CHECK(!ws::importFile(other, out / "nothing.nyxlayout").ok);
+    CHECK(!ws::importFile(other, out).ok);
+    writeAll(out / "garbage.nyxlayout", "not a layout at all");
+    const ws::Result garbage = ws::importFile(other, out / "garbage.nyxlayout");
+    CHECK(!garbage.ok);
+    CHECK(!garbage.error.empty());
+    writeAll(out / "plain.nyxlayout", kLayout);
+    CHECK(!ws::importFile(other, out / "plain.nyxlayout").ok);
+    std::string newer = readAll(out / "Projector night.nyxlayout");
+    newer.replace(newer.find("format=1"), 8, "format=9");
+    writeAll(out / "newer.nyxlayout", newer);
+    const ws::Result tooNew = ws::importFile(other, out / "newer.nyxlayout");
+    CHECK(!tooNew.ok);
+    CHECK(tooNew.error.find("newer version") != std::string::npos);
+    std::string huge = readAll(out / "Projector night.nyxlayout");
+    huge += std::string(ws::kMaxFileBytes + 2048, ' ');
+    writeAll(out / "huge.nyxlayout", huge);
+    CHECK(!ws::importFile(other, out / "huge.nyxlayout").ok);
+    writeAll(out / "CON.nyxlayout", readAll(out / "Projector night.nyxlayout"));
+    CHECK(ws::importFile(other, out / "CON.nyxlayout", &name).ok);
+    CHECK(name == "Imported layout");
+    CHECK(ws::list(other).size() == before + 1);
+    for (const ws::Entry& entry : ws::list(other)) {
+        CHECK(entry.valid);
+    }
+
+    const fs::path crowded = scratch("share-crowded");
+    for (size_t i = 0; i < ws::kMaxWorkspaces; ++i) {
+        CHECK(ws::save(crowded, "Layout " + std::to_string(i), kLayout, 100, 100, "x").ok);
+    }
+    const ws::Result full = ws::importFile(crowded, out / "Projector night.nyxlayout");
+    CHECK(!full.ok);
+    CHECK(ws::list(crowded).size() == ws::kMaxWorkspaces);
+
+    std::string crlf = readAll(out / "Projector night.nyxlayout");
+    std::string windows;
+    for (const char c : crlf) {
+        if (c == '\n') {
+            windows += '\r';
+        }
+        windows += c;
+    }
+    writeAll(out / "Windows lines.nyxlayout", windows);
+    CHECK(ws::importFile(other, out / "Windows lines.nyxlayout", &name).ok);
+    CHECK(name == "Windows lines");
+    CHECK(ws::load(other, "Windows lines", layout).ok);
+
+    std::error_code ec;
+    fs::remove_all(dir, ec);
+    fs::remove_all(out, ec);
+    fs::remove_all(other, ec);
+    fs::remove_all(crowded, ec);
+}
+
 void testStoreLimitsAndDamage() {
     const fs::path dir = scratch("limits");
     for (size_t i = 0; i < ws::kMaxWorkspaces; ++i) {
@@ -573,6 +697,7 @@ int main() {
     testFileHeader();
     testStore();
     testStoreLimitsAndDamage();
+    testShare();
     testQuarantine();
     testDefaultShortcuts();
     testParse();

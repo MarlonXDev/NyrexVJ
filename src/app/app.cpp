@@ -498,6 +498,8 @@ void App::queueDroppedFiles(const std::vector<std::string>& paths) {
             importNodeGraph(path);
         } else if (extension == ".avc") {
             openResoPort(path);
+        } else if (extension == ".nyxlayout") {
+            importWorkspaceFile(path);
         } else {
             pendingImports_.push_back(path);
         }

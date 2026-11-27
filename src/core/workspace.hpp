@@ -13,6 +13,7 @@ constexpr size_t kMaxFileBytes = 256 * 1024;
 constexpr size_t kMaxWorkspaces = 32;
 constexpr int kMaxLines = 6000;
 constexpr int kMaxCoordinate = 32000;
+constexpr const char* kShareExtension = ".nyxlayout";
 
 struct Check {
     bool ok = false;
@@ -57,6 +58,10 @@ std::vector<Entry> list(const std::filesystem::path& dataDir);
 Result save(const std::filesystem::path& dataDir, const std::string& name, const std::string& layout, int width, int height, const std::string& app);
 Result load(const std::filesystem::path& dataDir, const std::string& name, std::string& layout, Header* header = nullptr);
 Result remove(const std::filesystem::path& dataDir, const std::string& name);
+
+std::filesystem::path exportFolder(const std::filesystem::path& dataDir);
+Result exportTo(const std::filesystem::path& dataDir, const std::string& name, const std::filesystem::path& destination, std::filesystem::path* written = nullptr);
+Result importFile(const std::filesystem::path& dataDir, const std::filesystem::path& file, std::string* importedName = nullptr);
 
 bool quarantine(const std::filesystem::path& file);
 

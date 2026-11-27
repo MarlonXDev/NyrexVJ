@@ -1395,7 +1395,7 @@ Der C-Header, ein Beispiel-Plugin und die vollständige Referenz stehen in docs/
 | Seite | Was du findest |
 | --- | --- |
 | Allgemein | Sprache, letzte Sitzung wiederherstellen, Ausgabefenster beim Start öffnen, Decks |
-| Aussehen | Farbthema, Oberflächengröße und Bildschirmskalierung, Kontrast, Tastaturbedienung, Statusleiste, Fensteranordnung zurücksetzen und deine Arbeitsbereiche |
+| Aussehen | Farbthema, Oberflächengröße und Bildschirmskalierung, Kontrast, Tastaturbedienung, Statusleiste, Fensteranordnung zurücksetzen und deine Arbeitsbereiche (auch exportieren und importieren) |
 | Audio | Audioquelle, Verstärkung, Glättung, Beat-Schwelle, BPM mit Audio synchronisieren |
 | Ausgabe | Qualität und Auflösung, Spout, NDI, bis zu vier Ausgabefenster mit Slices, Mapping, Überblendung, Venue-Setups und Frame-Lock |
 | Aufnahme | Format, Größe, Bildrate, Qualität, Ton, Ordner und die Aufnahme-Schaltflächen |
@@ -1435,13 +1435,23 @@ Das Menü Ansicht steht zwischen Bearbeiten und Ausgabe. Es hat alles aus diesem
 
 Ein Arbeitsbereich merkt sich, wo jedes Fenster sitzt und wie groß es ist: welche Fenster nebeneinander angedockt oder als Tabs gestapelt sind und Position und Größe der schwebenden Fenster. Er enthält keine Clips, Decks, Presets oder Einstellungen. Das Laden eines Arbeitsbereichs ändert die Anordnung und sonst nichts.
 
-Zum Speichern wählst du Ansicht, Arbeitsbereiche, Aktuelle Anordnung speichern unter..., tippst einen Namen und drückst Enter. Du kannst es auch unter Einstellungen, Aussehen im Block Arbeitsbereiche tun, der außerdem jeden Arbeitsbereich mit seiner Bildschirmgröße, einer Laden-Schaltfläche und einer Löschen-Schaltfläche zeigt. Löschen fragt noch einmal nach (Wirklich löschen?), bevor die Datei entfernt wird.
+Zum Speichern wählst du Ansicht, Arbeitsbereiche, Aktuelle Anordnung speichern unter..., tippst einen Namen und drückst Enter. Du kannst es auch unter Einstellungen, Aussehen im Block Arbeitsbereiche tun, der außerdem jeden Arbeitsbereich mit seiner Bildschirmgröße, einer Laden-Schaltfläche, einer Exportieren-Schaltfläche und einer Löschen-Schaltfläche zeigt. Löschen fragt noch einmal nach (Wirklich löschen?), bevor die Datei entfernt wird.
 
 - Ein Name wird auf 40 Byte gekürzt. Zeichen, die ein Dateiname nicht haben kann (`/ \ : * ? " < > |`), werden zu Leerzeichen, und mehrere Leerzeichen werden eins. Ein Name, der danach leer ist oder den Windows reserviert (`CON`, `PRN`, `AUX`, `NUL`, `COM1` bis `COM9`, `LPT1` bis `LPT9`), wird mit einer Meldung abgelehnt. Du kannst bis zu 32 Arbeitsbereiche behalten.
 - Speichern unter einem vorhandenen Namen ersetzt diesen Arbeitsbereich. Groß- und Kleinschreibung zählen als derselbe Name.
 - Die Dateien sind einfacher Text, eine je Arbeitsbereich, im Ordner `workspaces` des Datenordners, zum Beispiel `workspaces/Projektor-Abend.ini`. Du kannst eine auf einen anderen PC kopieren. Die ersten Zeilen sagen, von welchem Programm und mit welcher Fenstergröße sie gespeichert wurde.
 - Eine Datei, die beschädigt oder zu groß ist oder von einer neueren Version von NyrexVJ stammt, steht als Beschädigt mit dem Grund in der Liste und lässt sich nicht laden. Das Programm löscht oder ändert sie nie.
 - Angedockte Fenster behalten ihre Proportionen, wenn du einen Arbeitsbereich in ein Fenster anderer Größe lädst. Schwebende Fenster behalten die Position, mit der sie gespeichert wurden. Liegt eines außer Reichweite, holt Fensteranordnung zurücksetzen die Hauptfenster zurück.
+
+### Einen Arbeitsbereich einem Freund geben {#workspaces-share}
+
+Exportieren macht aus einem gespeicherten Arbeitsbereich eine einzelne Datei, die auf `.nyxlayout` endet, zum Beispiel `Projektor-Abend.nyxlayout`. Sie wird in den Ordner `layouts_out` des Datenordners geschrieben, und der Ordner öffnet sich, damit du die Datei weiterschicken kannst. Gibst du vorher im Feld Exportordner (optional) einen anderen Ordner an, landet die Datei dort, und Exportordner öffnen öffnet diesen Ordner. Willst du die Anordnung teilen, die du gerade hast, speichere sie vorher als Arbeitsbereich.
+
+Um eine erhaltene Datei zu benutzen, ziehst du sie auf das NyrexVJ-Fenster oder gibst ihren Pfad im Feld Pfad einer .nyxlayout-Datei unter Einstellungen, Aussehen, Arbeitsbereiche ein und drückst Layout importieren. Die Anordnung kommt in deine Liste; du lädst sie dort oder unter Ansicht, Arbeitsbereiche. Auf dem Bildschirm ändert sich erst etwas, wenn du sie lädst, deine eigene Anordnung bleibt also sicher.
+
+- Ein importiertes Layout ersetzt nie eines von dir. Ist der Name vergeben, wird eine Zahl angehängt (`Projektor-Abend 2`). Ein leerer oder reservierter Dateiname wird zu `Imported layout`.
+- Die Datei wird wie ein gespeicherter Arbeitsbereich geprüft, bevor sie hinzukommt. Eine Datei, die kein Layout ist, beschädigt ist, größer als 256 KB ist oder von einer neueren NyrexVJ-Version stammt, wird mit einer Meldung abgelehnt, und nichts wird hinzugefügt. Du kannst bis zu 32 Arbeitsbereiche behalten; an dieser Grenze bittet dich ein Import, zuerst einen zu löschen.
+- Ein Layout enthält nur die Anordnung und die Fenstergröße, bei der es gespeichert wurde, keine Clips, keine Pfade und keine Einstellungen, daher kannst du es bedenkenlos schicken. Hat der Bildschirm deines Freundes eine andere Größe, behalten angedockte Fenster ihre Proportionen.
 
 ## Oberflächengröße und Bildschirmskalierung {#interface-size}
 

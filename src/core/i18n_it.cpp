@@ -496,6 +496,8 @@ const Translation kItalian[] = {
     {"3D model file", "File del modello 3D"},
     {"Blend", "Fusione"},
     {"Bypass: skip this layer", "Bypass: salta questo livello"},
+    {"Bypass: skip this effect", "Bypass: salta questo effetto"},
+    {"Remove this effect", "Rimuovi questo effetto"},
     {"Cancel loading", "Annulla il caricamento"},
     {"Freezes the tempo clock and all clip motion", "Blocca il clock del tempo e tutto il movimento delle clip"},
     {"Looks for new model files without restarting. Removed files stay in the list until the next start.", "Cerca nuovi file di modelli senza riavviare. I file rimossi restano nell'elenco fino al prossimo avvio."},

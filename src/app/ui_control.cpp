@@ -452,7 +452,7 @@ void App::drawMidiSection() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(ui::px(280.0f));
     const std::string current = settings_.midiDevice.empty() ? std::string(tr("None")) : settings_.midiDevice;
-    if (ImGui::BeginCombo("##midiDevice", current.c_str())) {
+    if (ui::beginCombo("##midiDevice", current.c_str())) {
         if (ImGui::Selectable(tr("None"), settings_.midiDevice.empty())) {
             settings_.midiDevice.clear();
             persist();
@@ -502,7 +502,7 @@ void App::drawMidiSection() {
     ImGui::SetNextItemWidth(ui::px(280.0f));
     const std::vector<std::string>& outputs = control_.midiOutDevices();
     const std::string currentOut = settings_.midiOutDevice.empty() ? std::string(tr("None")) : settings_.midiOutDevice;
-    if (ImGui::BeginCombo("##midiOutDevice", currentOut.c_str())) {
+    if (ui::beginCombo("##midiOutDevice", currentOut.c_str())) {
         if (ImGui::Selectable(tr("None"), settings_.midiOutDevice.empty())) {
             settings_.midiOutDevice.clear();
             persist();

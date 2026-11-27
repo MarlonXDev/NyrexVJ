@@ -1,0 +1,5 @@
+file(READ "${FILE}" TEXT)
+string(FIND "${TEXT}" "(bb.GetWidth() - frame_padding.x * 2.0f - label_size.x) * 0.5f" FOUND)
+if(FOUND EQUAL -1)
+    message(FATAL_ERROR "Dear ImGui does not have the centred tab labels patch applied")
+endif()

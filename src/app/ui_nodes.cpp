@@ -1144,7 +1144,7 @@ void App::drawNodeEditor() {
     }
     ImGui::SameLine();
     ImGui::SetNextItemWidth(ui::px(220.0f));
-    if (ImGui::BeginCombo("##nodeopen", s.hasGraph ? s.stem.c_str() : tr("Open an effect..."))) {
+    if (ui::beginCombo("##nodeopen", s.hasGraph ? s.stem.c_str() : tr("Open an effect..."))) {
         for (const std::string& stem : s.files) {
             if (ImGui::Selectable(stem.c_str(), s.hasGraph && stem == s.stem)) {
                 openStem(s, stem);

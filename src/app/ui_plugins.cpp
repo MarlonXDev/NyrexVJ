@@ -58,7 +58,7 @@ bool pickSource(PluginHost& host, const char* id, int kind, const std::string& c
     }
     bool changed = false;
     ImGui::SetNextItemWidth(width);
-    if (ImGui::BeginCombo(id, preview.c_str())) {
+    if (ui::beginCombo(id, preview.c_str())) {
         if (ImGui::Selectable(tr("None"), current.empty())) {
             chosen.clear();
             changed = true;

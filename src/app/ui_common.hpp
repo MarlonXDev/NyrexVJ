@@ -113,7 +113,7 @@ inline float labelColumn(const char* text, const char* end) {
 }
 
 inline bool beginTool(const char* title, bool* open, ImGuiWindowFlags flags = 0) {
-    const bool shown = ImGui::Begin(title, nullptr, flags);
+    const bool shown = ImGui::Begin(title, open, flags);
     if (open != nullptr && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape, false) &&
         !ImGui::IsAnyItemActive() && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
         *open = false;
@@ -406,6 +406,61 @@ inline void sectionHeader(const char* label) {
     draw->AddTriangleFilled(ImVec2(arrowX - arrow, arrowY), ImVec2(arrowX + arrow, arrowY), ImVec2(arrowX, arrowY + arrow * 1.2f), ImGui::GetColorU32(ImVec4(0.56f, 0.56f, 0.56f, 1.00f)));
     draw->AddText(ImVec2(left + px(22.0f), pos.y + style.FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), label);
     ImGui::Dummy(ImVec2(width, height));
+}
+
+inline bool collapsingHeader(const char* label, ImGuiTreeNodeFlags flags = 0) {
+    if (!kFlatLook) {
+        return ImGui::CollapsingHeader(label, flags);
+    }
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    const ImGuiID id = window->GetID(label);
+    bool open = ImGui::TreeNodeUpdateNextOpen(id, flags);
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float height = ImGui::GetFrameHeight();
+    const float width = ImGui::GetContentRegionAvail().x;
+    const ImVec2 pos = ImGui::GetCursorScreenPos();
+    const float left = pos.x - style.WindowPadding.x;
+    const float right = pos.x + width + style.WindowPadding.x;
+    const ImRect bounds(ImVec2(left, pos.y), ImVec2(right, pos.y + height));
+    ImGui::ItemSize(ImVec2(width, height), 0.0f);
+    if (!ImGui::ItemAdd(bounds, id)) {
+        return open;
+    }
+    bool hovered = false;
+    bool held = false;
+    if (ImGui::ButtonBehavior(bounds, id, &hovered, &held)) {
+        open = !open;
+        ImGui::TreeNodeSetOpen(id, open);
+    }
+    ImDrawList* draw = window->DrawList;
+    const float shade = hovered ? 0.208f : 0.173f;
+    draw->AddRectFilled(bounds.Min, bounds.Max, ImGui::GetColorU32(ImVec4(shade, shade, shade, 1.00f)));
+    const float arrow = std::max(3.0f, height * 0.17f);
+    const float arrowX = left + px(10.0f);
+    const float arrowY = pos.y + height * 0.5f;
+    const ImU32 arrowColor = ImGui::GetColorU32(ImVec4(0.56f, 0.56f, 0.56f, 1.00f));
+    if (open) {
+        draw->AddTriangleFilled(ImVec2(arrowX - arrow, arrowY - arrow * 0.6f), ImVec2(arrowX + arrow, arrowY - arrow * 0.6f), ImVec2(arrowX, arrowY + arrow * 0.7f), arrowColor);
+    } else {
+        draw->AddTriangleFilled(ImVec2(arrowX - arrow * 0.6f, arrowY - arrow), ImVec2(arrowX - arrow * 0.6f, arrowY + arrow), ImVec2(arrowX + arrow * 0.7f, arrowY), arrowColor);
+    }
+    draw->AddText(ImVec2(left + px(22.0f), pos.y + style.FramePadding.y), ImGui::GetColorU32(ImGuiCol_Text), label, ImGui::FindRenderedTextEnd(label));
+    return open;
+}
+
+inline bool beginCombo(const char* label, const char* preview, ImGuiComboFlags flags = 0) {
+    if (!kFlatLook || (flags & (ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_NoPreview)) != 0) {
+        return ImGui::BeginCombo(label, preview, flags);
+    }
+    const ImVec2 min = ImGui::GetCursorScreenPos();
+    const ImVec2 max(min.x + ImGui::CalcItemWidth(), min.y + ImGui::GetFrameHeight());
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    const bool open = ImGui::BeginCombo(label, preview, flags | ImGuiComboFlags_NoArrowButton);
+    const float size = std::max(3.0f, (max.y - min.y) * 0.14f);
+    const float x = max.x - px(10.0f);
+    const float y = (min.y + max.y) * 0.5f;
+    draw->AddTriangleFilled(ImVec2(x - size, y - size * 0.6f), ImVec2(x + size, y - size * 0.6f), ImVec2(x, y + size * 0.8f), ImGui::GetColorU32(ImVec4(0.78f, 0.78f, 0.78f, 1.00f)));
+    return open;
 }
 
 inline std::string cellLabel(int layer, int column) {

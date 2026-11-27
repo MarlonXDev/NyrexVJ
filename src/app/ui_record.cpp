@@ -346,7 +346,7 @@ void App::drawRecordingPage() {
     ui::sectionHeader(tr("Format"));
     ImGui::BeginDisabled(running);
     ImGui::SetNextItemWidth(ui::px(260.0f));
-    if (ImGui::BeginCombo(trId("Format", "recFormat"), profileLabel(current))) {
+    if (ui::beginCombo(trId("Format", "recFormat"), profileLabel(current))) {
         for (int i = 0; i < availableCount; ++i) {
             const RecordProfile profile = available[static_cast<size_t>(i)];
             if (ImGui::Selectable(profileLabel(profile), profile == current)) {
@@ -387,7 +387,7 @@ void App::drawRecordingPage() {
         sizeLabel = kSizeChoices[recordSizeChoice_ - 1].label;
     }
     ImGui::SetNextItemWidth(ui::px(260.0f));
-    if (ImGui::BeginCombo(trId("Size", "recSize"), sizeLabel)) {
+    if (ui::beginCombo(trId("Size", "recSize"), sizeLabel)) {
         if (ImGui::Selectable(outputLabel, recordSizeChoice_ == kSizeSameAsOutput)) {
             recordSizeChoice_ = kSizeSameAsOutput;
             settings_.recordWidth = 0;
@@ -434,7 +434,7 @@ void App::drawRecordingPage() {
     char fpsLabel[24];
     std::snprintf(fpsLabel, sizeof(fpsLabel), "%d", kRecordFrameRates[fpsIndex]);
     ImGui::SetNextItemWidth(ui::px(120.0f));
-    if (ImGui::BeginCombo(trId("Frame rate", "recFps"), fpsLabel)) {
+    if (ui::beginCombo(trId("Frame rate", "recFps"), fpsLabel)) {
         for (int i = 0; i < kRecordFrameRateCount; ++i) {
             std::snprintf(fpsLabel, sizeof(fpsLabel), "%d", kRecordFrameRates[i]);
             if (ImGui::Selectable(fpsLabel, i == fpsIndex)) {

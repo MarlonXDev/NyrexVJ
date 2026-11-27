@@ -536,6 +536,7 @@ int main(int argc, char** argv) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigDebugHighlightIdConflicts = options.interfaceUiTest;
 
     nvj::applyTheme();
 

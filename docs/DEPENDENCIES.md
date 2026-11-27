@@ -49,7 +49,7 @@ Download an LGPL shared build of FFmpeg 8.x (for example the `linux64-lgpl-share
 | Needed | Why |
 | --- | --- |
 | CMake 3.21 or newer, a C++20 compiler | GCC 11 or newer, Clang or Visual Studio 2022 |
-| Git and network access during configuration | GLFW 3.4, Dear ImGui 1.93.0 and, on Windows, Spout2 2.007.017 are downloaded by CMake |
+| Git and network access during configuration | GLFW 3.4, Dear ImGui 1.93.0 and, on Windows, Spout2 2.007.017 are downloaded by CMake. CMake changes one line of the downloaded `imgui_widgets.cpp` (the clip rectangle of the tab label, so the labels sit in the middle of their tabs, see [ADR 0057](adr/0057-resolume-look-for-section-bands-tabs-effect-rows-and-grid.md)); configuring stops with an error if that line is not found |
 | Linux: X11 development packages | `libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev` and an OpenGL development package such as `libgl1-mesa-dev` |
 | FFmpeg headers (optional) | Only for video clips. Pass `-DNYREXVJ_FFMPEG_ROOT=<folder with include/>`, or `-DNYREXVJ_VIDEO=OFF` to build without |
 

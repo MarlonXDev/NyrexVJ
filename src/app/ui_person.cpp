@@ -97,7 +97,7 @@ void App::drawPersonSettings() {
 
     const person::Mode mode = person::modeFromName(settings_.personMode, person::Mode::Off);
     ImGui::SetNextItemWidth(ui::px(300.0f));
-    if (ImGui::BeginCombo(trId("Person detection (experimental)", "personMode"), modeLabel(mode))) {
+    if (ui::beginCombo(trId("Person detection (experimental)", "personMode"), modeLabel(mode))) {
         for (int i = 0; i < person::kModeCount; ++i) {
             const person::Mode entry = static_cast<person::Mode>(i);
             if (ImGui::Selectable(modeLabel(entry), entry == mode)) {
@@ -119,7 +119,7 @@ void App::drawPersonSettings() {
         slot = 0;
     }
     ImGui::SetNextItemWidth(ui::px(300.0f));
-    if (ImGui::BeginCombo(trId("Picture source", "personSource"), sourceLabel(input, slot).c_str())) {
+    if (ui::beginCombo(trId("Picture source", "personSource"), sourceLabel(input, slot).c_str())) {
         for (int kind = 0; kind < person::kInputCount; ++kind) {
             for (int s = 0; s < 4; ++s) {
                 const person::Input entry = static_cast<person::Input>(kind);
@@ -136,7 +136,7 @@ void App::drawPersonSettings() {
 
     const person::Tier tier = person::tierFromName(settings_.personQuality, person::Tier::Balanced);
     ImGui::SetNextItemWidth(ui::px(300.0f));
-    if (ImGui::BeginCombo(trId("Quality", "personQuality"), tierLabel(tier))) {
+    if (ui::beginCombo(trId("Quality", "personQuality"), tierLabel(tier))) {
         for (int i = 0; i < person::kTierCount; ++i) {
             const person::Tier entry = static_cast<person::Tier>(i);
             if (ImGui::Selectable(tierLabel(entry), entry == tier)) {

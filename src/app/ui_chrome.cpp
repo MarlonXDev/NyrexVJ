@@ -41,11 +41,11 @@ void App::drawTransportBar() {
         comp.bpm = std::clamp(bpm, 40.0f, 240.0f);
     }
     ImGui::SameLine(0.0f, 4.0f);
-    if (ImGui::Button("-")) {
+    if (ImGui::Button("-##bpmDown")) {
         comp.bpm = std::clamp(comp.bpm - 1.0f, 40.0f, 240.0f);
     }
     ImGui::SameLine(0.0f, 2.0f);
-    if (ImGui::Button("+")) {
+    if (ImGui::Button("+##bpmUp")) {
         comp.bpm = std::clamp(comp.bpm + 1.0f, 40.0f, 240.0f);
     }
     if (ImGui::GetContentRegionAvail().x > ui::px(640.0f)) {
@@ -123,6 +123,31 @@ void App::drawTransportBar() {
         ImGui::TextDisabled("%s %.2f", tr("Phase"), phase);
     }
 
+    if (ImGui::GetContentRegionAvail().x > ui::px(960.0f)) {
+        DeckSettings& deckSettings = comp.deckSettings;
+        ImGui::SameLine(0.0f, ui::px(22.0f));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextDisabled("%s", tr("Transition"));
+        ImGui::SameLine(0.0f, ui::px(6.0f));
+        ImGui::SetNextItemWidth(ui::px(104.0f));
+        if (ui::beginCombo("##tbTransition", tr(transitionName(deckSettings.transition)))) {
+            for (int t = 0; t < TransitionTypeCount; ++t) {
+                if (ImGui::Selectable(tr(transitionName(t)), deckSettings.transition == t)) {
+                    deckSettings.transition = t;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::GetContentRegionAvail().x > ui::px(1180.0f)) {
+            ImGui::SameLine(0.0f, ui::px(10.0f));
+            ImGui::Checkbox(trId("Beat sync", "tbSync"), &deckSettings.syncBeats);
+            ImGui::SetItemTooltip("%s", tr("Transition length follows the tempo"));
+            ImGui::SameLine(0.0f, ui::px(10.0f));
+            ImGui::Checkbox(trId("Auto cycle", "tbCycle"), &deckSettings.autoCycle);
+            ImGui::SetItemTooltip("%s", tr("Switches to the next used deck by itself"));
+        }
+    }
+
     if (engine_.transitioning()) {
         const ImVec2 pos = ImGui::GetWindowPos();
         const ImVec2 size = ImGui::GetWindowSize();
@@ -145,7 +170,7 @@ void App::drawTrigger() {
         const QuantizeGrid current = quantizeGridFromName(settings_.launchQuantize.c_str());
         const size_t waiting = engine_.quantizer().pending();
         ImGui::SetNextItemWidth(waiting > 0 ? -ui::px(34.0f) : -FLT_MIN);
-        if (ImGui::BeginCombo("##launchQuantize", gridLabels[static_cast<int>(current)])) {
+        if (ui::beginCombo("##launchQuantize", gridLabels[static_cast<int>(current)])) {
             for (int g = 0; g < kQuantizeGridCount; ++g) {
                 if (ImGui::Selectable(gridLabels[g], static_cast<int>(current) == g)) {
                     settings_.launchQuantize = quantizeGridName(static_cast<QuantizeGrid>(g));
@@ -165,7 +190,7 @@ void App::drawTrigger() {
     ui::fieldLabel(tr("Type"));
     {
         ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::BeginCombo("##transition", tr(transitionName(settings.transition)))) {
+        if (ui::beginCombo("##transition", tr(transitionName(settings.transition)))) {
             for (int t = 0; t < TransitionTypeCount; ++t) {
                 if (ImGui::Selectable(tr(transitionName(t)), settings.transition == t)) {
                     settings.transition = t;
@@ -334,7 +359,7 @@ void App::drawStripMidi() {
     ui::fieldLabel(tr("Device"));
     const std::string current = settings_.midiDevice.empty() ? std::string(tr("None")) : settings_.midiDevice;
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##stripMidiDevice", current.c_str())) {
+    if (ui::beginCombo("##stripMidiDevice", current.c_str())) {
         if (ImGui::Selectable(tr("None"), settings_.midiDevice.empty())) {
             settings_.midiDevice.clear();
             saveSettings(settings_);

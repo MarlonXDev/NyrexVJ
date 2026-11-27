@@ -183,7 +183,7 @@ void App::drawStreamControls(int slot) {
     const char* const profileNames[] = {tr("Low latency"), tr("Balanced"), tr("Smooth")};
     const int profile = std::clamp(settings_.streamProfile, 0, 2);
     ImGui::SetNextItemWidth(ui::px(-90.0f));
-    if (ImGui::BeginCombo(trId("Profile", "streamProfile"), profileNames[profile])) {
+    if (ui::beginCombo(trId("Profile", "streamProfile"), profileNames[profile])) {
         for (int i = 0; i < 3; ++i) {
             if (ImGui::Selectable(profileNames[i], profile == i)) {
                 settings_.streamProfile = i;
@@ -234,7 +234,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
         const std::vector<NdiSourceInfo> sources = NdiFinder::instance().sources();
         const std::string preview = wanted.empty() ? std::string(tr("Automatic")) : wanted;
         ImGui::SetNextItemWidth(ui::px(-90.0f));
-        if (ImGui::BeginCombo(trId("NDI source", "ndiPick"), preview.c_str())) {
+        if (ui::beginCombo(trId("NDI source", "ndiPick"), preview.c_str())) {
             if (ImGui::Selectable(tr("Automatic"), wanted.empty())) {
                 wanted.clear();
                 persist();
@@ -290,7 +290,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
             preview = wanted;
         }
         ImGui::SetNextItemWidth(ui::px(-90.0f));
-        if (ImGui::BeginCombo(trId("Camera", "cameraPick"), preview.c_str())) {
+        if (ui::beginCombo(trId("Camera", "cameraPick"), preview.c_str())) {
             if (ImGui::Selectable(tr("None"), wanted.empty())) {
                 wanted.clear();
                 persist();
@@ -319,7 +319,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
             }
         }
         ImGui::SetNextItemWidth(ui::px(-90.0f));
-        if (ImGui::BeginCombo(trId("Resolution", "cameraResolution"), resolutionLabel.c_str())) {
+        if (ui::beginCombo(trId("Resolution", "cameraResolution"), resolutionLabel.c_str())) {
             for (const ModeChoice& choice : kCameraModes) {
                 const bool selected = choice.width == settings_.cameraWidth && choice.height == settings_.cameraHeight;
                 if (ImGui::Selectable(choice.width == 0 ? tr("Auto") : choice.label, selected)) {
@@ -337,7 +337,7 @@ void App::drawLiveInputControls(const ClipDef& def) {
             std::snprintf(rate, sizeof(rate), "%d fps", settings_.cameraFps);
         }
         ImGui::SetNextItemWidth(ui::px(-90.0f));
-        if (ImGui::BeginCombo(trId("Frame rate", "cameraRate"), rate)) {
+        if (ui::beginCombo(trId("Frame rate", "cameraRate"), rate)) {
             for (const int fps : kFrameRates) {
                 char label[24];
                 if (fps == 0) {

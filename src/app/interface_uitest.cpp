@@ -301,8 +301,41 @@ void App::buildInterfaceTest() {
         record("the Clip panel sits to the right of Layer and Master", clip && master && clip->DockId != master->DockId && clip->Pos.x >= master->Pos.x + master->Size.x - 2.0f, clip ? describe(clip) : "missing");
         *baseFrame = measuredFrameHeight();
         *basePadding = ImGui::GetStyle().FramePadding.y;
+        ImGuiWindow* deck = ImGui::FindWindowByName("###deck");
+        const ImGuiTable* grid = deck ? ImGui::TableFindByID(deck->GetID("deck")) : nullptr;
+        const float pitch = grid && grid->ColumnsCount > 3 ? grid->Columns[3].MinX - grid->Columns[2].MinX : 0.0f;
+        record("the clip grid keeps three pixels between two tiles", std::fabs(pitch - 111.0f) < 0.6f, "tile pitch " + std::to_string(pitch));
+        float narrowest = 1000.0f;
+        int tabsSeen = 0;
+        for (const ImGuiWindow* window : {master, layer, clip}) {
+            const ImGuiTabBar* bar = window && window->DockNode ? window->DockNode->TabBar : nullptr;
+            for (int i = 0; bar && i < bar->Tabs.Size; ++i) {
+                narrowest = std::min(narrowest, bar->Tabs[i].Width);
+                ++tabsSeen;
+            }
+        }
+        record("every dock tab is at least as wide as the minimum so the labels sit centred", tabsSeen >= 3 && narrowest >= ImGui::GetStyle().TabMinWidthBase - 0.6f, "narrowest " + std::to_string(narrowest) + " of " + std::to_string(tabsSeen));
     });
     shot("default-100");
+
+    const auto conflicts = std::make_shared<std::string>();
+    for (int row = 0; row < 2; ++row) {
+        for (int step = 0; step < 64; ++step) {
+            add([row, step]() {
+                const ImGuiWindow* deck = ImGui::FindWindowByName("###deck");
+                if (deck) {
+                    ImGui::GetIO().AddMousePosEvent(deck->Pos.x + 8.0f + static_cast<float>(step) * 16.0f, deck->Pos.y + deck->Size.y - (row == 0 ? 41.0f : 18.0f));
+                }
+            }, 2, nullptr, [conflicts, row, step]() {
+                if (ImGui::GetCurrentContext()->DebugDrawIdConflictsId != 0 && conflicts->empty()) {
+                    *conflicts = "row " + std::to_string(row) + ", position " + std::to_string(step);
+                }
+            });
+        }
+    }
+    add(nullptr, 1, nullptr, [conflicts, record]() {
+        record("no two buttons in the deck bar and the transport bar share an identifier", conflicts->empty(), conflicts->empty() ? "none found while moving the mouse along both rows" : *conflicts);
+    });
 
     add([this]() {
         workspaceName_[0] = '\0';
@@ -504,7 +537,7 @@ void App::buildInterfaceTest() {
     add([this]() { openSettings(SettingsAppearance); }, 8, nullptr, [this, record]() {
         const ImGuiWindow* window = ImGui::FindWindowByName("###settingsWindow");
         record("the Settings window opens inside the main window", window && insideMainWindow(window, 2.0f), describe(window));
-        record("the Settings window has no close button in its title bar", window && !window->HasCloseButton, describe(window));
+        record("the Settings window has a close button in its title bar", window && window->HasCloseButton, describe(window));
     });
     shot("settings-appearance-100");
     add([this]() {
@@ -522,6 +555,19 @@ void App::buildInterfaceTest() {
     press(ImGuiKey_Escape, false, false);
     add(nullptr, 3, nullptr, [this, record]() {
         record("Esc closes the Settings window", !settingsOpen_, settingsOpen_ ? "still open" : "closed");
+    });
+    add([this]() { settingsOpen_ = false; }, 3);
+    add([this]() { openSettings(SettingsAppearance); }, 8);
+    add([]() {
+        const ImGuiWindow* window = ImGui::FindWindowByName("###settingsWindow");
+        if (window) {
+            const ImGuiStyle& style = ImGui::GetStyle();
+            ImGui::GetIO().AddMousePosEvent(window->Pos.x + window->Size.x - style.FramePadding.x - window->FontRefSize * 0.5f, window->Pos.y + style.FramePadding.y + window->FontRefSize * 0.5f);
+        }
+    }, 3);
+    add([]() { ImGui::GetIO().AddMouseButtonEvent(0, true); }, 2);
+    add([]() { ImGui::GetIO().AddMouseButtonEvent(0, false); }, 3, nullptr, [this, record]() {
+        record("clicking the close button of the Settings window closes it", !settingsOpen_, settingsOpen_ ? "still open" : "closed");
     });
     add([this]() { settingsOpen_ = false; }, 3);
 

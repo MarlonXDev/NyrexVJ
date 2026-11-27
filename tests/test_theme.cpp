@@ -93,10 +93,16 @@ void testSameLookForEveryColour() {
         CHECK(style.Colors[ImGuiCol_WindowBg].x == windowBg.x && style.Colors[ImGuiCol_WindowBg].z == windowBg.z);
         CHECK(style.Colors[ImGuiCol_TabSelected].x == tabSelected.x);
         CHECK(style.FrameRounding == 2.0f && style.WindowMenuButtonPosition == ImGuiDir_None);
+        CHECK(style.TabMinWidthBase == 72.0f);
+        nvj::ThemeOptions larger;
+        larger.sizeScale = 1.5f;
+        nvj::applyTheme(theme, larger);
+        CHECK(std::fabs(ImGui::GetStyle().TabMinWidthBase - 108.0f) < 0.01f);
         nvj::ThemeOptions high;
         high.highContrast = true;
         nvj::applyTheme(theme, high);
         CHECK(!nvj::ui::kFlatLook);
+        CHECK(ImGui::GetStyle().TabMinWidthBase == 0.0f);
     }
     nvj::applyTheme(nvj::themeIndex("blue"));
     CHECK(nvj::ui::kAccent.z > nvj::ui::kAccent.x && nvj::ui::kAccentHover.z > nvj::ui::kAccentHover.x);

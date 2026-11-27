@@ -2496,12 +2496,12 @@
           "steps": [
             "Open Settings, Appearance and choose three different colours (for example Blue, Red and Mono); check that the look stays the same and only the accent changes (marker of the sliders, check marks, the selected column, layer and deck).",
             "Compare a parameter panel (Master, Layer, Clip) with Resolume: the rows, the lines between them, the empty and the filled part of a slider bar, the marker, the minus and plus fields; click and hold the plus field and check that the value keeps rising.",
-            "Check that the Settings window, the manual, the Creator and the Timeline window have no close button in the title bar, that Escape closes the one in front when no field is being edited, and that the menu entry opens it again.",
+            "Check that the Settings window, the manual, the Creator and the Timeline window each show a small X at the right of the title bar, that clicking it closes the window, that Escape closes the one in front when no field is being edited, and that the menu entry opens it again.",
             "Create two more decks with the plus button, rename one, switch with the tabs and check the smooth transition and the context menu of a tab.",
             "Switch high contrast on and off in the same session and check that the outlines come back and go away again."
           ],
           "measure": "which colours you tried, any difference to Resolume that disturbs you in the panels, sliders or tabs, whether holding the plus field keeps raising the value, and whether Escape closes every tool window",
-          "criteria": "Proposed: every colour gives the same shapes with its own accent, the stepper fields move a slider by one percent of its range, no tool window shows a close button and Escape closes it, and high contrast keeps its outlines."
+          "criteria": "Proposed: every colour gives the same shapes with its own accent, the stepper fields move a slider by one percent of its range, every tool window shows a small X in the title bar that closes it, Escape closes it too, and high contrast keeps its outlines."
         },
         {
           "id": "M-UI-10",
@@ -2518,6 +2518,22 @@
           ],
           "measure": "whether the drop from the file manager works on Windows, how the layout looks on a screen of another size, and whether any step was unclear",
           "criteria": "Proposed: the exported file loads on the other PC with the same arrangement, an import never replaces a layout of yours, and a damaged or foreign file is refused without a change."
+        },
+        {
+          "id": "M-UI-11",
+          "title": "The Resolume look of the section bands, tabs, effect rows and clip grid next to Resolume Arena",
+          "needs": "A PC with this build and a screen of 1920x1080 or more; Resolume Arena or its screenshots for the comparison",
+          "steps": [
+            "Start with --reset-layout and the Arena colours and put the window next to Resolume Arena; compare the clip grid (gaps between the tiles, the layer tiles with the name bar, the column buttons) and the transport bar.",
+            "Open the Master window, fold and open the sections Grade, Audio reactivity, Macros and LFOs and Effects with a click and compare the bands with the section bars of Resolume.",
+            "Put two effects into the slots and check the coloured rows: the triangle folds a slot, B bypasses the effect and turns its sliders grey, X empties the slot; choose another colour in Settings, Appearance and check that the rows take the new accent.",
+            "Look at the tab bars of Master and Layer, Clip and Trigger and the Browser column and check that every label sits in the middle of its tab and that no tab is cut off; switch the interface size to 125 and 150 percent and look again.",
+            "Open Settings, the manual and the Creator and check that each has a small X at the right of the title bar and that a click on it closes the window; move the mouse over the plus button of the deck tabs and the plus next to the tempo and check that no red Dear ImGui message appears.",
+            "Check that the transport bar shows Transition, Beat sync and Auto cycle next to the phase, that a change there shows in the Trigger window and the other way round, and that a narrow window shows fewer of them without overlap.",
+            "Switch high contrast on and off and check that the tick box in the effect slots and the old section headers come back and go away again."
+          ],
+          "measure": "any difference to Resolume that disturbs you (gaps, colours, band height, tab width), whether a folded effect slot hides something you need, whether the X of a window is easy to see and hit, and whether the tabs of the right column are still readable",
+          "criteria": "Proposed: the tiles sit 3 points apart, every band and effect row is flat over the full width, the tabs show their names in the middle and stay readable at 125 and 150 percent, and high contrast keeps the old controls."
         }
       ]
     },

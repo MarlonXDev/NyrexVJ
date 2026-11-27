@@ -239,7 +239,7 @@ void App::drawSettingsPage(int page) {
     if (page == SettingsGeneral) {
         ui::sectionHeader(tr("Language"));
         ImGui::SetNextItemWidth(ui::px(220.0f));
-        if (ImGui::BeginCombo("##language", languageLabel(currentLanguage()))) {
+        if (ui::beginCombo("##language", languageLabel(currentLanguage()))) {
             for (int i = 0; i < languageCount(); ++i) {
                 Language language = static_cast<Language>(i);
                 if (ImGui::Selectable(languageLabel(language), currentLanguage() == language)) {
@@ -311,7 +311,7 @@ void App::drawSettingsPage(int page) {
         ui::sectionHeader(tr("Quality"));
         Composition& comp = engine_.comp;
         ImGui::SetNextItemWidth(ui::px(220.0f));
-        if (ImGui::BeginCombo(trId("Resolution", "resolution"), kResolutions[comp.resolution].label)) {
+        if (ui::beginCombo(trId("Resolution", "resolution"), kResolutions[comp.resolution].label)) {
             for (int i = 0; i < kResolutionCount; ++i) {
                 if (ImGui::Selectable(kResolutions[i].label, i == comp.resolution)) {
                     engine_.setResolutionIndex(i);
@@ -390,7 +390,7 @@ void App::drawUpdateSection() {
     int channel = settings_.channel == UpdateChannel::Nightly ? 0 : 1;
     const char* channelNames[2] = {tr("Latest build (every commit)"), tr("Stable releases")};
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##channel", channelNames[channel])) {
+    if (ui::beginCombo("##channel", channelNames[channel])) {
         for (int i = 0; i < 2; ++i) {
             if (ImGui::Selectable(channelNames[i], channel == i)) {
                 settings_.channel = i == 0 ? UpdateChannel::Nightly : UpdateChannel::Stable;
@@ -547,7 +547,7 @@ void App::drawFrameRateLimit() {
         std::snprintf(current, sizeof(current), "%s", tr("Unlimited"));
     }
     ImGui::SetNextItemWidth(ui::px(220.0f));
-    if (ImGui::BeginCombo(trId("Frame rate limit", "optFpsLimit"), current)) {
+    if (ui::beginCombo(trId("Frame rate limit", "optFpsLimit"), current)) {
         for (const int fps : kFpsLimits) {
             char label[32];
             if (fps > 0) {
@@ -604,7 +604,7 @@ void App::drawPerformancePage() {
     char current[48];
     std::snprintf(current, sizeof(current), "%d FPS  (%.1f ms)", settings_.perfBudgetFps, budget);
     ImGui::SetNextItemWidth(ui::px(220.0f));
-    if (ImGui::BeginCombo(trId("Target frame rate", "optBudget"), current)) {
+    if (ui::beginCombo(trId("Target frame rate", "optBudget"), current)) {
         for (const int fps : kBudgets) {
             char label[48];
             std::snprintf(label, sizeof(label), "%d FPS  (%.1f ms)", fps, budgetMilliseconds(fps));
@@ -622,7 +622,7 @@ void App::drawPerformancePage() {
 
     ui::sectionHeader(tr("Render quality"));
     ImGui::SetNextItemWidth(ui::px(220.0f));
-    if (ImGui::BeginCombo(trId("Layer resolution", "optQuality"), qualityLabel(settings_.renderQuality))) {
+    if (ui::beginCombo(trId("Layer resolution", "optQuality"), qualityLabel(settings_.renderQuality))) {
         for (int mode = 0; mode < QualityModeCount; ++mode) {
             if (ImGui::Selectable(qualityLabel(mode), settings_.renderQuality == mode)) {
                 settings_.renderQuality = mode;

@@ -460,7 +460,7 @@ void App::drawConversionSettings() {
         }
     }
     ImGui::SetNextItemWidth(ui::px(220.0f));
-    if (ImGui::BeginCombo(trId("Import mode", "optConvertMode"), modeLabels[modeSelected])) {
+    if (ui::beginCombo(trId("Import mode", "optConvertMode"), modeLabels[modeSelected])) {
         for (int i = 0; i < 3; ++i) {
             if (ImGui::Selectable(modeLabels[i], i == modeSelected)) {
                 settings_.convertMode = hapjobs::importModeName(modes[i]);
@@ -482,7 +482,7 @@ void App::drawConversionSettings() {
         }
     }
     ImGui::SetNextItemWidth(ui::px(220.0f));
-    if (ImGui::BeginCombo(trId("HAP format", "optConvertFormat"), formatLabels[formatSelected])) {
+    if (ui::beginCombo(trId("HAP format", "optConvertFormat"), formatLabels[formatSelected])) {
         for (int i = 0; i < 4; ++i) {
             if (ImGui::Selectable(formatLabels[i], i == formatSelected)) {
                 settings_.convertFormat = hapconv::targetKey(formats[i]);

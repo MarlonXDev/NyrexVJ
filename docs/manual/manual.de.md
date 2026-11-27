@@ -94,7 +94,7 @@ Die zwei Zeilen direkt unter dem Clip-Raster enthalten, was du in jedem Moment b
 
 ## Das Deck-Fenster {#deck-window}
 
-Das große Fenster oben quer ist das Deck-Fenster. Es enthält das Clip-Raster mit 8 Spalten und 4 Layern und direkt unter dem Raster die Deck-Knöpfe und die Transportleiste. Vor jeder Layer-Zeile stehen die Knöpfe X (leert den Layer), B (Bypass) und S (Solo), der Mischmodus, die Deckkraft und der Name des Layers, der mintgrün wird, wenn der Layer gewählt ist. Alles, was du live spielst, beginnt hier. Siehe [Das Clip-Raster](#clip-grid) und [Decks und Übergänge](#decks).
+Das große Fenster oben quer ist das Deck-Fenster. Es enthält das Clip-Raster mit 8 Spalten und 4 Layern und direkt unter dem Raster die Deck-Knöpfe und die Transportleiste. Vor jeder Layer-Zeile steht eine Kachel mit dem Bild des Layers und seinem Namen auf einer Leiste am unteren Rand (die Leiste wird mintgrün, wenn der Layer gewählt ist), daneben die Knöpfe X (leert den Layer), B (Bypass) und S (Solo), der Mischmodus und die Deckkraft. Die Kacheln sitzen wie bei Resolume drei Pixel auseinander. Die grauen Bänder in den Fenstern (Audio-Reaktivität, Effekte, Grade und die anderen) klappen mit einem Klick zu und auf, und die Reiter jedes Fensters sind mindestens 72 Punkte breit, der Name steht in der Mitte. Alles, was du live spielst, beginnt hier. Siehe [Das Clip-Raster](#clip-grid) und [Decks und Übergänge](#decks).
 
 ## Vorschau und Ausgabe {#preview-output}
 
@@ -299,7 +299,7 @@ Manche Clips bringen eigene Regler ins Clip-Fenster mit.
 
 Jeder Layer hat vier Effekt-Slots, und der Master auch. Die Effekte laufen von Slot 1 bis Slot 4, die Reihenfolge ist also wichtig: Ein Blur vor einer Farbänderung sieht anders aus als eine Farbänderung vor einem Blur. Die Effekte eines Layers verändern nur diesen Layer, die Effekte des Masters verändern das fertige Bild.
 
-Jeder Slot hat ein Häkchen zum Ein- und Ausschalten, eine Liste zur Wahl des Effekts (tipp in die Liste, um zu suchen), bis zu vier Regler und eine Zeile für die Musikreaktion. Ein Regler, den du bewegt hast, geht mit Rechtsklick auf seinen Standardwert zurück. Effekte, die dreidimensional zeichnen, tragen in der Liste die Markierung [3D].
+Jeder Slot ist wie bei Resolume ein farbiges Band mit einem kleinen Dreieck, der Liste zur Wahl des Effekts (tipp in die Liste, um zu suchen), dem Knopf B und dem Knopf X. Das Dreieck klappt den Slot zu und auf, B überbrückt den Effekt (der Knopf leuchtet und die Regler werden grau) und X leert den Slot. Unter dem Band stehen bis zu vier Regler und eine Zeile für die Musikreaktion. Bei eingeschaltetem hohen Kontrast tritt das alte Häkchen an die Stelle von B und X. Ein Regler, den du bewegt hast, geht mit Rechtsklick auf seinen Standardwert zurück. Effekte, die dreidimensional zeichnen, tragen in der Liste die Markierung [3D].
 
 ## Effekte hinzufügen {#adding-effects}
 
@@ -1416,7 +1416,7 @@ Das Farbthema ändert den Akzent der ganzen Oberfläche und sonst nichts. Es gib
 
 # Oberfläche, Arbeitsbereiche und Barrierefreiheit {#interface}
 
-Fenster, die du für eine einzelne Aufgabe öffnest (Einstellungen, Creator, das Handbuch, der Shader-Editor, der Node-Editor, die Zeitleiste und ähnliche), haben keinen Schließen-Knopf in der Titelleiste. Drücke `Esc`, solange ein solches Fenster vorn liegt und kein Feld bearbeitet wird, dann schließt es sich. Die Fenster mit einem Menüeintrag mit Häkchen (Video-Routing, Hot-Standby, das Zeitleistenfenster und der Node-Effekt-Editor) schließen sich auch, wenn du diesen Eintrag noch einmal wählst; die anderen öffnest du wieder über das Menü, mit dem du sie geöffnet hast.
+Fenster, die du für eine einzelne Aufgabe öffnest (Einstellungen, Creator, das Handbuch, der Shader-Editor, der Node-Editor, die Zeitleiste und ähnliche), haben rechts in der Titelleiste einen Schließen-Knopf, ein kleines X. Klick darauf oder drücke `Esc`, solange ein solches Fenster vorn liegt und kein Feld bearbeitet wird, dann schließt sich das Fenster. Die Fenster mit einem Menüeintrag mit Häkchen (Video-Routing, Hot-Standby, das Zeitleistenfenster und der Node-Effekt-Editor) schließen sich auch, wenn du diesen Eintrag noch einmal wählst; die anderen öffnest du wieder über das Menü, mit dem du sie geöffnet hast.
 
 ## Das Menü Ansicht {#view-menu}
 

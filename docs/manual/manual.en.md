@@ -94,7 +94,7 @@ The two rows right under the clip grid hold what you need at every moment. The f
 
 ## The deck window {#deck-window}
 
-The big window across the top is the deck window. It holds the clip grid with 8 columns and 4 layers and, right below the grid, the deck buttons and the transport bar. In front of each layer row are the buttons X (clears the layer), B (bypass) and S (solo), the blend mode, the opacity and the layer name, which turns mint when the layer is selected. Everything you play live starts here. See [The clip grid](#clip-grid) and [Decks and transitions](#decks).
+The big window across the top is the deck window. It holds the clip grid with 8 columns and 4 layers and, right below the grid, the deck buttons and the transport bar. In front of each layer row is a tile with the picture of the layer and its name on a bar at the bottom (the bar turns mint when the layer is selected), and next to it the buttons X (clears the layer), B (bypass) and S (solo), the blend mode and the opacity. The tiles sit three pixels apart, like in Resolume. The grey bands in the panels (Audio reactivity, Effects, Grade and the others) fold up and down with a click, and the tabs of every window are at least 72 points wide with the name in the middle. Everything you play live starts here. See [The clip grid](#clip-grid) and [Decks and transitions](#decks).
 
 ## Preview and output {#preview-output}
 
@@ -299,7 +299,7 @@ Some clips add their own controls to the Clip window.
 
 Every layer has four effect slots and so does the master. Effects run from slot 1 to slot 4, so the order matters: a blur before a colour change looks different from a colour change before a blur. The effects of a layer change only that layer, the effects of the master change the final picture.
 
-Each slot has a tick box to switch it on or off, a list to choose the effect (type in the list to search it), up to four sliders, and a row for the music reaction. A slider that you moved goes back to its default with a right click. Effects that draw in three dimensions carry a [3D] mark in the list.
+Each slot is a coloured band like in Resolume with a small triangle, the list to choose the effect (type in the list to search it), the button B and the button X. The triangle folds the slot up and down, B bypasses the effect (the button lights up and the sliders turn grey) and X empties the slot. Under the band are up to four sliders and a row for the music reaction. With high contrast switched on the old tick box takes the place of B and X. A slider that you moved goes back to its default with a right click. Effects that draw in three dimensions carry a [3D] mark in the list.
 
 ## Adding effects {#adding-effects}
 
@@ -1416,7 +1416,7 @@ The theme colour changes the accent of the whole interface, and nothing else. Th
 
 # Interface, workspaces and accessibility {#interface}
 
-Windows that you open for a single job (Settings, Creator, the manual, the shader editor, the node editor, the timeline and similar) have no close button in the title bar. Press `Esc` while such a window is in front and no field is being edited to close it. The windows that have a menu entry with a check mark (video routing, hot standby, the timeline window and the node effect editor) can also be closed by choosing that entry again; the others open again from the menu that opened them.
+Windows that you open for a single job (Settings, Creator, the manual, the shader editor, the node editor, the timeline and similar) have a close button, a small X, at the right of the title bar. Click it, or press `Esc` while such a window is in front and no field is being edited, to close the window. The windows that have a menu entry with a check mark (video routing, hot standby, the timeline window and the node effect editor) can also be closed by choosing that entry again; the others open again from the menu that opened them.
 
 ## The View menu {#view-menu}
 

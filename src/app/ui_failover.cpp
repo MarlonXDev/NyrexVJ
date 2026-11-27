@@ -174,7 +174,7 @@ void App::drawFailoverWindow() {
     }
     ui::setNextWindowSize(ImVec2(620.0f, 760.0f), ImGuiCond_FirstUseEver);
     const std::string title = std::string(tr("Hot standby")) + "###failoverWindow";
-    if (!ImGui::Begin(title.c_str(), &failoverOpen_)) {
+    if (!ui::beginTool(title.c_str(), &failoverOpen_)) {
         ImGui::End();
         return;
     }

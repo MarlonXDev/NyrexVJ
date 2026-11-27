@@ -167,7 +167,7 @@ void App::updateInterfaceStyle() {
         style.FontScaleMain = scale;
         style.FontScaleDpi = dpi;
         applyTheme(themeIndex(settings_.theme), options);
-        useSansFont(!high && std::string(themeInfo(themeIndex(settings_.theme)).id) == "arena");
+        useSansFont(!high);
         appliedSizeScale_ = sizeScale;
         appliedHighContrast_ = high;
         appliedTheme_ = settings_.theme;

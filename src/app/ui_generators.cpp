@@ -605,7 +605,7 @@ void App::drawGeneratorStudio() {
         d.focus = false;
     }
     const std::string title = std::string(trId("Text and particles", "generatorWindow"));
-    if (!ImGui::Begin(title.c_str(), &d.open, ImGuiWindowFlags_NoDocking)) {
+    if (!ui::beginTool(title.c_str(), &d.open, ImGuiWindowFlags_NoDocking)) {
         ImGui::End();
         return;
     }
@@ -671,7 +671,7 @@ void App::drawChainLibrary() {
         d.focus = false;
     }
     const std::string title = std::string(trId("Effect chains", "chainWindow"));
-    if (!ImGui::Begin(title.c_str(), &d.open, ImGuiWindowFlags_NoDocking)) {
+    if (!ui::beginTool(title.c_str(), &d.open, ImGuiWindowFlags_NoDocking)) {
         ImGui::End();
         return;
     }

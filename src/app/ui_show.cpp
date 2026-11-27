@@ -798,7 +798,7 @@ void App::drawShowPackages() {
         d.focus = false;
     }
     const std::string title = std::string(trId("Show package", "showPackageWindow"));
-    if (!ImGui::Begin(title.c_str(), &d.open, ImGuiWindowFlags_NoDocking)) {
+    if (!ui::beginTool(title.c_str(), &d.open, ImGuiWindowFlags_NoDocking)) {
         ImGui::End();
         return;
     }

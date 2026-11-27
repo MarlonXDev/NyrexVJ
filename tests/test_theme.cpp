@@ -82,6 +82,32 @@ void testContrast() {
     }
 }
 
+void testSameLookForEveryColour() {
+    nvj::applyTheme(nvj::themeIndex("arena"));
+    const ImVec4 windowBg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
+    const ImVec4 tabSelected = ImGui::GetStyle().Colors[ImGuiCol_TabSelected];
+    for (int theme = 0; theme < nvj::themeCount(); ++theme) {
+        nvj::applyTheme(theme);
+        const ImGuiStyle& style = ImGui::GetStyle();
+        CHECK(nvj::ui::kFlatLook);
+        CHECK(style.Colors[ImGuiCol_WindowBg].x == windowBg.x && style.Colors[ImGuiCol_WindowBg].z == windowBg.z);
+        CHECK(style.Colors[ImGuiCol_TabSelected].x == tabSelected.x);
+        CHECK(style.FrameRounding == 2.0f && style.WindowMenuButtonPosition == ImGuiDir_None);
+        nvj::ThemeOptions high;
+        high.highContrast = true;
+        nvj::applyTheme(theme, high);
+        CHECK(!nvj::ui::kFlatLook);
+    }
+    nvj::applyTheme(nvj::themeIndex("blue"));
+    CHECK(nvj::ui::kAccent.z > nvj::ui::kAccent.x && nvj::ui::kAccentHover.z > nvj::ui::kAccentHover.x);
+    nvj::applyTheme(nvj::themeIndex("orange"));
+    CHECK(nvj::ui::kAccent.x > nvj::ui::kAccent.z && nvj::ui::kAccentHover.x > nvj::ui::kAccentHover.z);
+    nvj::applyTheme(nvj::themeIndex("mono"));
+    CHECK(std::fabs(nvj::ui::kAccent.x - nvj::ui::kAccent.z) < 0.04f);
+    nvj::applyTheme(nvj::themeIndex("arena"));
+    CHECK(std::fabs(nvj::ui::kAccentHover.x - 0.502f) < 0.01f && std::fabs(nvj::ui::kAccentHover.y - 0.996f) < 0.01f);
+}
+
 void testStyleReset() {
     ImGuiStyle& style = ImGui::GetStyle();
     style.FontScaleMain = 1.4f;
@@ -151,6 +177,7 @@ int main(int argc, char** argv) {
     ImGuiContext* context = ImGui::CreateContext();
     testIndexes();
     testStyleReset();
+    testSameLookForEveryColour();
     testContrast();
     ImGui::DestroyContext(context);
     return testing::finish();

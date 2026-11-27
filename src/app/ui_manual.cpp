@@ -372,7 +372,7 @@ void App::drawManual() {
         manualFocus_ = false;
     }
     const std::string title = std::string(trId("User manual", "manualWindow"));
-    if (!ImGui::Begin(title.c_str(), &manualOpen_, ImGuiWindowFlags_NoDocking)) {
+    if (!ui::beginTool(title.c_str(), &manualOpen_, ImGuiWindowFlags_NoDocking)) {
         ImGui::End();
         return;
     }

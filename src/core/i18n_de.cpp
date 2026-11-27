@@ -2990,6 +2990,15 @@ const Translation kGerman[] = {
     {"How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved.", "Wie lange der Ton bis zur Analyse braucht. Positive Werte legen die Beats früher, negative später. Wirkt nur mit Verbessert."},
     {"Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz.", "Wo sich die Bänder Bass, Mitten und Höhen treffen. Standard sind 150 Hz und 2000 Hz."},
     {"This input always listens to both channels mixed.", "Dieser Eingang hört immer beide Kanäle gemischt."},
+    {"Your transitions", "Deine Übergänge"},
+    {"This transition cannot run. The built-in transition is used instead.", "Dieser Übergang läuft nicht. Stattdessen wird der eingebaute Übergang benutzt."},
+    {"Create example transition", "Beispiel-Übergang erstellen"},
+    {"The example transition could not be created", "Der Beispiel-Übergang konnte nicht erstellt werden"},
+    {"Writes a small transition file into the shaders folder. Edit it in the shader editor and it shows up in the list above.", "Legt eine kleine Übergangsdatei im Shader-Ordner an. Bearbeite sie im Shader-Editor, dann erscheint sie in der Liste oben."},
+    {"The transition file is not in the shaders folder", "Die Übergangsdatei liegt nicht im Shader-Ordner"},
+    {"The transition file is gone", "Die Übergangsdatei ist weg"},
+    {"This file is not a transition any more", "Diese Datei ist kein Übergang mehr"},
+    {"The transition cannot be used", "Der Übergang kann nicht benutzt werden"},
 };
 
 }

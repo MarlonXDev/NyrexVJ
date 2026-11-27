@@ -139,6 +139,15 @@ void normalizeDecks(Composition& comp) {
     comp.activeDeck = std::clamp(comp.activeDeck, 0, kDeckCount - 1);
     comp.deckUsed[static_cast<size_t>(comp.activeDeck)] = true;
     comp.deckSettings.transition = std::clamp(comp.deckSettings.transition, 0, TransitionTypeCount - 1);
+    DeckSettings& settings = comp.deckSettings;
+    if (settings.customTransition.size() > kMaxTransitionName || settings.customTransition.rfind("Transition: ", 0) != 0) {
+        settings.customTransition.clear();
+    }
+    for (float& value : settings.transitionValues) {
+        if (value != kClipValueUnset && (!std::isfinite(value) || std::fabs(value) > 1.0e6f)) {
+            value = kClipValueUnset;
+        }
+    }
     comp.deckSettings.seconds = std::clamp(comp.deckSettings.seconds, 0.0f, 10.0f);
     comp.deckSettings.beats = std::clamp(comp.deckSettings.beats, 1, 32);
     comp.deckSettings.cycleBeats = std::clamp(comp.deckSettings.cycleBeats, 4, 128);

@@ -323,6 +323,8 @@ Options parseOptions(int argc, char** argv) {
             options.start.selectLayer = std::atoi(argv[++i]) - 1;
         } else if (arg == "--tab" && hasValue) {
             options.start.tab = std::atoi(argv[++i]);
+        } else if (arg == "--trigger-tab") {
+            options.start.triggerTab = true;
         } else if (arg == "--venue" && hasValue) {
             options.start.venue = argv[++i];
         } else if (arg == "--output") {

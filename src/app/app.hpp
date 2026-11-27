@@ -105,6 +105,7 @@ struct StartOptions {
     int quality = -1;
     int selectLayer = -1;
     int tab = -1;
+    bool triggerTab = false;
     int settingsPage = -1;
     int libraryMode = -1;
     int libraryKind = -1;
@@ -276,6 +277,7 @@ private:
     void openGeneratorStudio(int tab, const std::string& name);
     void drawGeneratorStudio();
     void openShaderEditor(const std::string& fileName);
+    void drawTransitionDesigner();
     void drawShaderEditor();
     void buildShaderEditorTest();
     void drawGeneratorTextTab();
@@ -454,6 +456,7 @@ private:
     GLFWwindow* window_ = nullptr;
     std::string iniPath_;
     int tabFocusFrames_ = 0;
+    bool startFocusTrigger_ = false;
     bool needsLayout_ = false;
     shortcuts::Table shortcuts_;
     std::string shortcutsPath_;
@@ -516,6 +519,8 @@ private:
     double perfRefresh_ = 0.0;
     bool restart_ = false;
     int selectedLayer_ = 0;
+    float transitionPreviewProgress_ = 0.5f;
+    bool transitionPreviewPlay_ = true;
     int selectedColumn_ = 0;
     int libraryMode_ = 0;
     int libraryKind_ = 0;

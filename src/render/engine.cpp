@@ -1791,6 +1791,7 @@ Engine::PassProgram Engine::passProgramFor(GLuint program, const ShaderPlan& pla
     pass.delta = glGetUniformLocation(program, "uDelta");
     pass.mix = glGetUniformLocation(program, "uMix");
     pass.picture = glGetUniformLocation(program, "uPicture");
+    pass.progress = glGetUniformLocation(program, "uProgress");
     for (size_t k = 0; k < plan.params.size() && k < pass.param.size(); ++k) {
         pass.param[k] = glGetUniformLocation(program, plan.params[k].name.c_str());
     }
@@ -2019,6 +2020,8 @@ void Engine::shutdown() {
     final_ = FinalProgram{};
     thumb_ = ThumbProgram{};
     transition_program_ = TransitionProgram{};
+    destroyCustomTransitions();
+    transitionPreview_.destroy();
     for (RenderTarget& thumb : clipThumbs_) {
         thumb.destroy();
     }
@@ -2561,6 +2564,9 @@ void Engine::update(double dt) {
             runLaunch(request);
         }
     }
+    if (!comp.deckSettings.customTransition.empty() && !transition_.active) {
+        ensureCustomTransition(comp.deckSettings.customTransition);
+    }
     if (transition_.active) {
         transition_.elapsed += static_cast<float>(dt);
         if (transition_.elapsed >= transition_.duration) {
@@ -2636,6 +2642,12 @@ bool Engine::switchDeck(int index) {
         transition_.type = comp.deckSettings.transition;
         transition_.target = index;
         transition_.from = previousDeck;
+        transition_.custom.clear();
+        if (!comp.deckSettings.customTransition.empty() && ensureCustomTransition(comp.deckSettings.customTransition)) {
+            transition_.custom = comp.deckSettings.customTransition;
+            const CustomTransitionProgram& program = customTransitions_[transition_.custom];
+            transition_.values = resolveShaderValues(*program.plan, comp.deckSettings.transitionValues);
+        }
         audio_ = audioInput_.active ? audioInput_ : virtualAudio(beat_, time_);
         if (!transition_.frozen) {
             outMaster_.level = comp.master.level;
@@ -3073,7 +3085,7 @@ void Engine::renderShaderThumbnail(size_t clipIndex, const RenderTarget& target)
     state.destroy();
 }
 
-void Engine::runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgram>& programs, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail, const ShaderValues& values, const RenderTarget* picture, float mixAmount) {
+void Engine::runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgram>& programs, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail, const ShaderValues& values, const RenderTarget* picture, float mixAmount, const RenderTarget* second, float progress) {
     const std::vector<std::string> mediaNames = plan.mediaNames();
     glDisable(GL_BLEND);
     for (size_t m = 0; m < mediaNames.size() && m < state.media.size(); ++m) {
@@ -3119,6 +3131,9 @@ void Engine::runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgr
         glUniform1f(program.scale, source.image ? scale : 1.0f);
         glUniform1i(program.frame, static_cast<GLint>(std::min<unsigned long long>(state.frame, 2147483647ull)));
         glUniform1f(program.delta, delta);
+        if (program.progress >= 0) {
+            glUniform1f(program.progress, progress);
+        }
         for (size_t k = 0; k < plan.params.size() && k < program.param.size(); ++k) {
             const ShaderParam& param = plan.params[k];
             const GLint location = program.param[k];
@@ -3168,6 +3183,13 @@ void Engine::runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgr
                     texture = picture->texture;
                     width = static_cast<float>(picture->width);
                     height = static_cast<float>(picture->height);
+                }
+            } else if (input.kind == ShaderInputKind::From || input.kind == ShaderInputKind::To) {
+                const RenderTarget* source = input.kind == ShaderInputKind::From ? picture : second;
+                if (source && source->texture) {
+                    texture = source->texture;
+                    width = static_cast<float>(source->width);
+                    height = static_cast<float>(source->height);
                 }
             } else if (input.kind == ShaderInputKind::Buffer) {
                 const size_t b = static_cast<size_t>(input.buffer);
@@ -3697,6 +3719,114 @@ void Engine::transitionPass(const RenderTarget& a, const RenderTarget& b, float 
     glActiveTexture(GL_TEXTURE0);
 }
 
+bool Engine::ensureCustomTransition(const std::string& name) {
+    const int index = customTransitionIndex(name);
+    CustomTransitionProgram& program = customTransitions_[name];
+    if (index < 0) {
+        if (!program.passes.empty()) {
+            for (const PassProgram& pass : program.passes) {
+                glDeleteProgram(pass.id);
+            }
+            program.passes.clear();
+        }
+        program.plan.reset();
+        program.error = "The transition file is not in the shaders folder";
+        program.tried = true;
+        return false;
+    }
+    const TransitionDef& def = transitionLibrary()[static_cast<size_t>(index)];
+    if (program.tried && program.version == def.version) {
+        return !program.passes.empty() && program.error.empty();
+    }
+    for (const PassProgram& pass : program.passes) {
+        glDeleteProgram(pass.id);
+    }
+    program.passes.clear();
+    program.plan.reset();
+    program.error.clear();
+    program.tried = true;
+    program.version = def.version;
+    if (!def.usable()) {
+        program.error = def.error.empty() ? "The transition cannot be used" : def.error;
+        return false;
+    }
+    std::string errors;
+    std::vector<PassProgram> passes;
+    const auto began = std::chrono::steady_clock::now();
+    if (!buildPlanPasses(*def.plan, def.shadertoy, def.name, passes, errors)) {
+        program.error = errors;
+        logLine("Transition '" + def.name + "' did not compile: " + errors.substr(0, 300));
+        return false;
+    }
+    program.passes = std::move(passes);
+    program.plan = def.plan;
+    logLine("Transition '" + def.name + "' compiled in " + std::to_string(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - began).count()) + " ms");
+    return true;
+}
+
+std::string Engine::customTransitionError(const std::string& name) {
+    const auto found = customTransitions_.find(name);
+    if (found != customTransitions_.end() && found->second.tried && !found->second.error.empty()) {
+        return found->second.error;
+    }
+    const int index = customTransitionIndex(name);
+    if (index >= 0 && !transitionLibrary()[static_cast<size_t>(index)].error.empty()) {
+        return transitionLibrary()[static_cast<size_t>(index)].error;
+    }
+    return std::string();
+}
+
+void Engine::destroyCustomTransitions() {
+    for (auto& entry : customTransitions_) {
+        for (const PassProgram& pass : entry.second.passes) {
+            glDeleteProgram(pass.id);
+        }
+    }
+    customTransitions_.clear();
+    customTransitionState_ = ShaderPassState{};
+}
+
+void Engine::customTransitionPass(const CustomTransitionProgram& program, const RenderTarget& a, const RenderTarget& b, float progress, const ShaderValues& values, const RenderTarget& destination) {
+    profiler_.mark(PassKind::Transition, 0, 0, 0, "");
+    runShaderPasses(*program.plan, program.passes, customTransitionState_, {0.9f, 0.4f, 0.2f}, {0.2f, 0.5f, 0.9f}, false, 1.0f, time_, static_cast<float>(beat_), comp.bpm, destination, false, values, &a, 0.0f, &b, progress);
+}
+
+void Engine::requestTransitionPreview(const std::string& custom, int builtin, float progress, const ShaderValues& values) {
+    previewWanted_ = true;
+    previewCustom_ = custom;
+    previewBuiltin_ = builtin;
+    previewProgress_ = std::clamp(progress, 0.0f, 1.0f);
+    previewValues_ = values;
+}
+
+void Engine::renderTransitionPreview() {
+    if (!previewWanted_) {
+        return;
+    }
+    previewWanted_ = false;
+    if (!transition_program_.id) {
+        return;
+    }
+    const int first = clipIndexByName("Plasma");
+    const int second = clipIndexByName("Tunnel");
+    if (first < 0 || second < 0 || static_cast<size_t>(first) >= clipThumbs_.size() || static_cast<size_t>(second) >= clipThumbs_.size()) {
+        return;
+    }
+    const RenderTarget& a = clipThumbs_[static_cast<size_t>(first)];
+    const RenderTarget& b = clipThumbs_[static_cast<size_t>(second)];
+    if (!a.fbo || !b.fbo) {
+        return;
+    }
+    if (!transitionPreview_.fbo && !transitionPreview_.create(a.width, a.height)) {
+        return;
+    }
+    if (!previewCustom_.empty() && ensureCustomTransition(previewCustom_)) {
+        customTransitionPass(customTransitions_[previewCustom_], a, b, previewProgress_, previewValues_, transitionPreview_);
+    } else {
+        transitionPass(a, b, previewProgress_, previewBuiltin_, transitionPreview_);
+    }
+}
+
 void Engine::render() {
     if (!out_.fbo) {
         return;
@@ -3742,8 +3872,17 @@ void Engine::render() {
         }
         RenderTarget* master = renderDeck(comp.layers, comp.master, effective_, layerClock_, feedbackSet_, true);
         finalPass(*master, effectiveMasterGrade_, effectiveLevel_, deckTex_[1]);
-        transitionPass(deckTex_[0], deckTex_[1], transitionProgress(), transition_.type, out_);
+        bool custom = false;
+        if (!transition_.custom.empty() && ensureCustomTransition(transition_.custom)) {
+            customTransitionPass(customTransitions_[transition_.custom], deckTex_[0], deckTex_[1], transitionProgress(), transition_.values, out_);
+            custom = true;
+        }
+        if (!custom) {
+            transition_.custom.clear();
+            transitionPass(deckTex_[0], deckTex_[1], transitionProgress(), transition_.type, out_);
+        }
     }
+    renderTransitionPreview();
 
     if (colorActive_ && colorStage_.hasLut()) {
         applyColorStage();

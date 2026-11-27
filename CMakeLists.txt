@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.64.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.65.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -181,6 +181,7 @@ set(NYREXVJ_CORE_SOURCES
     src/render/clip_library.cpp
     src/render/shader_source.cpp
     src/render/isf.cpp
+    src/render/transition_library.cpp
     src/render/clips_extra.cpp
     src/core/clip_pack.cpp
     src/core/show_package.cpp
@@ -775,6 +776,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_stage_tests PRIVATE nvj_core)
     target_include_directories(nvj_stage_tests PRIVATE tests)
     add_test(NAME nvj_stage_tests COMMAND nvj_stage_tests)
+    add_executable(nvj_transition_tests tests/test_transitions.cpp)
+    target_link_libraries(nvj_transition_tests PRIVATE nvj_core)
+    target_include_directories(nvj_transition_tests PRIVATE tests)
+    target_compile_definitions(nvj_transition_tests PRIVATE "NVJ_EXAMPLES=\"${CMAKE_SOURCE_DIR}/docs/shaders\"")
+    add_test(NAME nvj_transition_tests COMMAND nvj_transition_tests)
     add_executable(nvj_shader_tests tests/test_shaders.cpp)
     target_link_libraries(nvj_shader_tests PRIVATE nvj_core)
     target_include_directories(nvj_shader_tests PRIVATE tests)

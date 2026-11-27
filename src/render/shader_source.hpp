@@ -28,7 +28,9 @@ enum class ShaderInputKind {
     Audio,
     Buffer,
     Media,
-    Picture
+    Picture,
+    From,
+    To
 };
 
 enum class ShaderParamKind {
@@ -87,6 +89,7 @@ struct ShaderPlan {
     bool premultiplied = false;
     bool plain = false;
     bool filter = false;
+    bool transition = false;
     int commonLine = 1;
     std::string common;
     std::vector<ShaderPassSource> passes;

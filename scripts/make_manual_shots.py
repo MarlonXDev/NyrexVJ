@@ -42,6 +42,7 @@ RUNS = {
     "effects": ["--tab", "1", "--library-mode", "1"],
     "presets": ["--tab", "0"],
     "audio": ["--tab", "2"],
+    "trigger": ["--column", "1", "--trigger-tab", "--transition", "Transition: transition_iris", "--transition-seconds", "2"],
     "master": ["--tab", "3"],
     "set0": ["--settings", "0"],
     "set2": ["--settings", "2"],
@@ -62,6 +63,7 @@ RUNS = {
 }
 
 SEEDED = {"nodes", "timeline"}
+TRANSITIONS = {"trigger"}
 PACKED = {"packs"}
 GENERATED = {"generators", "gpuparticles", "chains"}
 
@@ -72,6 +74,7 @@ FIGURES = [
     ("bottom-strip", "main", STRIP),
     ("master-window", "master", MASTER),
     ("clip-window", "main", CLIP),
+    ("trigger-window", "trigger", CLIP),
     ("library", "library", BROWSER),
     ("effects-library", "effects", BROWSER),
     ("presets", "presets", BROWSER),
@@ -164,6 +167,9 @@ def run_app(binary, lang, key, work):
         shutil.copytree(SEED, data, dirs_exist_ok=True)
     if key in GENERATED:
         shutil.copytree(SEED_GENERATORS, data, dirs_exist_ok=True)
+    if key in TRANSITIONS:
+        (data / "shaders").mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / "docs" / "shaders" / "transition_iris.glsl", data / "shaders" / "transition_iris.glsl")
     target = work / f"{lang}-{key}.png"
     env = dict(os.environ)
     env["NYREXVJ_DATA_DIR"] = str(data)

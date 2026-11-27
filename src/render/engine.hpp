@@ -26,6 +26,7 @@
 #include "render/scene_player.hpp"
 #include "render/shader_passes.hpp"
 #include "render/spout_input.hpp"
+#include "render/transition_library.hpp"
 
 #include <array>
 #include <chrono>
@@ -126,6 +127,10 @@ public:
     void removeDeck(int index);
     void loadLook(const Composition& look);
     bool transitioning() const { return transition_.active; }
+    const std::string& activeCustomTransition() const { return transition_.custom; }
+    std::string customTransitionError(const std::string& name);
+    void requestTransitionPreview(const std::string& custom, int builtin, float progress, const ShaderValues& values);
+    GLuint transitionPreviewTexture() const { return transitionPreview_.texture; }
     float transitionProgress() const;
     int transitionTarget() const { return transition_.target; }
     int transitionSource() const { return transition_.from; }
@@ -307,6 +312,7 @@ private:
         GLint delta = -1;
         GLint mix = -1;
         GLint picture = -1;
+        GLint progress = -1;
         std::array<GLint, kMaxShaderParams> param{-1, -1, -1, -1, -1, -1, -1, -1};
         std::array<GLint, kShaderChannels> channel{};
         std::array<GLint, kShaderChannels> channelRes{};
@@ -425,6 +431,16 @@ private:
         int type = 0;
         int target = 0;
         int from = 0;
+        std::string custom;
+        ShaderValues values{};
+    };
+
+    struct CustomTransitionProgram {
+        unsigned long long version = 0;
+        bool tried = false;
+        std::vector<PassProgram> passes;
+        std::shared_ptr<const ShaderPlan> plan;
+        std::string error;
     };
 
     struct ThumbProgram {
@@ -465,6 +481,10 @@ private:
     void updateQuality();
     void destroyTransitionTargets();
     void endTransition();
+    bool ensureCustomTransition(const std::string& name);
+    void destroyCustomTransitions();
+    void customTransitionPass(const CustomTransitionProgram& program, const RenderTarget& a, const RenderTarget& b, float progress, const ShaderValues& values, const RenderTarget& destination);
+    void renderTransitionPreview();
     void runLaunch(const LaunchRequest& request);
     RenderTarget* renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews);
     void finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination);
@@ -488,7 +508,7 @@ private:
     RenderTarget* runPlanEffect(size_t effectIndex, int stateKey, const EffectSlot& slot, const std::array<float, kParamCount>& params, float mixAmount, RenderTarget* in, RenderTarget* out);
     bool allocateShaderState(ShaderPassState& state, size_t clipIndex, const ShaderPlan& plan, int width, int height, std::string& error, std::string& note);
     void drawShaderInstance(size_t clipIndex, int instance, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, const RenderTarget& target, const ShaderValues& stored);
-    void runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgram>& programs, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail, const ShaderValues& values, const RenderTarget* picture, float mixAmount);
+    void runShaderPasses(const ShaderPlan& plan, const std::vector<PassProgram>& programs, ShaderPassState& state, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale, double clock, float beat, float bpm, const RenderTarget& target, bool thumbnail, const ShaderValues& values, const RenderTarget* picture, float mixAmount, const RenderTarget* second = nullptr, float progress = 0.0f);
     void renderShaderThumbnail(size_t clipIndex, const RenderTarget& target);
     void releaseIdleShaderStates();
     void serviceMemory();
@@ -659,6 +679,14 @@ private:
     RenderTarget layerLoB_;
     std::array<unsigned long long, kLayerCount> hiddenPreviewFrame_{};
     Transition transition_;
+    std::map<std::string, CustomTransitionProgram> customTransitions_;
+    ShaderPassState customTransitionState_;
+    RenderTarget transitionPreview_;
+    bool previewWanted_ = false;
+    std::string previewCustom_;
+    int previewBuiltin_ = 0;
+    float previewProgress_ = 0.0f;
+    ShaderValues previewValues_{};
     std::array<Layer, kLayerCount> outLayers_;
     Master outMaster_;
     std::array<double, kLayerCount> outClocks_{};

@@ -2,6 +2,7 @@
 
 #include "core/composition.hpp"
 #include "core/i18n.hpp"
+#include "render/shader_source.hpp"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -507,4 +508,8 @@ inline bool accentButton(const char* label, bool highlighted, const ImVec2& size
     return pressed;
 }
 
+}
+
+namespace nvj {
+void drawShaderControlValues(const ShaderPlan& plan, ShaderValues& values);
 }

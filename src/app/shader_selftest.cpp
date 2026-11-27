@@ -4,6 +4,7 @@
 #include "core/log.hpp"
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
+#include "render/transition_library.hpp"
 
 #include <glad/gl.h>
 
@@ -280,6 +281,14 @@ public:
         refreshIsfEffects();
         engine_.syncEffects();
         return effectIndexByName(isfEffectName(stem));
+    }
+
+    std::string addTransition(const std::string& stem, const std::string& text) {
+        writeText(root_ / "shaders" / (stem + ".glsl"), text);
+        rescanLibrary();
+        engine_.syncLibrary();
+        refreshCustomTransitions();
+        return transitionClipName(stem);
     }
 
     void useEffect(int layer, int effect) {
@@ -663,6 +672,341 @@ void testTransition(Runner& run) {
     run.step(2);
 }
 
+
+const char* kRedSolid = "void mainImage(out vec4 c, in vec2 p) { c = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+
+const char* kHardWipe =
+    "#pragma nyrexvj transition\n"
+    "void main() { fragColor = vUv.x < uProgress ? colTo(vUv) : colFrom(vUv); }\n";
+
+const char* kCrossMix =
+    "#pragma nyrexvj transition\n"
+    "void main() { fragColor = mix(colFrom(vUv), colTo(vUv), uProgress); }\n";
+
+const char* kAmountMix =
+    "#pragma nyrexvj transition\n"
+    "#pragma nyrexvj param amount float \"Amount\" 0 1 0.5\n"
+    "void main() { fragColor = mix(colFrom(vUv), colTo(vUv), amount); }\n";
+
+const char* kClearAlpha =
+    "#pragma nyrexvj transition\n"
+    "void main() { fragColor = vec4(colTo(vUv).rgb, 0.0); }\n";
+
+const char* kBrokenCode =
+    "#pragma nyrexvj transition\n"
+    "void main() { fragColor = notAFunction(vUv); }\n";
+
+const char* kProgressRed =
+    "#pragma nyrexvj transition\n"
+    "void main() { fragColor = vec4(uProgress, 0.0, 0.0, 1.0); }\n";
+
+void useCustom(Runner& run, const std::string& name, float seconds) {
+    DeckSettings& settings = run.engine().comp.deckSettings;
+    settings = DeckSettings{};
+    settings.customTransition = name;
+    settings.seconds = seconds;
+    settings.syncBeats = false;
+}
+
+void testCustomTransition(Runner& run) {
+    const int red = run.add("ct_red", kRedSolid);
+    const int blue = run.add("ct_blue", kBlue);
+    const std::string wipe = run.addTransition("ct_wipe", kHardWipe);
+    const std::string mix = run.addTransition("ct_mix", kCrossMix);
+    run.record("custom transitions are found", customTransitionIndex(wipe) >= 0 && customTransitionIndex(mix) >= 0, "two files");
+    run.record("a transition file is not in the clip library", clipIndexByName(shaderClipName("ct_wipe")) < 0, "kept out of the clips");
+
+    run.step(300);
+    run.clearAll();
+    useCustom(run, wipe, 1.0f);
+    run.place(0, red);
+    run.step(10);
+    run.expect("custom wipe: old deck before the switch", run.centre(), 255, 0, 0, 2);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(2);
+    run.record("custom wipe: the transition runs", run.engine().transitioning() && run.engine().activeCustomTransition() == wipe, run.engine().activeCustomTransition());
+    run.expect("custom wipe: start shows the old deck", run.sample(0.9, 0.5), 255, 0, 0, 3);
+    run.step(28);
+    const float progress = run.engine().transitionProgress();
+    const Pixel left = run.sample(0.05, 0.5);
+    const Pixel right = run.sample(0.95, 0.5);
+    run.record("custom wipe: middle shows the new deck left and the old deck right", run.near(left, 0, 0, 255, 3) && run.near(right, 255, 0, 0, 3) && progress > 0.2f && progress < 0.8f, "progress " + std::to_string(progress));
+    run.step(60);
+    run.expect("custom wipe: ends on the new deck", run.centre(), 0, 0, 255, 2);
+    run.record("custom wipe: the transition is over", !run.engine().transitioning(), "idle");
+
+    run.clearAll();
+    useCustom(run, mix, 1.0f);
+    run.place(0, red);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(30);
+    const Pixel middle = run.centre();
+    run.record("custom mix: uProgress blends both decks", middle.r > 40 && middle.b > 40 && std::abs(middle.r + middle.b - 255) <= 8 && middle.a == 255, "got (" + std::to_string(middle.r) + "," + std::to_string(middle.g) + "," + std::to_string(middle.b) + ")");
+    run.step(60);
+    run.expect("custom mix: ends on the new deck", run.centre(), 0, 0, 255, 2);
+
+    const std::string amount = run.addTransition("ct_amount", kAmountMix);
+    run.clearAll();
+    useCustom(run, amount, 1.0f);
+    run.place(0, red);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(20);
+    const Pixel half = run.centre();
+    run.record("custom parameter: the default of the file is used", std::abs(half.r - 128) <= 6 && std::abs(half.b - 128) <= 6, "got (" + std::to_string(half.r) + "," + std::to_string(half.g) + "," + std::to_string(half.b) + ")");
+    run.engine().switchDeck(0);
+    run.step(80);
+    useCustom(run, amount, 1.0f);
+    run.engine().comp.deckSettings.transitionValues[0] = 0.0f;
+    run.engine().switchDeck(1);
+    run.step(20);
+    run.expect("custom parameter: the stored value of the deck is used", run.centre(), 255, 0, 0, 3);
+    run.step(80);
+    run.engine().switchDeck(0);
+    run.step(80);
+}
+
+void testCustomTransitionSwitching(Runner& run) {
+    const int red = run.add("cs_red", kRedSolid);
+    const int blue = run.add("cs_blue", kBlue);
+    const std::string mix = run.addTransition("cs_mix", kCrossMix);
+
+    run.clearAll();
+    useCustom(run, mix, 1.0f);
+    run.place(0, red);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(25);
+    const bool running = run.engine().transitioning();
+    const Pixel before = run.centre();
+    run.engine().switchDeck(0);
+    run.step(1);
+    const Pixel after = run.centre();
+    run.record("switch while a custom transition runs: no jump of more than a few levels", running && run.engine().transitioning() && std::abs(before.r - after.r) <= 40 && std::abs(before.b - after.b) <= 40, "before (" + std::to_string(before.r) + "," + std::to_string(before.b) + ") after (" + std::to_string(after.r) + "," + std::to_string(after.b) + ")");
+    run.step(90);
+    run.expect("switch while a custom transition runs: ends on the deck that was asked for", run.centre(), 255, 0, 0, 3);
+    run.record("switch while a custom transition runs: nothing is left running", !run.engine().transitioning(), "idle");
+
+    for (int i = 0; i < 6; ++i) {
+        run.engine().switchDeck(i % 2 == 0 ? 1 : 0);
+        run.step(7);
+    }
+    run.step(120);
+    run.record("six quick deck switches end in one steady picture", !run.engine().transitioning() && run.centre().a == 255, "idle");
+
+    run.clearAll();
+    useCustom(run, mix, 1.0f);
+    run.place(0, red);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(10);
+    run.engine().comp.deckSettings.customTransition.clear();
+    run.engine().comp.deckSettings.transition = TransitionWipe;
+    run.engine().switchDeck(0);
+    run.step(2);
+    run.record("changing to a built-in transition during a custom one starts the built-in", run.engine().transitioning() && run.engine().activeCustomTransition().empty(), "built-in");
+    run.step(120);
+    run.expect("the built-in transition ends on the requested deck", run.centre(), 255, 0, 0, 3);
+}
+
+void testCustomTransitionFallback(Runner& run) {
+    const int red = run.add("cf_red", kRedSolid);
+    const int blue = run.add("cf_blue", kBlue);
+    const std::string broken = run.addTransition("cf_broken", kBrokenCode);
+
+    run.clearAll();
+    useCustom(run, broken, 1.0f);
+    run.engine().comp.deckSettings.transition = TransitionFade;
+    run.place(0, red);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(2);
+    run.record("compile error: the built-in transition runs instead", run.engine().transitioning() && run.engine().activeCustomTransition().empty(), "fallback");
+    run.record("compile error: the error is kept for the interface", !run.engine().customTransitionError(broken).empty(), run.engine().customTransitionError(broken).substr(0, 80));
+    run.step(30);
+    const Pixel middle = run.centre();
+    run.record("compile error: the fade still blends both decks", middle.r > 20 && middle.b > 20, "got (" + std::to_string(middle.r) + "," + std::to_string(middle.g) + "," + std::to_string(middle.b) + ")");
+    run.step(60);
+    run.expect("compile error: ends on the new deck", run.centre(), 0, 0, 255, 3);
+    run.engine().switchDeck(0);
+    run.step(80);
+
+    const std::string gone = run.addTransition("cf_gone", kCrossMix);
+    run.clearAll();
+    useCustom(run, gone, 1.0f);
+    run.engine().comp.deckSettings.transition = TransitionDissolve;
+    run.place(0, red);
+    run.step(5);
+    std::error_code ec;
+    fs::remove(run.root() / "shaders" / "cf_gone.glsl", ec);
+    rescanLibrary();
+    refreshCustomTransitions();
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(2);
+    run.record("a deleted transition file: the built-in transition runs instead", run.engine().transitioning() && run.engine().activeCustomTransition().empty(), "fallback");
+    run.step(90);
+    run.expect("a deleted transition file: ends on the new deck", run.centre(), 0, 0, 255, 3);
+    run.engine().switchDeck(0);
+    run.step(80);
+
+    const std::string unknown = "Transition: never_existed";
+    run.clearAll();
+    useCustom(run, unknown, 1.0f);
+    run.place(0, red);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(90);
+    run.expect("an unknown transition name: the deck switch still completes", run.centre(), 0, 0, 255, 3);
+    run.engine().switchDeck(0);
+    run.step(80);
+
+    const std::string repaired = run.addTransition("cf_repair", kBrokenCode);
+    run.clearAll();
+    useCustom(run, repaired, 0.5f);
+    run.place(0, red);
+    run.step(5);
+    run.addTransition("cf_repair", kCrossMix);
+    run.step(3);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(3);
+    run.record("a repaired file is picked up without restarting", run.engine().activeCustomTransition() == repaired && run.engine().customTransitionError(repaired).empty(), run.engine().customTransitionError(repaired));
+    run.step(60);
+    run.engine().switchDeck(0);
+    run.step(60);
+}
+
+void testCustomTransitionAlpha(Runner& run) {
+    const int blue = run.add("ca_blue", kBlue);
+    const int straight = run.add("ca_alpha", kAlphaStraight);
+    const int green = run.add("ca_green", "void mainImage(out vec4 c, in vec2 p) { c = vec4(0.0, 1.0, 0.0, 1.0); }\n");
+    const std::string mix = run.addTransition("ca_mix", kCrossMix);
+    const std::string clear = run.addTransition("ca_clear", kClearAlpha);
+
+    run.clearAll();
+    useCustom(run, mix, 1.0f);
+    run.place(0, blue);
+    run.place(1, straight);
+    run.step(5);
+    run.expect("alpha deck before the transition", run.centre(), 128, 0, 128, 3);
+    run.engine().switchDeck(1);
+    run.place(0, green);
+    run.step(2);
+    const Pixel start = run.centre();
+    run.record("alpha deck: the transition starts from the composited picture", run.near(start, 128, 0, 128, 14) && start.a == 255, "got (" + std::to_string(start.r) + "," + std::to_string(start.g) + "," + std::to_string(start.b) + "," + std::to_string(start.a) + ")");
+    run.step(30);
+    const Pixel middle = run.centre();
+    run.record("alpha deck: every pixel stays opaque in the middle", middle.a == 255, "alpha " + std::to_string(middle.a));
+    run.step(60);
+    run.expect("alpha deck: ends on the new deck", run.centre(), 0, 255, 0, 3);
+    run.record("alpha deck: the output is opaque at the end", run.centre().a == 255, "alpha");
+    run.engine().switchDeck(0);
+    run.step(80);
+
+    run.clearAll();
+    useCustom(run, clear, 1.0f);
+    run.place(0, blue);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, green);
+    run.step(20);
+    const Pixel written = run.centre();
+    run.record("a transition that writes alpha 0 still gives an opaque picture", written.a == 255 && written.g > 100, "got (" + std::to_string(written.r) + "," + std::to_string(written.g) + "," + std::to_string(written.b) + "," + std::to_string(written.a) + ")");
+    run.step(80);
+    run.engine().switchDeck(0);
+    run.step(80);
+}
+
+void testCustomTransitionFeedback(Runner& run) {
+    const int accumulate = run.add("cb_accumulate", kAccumulate);
+    const int blue = run.add("cb_blue", kBlue);
+    const std::string mix = run.addTransition("cb_mix", kCrossMix);
+
+    run.clearAll();
+    useCustom(run, mix, 4.0f);
+    run.place(0, accumulate);
+    run.step(5);
+    run.expect("feedback deck before the custom transition", run.centre(), 128, 0, 0, 4);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(1);
+    run.record("feedback deck: the custom transition started", run.engine().transitioning() && run.engine().activeCustomTransition() == mix, "custom");
+    run.expect("feedback deck: the old deck keeps its buffers while the custom transition runs", run.centre(), 153, 0, 0, 8);
+    run.step(300);
+    run.step(static_cast<int>(kShaderIdleReleaseFrames) + 10);
+    run.record("feedback deck: the transition is over and the old deck released its buffers", !run.engine().transitioning() && run.engine().shaderBufferBytes() == 0, std::to_string(run.engine().shaderBufferBytes()) + " bytes");
+    run.engine().switchDeck(0);
+    run.step(300);
+}
+
+unsigned char previewRed(Engine& engine) {
+    const GLuint texture = engine.transitionPreviewTexture();
+    if (texture == 0) {
+        return 255;
+    }
+    GLint width = 0;
+    GLint height = 0;
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+    std::vector<unsigned char> pixels(static_cast<size_t>(width) * static_cast<size_t>(height) * 4u);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    const size_t index = (static_cast<size_t>(height / 2) * static_cast<size_t>(width) + static_cast<size_t>(width / 2)) * 4u;
+    return pixels.size() > index ? pixels[index] : static_cast<unsigned char>(255);
+}
+
+void testCustomTransitionPreview(Runner& run) {
+    const std::string solid = run.addTransition("cp_progress", kProgressRed);
+    run.clearAll();
+    run.engine().comp.deckSettings = DeckSettings{};
+    ShaderValues values = unsetShaderValues();
+    run.engine().requestTransitionPreview(solid, 0, 0.0f, values);
+    run.step(1);
+    run.record("preview: a texture exists", run.engine().transitionPreviewTexture() != 0, "texture");
+    const unsigned char atStart = previewRed(run.engine());
+    run.engine().requestTransitionPreview(solid, 0, 1.0f, values);
+    run.step(1);
+    const unsigned char atEnd = previewRed(run.engine());
+    run.engine().requestTransitionPreview(solid, 0, 0.5f, values);
+    run.step(1);
+    const unsigned char atHalf = previewRed(run.engine());
+    run.record("preview: uProgress follows the slider", atStart <= 4 && atEnd >= 250 && std::abs(static_cast<int>(atHalf) - 128) <= 6, "0: " + std::to_string(atStart) + ", 0.5: " + std::to_string(atHalf) + ", 1: " + std::to_string(atEnd));
+    run.engine().requestTransitionPreview(std::string(), TransitionFade, 0.0f, values);
+    run.step(1);
+    run.record("preview: a built-in transition renders too", run.engine().transitionPreviewTexture() != 0, "built-in");
+    run.engine().requestTransitionPreview("Transition: never_existed", TransitionFade, 0.3f, values);
+    run.step(1);
+    run.record("preview: an unknown name falls back to the built-in transition", run.engine().transitionPreviewTexture() != 0, "fallback");
+}
+
+void testBuiltinsAfterCustom(Runner& run) {
+    const int red = run.add("cu_red", kRedSolid);
+    const int blue = run.add("cu_blue", kBlue);
+    run.clearAll();
+    run.engine().comp.deckSettings = DeckSettings{};
+    run.engine().comp.deckSettings.seconds = 1.0f;
+    run.engine().comp.deckSettings.syncBeats = false;
+    run.place(0, red);
+    run.step(5);
+    run.engine().switchDeck(1);
+    run.place(0, blue);
+    run.step(2);
+    run.record("built-in transitions run unchanged next to custom ones", run.engine().transitioning() && run.engine().activeCustomTransition().empty(), "built-in");
+    run.step(90);
+    run.expect("built-in fade ends on the new deck", run.centre(), 0, 0, 255, 2);
+    run.engine().switchDeck(0);
+    run.step(80);
+}
+
 bool mentionsLine(const std::string& text, int number) {
     const std::string wanted = std::to_string(number);
     for (size_t i = 0; i + wanted.size() <= text.size(); ++i) {
@@ -970,6 +1314,81 @@ struct BenchCase {
     std::string filterText;
 };
 
+const char* kHeavyTransition =
+    "#pragma nyrexvj transition\n"
+    "void main() {\n"
+    "    vec4 a = vec4(0.0); vec4 b = vec4(0.0);\n"
+    "    for (int i = 0; i < 16; ++i) {\n"
+    "        float f = float(i) / 16.0 - 0.5;\n"
+    "        vec2 o = vec2(f, f * 0.5) * 0.02 * uProgress;\n"
+    "        a += colFrom(vUv + o); b += colTo(vUv - o);\n"
+    "    }\n"
+    "    fragColor = mix(a, b, smoothstep(0.0, 1.0, uProgress)) / 16.0;\n"
+    "}\n";
+
+const char* kIrisTransition =
+    "#pragma nyrexvj transition\n"
+    "#pragma nyrexvj param softness float \"Softness\" 0 0.5 0.12\n"
+    "void main() {\n"
+    "    vec2 p = vUv - 0.5;\n"
+    "    p.x *= uRes.x / uRes.y;\n"
+    "    float radius = uProgress * 1.2;\n"
+    "    float mask = 1.0 - ss(radius - softness, radius + softness, length(p));\n"
+    "    fragColor = mix(colFrom(vUv), colTo(vUv), mask);\n"
+    "}\n";
+
+void benchTransition(Runner& run, json& result, const std::string& name, int frames, const std::string& custom, int builtin, int from, int to) {
+    run.clearAll();
+    run.engine().setResolutionIndex(1);
+    run.step(static_cast<int>(kShaderIdleReleaseFrames) + 10);
+    DeckSettings& settings = run.engine().comp.deckSettings;
+    settings = DeckSettings{};
+    settings.transition = builtin;
+    settings.customTransition = custom;
+    settings.seconds = static_cast<float>(frames + 30) / 60.0f;
+    settings.syncBeats = false;
+    run.engine().switchDeck(0);
+    run.place(0, from);
+    double prewarmWorst = 0.0;
+    for (int i = 0; i < 6; ++i) {
+        const auto begin = std::chrono::steady_clock::now();
+        run.step(1);
+        prewarmWorst = std::max(prewarmWorst, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count());
+    }
+    const bool steady = custom.empty() && builtin < 0;
+    double startWorst = 0.0;
+    if (!steady) {
+        run.engine().switchDeck(1);
+        run.place(0, to);
+        for (int i = 0; i < 3; ++i) {
+            const auto begin = std::chrono::steady_clock::now();
+            run.step(1);
+            startWorst = std::max(startWorst, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count());
+        }
+    }
+    double total = 0.0;
+    double worst = 0.0;
+    for (int i = 0; i < frames; ++i) {
+        const auto begin = std::chrono::steady_clock::now();
+        run.step(1);
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
+        total += ms;
+        worst = std::max(worst, ms);
+    }
+    json item;
+    item["name"] = name;
+    item["averageMs"] = total / static_cast<double>(std::max(frames, 1));
+    item["worstMs"] = worst;
+    item["transitioning"] = run.engine().transitioning();
+    item["firstFramesAfterChoosingWorstMs"] = prewarmWorst;
+    item["firstFramesOfTheSwitchWorstMs"] = startWorst;
+    result.push_back(std::move(item));
+    logLine("Shader benchmark " + name + ": " + std::to_string(total / std::max(frames, 1)) + " ms per frame");
+    run.step(60);
+    run.engine().switchDeck(0);
+    run.step(static_cast<int>(settings.seconds * 60.0f) + 30);
+}
+
 json benchmark(Runner& run, int frames) {
     json result = json::array();
     run.engine().setResolutionIndex(1);
@@ -1026,6 +1445,19 @@ json benchmark(Runner& run, int frames) {
         result.push_back(std::move(item));
         logLine("Shader benchmark " + entry.name + ": " + std::to_string(total / std::max(frames, 1)) + " ms per frame");
     }
+    const int trFrom = run.add("bench_tr_from", kSinglePassBench);
+    const int trTo = run.add("bench_tr_to", std::string(kSinglePassBench) + "\n");
+    const std::string trMix = run.addTransition("bench_tr_mix", kCrossMix);
+    const std::string trIris = run.addTransition("bench_tr_iris", kIrisTransition);
+    const std::string trHeavy = run.addTransition("bench_tr_heavy", kHeavyTransition);
+    if (trFrom >= 0 && trTo >= 0) {
+        benchTransition(run, result, "bench_transition_none", frames, std::string(), -1, trFrom, trTo);
+        benchTransition(run, result, "bench_transition_builtin_fade", frames, std::string(), TransitionFade, trFrom, trTo);
+        benchTransition(run, result, "bench_transition_builtin_radial", frames, std::string(), TransitionRadial, trFrom, trTo);
+        benchTransition(run, result, "bench_transition_custom_mix", frames, trMix, TransitionFade, trFrom, trTo);
+        benchTransition(run, result, "bench_transition_custom_iris", frames, trIris, TransitionFade, trFrom, trTo);
+        benchTransition(run, result, "bench_transition_custom_heavy16", frames, trHeavy, TransitionFade, trFrom, trTo);
+    }
     return result;
 }
 
@@ -1049,6 +1481,13 @@ int runShaderSelfTest(Engine& engine, int benchFrames, const std::string& output
     testIsfExamples(run);
     testTransitionTypes(run);
     testTransition(run);
+    testCustomTransition(run);
+    testCustomTransitionSwitching(run);
+    testCustomTransitionFallback(run);
+    testCustomTransitionAlpha(run);
+    testCustomTransitionFeedback(run);
+    testCustomTransitionPreview(run);
+    testBuiltinsAfterCustom(run);
     report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
     report["checks"] = run.items();
     report["failed"] = run.failed();

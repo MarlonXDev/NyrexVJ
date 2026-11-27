@@ -220,6 +220,18 @@ Die Reihe mit 16 Knöpfen über dem Clip-Raster wechselt die Decks. Jedes Deck i
 
 Wähl den Übergang und seine Länge im Trigger-Fenster. Stell die Länge in Sekunden ein, oder hak Beat-Sync an, um in Beats zu zählen, damit der Wechsel dem Tempo folgt. Wenn du mitten in einem Übergang noch einmal wechselst, friert NyrexVJ das Bild ein, das du gerade siehst, und blendet von dort aus über, es gibt also nie einen Sprung.
 
+## Eigene Übergänge {#custom-transitions}
+
+Eine Shader-Datei mit der Zeile `#pragma nyrexvj transition` ist ein eigener Übergang, ebenso eine ISF-Datei mit den Eingängen `startImage` und `endImage`. Leg sie in den Shader-Ordner (siehe [Eigene Shader](#shaders)), dann erscheint sie in der Übergangsliste, in der Transportleiste und im Trigger-Fenster, unter Deine Übergänge. Wähl sie wie einen eingebauten. Die 15 eingebauten Übergänge bleiben genau, wie sie waren.
+
+In der Datei ist `colFrom(vUv)` das Bild des ausgehenden Decks, `colTo(vUv)` das Bild des eingehenden Decks und `uProgress` läuft von 0 bis 1, solange der Übergang geht. Die `param`-Zeilen der Datei werden zu Reglern unter Shader-Regler im Trigger-Fenster, ihre Werte werden mit den Deck-Einstellungen gespeichert. Das Trigger-Fenster zeigt die Regler und die Vorschau.
+
+![Das Trigger-Fenster mit einem eigenen Übergang, seinen Reglern und der Vorschau](trigger-window.webp)
+
+Unter den Reglern stehen eine Vorschau mit einem Fortschritts-Regler (sie zeigt zwei Beispielbilder, nicht deine Show), der Knopf Beispiel-Übergang erstellen, der eine kleine funktionierende Datei in den Shader-Ordner schreibt, und Im Shader-Editor bearbeiten.
+
+Ist die Datei gelöscht, hat einen Fehler oder lässt sich nicht kompilieren, benutzt der Deck-Wechsel den eingebauten Übergang, der daneben gewählt ist, das Trigger-Fenster sagt in Rot, warum, und die Show läuft weiter. Du reparierst die Datei, und der nächste Wechsel benutzt sie. Was die Datei benutzen kann und was nicht, steht im Dokument docs/SHADERS.md des Projekts, im Abschnitt Your own transitions.
+
 ## Auto-Wechsel {#auto-cycle}
 
 Hak Auto-Wechsel an und wähl eine Anzahl Beats von 4 bis 128. NyrexVJ geht dann von selbst durch die benutzten Decks und wechselt in diesem Abstand. Das ist gut für die ruhige Stunde einer Party, wenn du die Regler jemand anderem überlassen willst.
@@ -678,7 +690,7 @@ Eine Zeile `#pragma nyrexvj alpha` macht den Clip transparent. Abschnitte namens
 
 ## ISF-Dateien {#isf}
 
-ISF-Dateien, das Format von VDMX und anderen mit einem Kopf zwischen `/*{` und `}*/`, werden aus demselben Ordner gelesen. Eine Datei mit einem Eingang `inputImage` wird zu einem Effekt namens ISF: Dateiname. Jede andere ISF-Datei wird zu einem Clip. Die Eingänge der Datei erscheinen als Regler im Clip-Fenster oder als die vier Regler des Effekts. Was eine ISF-Datei nicht kann, wie Vertex-Shader, Übergänge und Audio-Eingänge, steht im Clip-Fenster.
+ISF-Dateien, das Format von VDMX und anderen mit einem Kopf zwischen `/*{` und `}*/`, werden aus demselben Ordner gelesen. Eine Datei mit einem Eingang `inputImage` wird zu einem Effekt namens ISF: Dateiname. Jede andere ISF-Datei wird zu einem Clip. Die Eingänge der Datei erscheinen als Regler im Clip-Fenster oder als die vier Regler des Effekts. Eine ISF-Datei mit den Eingängen `startImage` und `endImage` ist ein Deck-Übergang und erscheint in der Übergangsliste (siehe [Eigene Übergänge](#decks/custom-transitions)). Was eine ISF-Datei nicht kann, wie Vertex-Shader und Audio-Eingänge, steht im Clip-Fenster.
 
 ## Regler für deinen Shader {#shader-controls}
 

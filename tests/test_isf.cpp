@@ -277,7 +277,9 @@ void testErrors() {
     cases.push_back({"color with two numbers", wrap("\"INPUTS\": [{\"NAME\": \"a\", \"TYPE\": \"color\", \"DEFAULT\": [1, 2]}]"), "numbers"});
     cases.push_back({"long with 17 values", wrap("\"INPUTS\": [{\"NAME\": \"a\", \"TYPE\": \"long\", \"VALUES\": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}]"), "VALUES"});
     cases.push_back({"long with text values", wrap("\"INPUTS\": [{\"NAME\": \"a\", \"TYPE\": \"long\", \"VALUES\": [\"a\"]}]"), "must be a number"});
-    cases.push_back({"transition", wrap("\"INPUTS\": [{\"NAME\": \"startImage\", \"TYPE\": \"image\"},{\"NAME\": \"endImage\", \"TYPE\": \"image\"},{\"NAME\": \"progress\", \"TYPE\": \"float\"}]"), "transition"});
+    cases.push_back({"transition with one picture", wrap("\"INPUTS\": [{\"NAME\": \"startImage\", \"TYPE\": \"image\"},{\"NAME\": \"progress\", \"TYPE\": \"float\"}]"), "only one of startImage and endImage"});
+    cases.push_back({"transition with input image", wrap("\"INPUTS\": [{\"NAME\": \"startImage\", \"TYPE\": \"image\"},{\"NAME\": \"endImage\", \"TYPE\": \"image\"},{\"NAME\": \"inputImage\", \"TYPE\": \"image\"}]"), "cannot also have an inputImage"});
+    cases.push_back({"transition with buffer", wrap("\"INPUTS\": [{\"NAME\": \"startImage\", \"TYPE\": \"image\"},{\"NAME\": \"endImage\", \"TYPE\": \"image\"}], \"PASSES\": [{\"TARGET\": \"a\"},{}]"), "TARGET"});
     cases.push_back({"passes not a list", wrap("\"PASSES\": 3"), "PASSES must be a list"});
     cases.push_back({"last pass with target", wrap("\"PASSES\": [{\"TARGET\": \"a\"}]"), "must not have a TARGET"});
     cases.push_back({"middle pass without target", wrap("\"PASSES\": [{}, {}]"), "no TARGET"});

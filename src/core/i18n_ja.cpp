@@ -2990,6 +2990,15 @@ const Translation kJapanese[] = {
     {"How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved.", "音が解析に届くまでの時間です。正の値はビートを早め、負の値は遅らせます。改良でのみ有効です。"},
     {"Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz.", "低音、中音、高音の帯域が接する位置です。初期値は150 Hzと2000 Hzです。"},
     {"This input always listens to both channels mixed.", "この入力は常に両チャンネルをミックスして聞きます。"},
+    {"Your transitions", "自作のトランジション"},
+    {"This transition cannot run. The built-in transition is used instead.", "このトランジションは実行できません。代わりに内蔵のトランジションを使います。"},
+    {"Create example transition", "サンプルのトランジションを作成"},
+    {"The example transition could not be created", "サンプルのトランジションを作成できませんでした"},
+    {"Writes a small transition file into the shaders folder. Edit it in the shader editor and it shows up in the list above.", "シェーダーフォルダーに小さなトランジションファイルを作ります。シェーダーエディターで編集すると、上の一覧に表示されます。"},
+    {"The transition file is not in the shaders folder", "トランジションのファイルがシェーダーフォルダーにありません"},
+    {"The transition file is gone", "トランジションのファイルがなくなりました"},
+    {"This file is not a transition any more", "このファイルはもうトランジションではありません"},
+    {"The transition cannot be used", "このトランジションは使えません"},
 };
 
 }

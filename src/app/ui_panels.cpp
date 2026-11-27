@@ -424,12 +424,12 @@ static void drawShaderNotes(const ShaderPlan& plan) {
     }
 }
 
-static void drawShaderControls(const ShaderPlan& plan, ClipPlayback& playback) {
+void drawShaderControlValues(const ShaderPlan& plan, ShaderValues& values) {
     if (plan.params.empty()) {
         return;
     }
     ui::sectionHeader(tr("Shader controls"));
-    const ShaderValues resolved = resolveShaderValues(plan, playback.values);
+    const ShaderValues resolved = resolveShaderValues(plan, values);
     for (const ShaderParam& param : plan.params) {
         ImGui::PushID(param.name.c_str());
         const size_t slot = static_cast<size_t>(param.slot);
@@ -475,20 +475,24 @@ static void drawShaderControls(const ShaderPlan& plan, ClipPlayback& playback) {
         }
         if (changed) {
             for (int c = 0; c < param.count; ++c) {
-                playback.values[slot + static_cast<size_t>(c)] = shaderValueClamp(param, c, value[c]);
+                values[slot + static_cast<size_t>(c)] = shaderValueClamp(param, c, value[c]);
             }
         }
         ImGui::SetItemTooltip("%s", tr("Right click resets this control to the default of the file"));
         if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
             for (int c = 0; c < param.count; ++c) {
-                playback.values[slot + static_cast<size_t>(c)] = kClipValueUnset;
+                values[slot + static_cast<size_t>(c)] = kClipValueUnset;
             }
         }
         ImGui::PopID();
     }
-    if (!shaderValuesUnset(playback.values) && ImGui::SmallButton(tr("Reset controls"))) {
-        playback.values = unsetShaderValues();
+    if (!shaderValuesUnset(values) && ImGui::SmallButton(tr("Reset controls"))) {
+        values = unsetShaderValues();
     }
+}
+
+static void drawShaderControls(const ShaderPlan& plan, ClipPlayback& playback) {
+    drawShaderControlValues(plan, playback.values);
 }
 
 void App::drawClipPanel() {

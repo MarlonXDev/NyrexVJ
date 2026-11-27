@@ -180,7 +180,7 @@ void App::drawResoPort() {
         ImGui::SetNextWindowFocus();
         d.focus = false;
     }
-    if (!ImGui::Begin(trId("Resolume import (ResoPort)", "resoPortWindow"), &d.open, ImGuiWindowFlags_NoDocking)) {
+    if (!ui::beginTool(trId("Resolume import (ResoPort)", "resoPortWindow"), &d.open, ImGuiWindowFlags_NoDocking)) {
         ImGui::End();
         return;
     }

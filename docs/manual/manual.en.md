@@ -88,7 +88,7 @@ This chapter names every part of the main window, so the rest of the manual can 
 
 ## The transport bar {#transport-bar}
 
-The two rows right under the clip grid hold what you need at every moment. The first row has the 16 deck buttons with Previous and Next. The second row has the BPM field with minus, plus, /2 and x2, Tap and Resync, then Play, Pause and Stop, and the beat display. Play lets the tempo clock and all clip motion run, Pause freezes them, and Stop pauses and restarts the beat count at 1. The beat display shows the beat in the bar, one tick for every beat of the bar and the position inside the beat as Phase. A thin line along the lower edge of the deck window shows how far a deck transition has come. In a window narrower than about 1500 pixels (at an interface size of 100 percent) the 16 deck buttons shrink to one button that shows the active deck and opens the list of decks, and in a very narrow window the buttons /2 and x2, Resync and the beat display make room for Play, Pause and Stop.
+The two rows right under the clip grid hold what you need at every moment. The first row has the decks as tabs with their names, the selected deck in the light tint of the theme, a plus button that starts the next free deck, and Previous and Next. A deck that is empty has no tab. The second row has the BPM field with minus, plus, /2 and x2, Tap and Resync, then Play, Pause and Stop, and the beat display. Play lets the tempo clock and all clip motion run, Pause freezes them, and Stop pauses and restarts the beat count at 1. The beat display shows the beat in the bar, one tick for every beat of the bar and the position inside the beat as Phase. A thin line along the lower edge of the deck window shows how far a deck transition has come. When the tabs do not fit the width of the window they shrink to one button that shows the active deck and opens the list of all 16 decks, and in a very narrow window the buttons /2 and x2, Resync and the beat display make room for Play, Pause and Stop.
 
 ![The transport bar with the deck buttons, the tempo controls, Play, Pause and Stop and the beat display](transport-bar.webp)
 
@@ -180,7 +180,7 @@ A normal click plays the cell. Ctrl+click only shows it in the Preview window, a
 
 At the start of each row you see the name of the layer, its opacity slider, its blend mode and three small buttons. B bypasses the layer, which skips it completely. S solos it, so only this layer is shown. X stops the layer and clears what it plays. Click the layer name to select the layer, the Layer window then works on it.
 
-> Tip: Right click a slider to put it back to its default value. This works for most sliders in the program.
+> Tip: Right click a slider to put it back to its default value. This works for most sliders in the program. The minus and plus fields left of the bar move the value by one percent of the range (whole numbers by one) and repeat while you hold them; `Ctrl` and click on the bar types a value.
 
 ## Starting on the beat {#quantize}
 
@@ -1412,9 +1412,11 @@ Open Settings with the menu Settings or with `Ctrl+,`. The window has a list of 
 
 ## Appearance {#settings-appearance}
 
-The theme colour changes the accent of the whole interface. There are eleven themes: Arena (the default), Studio (a neutral dark with a red-orange accent, rounded corners and slim sliders), Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold, Mono. Arena follows the look of Resolume Arena: neutral greys without a colour tint, flat corners, flat bars for the sliders with the name on the right and a thin marker, dark bands with a small triangle above each group of controls, a mint highlight with dark text for the selected layer and the playing column, a dark teal accent, and the sans-serif font of the system instead of the built-in pixel font. A setup that used Studio before 0.60.0 is moved to Arena once; choose Studio here to go back. Interface size scales all windows and text, and Reset sets it back. The same page holds the display scale, high contrast, keyboard navigation, the reset of the window layout and the workspaces; see [Interface, workspaces and accessibility](#interface).
+The theme colour changes the accent of the whole interface, and nothing else. There are eleven themes: Arena (the default, a dark teal), Studio, Orange, Blue, Red, Green, Purple, Pink, Cyan, Gold, Mono. Every one of them has the look of Resolume Arena: neutral greys without a colour tint, flat corners, grey tab bars with a darker selected tab, flat bars for the sliders with the name on the right, the value, two small fields for minus and plus and a thin marker in the accent, dark bands with a small triangle above each group of controls, a light tint of the chosen colour with dark text for the selected layer, deck and playing column, and the sans-serif font of the system instead of the built-in pixel font. A setup that used Studio before 0.60.0 is moved to Arena once. High contrast keeps its own bright outlines. Interface size scales all windows and text, and Reset sets it back. The same page holds the display scale, high contrast, keyboard navigation, the reset of the window layout and the workspaces; see [Interface, workspaces and accessibility](#interface).
 
 # Interface, workspaces and accessibility {#interface}
+
+Windows that you open for a single job (Settings, Creator, the manual, the shader editor, the node editor, the timeline and similar) have no close button in the title bar. Press `Esc` while such a window is in front and no field is being edited to close it. The windows that have a menu entry with a check mark (video routing, hot standby, the timeline window and the node effect editor) can also be closed by choosing that entry again; the others open again from the menu that opened them.
 
 ## The View menu {#view-menu}
 

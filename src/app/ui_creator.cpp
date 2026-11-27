@@ -567,7 +567,7 @@ void App::drawCreator() {
         creatorFocus_ = false;
     }
     const std::string title = std::string(tr("Clip Creator")) + (cs.dirty ? " *" : "") + "###creator";
-    if (!ImGui::Begin(title.c_str(), &creatorOpen_, ImGuiWindowFlags_NoDocking)) {
+    if (!ui::beginTool(title.c_str(), &creatorOpen_, ImGuiWindowFlags_NoDocking)) {
         ImGui::End();
         return;
     }

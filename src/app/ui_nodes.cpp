@@ -1130,7 +1130,7 @@ void App::drawNodeEditor() {
         nodesFocus_ = false;
     }
     const std::string title = std::string(tr("Node effect editor")) + "###nodeeditor";
-    if (!ImGui::Begin(title.c_str(), &nodesOpen_, ImGuiWindowFlags_NoDocking)) {
+    if (!ui::beginTool(title.c_str(), &nodesOpen_, ImGuiWindowFlags_NoDocking)) {
         ImGui::End();
         nodesHasFocus_ = false;
         return;

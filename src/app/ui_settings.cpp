@@ -140,12 +140,9 @@ void App::drawSettingsWindow() {
         ImGui::SetNextWindowFocus();
         settingsFocus_ = false;
     }
-    if (!ImGui::Begin(trId("Settings", "settingsWindow"), &settingsOpen_, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
+    if (!ui::beginTool(trId("Settings", "settingsWindow"), &settingsOpen_, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
         ImGui::End();
         return;
-    }
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape, false) && !ImGui::IsAnyItemActive()) {
-        settingsOpen_ = false;
     }
 
     ImGui::BeginChild("settingsNav", ImVec2(180.0f, 0.0f), ImGuiChildFlags_Borders);

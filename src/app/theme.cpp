@@ -1,6 +1,7 @@
 #include "app/theme.hpp"
 
 #include "app/ui_common.hpp"
+#include "core/contrast.hpp"
 
 #include <imgui.h>
 
@@ -32,6 +33,39 @@ ImVec4 withAlpha(const ImVec4& c, float alpha) {
     return ImVec4(c.x, c.y, c.z, alpha);
 }
 
+ImVec4 fromHsv(float hue, float saturation, float value) {
+    float r = 0.0f;
+    float g = 0.0f;
+    float b = 0.0f;
+    ImGui::ColorConvertHSVtoRGB(hue, saturation, value, r, g, b);
+    return ImVec4(r, g, b, 1.0f);
+}
+
+struct FlatAccents {
+    ImVec4 mid;
+    ImVec4 bright;
+    ImVec4 dim;
+};
+
+FlatAccents flatAccents(const ThemeInfo& theme, const ImVec4& under) {
+    float hue = 0.0f;
+    float saturation = 0.0f;
+    float value = 0.0f;
+    ImGui::ColorConvertRGBtoHSV(theme.r, theme.g, theme.b, hue, saturation, value);
+    const float chroma = std::clamp((saturation - 0.04f) / 0.11f, 0.0f, 1.0f);
+    FlatAccents out;
+    float midValue = 0.55f;
+    const contrast::Rgb back{under.x, under.y, under.z};
+    out.mid = fromHsv(hue, 0.45f * chroma, midValue);
+    while (midValue < 0.92f && contrast::ratio(contrast::Rgb{out.mid.x, out.mid.y, out.mid.z}, back) < 3.3) {
+        midValue += 0.02f;
+        out.mid = fromHsv(hue, 0.45f * chroma, midValue);
+    }
+    out.bright = fromHsv(hue, 0.50f * chroma, 1.00f);
+    out.dim = fromHsv(hue, 0.49f * chroma, 0.32f);
+    return out;
+}
+
 }
 
 int themeCount() {
@@ -53,8 +87,6 @@ int themeIndex(const std::string& id) {
 
 void applyTheme(int index, const ThemeOptions& options) {
     const ThemeInfo& theme = themeInfo(index);
-    const bool mono = std::string(theme.id) == "mono";
-    const bool arena = std::string(theme.id) == "arena";
     const bool high = options.highContrast;
 
     ImGuiStyle& style = ImGui::GetStyle();
@@ -66,76 +98,92 @@ void applyTheme(int index, const ThemeOptions& options) {
     style.FontScaleMain = fontScaleMain;
     style.FontScaleDpi = fontScaleDpi;
     style.WindowRounding = 0.0f;
-    style.ChildRounding = arena ? 2.0f : 6.0f;
-    style.FrameRounding = arena ? 2.0f : 6.0f;
-    style.PopupRounding = arena ? 3.0f : 8.0f;
-    style.GrabRounding = arena ? 2.0f : 3.0f;
-    style.ScrollbarRounding = arena ? 3.0f : 10.0f;
-    style.TabRounding = arena ? 2.0f : 6.0f;
+    style.ChildRounding = 2.0f;
+    style.FrameRounding = 2.0f;
+    style.PopupRounding = 3.0f;
+    style.GrabRounding = 2.0f;
+    style.ScrollbarRounding = 3.0f;
+    style.TabRounding = 2.0f;
     style.WindowBorderSize = 1.0f;
-    style.ChildBorderSize = 1.0f;
+    style.ChildBorderSize = high ? 1.0f : 0.0f;
     style.PopupBorderSize = 1.0f;
-    style.FrameBorderSize = 1.0f;
-    style.TabBarOverlineSize = high ? 3.0f : 2.0f;
-    style.WindowPadding = arena ? ImVec2(8.0f, 8.0f) : ImVec2(10.0f, 10.0f);
-    style.FramePadding = arena ? ImVec2(8.0f, 4.0f) : ImVec2(9.0f, 5.0f);
-    style.ItemSpacing = arena ? ImVec2(7.0f, 6.0f) : ImVec2(8.0f, 7.0f);
+    style.FrameBorderSize = high ? 1.0f : 0.0f;
+    style.TabBarOverlineSize = 0.0f;
+    style.WindowPadding = ImVec2(6.0f, 6.0f);
+    style.FramePadding = ImVec2(7.0f, 3.0f);
+    style.ItemSpacing = ImVec2(6.0f, 4.0f);
     style.ItemInnerSpacing = ImVec2(6.0f, 4.0f);
     style.ScrollbarSize = 11.0f;
     style.GrabMinSize = high ? 9.0f : 6.0f;
+    style.WindowMenuButtonPosition = ImGuiDir_None;
 
     const ImVec4 white(1.00f, 1.00f, 1.00f, 1.00f);
+    const ImVec4 clear(0.0f, 0.0f, 0.0f, 0.0f);
     const ImVec4 baseAccent(theme.r, theme.g, theme.b, 1.00f);
-    ImVec4 accent = high ? mixColor(baseAccent, white, 0.30f) : baseAccent;
-    ImVec4 accentHover = mixColor(accent, white, 0.22f);
-    ImVec4 accentDim(accent.x * 0.52f, accent.y * 0.52f, accent.z * 0.52f, 1.00f);
-    const float tint = (mono || arena) ? 0.0f : 0.02f;
-    ImVec4 bg = high ? ImVec4(0.00f, 0.00f, 0.00f, 1.00f) : mixColor(ImVec4(0.075f, 0.078f, 0.086f, 1.00f), accent, tint);
-    ImVec4 panel = high ? ImVec4(0.035f, 0.035f, 0.040f, 1.00f) : mixColor(ImVec4(0.125f, 0.130f, 0.141f, 1.00f), accent, tint);
-    ImVec4 well = high ? ImVec4(0.012f, 0.012f, 0.014f, 1.00f) : mixColor(ImVec4(0.100f, 0.105f, 0.118f, 1.00f), accent, tint);
-    ImVec4 raised = high ? ImVec4(0.150f, 0.152f, 0.165f, 1.00f) : mixColor(ImVec4(0.165f, 0.170f, 0.185f, 1.00f), accent, tint);
-    ImVec4 raisedHover = high ? ImVec4(0.270f, 0.275f, 0.300f, 1.00f) : mixColor(ImVec4(0.215f, 0.222f, 0.240f, 1.00f), accent, tint);
-    ImVec4 text = high ? ImVec4(1.00f, 1.00f, 1.00f, 1.00f) : ImVec4(0.86f, 0.87f, 0.89f, 1.00f);
-    ImVec4 textDim = high ? ImVec4(0.80f, 0.81f, 0.84f, 1.00f) : ImVec4(0.60f, 0.61f, 0.64f, 1.00f);
-    ImVec4 border = high ? ImVec4(0.66f, 0.67f, 0.71f, 1.00f) : ImVec4(0.205f, 0.212f, 0.230f, 1.00f);
-    ImVec4 knob = high ? ImVec4(0.95f, 0.95f, 0.97f, 1.00f) : ImVec4(0.78f, 0.78f, 0.80f, 0.70f);
-    ImVec4 focus = high ? ImVec4(1.00f, 0.92f, 0.20f, 1.00f) : accent;
-    const float headerMix = (mono || arena) ? 0.0f : 0.05f;
-    if (arena && !high) {
-        bg = ImVec4(0.039f, 0.035f, 0.035f, 1.00f);
-        panel = ImVec4(0.086f, 0.082f, 0.078f, 1.00f);
-        well = ImVec4(0.051f, 0.051f, 0.047f, 1.00f);
-        raised = ImVec4(0.227f, 0.227f, 0.224f, 1.00f);
-        raisedHover = ImVec4(0.290f, 0.290f, 0.286f, 1.00f);
-        text = ImVec4(0.79f, 0.79f, 0.79f, 1.00f);
-        textDim = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
-        border = ImVec4(0.039f, 0.035f, 0.035f, 1.00f);
-        accent = ImVec4(0.302f, 0.549f, 0.459f, 1.00f);
-        accentHover = ImVec4(0.502f, 0.996f, 0.824f, 1.00f);
-        accentDim = ImVec4(0.165f, 0.322f, 0.267f, 1.00f);
+    ImVec4 bg = ImVec4(0.039f, 0.035f, 0.035f, 1.00f);
+    ImVec4 panel = ImVec4(0.086f, 0.082f, 0.078f, 1.00f);
+    ImVec4 well = ImVec4(0.051f, 0.051f, 0.047f, 1.00f);
+    ImVec4 raised = ImVec4(0.227f, 0.227f, 0.224f, 1.00f);
+    ImVec4 raisedHover = ImVec4(0.290f, 0.290f, 0.286f, 1.00f);
+    ImVec4 text = ImVec4(0.79f, 0.79f, 0.79f, 1.00f);
+    ImVec4 textDim = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
+    ImVec4 border = ImVec4(0.039f, 0.035f, 0.035f, 1.00f);
+    ImVec4 knob = ImVec4(0.55f, 0.55f, 0.55f, 1.00f);
+    ImVec4 frame = ImVec4(0.118f, 0.118f, 0.114f, 1.00f);
+    ImVec4 frameHover = ImVec4(0.165f, 0.165f, 0.165f, 1.00f);
+    ImVec4 popup = ImVec4(0.165f, 0.165f, 0.165f, 0.98f);
+    ImVec4 menuBar = ImVec4(0.165f, 0.165f, 0.165f, 1.00f);
+    ImVec4 header = ImVec4(0.173f, 0.173f, 0.173f, 1.00f);
+    ImVec4 accent;
+    ImVec4 accentHover;
+    ImVec4 accentDim;
+    ImVec4 focus;
+    if (high) {
+        bg = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+        panel = ImVec4(0.035f, 0.035f, 0.040f, 1.00f);
+        well = ImVec4(0.012f, 0.012f, 0.014f, 1.00f);
+        raised = ImVec4(0.150f, 0.152f, 0.165f, 1.00f);
+        raisedHover = ImVec4(0.270f, 0.275f, 0.300f, 1.00f);
+        text = white;
+        textDim = ImVec4(0.80f, 0.81f, 0.84f, 1.00f);
+        border = ImVec4(0.66f, 0.67f, 0.71f, 1.00f);
+        knob = ImVec4(0.95f, 0.95f, 0.97f, 1.00f);
+        frame = raised;
+        frameHover = raisedHover;
+        popup = ImVec4(0.115f, 0.120f, 0.132f, 0.98f);
+        menuBar = bg;
+        header = raised;
+        accent = mixColor(baseAccent, white, 0.30f);
+        accentHover = mixColor(accent, white, 0.22f);
+        accentDim = ImVec4(accent.x * 0.52f, accent.y * 0.52f, accent.z * 0.52f, 1.00f);
+        focus = ImVec4(1.00f, 0.92f, 0.20f, 1.00f);
+    } else {
+        const FlatAccents flat = flatAccents(theme, frame);
+        accent = flat.mid;
+        accentHover = flat.bright;
+        accentDim = flat.dim;
         focus = accentHover;
     }
-    const ImVec4 header = mixColor(raised, accent, headerMix);
-    const ImVec4 headerHover = mixColor(raisedHover, accent, headerMix + 0.12f);
-    const ImVec4 headerActive = mixColor(raisedHover, accent, high ? 0.20f : headerMix + 0.38f);
+    const ImVec4 headerHover = high ? mixColor(raisedHover, accent, 0.12f) : raised;
+    const ImVec4 headerActive = high ? mixColor(raisedHover, accent, 0.20f) : accentDim;
 
     ImVec4* c = style.Colors;
     c[ImGuiCol_Text] = text;
     c[ImGuiCol_TextDisabled] = textDim;
     c[ImGuiCol_WindowBg] = panel;
     c[ImGuiCol_ChildBg] = well;
-    c[ImGuiCol_PopupBg] = withAlpha(mixColor(ImVec4(0.115f, 0.120f, 0.132f, 1.0f), accent, tint), 0.98f);
+    c[ImGuiCol_PopupBg] = popup;
     c[ImGuiCol_Border] = border;
-    c[ImGuiCol_BorderShadow] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-    c[ImGuiCol_FrameBg] = raised;
-    c[ImGuiCol_FrameBgHovered] = raisedHover;
+    c[ImGuiCol_BorderShadow] = clear;
+    c[ImGuiCol_FrameBg] = frame;
+    c[ImGuiCol_FrameBgHovered] = frameHover;
     c[ImGuiCol_FrameBgActive] = mixColor(raisedHover, accent, 0.30f);
-    c[ImGuiCol_TitleBg] = bg;
-    c[ImGuiCol_TitleBgActive] = bg;
-    c[ImGuiCol_TitleBgCollapsed] = bg;
-    c[ImGuiCol_MenuBarBg] = bg;
-    c[ImGuiCol_ScrollbarBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-    c[ImGuiCol_ScrollbarGrab] = high ? border : raisedHover;
+    c[ImGuiCol_TitleBg] = high ? bg : menuBar;
+    c[ImGuiCol_TitleBgActive] = high ? bg : menuBar;
+    c[ImGuiCol_TitleBgCollapsed] = high ? bg : menuBar;
+    c[ImGuiCol_MenuBarBg] = menuBar;
+    c[ImGuiCol_ScrollbarBg] = clear;
+    c[ImGuiCol_ScrollbarGrab] = high ? border : raised;
     c[ImGuiCol_ScrollbarGrabHovered] = accentDim;
     c[ImGuiCol_ScrollbarGrabActive] = accent;
     c[ImGuiCol_CheckMark] = accent;
@@ -150,68 +198,36 @@ void applyTheme(int index, const ThemeOptions& options) {
     c[ImGuiCol_Separator] = border;
     c[ImGuiCol_SeparatorHovered] = accent;
     c[ImGuiCol_SeparatorActive] = accentHover;
-    c[ImGuiCol_ResizeGrip] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    c[ImGuiCol_ResizeGrip] = clear;
     c[ImGuiCol_ResizeGripHovered] = accentDim;
     c[ImGuiCol_ResizeGripActive] = accent;
-    c[ImGuiCol_Tab] = bg;
-    c[ImGuiCol_TabHovered] = raisedHover;
-    c[ImGuiCol_TabSelected] = raised;
-    c[ImGuiCol_TabSelectedOverline] = accent;
-    c[ImGuiCol_TabDimmed] = bg;
-    c[ImGuiCol_TabDimmedSelected] = raised;
-    c[ImGuiCol_TabDimmedSelectedOverline] = accentDim;
+    c[ImGuiCol_Tab] = high ? bg : menuBar;
+    c[ImGuiCol_TabHovered] = high ? raised : ImVec4(0.227f, 0.227f, 0.224f, 1.00f);
+    c[ImGuiCol_TabSelected] = high ? raised : bg;
+    c[ImGuiCol_TabSelectedOverline] = clear;
+    c[ImGuiCol_TabDimmed] = high ? bg : menuBar;
+    c[ImGuiCol_TabDimmedSelected] = high ? raised : bg;
+    c[ImGuiCol_TabDimmedSelectedOverline] = clear;
     c[ImGuiCol_DockingPreview] = withAlpha(accent, 0.45f);
     c[ImGuiCol_DockingEmptyBg] = bg;
-    c[ImGuiCol_TableHeaderBg] = bg;
+    c[ImGuiCol_TableHeaderBg] = high ? bg : menuBar;
     c[ImGuiCol_TableBorderStrong] = border;
     c[ImGuiCol_TableBorderLight] = high ? ImVec4(0.45f, 0.46f, 0.50f, 1.00f) : ImVec4(0.15f, 0.155f, 0.17f, 1.00f);
-    c[ImGuiCol_TableRowBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    c[ImGuiCol_TableRowBg] = clear;
     c[ImGuiCol_TableRowBgAlt] = ImVec4(1.0f, 1.0f, 1.0f, 0.02f);
     c[ImGuiCol_TextSelectedBg] = withAlpha(accent, 0.35f);
     c[ImGuiCol_DragDropTarget] = accent;
     c[ImGuiCol_NavCursor] = focus;
     c[ImGuiCol_WindowBg].w = 1.0f;
 
-    if (arena) {
-        const ImVec4 bar(0.165f, 0.165f, 0.165f, 1.00f);
-        const ImVec4 clear(0.0f, 0.0f, 0.0f, 0.0f);
-        if (!high) {
-            c[ImGuiCol_MenuBarBg] = bar;
-            c[ImGuiCol_PopupBg] = ImVec4(0.165f, 0.165f, 0.165f, 0.98f);
-            c[ImGuiCol_FrameBg] = ImVec4(0.118f, 0.118f, 0.114f, 1.00f);
-            c[ImGuiCol_FrameBgHovered] = ImVec4(0.165f, 0.165f, 0.165f, 1.00f);
-            c[ImGuiCol_Header] = ImVec4(0.173f, 0.173f, 0.173f, 1.00f);
-            c[ImGuiCol_HeaderHovered] = raised;
-            c[ImGuiCol_HeaderActive] = accentDim;
-            c[ImGuiCol_Tab] = bg;
-            c[ImGuiCol_TabSelected] = bar;
-            c[ImGuiCol_TabDimmed] = bg;
-            c[ImGuiCol_TabDimmedSelected] = bar;
-            c[ImGuiCol_TabHovered] = raised;
-            c[ImGuiCol_ScrollbarGrab] = raised;
-            c[ImGuiCol_SliderGrab] = ImVec4(0.55f, 0.55f, 0.55f, 1.00f);
-            c[ImGuiCol_TableHeaderBg] = bar;
-        }
-        c[ImGuiCol_TabSelectedOverline] = clear;
-        c[ImGuiCol_TabDimmedSelectedOverline] = clear;
-        style.FrameBorderSize = high ? 1.0f : 0.0f;
-        style.ChildBorderSize = high ? 1.0f : 0.0f;
-        style.TabBarOverlineSize = 0.0f;
-        style.ItemSpacing = ImVec2(6.0f, 4.0f);
-        style.FramePadding = ImVec2(7.0f, 3.0f);
-        style.WindowPadding = ImVec2(6.0f, 6.0f);
-    }
-
     if (options.sizeScale > 0.0f && options.sizeScale != 1.0f) {
         style.ScaleAllSizes(options.sizeScale);
     }
-    if (arena) {
-        const float factor = options.sizeScale > 0.0f ? options.sizeScale : 1.0f;
-        style.FramePadding = ImVec2(7.0f * factor, 3.0f * factor);
-    }
+    const float factor = options.sizeScale > 0.0f ? options.sizeScale : 1.0f;
+    style.FramePadding = ImVec2(7.0f * factor, 3.0f * factor);
 
     ui::kHighContrast = high;
-    ui::kFlatLook = arena && !high;
+    ui::kFlatLook = !high;
     ui::kAccent = accent;
     ui::kAccentHover = accentHover;
     ui::kAccentDim = accentDim;

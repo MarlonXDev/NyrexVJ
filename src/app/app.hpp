@@ -166,6 +166,8 @@ private:
     void requestWorkspace(const std::string& name);
     void saveWorkspaceAs(const std::string& name);
     void deleteWorkspace(const std::string& name);
+    void exportWorkspace(const std::string& name, bool openFolder);
+    void importWorkspaceFile(const std::string& path);
     void resetWindowLayout();
     void changeInterfaceScale(int direction);
     void drawViewMenu();
@@ -463,6 +465,8 @@ private:
     std::string pendingWorkspace_;
     int recoveryFlags_ = 0;
     std::string workspaceDeleteArmed_;
+    char workspaceImportPath_[1024] = {};
+    char workspaceExportFolder_[1024] = {};
     float dpiScale_ = 1.0f;
     float appliedSizeScale_ = 0.0f;
     bool appliedHighContrast_ = false;

@@ -458,6 +458,113 @@ Result remove(const fs::path& dataDir, const std::string& name) {
     return result;
 }
 
+namespace {
+
+fs::path shareFileName(const std::string& name) {
+    const std::string file = name + kShareExtension;
+    return fs::path(std::u8string(file.begin(), file.end()));
+}
+
+std::string cutBytes(const std::string& text, size_t limit) {
+    if (text.size() <= limit) {
+        return text;
+    }
+    size_t cut = limit;
+    while (cut > 0 && (static_cast<unsigned char>(text[cut]) & 0xC0) == 0x80) {
+        --cut;
+    }
+    return text.substr(0, cut);
+}
+
+}
+
+fs::path exportFolder(const fs::path& dataDir) {
+    return dataDir / "layouts_out";
+}
+
+Result exportTo(const fs::path& dataDir, const std::string& name, const fs::path& destination, fs::path* written) {
+    Result result;
+    const std::vector<Entry> entries = list(dataDir);
+    const Entry* entry = findEntry(entries, name);
+    if (entry == nullptr) {
+        result.error = "There is no workspace with that name";
+        return result;
+    }
+    std::string text;
+    if (!readText(entry->path, kMaxFileBytes + 1024, text)) {
+        result.error = "The workspace file could not be read";
+        return result;
+    }
+    const Check check = inspectFile(text);
+    if (!check.ok) {
+        result.error = check.reason;
+        return result;
+    }
+    const fs::path target = destination.empty() ? exportFolder(dataDir) : destination;
+    std::error_code ec;
+    fs::create_directories(target, ec);
+    if (!fs::is_directory(target, ec)) {
+        result.error = "The export folder could not be created";
+        return result;
+    }
+    const fs::path file = target / shareFileName(entry->name);
+    if (!writeTextAtomic(file, text)) {
+        result.error = "The layout file could not be written";
+        return result;
+    }
+    if (written != nullptr) {
+        *written = file;
+    }
+    result.ok = true;
+    return result;
+}
+
+Result importFile(const fs::path& dataDir, const fs::path& file, std::string* importedName) {
+    Result result;
+    std::error_code ec;
+    if (!fs::is_regular_file(file, ec)) {
+        result.error = "The layout file could not be read or is too large";
+        return result;
+    }
+    std::string text;
+    if (!readText(file, kMaxFileBytes + 1024, text)) {
+        result.error = "The layout file could not be read or is too large";
+        return result;
+    }
+    const Check check = inspectFile(text);
+    if (!check.ok) {
+        result.error = check.reason;
+        return result;
+    }
+    const std::vector<Entry> entries = list(dataDir);
+    if (entries.size() >= kMaxWorkspaces) {
+        result.error = "The workspace limit is reached. Delete one first";
+        return result;
+    }
+    std::string base = cleanName(nameFromPath(file));
+    if (base.empty() || reservedName(base)) {
+        base = "Imported layout";
+    }
+    std::string name = base;
+    for (int number = 2; findEntry(entries, name) != nullptr; ++number) {
+        if (number > 99) {
+            result.error = "That name cannot be used for a workspace";
+            return result;
+        }
+        const std::string suffix = " " + std::to_string(number);
+        name = cleanName(cutBytes(base, kMaxNameBytes - suffix.size()) + suffix);
+    }
+    if (!writeTextAtomic(folder(dataDir) / pathFromName(name), text)) {
+        result.error = "The workspace could not be written";
+        return result;
+    }
+    if (importedName != nullptr) {
+        *importedName = name;
+    }
+    result.ok = true;
+    return result;
+}
+
 bool quarantine(const fs::path& file) {
     std::error_code ec;
     if (!fs::exists(file, ec)) {

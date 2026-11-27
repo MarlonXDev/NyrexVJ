@@ -318,6 +318,56 @@ void App::buildInterfaceTest() {
         record("a workspace is saved and listed with its screen size", found, std::to_string(workspaces_.size()) + " entries");
     });
 
+    add([this]() {
+        const fs::path out = fs::path(userDataDir()) / "uitest-layout-share";
+        std::error_code ec;
+        fs::remove_all(out, ec);
+        fs::create_directories(out, ec);
+        std::snprintf(workspaceExportFolder_, sizeof(workspaceExportFolder_), "%s", pathToUtf8(out).c_str());
+        exportWorkspace("uitest-one", false);
+    }, 2, nullptr, [this, record]() {
+        const fs::path file = fs::path(userDataDir()) / "uitest-layout-share" / "uitest-one.nyxlayout";
+        std::error_code ec;
+        record("Export writes a .nyxlayout file for a saved workspace", fs::is_regular_file(file, ec) && workspace::inspectFile(readText(file)).ok, workspaceMessage_);
+    });
+    add([this]() {
+        importWorkspaceFile(pathToUtf8(fs::path(userDataDir()) / "uitest-layout-share" / "uitest-one.nyxlayout"));
+    }, 2, nullptr, [this, record]() {
+        refreshWorkspaces();
+        bool original = false;
+        bool copy = false;
+        for (const workspace::Entry& entry : workspaces_) {
+            original = original || (entry.name == "uitest-one" && entry.valid);
+            copy = copy || (entry.name == "uitest-one 2" && entry.valid && entry.width > 0);
+        }
+        record("Import adds the file under a free name and keeps the original", original && copy, workspaceMessage_);
+    });
+    add([this]() {
+        queueDroppedFiles({pathToUtf8(fs::path(userDataDir()) / "uitest-layout-share" / "uitest-one.nyxlayout")});
+    }, 2, nullptr, [this, record]() {
+        refreshWorkspaces();
+        bool dropped = false;
+        for (const workspace::Entry& entry : workspaces_) {
+            dropped = dropped || (entry.name == "uitest-one 3" && entry.valid);
+        }
+        record("Dropping a .nyxlayout file onto the window imports it", dropped, workspaceMessage_);
+    });
+    add([this]() {
+        writeText(fs::path(userDataDir()) / "uitest-layout-share" / "garbage.nyxlayout", "this is not a layout\n");
+        refreshWorkspaces();
+        importWorkspaceFile(pathToUtf8(fs::path(userDataDir()) / "uitest-layout-share" / "garbage.nyxlayout"));
+    }, 2, nullptr, [this, record]() {
+        const size_t count = workspaces_.size();
+        refreshWorkspaces();
+        record("Importing a file that is not a layout is refused and adds nothing", workspaces_.size() == count && !workspaceMessage_.empty(), workspaceMessage_);
+        workspaceDeleteArmed_.clear();
+        deleteWorkspace("uitest-one 2");
+        deleteWorkspace("uitest-one 3");
+        workspaceExportFolder_[0] = '\0';
+        std::error_code ec;
+        fs::remove_all(fs::path(userDataDir()) / "uitest-layout-share", ec);
+    });
+
     add([messed]() {
         const ImGuiWindow* deck = panel(0);
         ImGui::DockBuilderDockWindow("###browser", deck->DockId);
@@ -457,6 +507,17 @@ void App::buildInterfaceTest() {
         record("the Settings window has no close button in its title bar", window && !window->HasCloseButton, describe(window));
     });
     shot("settings-appearance-100");
+    add([this]() {
+        const ImGuiWindow* window = ImGui::FindWindowByName("###settingsWindow");
+        if (window) {
+            ImGui::GetIO().AddMousePosEvent(window->Pos.x + window->Size.x * 0.6f, window->Pos.y + window->Size.y * 0.6f);
+        }
+    }, 2);
+    for (int i = 0; i < 12; ++i) {
+        add([]() { ImGui::GetIO().AddMouseWheelEvent(0.0f, -5.0f); }, 1);
+    }
+    add(nullptr, 4);
+    shot("settings-appearance-workspaces");
     add([]() { ImGui::SetWindowFocus("###settingsWindow"); }, 3);
     press(ImGuiKey_Escape, false, false);
     add(nullptr, 3, nullptr, [this, record]() {

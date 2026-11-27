@@ -214,6 +214,7 @@ private:
     void undoEdit();
     void drawPerformancePage();
     void drawGpuDiagnostics();
+    void drawFeedbackSettings();
     void drawRoutingWindow();
     void drawFailoverWindow();
     void applySenderSources();

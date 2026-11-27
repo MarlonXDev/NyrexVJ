@@ -790,6 +790,11 @@ void App::frame(double dt, bool drawUi) {
     memoryPolicy.trim = settings_.gpuMemoryTrim;
     memoryPolicy.lowerQuality = settings_.gpuMemoryLowerQuality;
     engine_.setMemoryPolicy(memoryPolicy);
+    const unsigned long long feedbackBudget = static_cast<unsigned long long>(std::max(settings_.feedbackBudgetMb, 0)) * 1024ull * 1024ull;
+    if (engine_.feedbackBudget() != feedbackBudget) {
+        engine_.setFeedbackBudget(feedbackBudget);
+    }
+    engine_.setFeedbackReuse(settings_.feedbackReuse);
     engine_.update(dt);
     netSync_.afterEngineUpdate(steadyNowSeconds(), dt);
     updatePlugins();

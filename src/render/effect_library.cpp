@@ -58,6 +58,7 @@ uniform vec4 uAudio;
 uniform float uKick;
 uniform sampler2D uAudioTex;
 uniform float uMix;
+uniform float uDelta;
 uniform sampler2D uPerson;
 uniform float uPersonOn;
 uniform vec2 uPersonFit;
@@ -117,6 +118,28 @@ mat2 rot(float a) {
 
 vec2 mrep(vec2 q) {
     return 1.0 - abs(mod(q, 2.0) - 1.0);
+}
+
+float fbKeep(float halfLife) {
+    return exp2(-uDelta / max(halfLife, 0.001));
+}
+
+vec3 fbFetch(vec2 q) {
+    vec2 inside = step(vec2(0.0), q) * step(q, vec2(1.0));
+    return texture(uPrev, q).rgb * inside.x * inside.y;
+}
+
+uint fbPcg(uint v) {
+    uint state = v * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+vec3 fbRound(vec3 c) {
+    uvec2 q = uvec2(gl_FragCoord.xy);
+    uint h = fbPcg(q.x + fbPcg(q.y + fbPcg(floatBitsToUint(uTime))));
+    vec3 n = vec3(float(h >> 8u) * (1.0 / 16777216.0));
+    return floor(clamp(c, 0.0, 1.0) * 255.0 + n) / 255.0;
 }
 )glsl";
 

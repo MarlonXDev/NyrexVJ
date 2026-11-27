@@ -1211,7 +1211,7 @@ void Engine::renderEditorPreviews() {
     chainPreviewResult_ = runChain(chainPreviewSlots_, chainPreviewFeedback_.data(), chainPreviewFeedbackUsed_.data(), &chainPreviewA_, &chainPreviewB_, 0, -1);
     for (size_t k = 0; k < chainPreviewFeedback_.size(); ++k) {
         if (chainPreviewFeedback_[k].fbo && !chainPreviewFeedbackUsed_[k]) {
-            chainPreviewFeedback_[k].destroy();
+            releaseFeedback(chainPreviewFeedback_[k]);
         }
     }
 }
@@ -1648,9 +1648,7 @@ GpuMemory Engine::gpuMemory() const {
     for (const RenderTarget* target : {&layerA_, &layerB_, &compA_, &compB_, &out_, &deckTex_[0], &deckTex_[1], &layerLoA_, &layerLoB_}) {
         memory.targets += bytes(*target);
     }
-    for (const RenderTarget& target : feedback_) {
-        memory.targets += bytes(target);
-    }
+    memory.feedback = feedbackBytes();
     memory.targets += static_cast<size_t>(colorStageBytes());
     for (const RenderTarget& target : clipThumbs_) {
         memory.thumbnails += bytes(target);
@@ -1886,6 +1884,7 @@ bool Engine::ensureEffect(size_t index) {
     effect.kick = glGetUniformLocation(program, "uKick");
     effect.audioTex = glGetUniformLocation(program, "uAudioTex");
     effect.mix = glGetUniformLocation(program, "uMix");
+    effect.delta = glGetUniformLocation(program, "uDelta");
     effect.macros = def.usesMacros ? glGetUniformLocation(program, "uMacros") : -1;
     effect.person = glGetUniformLocation(program, "uPerson");
     effect.personOn = glGetUniformLocation(program, "uPersonOn");
@@ -2138,9 +2137,201 @@ void Engine::updateQuality() {
 }
 
 void Engine::destroyFeedback() {
-    for (RenderTarget& target : feedback_) {
+    for (FeedbackTarget& target : feedback_) {
         target.destroy();
+        target.sourceWidth = 0;
+        target.sourceHeight = 0;
     }
+    trimFeedbackPool(true);
+}
+
+size_t Engine::feedbackBytes() const {
+    size_t total = 0;
+    for (const FeedbackTarget& target : feedback_) {
+        total += target.bytes();
+    }
+    for (const FeedbackTarget& target : previewFeedback_) {
+        total += target.bytes();
+    }
+    for (const FeedbackTarget& target : chainPreviewFeedback_) {
+        total += target.bytes();
+    }
+    for (const FeedbackTarget& target : feedbackPool_) {
+        total += target.bytes();
+    }
+    return total;
+}
+
+FeedbackStats Engine::feedbackStats() const {
+    FeedbackStats stats;
+    const auto count = [&stats](const FeedbackTarget& target) {
+        if (!target.fbo) {
+            return;
+        }
+        ++stats.live;
+        stats.liveBytes += target.bytes();
+        if (target.width != target.sourceWidth || target.height != target.sourceHeight) {
+            ++stats.reduced;
+        }
+    };
+    for (const FeedbackTarget& target : feedback_) {
+        count(target);
+    }
+    for (const FeedbackTarget& target : previewFeedback_) {
+        count(target);
+    }
+    for (const FeedbackTarget& target : chainPreviewFeedback_) {
+        count(target);
+    }
+    for (const FeedbackTarget& target : feedbackPool_) {
+        ++stats.pooled;
+        stats.pooledBytes += target.bytes();
+    }
+    stats.budget = feedbackBudget_;
+    stats.created = feedbackCreated_;
+    stats.reused = feedbackReused_;
+    stats.denied = feedbackDenied_;
+    stats.frozen = feedbackFrozen_;
+    stats.reuse = feedbackReuse_;
+    return stats;
+}
+
+void Engine::setFeedbackBudget(unsigned long long bytes) {
+    if (bytes == feedbackBudget_) {
+        return;
+    }
+    feedbackBudget_ = bytes;
+    trimFeedbackPool(true);
+    const FeedbackStats stats = feedbackStats();
+    if (stats.reduced > 0 || (feedbackBudget_ > 0 && stats.liveBytes > feedbackBudget_)) {
+        destroyFeedback();
+        for (FeedbackTarget& target : previewFeedback_) {
+            target.destroy();
+            target.sourceWidth = 0;
+            target.sourceHeight = 0;
+        }
+        for (FeedbackTarget& target : chainPreviewFeedback_) {
+            target.destroy();
+            target.sourceWidth = 0;
+            target.sourceHeight = 0;
+        }
+    }
+    feedbackReduceLogged_ = false;
+    feedbackDenyLogged_ = false;
+}
+
+void Engine::setFeedbackReuse(bool on) {
+    feedbackReuse_ = on;
+    if (!on) {
+        trimFeedbackPool(true);
+    }
+}
+
+void Engine::trimFeedbackPool(bool everything) {
+    for (auto it = feedbackPool_.begin(); it != feedbackPool_.end();) {
+        const bool idle = frameId_ > it->idleSince && frameId_ - it->idleSince > kFeedbackPoolIdleFrames;
+        if (everything || idle) {
+            it->destroy();
+            it = feedbackPool_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+bool Engine::acquireFeedback(FeedbackTarget& slot, int width, int height) {
+    size_t pooledBytes = 0;
+    for (const FeedbackTarget& target : feedbackPool_) {
+        pooledBytes += target.bytes();
+    }
+    const size_t liveBytes = feedbackBytes() - pooledBytes;
+    float scale = 1.0f;
+    if (feedbackBudget_ > 0) {
+        const unsigned long long remaining = liveBytes < feedbackBudget_ ? feedbackBudget_ - liveBytes : 0;
+        scale = fitShaderScale(1.0f, width, height, 4, 1, remaining);
+        if (scale <= 0.0f) {
+            ++feedbackDenied_;
+            if (!feedbackDenyLogged_) {
+                feedbackDenyLogged_ = true;
+                logLine("Feedback buffer refused: the feedback memory budget is used up");
+            }
+            return false;
+        }
+    }
+    const int w = std::max(1, static_cast<int>(std::lround(static_cast<float>(width) * scale)));
+    const int h = std::max(1, static_cast<int>(std::lround(static_cast<float>(height) * scale)));
+    if (scale < 0.999f && !feedbackReduceLogged_) {
+        feedbackReduceLogged_ = true;
+        logLine("Feedback buffers run at " + std::to_string(static_cast<int>(scale * 100.0f + 0.5f)) + " % of the size because of the feedback memory budget");
+    }
+    if (feedbackReuse_) {
+        for (auto it = feedbackPool_.begin(); it != feedbackPool_.end(); ++it) {
+            if (it->width == w && it->height == h) {
+                slot = *it;
+                feedbackPool_.erase(it);
+                slot.sourceWidth = width;
+                slot.sourceHeight = height;
+                clearTarget(slot);
+                ++feedbackReused_;
+                return true;
+            }
+        }
+    }
+    if (feedbackBudget_ > 0) {
+        const size_t wanted = static_cast<size_t>(w) * static_cast<size_t>(h) * 4u;
+        while (!feedbackPool_.empty() && liveBytes + pooledBytes + wanted > feedbackBudget_) {
+            pooledBytes -= std::min(pooledBytes, feedbackPool_.back().bytes());
+            feedbackPool_.back().destroy();
+            feedbackPool_.pop_back();
+        }
+    }
+    if (!slot.create(w, h)) {
+        slot.destroy();
+        return false;
+    }
+    slot.sourceWidth = width;
+    slot.sourceHeight = height;
+    clearTarget(slot);
+    ++feedbackCreated_;
+    return true;
+}
+
+void Engine::releaseFeedback(FeedbackTarget& slot) {
+    if (!slot.fbo) {
+        return;
+    }
+    if (feedbackReuse_ && feedbackPool_.size() < kFeedbackPoolMax) {
+        FeedbackTarget kept = slot;
+        kept.idleSince = frameId_;
+        feedbackPool_.push_back(kept);
+        slot = FeedbackTarget{};
+        return;
+    }
+    slot.destroy();
+    slot.sourceWidth = 0;
+    slot.sourceHeight = 0;
+}
+
+void Engine::resetFeedback() {
+    for (FeedbackTarget& target : feedback_) {
+        if (target.fbo) {
+            clearTarget(target);
+        }
+    }
+    for (FeedbackTarget& target : previewFeedback_) {
+        if (target.fbo) {
+            clearTarget(target);
+        }
+    }
+    for (FeedbackTarget& target : chainPreviewFeedback_) {
+        if (target.fbo) {
+            clearTarget(target);
+        }
+    }
+    for (auto& entry : shaderStates_) {
+        entry.second.clear();
+    }
+    playground_.state.clear();
 }
 
 bool Engine::setResolutionIndex(int index) {
@@ -2553,6 +2744,7 @@ void Engine::update(double dt) {
     clock_ += std::max(dt, 0.0);
     const double step = paused ? 0.0 : dt;
     time_ += step;
+    frameDelta_ = static_cast<float>(std::clamp(step, 0.0, 0.1));
     pushCompTempo();
     beatClock_.advance(dt, !paused);
     beat_ = beatClock_.beat();
@@ -2630,7 +2822,7 @@ bool Engine::switchDeck(int index) {
     }
     feedbackSet_ ^= 1;
     for (int c = 0; c < kChainsPerSet * kEffectSlots; ++c) {
-        feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)].destroy();
+        releaseFeedback(feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)]);
     }
     selectDeck(comp, index);
     layerClock_.fill(0.0);
@@ -2680,7 +2872,7 @@ void Engine::clearDeck(int index) {
         restartShaders(false);
         transition_ = Transition{};
         for (int c = 0; c < kChainsPerSet * kEffectSlots; ++c) {
-            feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)].destroy();
+            releaseFeedback(feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)]);
         }
         return;
     }
@@ -2717,7 +2909,7 @@ void Engine::loadLook(const Composition& look) {
     layerClock_.fill(0.0);
     restartShaders(false);
     for (int c = 0; c < kChainsPerSet * kEffectSlots; ++c) {
-        feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)].destroy();
+        releaseFeedback(feedback_[static_cast<size_t>(feedbackSet_ * kChainsPerSet * kEffectSlots + c)]);
     }
     if (look.bpm > 0.0f && look.bpm != comp.bpm) {
         comp.bpm = std::clamp(look.bpm, 40.0f, 240.0f);
@@ -3412,12 +3604,12 @@ void Engine::renderPreview() {
     previewResult_ = runChain(layer.fx, previewFeedback_.data(), previewFeedbackUsed_.data(), &previewA_, &previewB_, 0, -1);
     for (size_t k = 0; k < previewFeedback_.size(); ++k) {
         if (previewFeedback_[k].fbo && !previewFeedbackUsed_[k]) {
-            previewFeedback_[k].destroy();
+            releaseFeedback(previewFeedback_[k]);
         }
     }
 }
 
-RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner) {
+RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots, FeedbackTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner) {
     RenderTarget* in = source;
     RenderTarget* out = scratch;
     const float width = static_cast<float>(source->width);
@@ -3435,8 +3627,8 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         if (profiler_.enabled()) {
             profiler_.mark(PassKind::Effect, deck, owner, s + 1, effectLibrary()[static_cast<size_t>(slot.effect)].name);
         }
-        if (effect.usesPrevious && feedback[s].fbo && (feedback[s].width != source->width || feedback[s].height != source->height)) {
-            feedback[s].destroy();
+        if (effect.usesPrevious && feedback[s].fbo && (feedback[s].sourceWidth != source->width || feedback[s].sourceHeight != source->height)) {
+            releaseFeedback(feedback[s]);
         }
 
         std::array<float, kParamCount> params = slot.params;
@@ -3452,16 +3644,18 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         }
         if (mixAmount <= 0.002f) {
             if (effect.usesPrevious && feedback[s].fbo) {
-                blit(*in, feedback[s]);
+                if (!feedbackFrozen_) {
+                    blit(*in, feedback[s]);
+                }
                 feedbackUsed[s] = true;
             }
             continue;
         }
 
         if (!effect.passes.empty()) {
-            const RenderTarget* slotAddress = &feedback[s];
-            const RenderTarget* base = feedback_.data();
-            const bool inMain = !std::less<const RenderTarget*>{}(slotAddress, base) && std::less<const RenderTarget*>{}(slotAddress, base + feedback_.size());
+            const FeedbackTarget* slotAddress = &feedback[s];
+            const FeedbackTarget* base = feedback_.data();
+            const bool inMain = !std::less<const FeedbackTarget*>{}(slotAddress, base) && std::less<const FeedbackTarget*>{}(slotAddress, base + feedback_.size());
             const int key = kEffectKeyBase + (inMain ? static_cast<int>(slotAddress - base) : static_cast<int>(feedback_.size()) + s);
             if (runPlanEffect(static_cast<size_t>(slot.effect), key, slot, params, mixAmount, in, out) == out) {
                 std::swap(in, out);
@@ -3470,9 +3664,7 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         }
 
         if (effect.usesPrevious && !feedback[s].fbo) {
-            if (feedback[s].create(source->width, source->height)) {
-                clearTarget(feedback[s]);
-            }
+            acquireFeedback(feedback[s], source->width, source->height);
         }
 
         out->bind();
@@ -3481,13 +3673,16 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, in->texture);
         glUniform1i(effect.tex, 0);
-        if (effect.usesPrevious && feedback[s].texture) {
+        if (effect.usesPrevious) {
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, feedback[s].texture);
+            glBindTexture(GL_TEXTURE_2D, feedback[s].texture ? feedback[s].texture : blackTexture_);
             glUniform1i(effect.prev, 1);
             glActiveTexture(GL_TEXTURE0);
         }
         glUniform1f(effect.mix, mixAmount);
+        if (effect.delta >= 0) {
+            glUniform1f(effect.delta, frameDelta_);
+        }
         glUniform4f(effect.params, params[0], params[1], params[2], params[3]);
         if (effect.macros >= 0) {
             glUniform1fv(effect.macros, kMacroCount, comp.modulators.macros.data());
@@ -3517,12 +3712,16 @@ RenderTarget* Engine::runChain(const std::array<EffectSlot, kEffectSlots>& slots
             glActiveTexture(GL_TEXTURE0);
         }
 
-        if (effect.usesPrevious && feedback[s].fbo) {
+        if (effect.usesPrevious) {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, 0);
             glActiveTexture(GL_TEXTURE0);
-            blit(*out, feedback[s]);
-            feedbackUsed[s] = true;
+            if (feedback[s].fbo) {
+                if (!feedbackFrozen_) {
+                    blit(*out, feedback[s]);
+                }
+                feedbackUsed[s] = true;
+            }
         }
 
         std::swap(in, out);
@@ -3890,9 +4089,10 @@ void Engine::render() {
 
     for (size_t k = 0; k < feedback_.size(); ++k) {
         if (feedback_[k].fbo && !feedbackUsed_[k]) {
-            feedback_[k].destroy();
+            releaseFeedback(feedback_[k]);
         }
     }
+    trimFeedbackPool(false);
 
     serviceRouting();
 

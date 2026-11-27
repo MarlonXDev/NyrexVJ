@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.65.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.66.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -282,6 +282,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/crash_handler.cpp
     src/render/effect_library.cpp
     src/render/effects_extra.cpp
+    src/render/effects_feedback.cpp
     src/core/factory_presets.cpp
     src/core/log.cpp
     src/core/novelty.cpp
@@ -776,6 +777,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_stage_tests PRIVATE nvj_core)
     target_include_directories(nvj_stage_tests PRIVATE tests)
     add_test(NAME nvj_stage_tests COMMAND nvj_stage_tests)
+    add_executable(nvj_feedback_tests tests/test_feedback.cpp)
+    target_link_libraries(nvj_feedback_tests PRIVATE nvj_core glad)
+    target_include_directories(nvj_feedback_tests PRIVATE tests)
+    add_test(NAME nvj_feedback_tests COMMAND nvj_feedback_tests)
     add_executable(nvj_transition_tests tests/test_transitions.cpp)
     target_link_libraries(nvj_transition_tests PRIVATE nvj_core)
     target_include_directories(nvj_transition_tests PRIVATE tests)

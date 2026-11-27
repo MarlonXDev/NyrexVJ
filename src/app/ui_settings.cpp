@@ -737,6 +737,7 @@ void App::drawPerformancePage() {
     ImGui::Text("%s: %.0f MB", tr("GPU memory (estimate)"), megabytes(memory.total()));
     if (ImGui::BeginItemTooltip()) {
         ImGui::Text("%s: %.1f MB", tr("Render targets"), megabytes(memory.targets));
+        ImGui::Text("%s: %.1f MB", tr("Feedback buffers"), megabytes(memory.feedback));
         ImGui::Text("%s: %.1f MB", tr("Thumbnails"), megabytes(memory.thumbnails));
         ImGui::Text("%s: %.1f MB", tr("3D depth buffers"), megabytes(memory.sceneDepth));
         ImGui::Text("%s: %.1f MB", tr("3D geometry and textures"), megabytes(memory.sceneGeometry));
@@ -755,6 +756,8 @@ void App::drawPerformancePage() {
     }
     ImGui::Text("%s: %.0f MB", tr("Program memory"), static_cast<double>(platform::processMemoryBytes()) / (1024.0 * 1024.0));
     ImGui::Text("%s: %d", tr("3D scenes loaded"), engine_.loadedSceneCount());
+
+    drawFeedbackSettings();
 
     drawGpuDiagnostics();
 

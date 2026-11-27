@@ -3,6 +3,7 @@
 #include "audio/audio_features.hpp"
 #include "core/log.hpp"
 #include "render/clip_library.hpp"
+#include "core/render_policy.hpp"
 #include "render/effect_library.hpp"
 #include "render/transition_library.hpp"
 
@@ -309,9 +310,13 @@ public:
     }
 
     void step(int count) {
+        stepWith(count, 1.0 / 60.0);
+    }
+
+    void stepWith(int count, double dt) {
         for (int i = 0; i < count; ++i) {
             engine_.setAudio(virtualAudio(engine_.beat(), engine_.time()));
-            engine_.update(1.0 / 60.0);
+            engine_.update(dt);
             engine_.render();
             glFinish();
         }
@@ -1007,6 +1012,533 @@ void testBuiltinsAfterCustom(Runner& run) {
     run.step(80);
 }
 
+
+const char* kFbGrey = "void mainImage(out vec4 c, in vec2 p) { c = vec4(0.8, 0.8, 0.8, 1.0); }\n";
+const char* kFbBlack = "void mainImage(out vec4 c, in vec2 p) { c = vec4(0.0, 0.0, 0.0, 1.0); }\n";
+const char* kFbBar = "void mainImage(out vec4 c, in vec2 p) { float x = p.x / iResolution.x; c = vec4(vec3(step(abs(x - 0.5), 0.05) * 0.8), 1.0); }\n";
+
+struct FeedbackClips {
+    int grey = -1;
+    int black = -1;
+    int bar = -1;
+};
+
+FeedbackClips feedbackClips(Runner& run) {
+    FeedbackClips clips;
+    clips.grey = run.add("fb_grey", kFbGrey);
+    clips.black = run.add("fb_black", kFbBlack);
+    clips.bar = run.add("fb_bar", kFbBar);
+    return clips;
+}
+
+void feedbackDefaults(Runner& run) {
+    Engine& engine = run.engine();
+    engine.setFeedbackFrozen(false);
+    engine.setFeedbackReuse(true);
+    engine.setFeedbackBudget(kDefaultFeedbackBudgetBytes);
+    engine.setQuality(QualityFull, 16.0);
+    engine.paused = false;
+    engine.resetFeedback();
+}
+
+EffectSlot& feedbackEffect(Runner& run, int layer, const char* name, float a, float b, float c, float d) {
+    EffectSlot& slot = run.engine().comp.layers[static_cast<size_t>(layer)].fx[0];
+    setEffect(slot, effectIndexByName(name));
+    slot.params = {a, b, c, d};
+    return slot;
+}
+
+void charge(Runner& run, const FeedbackClips& clips, int frames) {
+    run.place(0, clips.grey);
+    run.step(frames);
+}
+
+void drainGlErrors() {
+    while (glGetError() != GL_NO_ERROR) {
+    }
+}
+
+std::string pixelText(const Pixel& pixel) {
+    return "(" + std::to_string(pixel.r) + "," + std::to_string(pixel.g) + "," + std::to_string(pixel.b) + ")";
+}
+
+constexpr float kHalfLifeOneSecondEcho = 0.5695f;
+constexpr float kHalfLifeOneSecondAccumulate = 0.3015f;
+
+void testFeedbackDecay(Runner& run, const FeedbackClips& clips) {
+    run.clearAll();
+    feedbackDefaults(run);
+    run.engine().setResolutionIndex(0);
+
+    feedbackEffect(run, 0, "Trails", 1.0f, 0.5f, 0.5f, 0.5f);
+    charge(run, clips, 90);
+    run.place(0, clips.black);
+    run.step(900);
+    const Pixel trails = run.centre();
+    const int trailsLit = run.lit(30);
+    const int total = run.engine().width() * run.engine().height();
+    run.record("feedback_trails_8bit_residue_documented", trails.r > 8 && trailsLit > total * 9 / 10, "after 15 s of black the old Trails still shows " + pixelText(trails) + " on " + std::to_string(trailsLit * 100 / std::max(total, 1)) + " % of the picture");
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    charge(run, clips, 120);
+    run.expect("feedback_echo_charged", run.centre(), 204, 204, 204, 4);
+    run.place(0, clips.black);
+    run.step(60);
+    run.expect("feedback_echo_half_after_one_second_60fps", run.centre(), 102, 102, 102, 10);
+    run.step(840);
+    const int echoLit = run.lit(3);
+    run.record("feedback_echo_fades_to_black", echoLit < total / 50, "after 15 s the lit part is " + std::to_string(echoLit * 100 / std::max(total, 1)) + " % of the picture (Trails above: " + std::to_string(trailsLit * 100 / std::max(total, 1)) + " %)");
+
+    for (const int rate : {30, 120}) {
+        run.clearAll();
+        feedbackDefaults(run);
+        feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+        charge(run, clips, 120);
+        run.place(0, clips.black);
+        run.stepWith(rate, 1.0 / static_cast<double>(rate));
+        run.expect("feedback_echo_half_after_one_second_" + std::to_string(rate) + "fps", run.centre(), 102, 102, 102, 12);
+    }
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    charge(run, clips, 120);
+    run.place(0, clips.black);
+    run.step(2);
+    run.engine().paused = true;
+    run.step(180);
+    const Pixel held = run.centre();
+    run.record("feedback_echo_holds_while_paused", held.r >= 190, "got " + pixelText(held) + " after three paused seconds");
+    run.engine().paused = false;
+    run.step(60);
+    const Pixel resumed = run.centre();
+    run.record("feedback_echo_resumes_after_pause", resumed.r >= 80 && resumed.r <= 125, "got " + pixelText(resumed) + " one second after the pause");
+}
+
+void testFeedbackControls(Runner& run, const FeedbackClips& clips) {
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    charge(run, clips, 120);
+    run.place(0, clips.black);
+    run.step(30);
+    run.engine().setFeedbackFrozen(true);
+    run.step(2);
+    const Pixel before = run.centre();
+    run.step(180);
+    const Pixel during = run.centre();
+    run.record("feedback_freeze_holds_the_picture", std::abs(before.r - during.r) <= 3 && during.r > 100, "frozen at " + pixelText(before) + " and still " + pixelText(during) + " three seconds later");
+    run.engine().setFeedbackFrozen(false);
+    run.step(60);
+    const Pixel released = run.centre();
+    run.record("feedback_unfreeze_fades_again", released.r < during.r * 65 / 100, "after unfreezing " + pixelText(released) + " from " + pixelText(during));
+    charge(run, clips, 120);
+    run.place(0, clips.black);
+    run.step(3);
+    run.engine().resetFeedback();
+    run.step(1);
+    run.expect("feedback_reset_clears", run.centre(), 0, 0, 0, 2);
+
+    run.clearAll();
+    feedbackDefaults(run);
+    const int accumulate = run.add("fb_accumulate", kAccumulate);
+    if (accumulate >= 0) {
+        run.place(0, accumulate);
+        run.step(20);
+        const Pixel full = run.centre();
+        run.engine().resetFeedback();
+        run.step(1);
+        const Pixel again = run.centre();
+        run.record("feedback_reset_restarts_shader_buffers", full.r >= 250 && again.r <= 80, "shader buffer was " + pixelText(full) + " and starts again at " + pixelText(again));
+    }
+}
+
+void testFeedbackEffects(Runner& run, const FeedbackClips& clips) {
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Motion Smear", 0.7f, 0.0f, 0.0f, 0.0f);
+    run.place(0, clips.black);
+    run.step(30);
+    run.place(0, clips.grey);
+    run.step(3);
+    const Pixel early = run.centre();
+    run.step(57);
+    const Pixel oneSecond = run.centre();
+    run.step(540);
+    const Pixel late = run.centre();
+    run.record("feedback_smear_rises_gradually", early.r >= 8 && early.r <= 16 && oneSecond.r >= 128 && oneSecond.r <= 153 && late.r >= 200, "three frames after the cut " + pixelText(early) + " (about 12 expected), after one second " + pixelText(oneSecond) + " (about 141), after ten seconds " + pixelText(late));
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Accumulate", kHalfLifeOneSecondAccumulate, 0.0f, 0.0f, 0.0f);
+    run.place(0, clips.black);
+    run.step(30);
+    run.place(0, clips.grey);
+    run.step(60);
+    run.expect("feedback_accumulate_average_half_after_one_second", run.centre(), 102, 102, 102, 12);
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Accumulate", kHalfLifeOneSecondAccumulate, 0.5f, 0.0f, 0.0f);
+    charge(run, clips, 120);
+    run.place(0, clips.black);
+    run.step(60);
+    run.expect("feedback_accumulate_lighten_half_after_one_second", run.centre(), 102, 102, 102, 12);
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Accumulate", kHalfLifeOneSecondAccumulate, 1.0f, 0.0f, 0.0f);
+    charge(run, clips, 300);
+    const Pixel exposed = run.centre();
+    run.record("feedback_accumulate_exposure_gets_brighter_than_the_source", exposed.r >= 240, "a grey of 204 reached " + pixelText(exposed));
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Feedback Transform", 0.5f, 0.5f, 0.5f, 0.5f);
+    charge(run, clips, 120);
+    const Pixel held = run.centre();
+    run.place(0, clips.black);
+    run.step(60);
+    const Pixel transformed = run.centre();
+    run.record("feedback_transform_neutral_holds_and_fades", held.r >= 200 && held.r <= 208 && transformed.r >= 93 && transformed.r <= 117, "a neutral Feedback Transform holds " + pixelText(held) + " on a steady picture and left " + pixelText(transformed) + " one second after the picture went black (about 105 expected)");
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Time Echo", 0.7f, 1.0f, 0.0f, 0.0f);
+    run.place(0, clips.bar);
+    run.step(150);
+    const Pixel right = run.sample(0.8, 0.5);
+    const Pixel left = run.sample(0.2, 0.5);
+    run.record("feedback_echo_follows_its_angle", right.r >= 120 && left.r <= 4, "a bar at the centre echoed to the right " + pixelText(right) + ", nothing to the left " + pixelText(left));
+
+    run.clearAll();
+    feedbackDefaults(run);
+    EffectSlot& echoSlot = feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    charge(run, clips, 60);
+    run.place(0, clips.black);
+    run.step(1);
+    echoSlot.params[0] = 0.0f;
+    run.step(40);
+    const int total = run.engine().width() * run.engine().height();
+    run.record("feedback_short_half_life_follows_the_control", run.lit(3) < total / 50, "a half-life of 0.04 s left " + std::to_string(run.lit(3) * 100 / std::max(total, 1)) + " % lit after 40 frames");
+}
+
+void testFeedbackBudget(Runner& run, const FeedbackClips& clips) {
+    Engine& engine = run.engine();
+    run.clearAll();
+    feedbackDefaults(run);
+    engine.setResolutionIndex(0);
+    const size_t full = static_cast<size_t>(engine.width()) * static_cast<size_t>(engine.height()) * 4u;
+
+    for (int layer = 0; layer < 4; ++layer) {
+        run.engine().comp.layers[static_cast<size_t>(layer)].opacity = 1.0f;
+        feedbackEffect(run, layer, "Trails", 0.7f, 0.5f, 0.5f, 0.5f);
+        run.place(layer, clips.grey);
+    }
+    engine.setFeedbackBudget(0);
+    run.step(8);
+    FeedbackStats open = engine.feedbackStats();
+    run.record("feedback_four_layers_without_a_limit", open.live == 4 && open.liveBytes == 4 * full && open.reduced == 0 && open.denied == 0, std::to_string(open.live) + " buffers, " + std::to_string(open.liveBytes) + " bytes, expected " + std::to_string(4 * full));
+
+    const unsigned long long tight = 5ull * 1024ull * 1024ull;
+    engine.setFeedbackBudget(tight);
+    run.step(8);
+    FeedbackStats limited = engine.feedbackStats();
+    run.record("feedback_budget_is_kept", limited.total() <= tight && limited.live == 4 && limited.reduced >= 1 && limited.denied == 0, std::to_string(limited.live) + " buffers, " + std::to_string(limited.liveBytes) + " of " + std::to_string(tight) + " bytes, " + std::to_string(limited.reduced) + " smaller than the picture");
+    run.record("feedback_budget_shows_in_the_memory_total", engine.gpuMemory().feedback == limited.total(), "memory overview " + std::to_string(engine.gpuMemory().feedback) + " bytes, stats " + std::to_string(limited.total()));
+    run.record("feedback_budget_keeps_the_picture", run.lit(30) > 0, "the output is not black");
+
+    run.clearAll();
+    feedbackDefaults(run);
+    engine.setResolutionIndex(0);
+    feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    engine.setFeedbackBudget(600ull * 1024ull);
+    charge(run, clips, 120);
+    const FeedbackStats halfSize = engine.feedbackStats();
+    run.place(0, clips.black);
+    run.step(60);
+    const Pixel small = run.centre();
+    run.record("feedback_smaller_buffer_still_works", halfSize.live == 1 && halfSize.reduced == 1 && small.r >= 85 && small.r <= 125, std::to_string(halfSize.liveBytes) + " bytes instead of " + std::to_string(full) + ", centre " + pixelText(small) + " after one second");
+    run.step(840);
+    const int smallLit = run.lit(3);
+    const Pixel smallEnd = run.centre();
+    const int pixelCount = engine.width() * engine.height();
+    run.record("feedback_smaller_buffer_fades_out_without_a_stall", smallLit < pixelCount / 4, "fifteen seconds after the picture went black the half size buffer leaves " + pixelText(smallEnd) + " in the centre and " + std::to_string(smallLit * 100 / std::max(pixelCount, 1)) + " % of the picture one step above black (the full size buffer: 0 %)");
+
+    run.clearAll();
+    feedbackDefaults(run);
+    engine.setResolutionIndex(0);
+    feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    engine.setFeedbackBudget(100ull * 1024ull);
+    charge(run, clips, 30);
+    const FeedbackStats refused = engine.feedbackStats();
+    run.expect("feedback_refused_buffer_shows_the_live_picture", run.centre(), 204, 204, 204, 4);
+    run.place(0, clips.black);
+    run.step(2);
+    run.expect("feedback_refused_buffer_leaves_no_echo", run.centre(), 0, 0, 0, 2);
+    run.record("feedback_refused_buffer_is_counted", refused.live == 0 && refused.denied >= 1 && engine.gpuMemory().feedback == 0, std::to_string(refused.live) + " buffers, " + std::to_string(static_cast<long long>(refused.denied)) + " refused");
+
+    engine.setFeedbackBudget(0);
+    charge(run, clips, 20);
+    const FeedbackStats restored = engine.feedbackStats();
+    run.record("feedback_budget_off_gives_full_size_again", restored.live == 1 && restored.reduced == 0 && restored.liveBytes == full, std::to_string(restored.liveBytes) + " bytes, expected " + std::to_string(full));
+    feedbackDefaults(run);
+}
+
+void testFeedbackResolutions(Runner& run, const FeedbackClips& clips) {
+    Engine& engine = run.engine();
+    run.clearAll();
+    feedbackDefaults(run);
+    run.place(0, clips.grey);
+    run.place(1, clips.bar);
+    run.place(2, clips.grey);
+    feedbackEffect(run, 0, "Trails", 0.7f, 0.5f, 0.5f, 0.5f);
+    feedbackEffect(run, 1, "Time Echo", 0.5f, 0.3f, 0.2f, 0.2f);
+    feedbackEffect(run, 2, "Accumulate", 0.4f, 0.0f, 0.0f, 0.0f);
+    EffectSlot& master = engine.comp.master.fx[0];
+    setEffect(master, effectIndexByName("Time Echo"));
+    int errors = 0;
+    for (const int index : {0, 1, 2, 3, 0, 2, 1, 0}) {
+        drainGlErrors();
+        engine.setResolutionIndex(index);
+        run.step(5);
+        const FeedbackStats stats = engine.feedbackStats();
+        const size_t one = static_cast<size_t>(engine.width()) * static_cast<size_t>(engine.height()) * 4u;
+        const bool sized = stats.live == 4 && stats.liveBytes == 4 * one && stats.reduced == 0 && stats.pooled <= static_cast<int>(kFeedbackPoolMax);
+        const bool seen = engine.gpuMemory().feedback == stats.total();
+        const bool visible = run.lit(30) > 0;
+        const bool clean = glGetError() == GL_NO_ERROR;
+        const bool good = sized && seen && visible && clean;
+        errors += good ? 0 : 1;
+        run.record("feedback_resolution_" + std::to_string(engine.width()) + "x" + std::to_string(engine.height()) + "_" + std::to_string(index), good, std::to_string(stats.live) + " buffers, " + std::to_string(stats.liveBytes) + " bytes, expected " + std::to_string(4 * one) + ", pooled " + std::to_string(stats.pooled) + ", picture " + (visible ? "lit" : "black") + ", GL " + (clean ? "clean" : "error"));
+    }
+    engine.setResolutionIndex(0);
+    run.step(3);
+
+    const size_t base = static_cast<size_t>(engine.width()) * static_cast<size_t>(engine.height()) * 4u;
+    engine.setQuality(QualityBalanced, 16.0);
+    run.step(6);
+    const FeedbackStats scaled = engine.feedbackStats();
+    const float balancedScale = fixedQualityScale(QualityBalanced);
+    const size_t layerSize = static_cast<size_t>(scaledDimension(engine.width(), balancedScale)) * static_cast<size_t>(scaledDimension(engine.height(), balancedScale)) * 4u;
+    run.record("feedback_follows_the_layer_resolution", scaled.live == 4 && scaled.liveBytes == 3 * layerSize + base && scaled.reduced == 0, std::to_string(scaled.liveBytes) + " bytes with the balanced layer size, expected " + std::to_string(3 * layerSize + base));
+    engine.setQuality(QualityFull, 16.0);
+    run.step(6);
+    const FeedbackStats back = engine.feedbackStats();
+    run.record("feedback_returns_to_full_layer_resolution", back.live == 4 && back.liveBytes == 4 * base, std::to_string(back.liveBytes) + " bytes, expected " + std::to_string(4 * base));
+    feedbackDefaults(run);
+}
+
+void testFeedbackReuse(Runner& run, const FeedbackClips& clips) {
+    Engine& engine = run.engine();
+    run.clearAll();
+    feedbackDefaults(run);
+    engine.setResolutionIndex(0);
+    EffectSlot& slot = feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    run.place(0, clips.grey);
+    run.step(10);
+    const FeedbackStats start = engine.feedbackStats();
+    for (int i = 0; i < 40; ++i) {
+        slot.enabled = i % 2 == 1;
+        run.step(2);
+    }
+    slot.enabled = true;
+    run.step(3);
+    const FeedbackStats withReuse = engine.feedbackStats();
+    run.record("feedback_buffers_are_reused", withReuse.created - start.created <= 2 && withReuse.reused - start.reused >= 15, std::to_string(static_cast<long long>(withReuse.created - start.created)) + " made and " + std::to_string(static_cast<long long>(withReuse.reused - start.reused)) + " reused over 20 off and on switches");
+
+    engine.setFeedbackReuse(false);
+    run.record("feedback_reuse_off_empties_the_pool", engine.feedbackStats().pooled == 0, "pool holds " + std::to_string(engine.feedbackStats().pooled));
+    const FeedbackStats plain = engine.feedbackStats();
+    for (int i = 0; i < 40; ++i) {
+        slot.enabled = i % 2 == 1;
+        run.step(2);
+    }
+    slot.enabled = true;
+    run.step(3);
+    const FeedbackStats without = engine.feedbackStats();
+    run.record("feedback_reuse_off_makes_new_buffers", without.created - plain.created >= 15 && without.reused == plain.reused && without.pooled == 0, std::to_string(static_cast<long long>(without.created - plain.created)) + " made and " + std::to_string(static_cast<long long>(without.reused - plain.reused)) + " reused");
+    engine.setFeedbackReuse(true);
+
+    slot.enabled = false;
+    run.step(3);
+    const FeedbackStats parked = engine.feedbackStats();
+    run.record("feedback_released_buffer_waits_in_the_pool", parked.pooled == 1 && parked.live == 0, std::to_string(parked.pooled) + " pooled, " + std::to_string(parked.live) + " live");
+    run.step(static_cast<int>(kFeedbackPoolIdleFrames) + 20);
+    const FeedbackStats idle = engine.feedbackStats();
+    run.record("feedback_idle_pool_is_released", idle.pooled == 0 && idle.total() == 0 && engine.gpuMemory().feedback == 0, std::to_string(idle.pooled) + " pooled, " + std::to_string(idle.total()) + " bytes");
+    slot.enabled = true;
+
+    run.clearAll();
+    feedbackDefaults(run);
+    feedbackEffect(run, 0, "Time Echo", kHalfLifeOneSecondEcho, 0.0f, 0.0f, 0.0f);
+    run.place(0, clips.grey);
+    run.step(6);
+    DeckSettings& deck = engine.comp.deckSettings;
+    deck = DeckSettings{};
+    deck.seconds = 0.3f;
+    deck.syncBeats = false;
+    bool clean = true;
+    drainGlErrors();
+    for (int i = 0; i < 6; ++i) {
+        engine.switchDeck((i + 1) % 2);
+        run.step(30);
+        clean = clean && glGetError() == GL_NO_ERROR;
+    }
+    engine.switchDeck(0);
+    run.step(40);
+    run.record("feedback_deck_switches_stay_clean", clean && engine.feedbackStats().total() <= 4 * static_cast<size_t>(engine.width()) * static_cast<size_t>(engine.height()) * 4u, std::to_string(engine.feedbackStats().total()) + " bytes after six switches");
+}
+
+void testFeedbackSoak(Runner& run, const FeedbackClips& clips) {
+    Engine& engine = run.engine();
+    run.clearAll();
+    feedbackDefaults(run);
+    engine.setResolutionIndex(0);
+    int frames = 1200;
+    if (const char* text = std::getenv("NYREXVJ_FEEDBACK_SOAK_FRAMES")) {
+        frames = std::clamp(std::atoi(text), 100, 200000);
+    }
+    const char* names[] = {"Trails", "Time Echo", "Motion Smear", "Accumulate"};
+    DeckSettings& deck = engine.comp.deckSettings;
+    deck = DeckSettings{};
+    deck.seconds = 0.0f;
+    deck.syncBeats = false;
+    const auto configure = [&]() {
+        for (int layer = 0; layer < 4; ++layer) {
+            feedbackEffect(run, layer, names[layer], 0.6f, 0.5f, 0.5f, 0.4f);
+            run.place(layer, layer % 2 == 0 ? clips.grey : clips.bar);
+        }
+        setEffect(engine.comp.master.fx[0], effectIndexByName("Hue Feedback"));
+    };
+    engine.switchDeck(1);
+    run.step(2);
+    configure();
+    run.step(2);
+    engine.switchDeck(0);
+    run.step(2);
+    configure();
+    run.step(2);
+    deck.seconds = 0.2f;
+
+    std::string lastAction = "none";
+    std::string blackAfter;
+    unsigned long long seed = 12345;
+    const auto next = [&seed]() {
+        seed = seed * 6364136223846793005ull + 1442695040888963407ull;
+        return static_cast<unsigned>(seed >> 33);
+    };
+    const unsigned long long budgets[] = {0ull, 3ull * 1024ull * 1024ull, 12ull * 1024ull * 1024ull, kDefaultFeedbackBudgetBytes};
+    size_t peakFeedback = 0;
+    int glErrors = 0;
+    int blackFrames = 0;
+    drainGlErrors();
+    for (int frame = 0; frame < frames; ++frame) {
+        run.step(1);
+        if (frame % 100 == 99) {
+            const FeedbackStats stats = engine.feedbackStats();
+            peakFeedback = std::max(peakFeedback, stats.total());
+            glErrors += glGetError() == GL_NO_ERROR ? 0 : 1;
+            if (run.lit(3) == 0) {
+                ++blackFrames;
+                blackAfter += (blackAfter.empty() ? "" : ", ") + std::string("frame ") + std::to_string(frame) + " after " + lastAction;
+            }
+        }
+        if (frame % 40 == 39) {
+            switch (next() % 9) {
+            case 0: {
+                const int index = static_cast<int>(next() % 2);
+                engine.setResolutionIndex(index);
+                lastAction = "resolution " + std::to_string(index);
+                break;
+            }
+            case 1:
+                engine.setFeedbackFrozen(!engine.feedbackFrozen());
+                lastAction = engine.feedbackFrozen() ? "freeze on" : "freeze off";
+                break;
+            case 2:
+                engine.resetFeedback();
+                lastAction = "reset";
+                break;
+            case 3: {
+                const size_t layer = next() % 4;
+                EffectSlot& slot = engine.comp.layers[layer].fx[0];
+                slot.enabled = !slot.enabled;
+                lastAction = std::string("layer ") + std::to_string(layer) + (slot.enabled ? " effect on" : " effect off");
+                break;
+            }
+            case 4: {
+                const size_t layer = next() % 4;
+                const size_t param = next() % 4;
+                const float value = static_cast<float>(next() % 101) / 100.0f;
+                engine.comp.layers[layer].fx[0].params[param] = value;
+                lastAction = "layer " + std::to_string(layer) + " parameter " + std::to_string(param) + " = " + std::to_string(value);
+                break;
+            }
+            case 5: {
+                const int index = static_cast<int>(next() % 2);
+                engine.switchDeck(index);
+                lastAction = "deck " + std::to_string(index);
+                break;
+            }
+            case 6: {
+                const int mode = static_cast<int>(next() % 3);
+                engine.setQuality(mode, 16.0);
+                lastAction = "quality " + std::to_string(mode);
+                break;
+            }
+            case 7: {
+                const unsigned long long value = budgets[next() % 4];
+                engine.setFeedbackBudget(value);
+                lastAction = "budget " + std::to_string(value);
+                break;
+            }
+            default: {
+                const bool reuse = next() % 2 == 0;
+                engine.setFeedbackReuse(reuse);
+                lastAction = reuse ? "reuse on" : "reuse off";
+                break;
+            }
+            }
+        }
+    }
+    const size_t ceiling = (10u + kFeedbackPoolMax) * static_cast<size_t>(1280) * 720u * 4u;
+    run.record("feedback_soak_memory_stays_below_the_ceiling", peakFeedback <= ceiling, std::to_string(frames) + " frames with resolution, deck, quality, budget, freeze and reset changes: peak " + std::to_string(peakFeedback) + " bytes, ceiling " + std::to_string(ceiling));
+    run.record("feedback_soak_no_gl_errors_and_a_picture", glErrors == 0 && blackFrames == 0, std::to_string(glErrors) + " GL errors, " + std::to_string(blackFrames) + " black samples" + (blackAfter.empty() ? "" : " (" + blackAfter + ")"));
+
+    engine.setFeedbackFrozen(false);
+    engine.setFeedbackBudget(kDefaultFeedbackBudgetBytes);
+    engine.switchDeck(0);
+    run.step(30);
+    for (int layer = 0; layer < 4; ++layer) {
+        engine.comp.layers[static_cast<size_t>(layer)].fx[0].enabled = false;
+    }
+    engine.comp.master.fx[0].enabled = false;
+    run.step(static_cast<int>(kFeedbackPoolIdleFrames) + 60);
+    const FeedbackStats end = engine.feedbackStats();
+    run.record("feedback_soak_releases_everything", end.live == 0 && end.pooled == 0 && engine.gpuMemory().feedback == 0, std::to_string(end.live) + " live, " + std::to_string(end.pooled) + " pooled, " + std::to_string(engine.gpuMemory().feedback) + " bytes after every effect was switched off");
+    feedbackDefaults(run);
+}
+
+void testFeedbackLab(Runner& run) {
+    const FeedbackClips clips = feedbackClips(run);
+    if (clips.grey < 0 || clips.black < 0 || clips.bar < 0) {
+        run.record("feedback_clips", false, "the test clips did not load");
+        return;
+    }
+    testFeedbackDecay(run, clips);
+    testFeedbackControls(run, clips);
+    testFeedbackEffects(run, clips);
+    testFeedbackBudget(run, clips);
+    testFeedbackResolutions(run, clips);
+    testFeedbackReuse(run, clips);
+    testFeedbackSoak(run, clips);
+    run.clearAll();
+    feedbackDefaults(run);
+}
+
 bool mentionsLine(const std::string& text, int number) {
     const std::string wanted = std::to_string(number);
     for (size_t i = 0; i + wanted.size() <= text.size(); ++i) {
@@ -1389,6 +1921,61 @@ void benchTransition(Runner& run, json& result, const std::string& name, int fra
     run.step(static_cast<int>(settings.seconds * 60.0f) + 30);
 }
 
+void benchFeedbackCase(Runner& run, json& result, const std::string& name, int frames, const FeedbackClips& clips, const char* effect, int layers, bool frozen) {
+    Engine& engine = run.engine();
+    run.clearAll();
+    feedbackDefaults(run);
+    engine.setResolutionIndex(1);
+    run.step(static_cast<int>(kFeedbackPoolIdleFrames) + 10);
+    engine.setFeedbackFrozen(frozen);
+    for (int layer = 0; layer < layers; ++layer) {
+        if (effect) {
+            feedbackEffect(run, layer, effect, 0.6f, 0.5f, 0.5f, 0.4f);
+        }
+        run.place(layer, layer % 2 == 0 ? clips.grey : clips.bar);
+    }
+    const auto first = std::chrono::steady_clock::now();
+    run.step(1);
+    const double firstMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - first).count();
+    run.step(6);
+    double total = 0.0;
+    double worst = 0.0;
+    for (int i = 0; i < frames; ++i) {
+        const auto begin = std::chrono::steady_clock::now();
+        run.step(1);
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count();
+        total += ms;
+        worst = std::max(worst, ms);
+    }
+    json item;
+    item["name"] = name;
+    item["averageMs"] = total / static_cast<double>(std::max(frames, 1));
+    item["worstMs"] = worst;
+    item["firstFrameMs"] = firstMs;
+    item["feedbackBytes"] = engine.feedbackStats().total();
+    result.push_back(std::move(item));
+    logLine("Shader benchmark " + name + ": " + std::to_string(total / std::max(frames, 1)) + " ms per frame, first frame " + std::to_string(firstMs) + " ms, " + std::to_string(engine.feedbackStats().total()) + " feedback bytes");
+    engine.setFeedbackFrozen(false);
+}
+
+void benchFeedbackLab(Runner& run, json& result, int frames) {
+    const FeedbackClips clips = feedbackClips(run);
+    if (clips.grey < 0 || clips.bar < 0) {
+        return;
+    }
+    benchFeedbackCase(run, result, "bench_feedback_none", frames, clips, nullptr, 1, false);
+    benchFeedbackCase(run, result, "bench_feedback_trails", frames, clips, "Trails", 1, false);
+    benchFeedbackCase(run, result, "bench_feedback_time_echo", frames, clips, "Time Echo", 1, false);
+    benchFeedbackCase(run, result, "bench_feedback_motion_smear", frames, clips, "Motion Smear", 1, false);
+    benchFeedbackCase(run, result, "bench_feedback_transform", frames, clips, "Feedback Transform", 1, false);
+    benchFeedbackCase(run, result, "bench_feedback_accumulate", frames, clips, "Accumulate", 1, false);
+    benchFeedbackCase(run, result, "bench_feedback_time_echo_frozen", frames, clips, "Time Echo", 1, true);
+    benchFeedbackCase(run, result, "bench_feedback_none_four_layers", frames, clips, nullptr, 4, false);
+    benchFeedbackCase(run, result, "bench_feedback_time_echo_four_layers", frames, clips, "Time Echo", 4, false);
+    run.clearAll();
+    feedbackDefaults(run);
+}
+
 json benchmark(Runner& run, int frames) {
     json result = json::array();
     run.engine().setResolutionIndex(1);
@@ -1458,6 +2045,7 @@ json benchmark(Runner& run, int frames) {
         benchTransition(run, result, "bench_transition_custom_iris", frames, trIris, TransitionFade, trFrom, trTo);
         benchTransition(run, result, "bench_transition_custom_heavy16", frames, trHeavy, TransitionFade, trFrom, trTo);
     }
+    benchFeedbackLab(run, result, frames);
     return result;
 }
 
@@ -1488,6 +2076,7 @@ int runShaderSelfTest(Engine& engine, int benchFrames, const std::string& output
     testCustomTransitionFeedback(run);
     testCustomTransitionPreview(run);
     testBuiltinsAfterCustom(run);
+    testFeedbackLab(run);
     report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
     report["checks"] = run.items();
     report["failed"] = run.failed();

@@ -17,6 +17,9 @@ public:
     void resync() override { engine_.resync(); }
     bool blackout() const override { return engine_.blackout; }
     void setBlackout(bool on) override { engine_.blackout = on; }
+    bool feedbackFrozen() const override { return engine_.feedbackFrozen(); }
+    void setFeedbackFrozen(bool on) override { engine_.setFeedbackFrozen(on); }
+    void resetFeedback() override { engine_.resetFeedback(); }
 
 private:
     Engine& engine_;

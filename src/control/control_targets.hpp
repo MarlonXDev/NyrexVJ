@@ -33,7 +33,9 @@ enum class ControlItem {
     DeckPrevious,
     EffectEnable,
     EffectParam,
-    Macro
+    Macro,
+    FeedbackFreeze,
+    FeedbackReset
 };
 
 struct ControlTarget {
@@ -60,6 +62,9 @@ public:
     virtual void resync() = 0;
     virtual bool blackout() const = 0;
     virtual void setBlackout(bool on) = 0;
+    virtual bool feedbackFrozen() const { return false; }
+    virtual void setFeedbackFrozen(bool) {}
+    virtual void resetFeedback() {}
 };
 
 class ControlRouter {

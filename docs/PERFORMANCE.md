@@ -6,7 +6,7 @@ NyrexVJ often runs next to VRChat on the same computer and the same graphics car
 
 - Effects that are switched off and layers that have no active clip, are bypassed or are not soloed.
 - Gated effects (React mode Gate) while their gate is closed. A closed feedback effect still copies its input into its feedback picture.
-- Feedback pictures only exist while a feedback effect needs them and are freed in the same frame when it does not.
+- Feedback pictures only exist while a feedback effect needs them. Until 0.65.0 they were freed in the same frame when it did not; since 0.66.0 a released one waits up to five seconds in a small pool for reuse (see below).
 - Shader programs are compiled once, when a clip or effect is first used, and then reused.
 - The picture of the cue preview is only drawn while a clip is waiting in it.
 
@@ -292,6 +292,16 @@ Off by default; with Use hot standby off the failover system does nothing, and a
 - **Measured here.** A 30 s media run on a software renderer (Mesa llvmpipe, two cores, 1920 x 1080, six files: two 3D models, an image and three videos): 417 frames, 335 of them over the budget of one frame period, which is what a software renderer does and says nothing about a card; 14 launches, 3 clears, no clip failed, no OpenGL error. A 20 s media run with an image and two 3D models also passed.
 - **Limits proposed for a real card** (60 fps target, period 16.7 ms): P95 of the work time within one period, P99 within 1.5 periods, longest frame 100 ms, at most 2 percent of frames over a period, at most 0.5 percent missed frames, at least 97 percent of the target frame rate. They are starting points, not results.
 - **Not measured.** Any graphics card, any frame time against these limits, VRAM growth against the card (`scripts/measure_live.py` against `nvidia-smi` or the Windows counters), a run on Windows, a long media run with video decoding through a hardware decoder.
+
+## What is new in 0.66.0: feedback buffers
+
+[ADR 0060](adr/0060-gpu-feedback-lab-budget-pool-freeze-reset-and-feedback-effects.md). The pictures that feedback effects keep (Trails, Hue Feedback, Time Echo, Motion Smear, Feedback Transform, Accumulate) get a memory budget, a pool for reuse, Freeze and Reset. Nothing here changes a show that has no feedback effect.
+
+- **Where the cost goes.** Each feedback effect keeps one 8 bit picture of the size of its layer (3.7 MB at 1280 x 720, 8.3 MB at 1920 x 1080, 33.2 MB at 3840 x 2160) and copies its output into it once per frame. A buffer is made when the effect starts (one clear), reused from the pool when one of the right size is waiting, and released when the effect stops. The pool holds at most 8 buffers and drops one after 300 frames without use; its memory is part of the estimate under Settings, Performance, Memory (new line Feedback buffers). The budget (Settings, Performance, Feedback, 256 MB at the start, 0 = off) makes a new buffer three quarters, half or a quarter of the picture when the full size does not fit, and refuses it when even that does not fit.
+- **Measured here.** Mesa llvmpipe, 1280 x 720, one layer with a grey clip, milliseconds per frame, 60 frames after 6 warm-up frames, final run (the other two runs differ by up to 3 ms): no effect 14.4, Trails 23.5, Time Echo 31.5, Motion Smear 26.8, Feedback Transform 26.3, Accumulate 25.8, Time Echo frozen 30.8; four layers 43.0 without an effect and 110.4 with a Time Echo on each. Feedback memory: 3,686,400 bytes for one picture, 14,745,600 for four. A 1,200 frame run with random changes of resolution, deck, quality, budget, freeze, reset and effects peaked at 12.4 MB of feedback memory and ended at 0 bytes after every effect was switched off.
+- **What it costs to be under the budget.** A buffer that runs smaller is filled by taking every n-th pixel and read back with bilinear filtering, so trails get softer and a little rougher. With a half size buffer and a half-life of one second, 8 % of the pixels were still one step above black 15 seconds after the picture went black, where the full size buffer was fully black.
+- **Freeze is not a saving.** A frozen effect still reads the old picture; only the copy into the buffer is skipped (30.8 ms frozen against 31.5 ms running).
+- **Not measured.** A graphics card, Windows, the cost next to VRChat, a run of hours, the first frame of a new buffer on a real driver, and what the budget does on a 4K output with many layers.
 
 ## Measured
 

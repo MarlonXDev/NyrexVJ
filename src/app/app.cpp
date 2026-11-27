@@ -653,6 +653,10 @@ void App::updateAudio(double dt) {
     audio_.setGain(settings_.audioGain);
     audio_.setSmoothing(settings_.audioSmoothing);
     audio_.setBeatSensitivity(settings_.audioBeatSensitivity);
+    audio_.setImprovedTracking(settings_.audioTracking == "improved");
+    audio_.setCrossovers(settings_.audioCrossLow, settings_.audioCrossHigh);
+    audio_.setLatency(static_cast<double>(settings_.audioLatencyMs) * 0.001);
+    audio_.setChannel(audioChannelFromName(settings_.audioChannel.c_str()));
     audio_.update(dt, engine_.comp.bpm);
     const AudioFeatures& features = audio_.features();
     engine_.setAudio(features);

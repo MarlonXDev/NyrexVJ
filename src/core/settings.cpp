@@ -417,6 +417,11 @@ bool loadSettings(Settings& settings) {
         return std::string(fallback);
     };
     result.launchQuantize = choice("launchQuantize", {"off", "beat", "bar", "2bars", "4bars"}, "off");
+    result.audioTracking = choice("audioTracking", {"classic", "improved"}, "classic");
+    result.audioChannel = choice("audioChannel", {"mix", "left", "right"}, "mix");
+    result.audioLatencyMs = number("audioLatencyMs", 0.0f, -250.0f, 250.0f);
+    result.audioCrossLow = number("audioCrossLow", 150.0f, 60.0f, 400.0f);
+    result.audioCrossHigh = number("audioCrossHigh", 2000.0f, 800.0f, 6000.0f);
     result.timelineSource = choice("timelineSource", {"auto", "timecode", "transport"}, "auto");
     result.timelineLost = choice("timelineLost", {"hold", "continue"}, "hold");
     result.timelineOverride = choice("timelineOverride", {"segment", "released"}, "segment");
@@ -600,6 +605,11 @@ bool saveSettings(const Settings& settings) {
     doc["apiAllowRemote"] = settings.apiAllowRemote;
     doc["midiDevice"] = settings.midiDevice;
     doc["launchQuantize"] = settings.launchQuantize;
+    doc["audioTracking"] = settings.audioTracking;
+    doc["audioChannel"] = settings.audioChannel;
+    doc["audioLatencyMs"] = settings.audioLatencyMs;
+    doc["audioCrossLow"] = settings.audioCrossLow;
+    doc["audioCrossHigh"] = settings.audioCrossHigh;
     doc["midiFeedback"] = settings.midiFeedback;
     doc["midiOutDevice"] = settings.midiOutDevice;
     doc["syncMode"] = settings.syncMode;

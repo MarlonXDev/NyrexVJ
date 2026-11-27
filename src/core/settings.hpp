@@ -82,6 +82,11 @@ struct Settings {
     float audioSmoothing = 0.5f;
     float audioBeatSensitivity = 0.5f;
     bool audioSyncBpm = false;
+    std::string audioTracking = "classic";
+    std::string audioChannel = "mix";
+    float audioLatencyMs = 0.0f;
+    float audioCrossLow = 150.0f;
+    float audioCrossHigh = 2000.0f;
     bool spoutEnabled = false;
     std::string spoutName = "NyrexVJ";
     bool ndiEnabled = false;

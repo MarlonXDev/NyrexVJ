@@ -217,7 +217,7 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Musik und Bewegung</p>
 <h1>Audio und Musik</h1>
-<p class="meta">Kapitel 13 von 38 &middot; 2 Min. Lesezeit</p>
+<p class="meta">Kapitel 13 von 38 &middot; 3 Min. Lesezeit</p>
 <nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#sources">Eine Quelle wählen</a><a href="#analysis">Analyse-Einstellungen</a><a href="#making-react">Visuals reagieren lassen</a></nav>
 <h2 id="sources"><a class="anchor" href="#sources" aria-label="Link">#</a>Eine Quelle wählen</h2>
 <p>Wähle die Quelle im Fenster Audio-Eingang unten, oder unter Einstellungen, Audio, oder im Menü Audio.</p>
@@ -227,6 +227,9 @@
 <h2 id="analysis"><a class="anchor" href="#analysis" aria-label="Link">#</a>Analyse-Einstellungen</h2>
 <p>Verstärkung hebt oder senkt den Pegel, den die Analyse sieht, Glättung macht die Bänder ruhiger, und Beat-Schwelle bestimmt, wie leicht ein Beat gefunden wird. Du findest sie im Audio-Fenster und unter Einstellungen, Audio. Wenn die Anzeigen dauernd oben anschlagen, senk die Verstärkung, und wenn in jedem Geräusch ein Beat gefunden wird, senk die Empfindlichkeit.</p>
 <p>Erkanntes Tempo zeigt die Schätzung, und Verwenden übernimmt sie als Tempo. BPM mit Audio synchronisieren hält das Tempo dauerhaft am erkannten Beat. Das klappt am besten mit Musik mit klarer Kick. Für eine gleichmäßige Show mit einem DJ ist es oft besser, das Tempo selbst zu tappen oder einer Clock zu folgen, siehe <a href="sync.html">Show-Sync und Timecode</a>.</p>
+<p>Auf derselben Seite gibt es einen Abschnitt <strong>Beat-Verfolgung</strong> mit drei weiteren Dingen. Das Feld <strong>Beat-Verfolgung</strong> wählt das Verfahren: <strong>Klassisch</strong> ist der Erkenner, der immer da war, <strong>Verbessert</strong> ergänzt einen Tracker, der das Tempo aus jedem Schlag der letzten zehn Sekunden findet, sodass eine fehlende Kick ihn nicht aus dem Takt bringt. Er zeigt, ob er eingerastet ist, die Tempo-Sicherheit und die Beat-Sicherheit, und solange er eingerastet ist, kommen die Beats auf einem gleichmäßigen Raster, das eine kurze Pause überbrückt und nach anderthalb Sekunden Stille anhält. Klassisch bleibt die Vorgabe, und damit ist nichts anders als in der Version davor.</p>
+<p>Bei Verbessert verschiebt <strong>Audio-Latenz</strong> (-250 bis +250 ms) die Beats mit einem positiven Wert früher und mit einem negativen später. Nimm sie, wenn dein Audio-Interface oder ein Loopback hinterherhinkt, und schau auf Bild und Ton, bis beides zusammenpasst. <strong>Trennung Bass und Mitten</strong> und <strong>Trennung Mitten und Höhen</strong> verschieben die Grenzen der drei Bänder, am Anfang 150 Hz und 2000 Hz, für beide Verfahren. <strong>Kanal</strong> wählt Mischung, Links oder Rechts bei Geräten mit zwei Kanälen; das Feld ist beim Demo-Signal und bei Eingängen, die das nicht können, grau, und eine Änderung startet die Aufnahme des Geräts neu.</p>
+<aside class="note note"><strong class="note-label">Hinweis</strong><p>Der Tracker wurde mit synthetischen Stücken getestet, noch nicht mit echten DJ-Mixen und nicht unter Windows. Ein Stück ohne gleichmäßigen Beat bekommt eine niedrige Sicherheit, und unter einem Viertel davon kommen die Beats wieder vom klassischen Erkenner.</p></aside>
 <figure class="shot"><a href="../../assets/manual/de/settings-audio.webp"><img src="../../assets/manual/de/settings-audio.webp" width="874" height="584" loading="lazy" alt="Die Seite Audio in den Einstellungen"></a><figcaption>Die Seite Audio in den Einstellungen</figcaption></figure>
 <h2 id="making-react"><a class="anchor" href="#making-react" aria-label="Link">#</a>Visuals reagieren lassen</h2>
 <p>Die Reaktivität stellst du an drei Stellen ein:</p>

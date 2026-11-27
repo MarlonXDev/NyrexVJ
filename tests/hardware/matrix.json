@@ -3403,6 +3403,65 @@
           "criteria": "Proposed: the output never freezes for more than a fraction of a second in any of the four cases, and the interface is drawn again after the restore."
         }
       ]
+    },
+    {
+      "id": "audio-analysis",
+      "title": "Audio analysis 2: the optional beat tracker (tempo, phase, confidence, grid beats), the audio latency setting, the adjustable band split and the left, right or mixed channel choice",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/manual/manual.en.md",
+        "docs/SYNC.md",
+        "docs/TESTING.md",
+        "docs/INTERFACES.md",
+        "docs/adr/0058-audio-analysis-beat-tracker-latency-bands-and-channels.md"
+      ],
+      "sources": [
+        "src/audio/beat_tracker.cpp",
+        "src/audio/audio_analyzer.cpp",
+        "src/audio/audio_channels.cpp",
+        "src/audio/audio_system.cpp",
+        "src/audio/audio_input_linux.cpp",
+        "src/audio/audio_input_win.cpp",
+        "src/core/settings.cpp",
+        "src/app/ui_browser.cpp",
+        "tests/test_audio_tracker.cpp",
+        "tests/audio_signal.hpp"
+      ],
+      "automated": [
+        {
+          "id": "A-AUD-1",
+          "kind": "ctest",
+          "name": "nvj_audio_tracker_tests",
+          "note": "synthetic tracks at 100, 128 and 150 BPM, a tempo change from 120 to 140, a 10 s cross-fade between 124 and 128 BPM, silence and its return, a quiet break, clipping, hats on the off-beats, sixteenth hats, three frame rates, the latency setting in both directions, the channel picking, the band split, the classic path unchanged by the switch, and the CPU time per frame"
+        },
+        {
+          "id": "A-AUD-2",
+          "kind": "ctest",
+          "name": "nvj_audio_tests",
+          "note": "the existing analysis: bands, smoothing, the demo signal at three tempi and the classic beat detection that the new tracker sits next to"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-AUD-1",
+          "title": "The beat tracker with real music and a real audio input",
+          "needs": "A PC with a real audio input or system audio, music with a clear kick at a steady tempo, a DJ mix with a tempo change, a second track without a steady beat (ambient or a live band), and a stereo source with a different signal on each side",
+          "steps": [
+            "Open Settings, Audio, set Beat tracking to Improved, play a house or techno track and watch the tempo, the Tempo and Beat percentages and Locked; note the time until Locked and the tempo you see against the tempo you know.",
+            "Play a DJ mix through a tempo change and a break and watch whether the tempo follows and whether the beats keep going through the break; then stop the sound for ten seconds and start it again.",
+            "Play the ambient track and check that the tracker does not lock on noise and that the picture falls back to the classic detection when it is not locked.",
+            "Route a click track to a loopback or a second input, show the beat in the output next to the click on a recording or a scope, and set Audio latency until both agree; write down the value and the audio device.",
+            "Send a different signal to the left and the right channel and switch Channel between Mix, Left and Right; check that the Audio window shows the chosen side only and that the capture restarts without a crash.",
+            "Move the two split sliders while a track with a loud bass line plays and check that the Bass, Mid and High meters follow; set Beat tracking back to Classic and check that the show behaves as in the version before.",
+            "Run a show of 30 minutes with Improved on while the video plays and look at the frame time and the CPU use of the audio thread."
+          ],
+          "measure": "the time until Locked, the tempo error against the known tempo, whether the grid beats fall on the kicks (a recording or a scope), the latency value that matches on your interface, the CPU use with Classic and with Improved, the frame time, and anything that jumps or stays wrong",
+          "criteria": "Proposed: Locked within 5 s on steady music, the tempo within 1 BPM, grid beats within 40 ms of the kicks after the latency setting, no lock on the ambient track, no crash when the channel changes, and no measurable change of the frame time between Classic and Improved."
+        }
+      ]
     }
   ]
 }

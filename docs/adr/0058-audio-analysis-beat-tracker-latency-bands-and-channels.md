@@ -1,0 +1,44 @@
+# ADR 0058: Audio analysis 2: an optional beat tracker, a latency setting, adjustable bands and a channel choice
+
+- **Status:** Accepted, requested by MarlonXDev (2026-11-27 20:32, prompt 31): improve the existing audio analysis and the audio sync where there are real gaps, without a second audio engine, and keep OSC onset events, MIDI clock, LTC/MTC and Pro DJ Link. Issue [#146](https://github.com/MarlonXDev/NyrexVJ/issues/146).
+- **Date:** 2026-11-27
+- **Owners:** Maintainers (pending assignment)
+- **Related:** [SYNC.md](../SYNC.md), [ADR 0036](0036-text-particles-chains.md) (no relation, listed for the numbering of the audio bands), [INTERFACES.md](../INTERFACES.md), [TESTING.md](../TESTING.md)
+
+## Context
+- State at main `d11a604`: one FFT of 2048 samples per frame in `src/audio/audio_analyzer.cpp`, 128 log bins, the bands split at a fixed 150 Hz and 2 kHz, the kick found from the flux of the low band with a fixed refractory time of 0.27 s, the tempo from the median of the folded intervals of the last 24 beats (six are needed, the confidence is the share within 7 percent of the median). The capture is mono only (`audio_input_linux.cpp` asks PulseAudio for one channel, `audio_input_win.cpp` averages all channels). `App::updateAudio` blends the tempo into the composition (0.08 per frame, confidence above 0.55) and nudges the beat clock on every detected beat. `/nyrex/out/onset` follows `beatCount`.
+- What the old detector cannot do: it needs six clean kicks before it shows a tempo, one missing kick doubles an interval (the folding hides some of it), a break or a quiet part stops the beats, a tempo change takes about five seconds to appear, the beats are the detections themselves (they jitter by a frame and follow every bump of the bass), and there is no phase and no statement about how sure it is about the beat.
+- The test file `tests/test_audio.cpp` had sines and the demo signal at three tempi. Nothing covered tempo changes, offbeats, silence, clipping, a latency or a DJ mix.
+
+## Decision
+1. **A second tracker next to the old one, chosen in Settings, Audio, Beat tracking.** `Classic` is the old code and stays the default; with the default settings the features are the same as before (a test compares a fresh analyzer with one that was switched to Improved and back). `Improved` adds `src/audio/beat_tracker.*`. There is still one analyzer, one FFT and one thread; the tracker is a plain class that is fed from the render thread once per frame.
+2. **Onsets.** With Improved the analyzer computes an onset strength from the rise of the spectrum (three bands with the weights 1.0, 0.6 and 0.4, rescaled to a 60 Hz frame so that the thresholds do not depend on the frame rate), finds peaks above an adaptive threshold (mean plus deviation of the last 0.8 s, shaped by Beat sensitivity) and stamps each onset with the moment the rise crossed the threshold, interpolated inside the frame. At least 0.1 s lie between two onsets.
+3. **Tempo from all pairs.** The tracker keeps the onsets of the last 10 s with a weight that halves every 3 s. Every pair of onsets at most 3.05 s apart votes for a tempo with the distance divided by 1, 2, 3 and 4 (so a missing beat does not break it), into a histogram from 80 to 180 BPM in steps of 0.25, with a mild preference around 125 BPM. The best bin is refined with its neighbours. A new tempo has to win three evaluations (0.2 s apart) before it replaces the current one unless the current one has fallen below 0.2 confidence, and a candidate within 4 percent only moves the tempo gently.
+4. **Phase, confidence and the grid.** The phase is the circular mean of the onset times at the chosen period, weighted with the square of their strength, so a strong kick wins against weaker hats in between. The confidence is how closely the onsets sit on that grid (`(R - 0.3) / 0.7`), multiplied by how much evidence there is. `bpmConfidence` looks at the last 10 s, the new `beatConfidence` at the last four beats. Once the confidence is 0.4 the tracker is locked; it lets go below 0.25. While it is locked, `beatNow`, `kick` and `beatCount` come from the grid: beats are exactly one period apart, a beat that is missing in the signal (a break, a quiet bar) is still given, and the onset events of OSC stay as they are. After 1.5 s without sound the grid stops (the tempo is kept for 10 s).
+5. **Latency.** Settings, Audio, Audio latency (-250 to +250 ms, default 0) moves the beats on the grid earlier (positive) or later (negative). Because the grid predicts, it can place a beat before the sound has been analysed, which the old detector cannot do. The setting is only used with Improved. The detector itself has an offset that depends on the frame rate and the sound (measured below); it is not corrected with a fixed number.
+6. **Bands.** The two crossover frequencies are settings (Bass and mid split 60 to 400 Hz, default 150; Mid and high split 800 to 6000 Hz, default 2000, at least 200 Hz above the first). The defaults give the same bands as before.
+7. **Channels.** Settings, Audio, Channel: Mix (default, the same samples as before), Left or Right. Only with Left or Right does the Linux input ask PulseAudio for two channels; the Windows input picks the channel while it converts the frames it reads anyway. The pure function `appendChannel` does the picking and is tested. A change of the channel restarts the capture of the chosen device. The demo signal has no channels.
+8. **What follows the analysis stays.** `App::updateAudio` is unchanged except that it sets the new values. The clock still follows tempo and nudges, so with Improved the nudges arrive on the grid.
+
+## Measured
+All values come from `nvj_audio_tracker_tests` (synthetic tracks: a kick as a decaying sine sweep, hats as short bursts of noise, 48 kHz, 60 frames per second unless noted; Linux, software only, no audio device). Classic / Improved:
+- Time until the tempo is within 2 percent: 100 BPM 3.75 s / 2.35 s; 128 BPM 2.97 s / 1.27 s; 150 BPM 2.55 s / 1.70 s. Median tempo error at 128 BPM after 15 s: 0.57 BPM / 0.05 BPM.
+- Tempo change from 120 to 140 BPM: new tempo within 2 percent after 5.22 s / 2.42 s.
+- DJ mix of 124 and 128 BPM with a cross-fade of 10 s: after the mix 127.78 / 128.06 BPM; the improved value never leaves 118 to 134 BPM during the mix and deviates at most 0.21 BPM in the last 7 s.
+- Silence from 16 s to 20 s: no grid beat after 1.8 s of silence (the hold time is 1.5 s), the tempo is kept at 128.04 BPM; after the music returns, beats are back after 0.30 s and all 13 of the following beats lie within 50 ms of the kicks.
+- A quiet break (2 percent level for 3 s): 5 grid beats inside the break stay on the kick grid.
+- Hard clipped at eight times the gain: 128.08 BPM, locked.
+- Hats alone on the off-beats at 120 BPM: 120.00 BPM. Kick with off-beat and sixteenth hats: 32 of 32 beats within 60 ms of a kick.
+- Offset of the grid beats to the kicks (the frame at which the beat is reported minus the kick; half a frame is the ideal): 7.8 ms at 60 frames per second (ideal 8.3), 18.2 ms at 30 (ideal 16.7), 24.0 ms at 144 (ideal 3.5). The onset time itself is 1 to 3 ms late at 60 frames per second, 7 to 15 ms late at 30 and about 13 ms late at 144; it depends on the sound too, so use the latency setting.
+- Latency setting: +60 ms moves the grid beats by -64.6 ms, -60 ms by +64.6 ms (frame resolution of 16.7 ms).
+- CPU time of `push` and `advance` per frame on this machine: 37.6 us on average and 218 us at worst for Classic, 41.3 us and 162 us for Improved (the FFT is the same). The test accepts at most 1.5 ms extra per frame.
+
+## Not done
+- A second analysis input, ASIO or exclusive mode, an automatic latency measurement (it needs a loopback cable and a known signal: `M-AUD-1`), track recognition of any kind (the tempo alone never says which song it is), a change of the OSC messages, per-band onset events, tempo values below 80 or above 180 BPM (they are folded as before), a different default for new installations, a window with the onset curve.
+- The Windows capture was changed (channel choice) and compiled by the CI, but not run on Windows.
+
+## Consequences
+- `AudioFeatures` has four new fields (`beatConfidence`, `beatPhase`, `onsetStrength`, `tracking`). The plugin ABI does not carry them and is unchanged.
+- Settings gain `audioTracking`, `audioChannel`, `audioLatencyMs`, `audioCrossLow` and `audioCrossHigh`; older files load with the defaults, newer files load in older versions (unknown keys are ignored).
+- With Improved the tempo is shown from the second or third bar on and the beats come from the grid. A track that really changes the tempo in one step needs about 2 to 3 s to follow; a track without a steady beat (ambient, a live band) gets low confidence and, below 0.25, no grid beats, as the old detector would give.
+- Not measured on real music and real hardware, see `M-AUD-1`.

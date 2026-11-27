@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.63.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.64.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -173,6 +173,8 @@ set(NYREXVJ_CORE_SOURCES
     src/core/i18n_nl.cpp
     src/core/i18n_ja.cpp
     src/audio/audio_analyzer.cpp
+    src/audio/audio_channels.cpp
+    src/audio/beat_tracker.cpp
     src/audio/audio_system.cpp
     src/audio/synthetic_source.cpp
     src/render/asset_import.cpp
@@ -509,6 +511,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_audio_tests PRIVATE nvj_core)
     target_include_directories(nvj_audio_tests PRIVATE tests)
     add_test(NAME nvj_audio_tests COMMAND nvj_audio_tests)
+
+    add_executable(nvj_audio_tracker_tests tests/test_audio_tracker.cpp)
+    target_link_libraries(nvj_audio_tracker_tests PRIVATE nvj_core)
+    target_include_directories(nvj_audio_tracker_tests PRIVATE tests)
+    add_test(NAME nvj_audio_tracker_tests COMMAND nvj_audio_tracker_tests)
     add_executable(nvj_control_tests tests/test_control.cpp)
     target_link_libraries(nvj_control_tests PRIVATE nvj_core)
     target_include_directories(nvj_control_tests PRIVATE tests)

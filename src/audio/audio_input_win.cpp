@@ -199,6 +199,10 @@ public:
     bool running() const override { return running_ && !failed_; }
     int sampleRate() const override { return sampleRate_; }
 
+    bool supportsChannel() const override { return true; }
+
+    void setChannel(AudioChannel channel) override { channel_.store(channel); }
+
     void drain(std::vector<float>& mono) override {
         std::lock_guard<std::mutex> lock(mutex_);
         mono.swap(buffer_);
@@ -284,10 +288,13 @@ private:
                     break;
                 }
                 converted.assign(frames, 0.0f);
+                const AudioChannel mode = channel_.load();
                 if (!(bufferFlags & AUDCLNT_BUFFERFLAGS_SILENT) && data) {
                     for (UINT32 f = 0; f < frames; ++f) {
                         const BYTE* frame = data + static_cast<size_t>(f) * static_cast<size_t>(frameBytes);
                         float sum = 0.0f;
+                        float first = 0.0f;
+                        float second = 0.0f;
                         for (int c = 0; c < channels; ++c) {
                             const BYTE* sample = frame + c * bytesPerSample;
                             float value = 0.0f;
@@ -306,8 +313,19 @@ private:
                                 value = static_cast<float>(raw) / 2147483648.0f;
                             }
                             sum += value;
+                            if (c == 0) {
+                                first = value;
+                            } else if (c == 1) {
+                                second = value;
+                            }
                         }
-                        converted[f] = sum / static_cast<float>(channels);
+                        if (mode == AudioChannel::Left || (mode == AudioChannel::Right && channels < 2)) {
+                            converted[f] = first;
+                        } else if (mode == AudioChannel::Right) {
+                            converted[f] = second;
+                        } else {
+                            converted[f] = sum / static_cast<float>(channels);
+                        }
                     }
                 }
                 capture->ReleaseBuffer(frames);
@@ -336,6 +354,7 @@ private:
     std::atomic<bool> running_{false};
     std::atomic<bool> failed_{false};
     std::atomic<int> sampleRate_{48000};
+    std::atomic<AudioChannel> channel_{AudioChannel::Mix};
     std::mutex mutex_;
     std::vector<float> buffer_;
 };

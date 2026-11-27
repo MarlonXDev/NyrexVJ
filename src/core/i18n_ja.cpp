@@ -2980,6 +2980,16 @@ const Translation kJapanese[] = {
     {"Resolution %d x %d is not available, %s is used", "解像度 %d x %d は使用できないため、%s を使用します"},
     {"Tempo %.1f BPM is taken over", "テンポ %.1f BPM を引き継ぎます"},
     {"This file cannot be read as a Resolume composition", "このファイルは Resolume コンポジションとして読み込めません"},
+    {"Beat tracking", "ビート追跡"},
+    {"Classic", "従来"},
+    {"Improved", "改良"},
+    {"Audio latency", "オーディオ遅延"},
+    {"Bass and mid split", "低音と中音の境界"},
+    {"Mid and high split", "中音と高音の境界"},
+    {"Improved follows the tempo from every hit, keeps the beat through short breaks and puts the beats on a steady grid. Classic is the earlier detector.", "改良はすべての打撃からテンポを追い、短い休止でもビートを保ち、ビートを一定のグリッドに置きます。従来は以前の検出方式です。"},
+    {"How long the sound takes to reach the analysis. Positive values place the beats earlier, negative values later. It only works with Improved.", "音が解析に届くまでの時間です。正の値はビートを早め、負の値は遅らせます。改良でのみ有効です。"},
+    {"Where the bands Bass, Mid and High meet. The defaults are 150 Hz and 2000 Hz.", "低音、中音、高音の帯域が接する位置です。初期値は150 Hzと2000 Hzです。"},
+    {"This input always listens to both channels mixed.", "この入力は常に両チャンネルをミックスして聞きます。"},
 };
 
 }

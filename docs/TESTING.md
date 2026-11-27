@@ -63,6 +63,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Hardware frame lock and genlock status: the swap group and genlock extension names a real driver lists, what a consumer card, a professional card and a card with a sync board show, the software frame lock next to it, Windows and Linux | implemented | automated 4/4 | 4 | M-GENLOCK-1 open; M-GENLOCK-2 open; M-GENLOCK-3 open; M-GENLOCK-4 open |
 | Unreal Engine link: the plugin in a real editor and a packaged game, the connection state, the ping and pong round trip, the Python example client, Windows and Linux | implemented | automated 4/4 | 4 | M-UNREAL-1 open; M-UNREAL-2 open; M-UNREAL-3 open; M-UNREAL-4 open; M-UNREAL-5 open |
 | ResoPort (Resolume import), translucent 3D meshes, output while the window is minimized or moved, the 15 transitions and the glass effects: real Resolume compositions, real Windows, real graphics cards | implemented | implemented | 5 | M-RP-1 open; M-RP-2 open; M-RP-3 open; M-WIN-1 open |
+| Audio analysis 2: the optional beat tracker (tempo, phase, confidence, grid beats), the audio latency setting, the adjustable band split and the left, right or mixed channel choice | implemented | implemented | 2 | M-AUD-1 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

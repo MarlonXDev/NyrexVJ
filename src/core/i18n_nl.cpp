@@ -496,6 +496,8 @@ const Translation kDutch[] = {
     {"3D model file", "3D-modelbestand"},
     {"Blend", "Overvloeimodus"},
     {"Bypass: skip this layer", "Omzeilen: sla deze laag over"},
+    {"Bypass: skip this effect", "Omzeilen: dit effect overslaan"},
+    {"Remove this effect", "Dit effect verwijderen"},
     {"Cancel loading", "Laden annuleren"},
     {"Freezes the tempo clock and all clip motion", "Bevriest de tempoklok en alle clipbeweging"},
     {"Looks for new model files without restarting. Removed files stay in the list until the next start.", "Zoekt nieuwe modelbestanden zonder te herstarten. Verwijderde bestanden blijven in de lijst staan tot de volgende start."},

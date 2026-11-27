@@ -36,7 +36,7 @@ bool bandCombo(const char* id, int& band, float width, const PluginHost* plugins
     width = ui::fitComboWidth(width, tr(audioBandName(band)));
     width = ui::fitComboWidth(width, tr(audioBandName(BandOff)));
     ImGui::SetNextItemWidth(width);
-    if (ImGui::BeginCombo(id, tr(audioBandName(band)))) {
+    if (ui::beginCombo(id, tr(audioBandName(band)))) {
         for (int b = 0; b < AudioBandCount; ++b) {
             if (!pluginBandVisible(plugins, b, band, personOn)) {
                 continue;
@@ -75,7 +75,7 @@ void App::drawMods(std::array<AudioMod, kModSlots>& mods, bool master) {
         ImGui::SetNextItemWidth(ui::px(104.0f));
         const bool level = master && mod.target == TargetOpacity;
         const char* preview = level ? tr("Level") : tr(modTargetName(mod.target));
-        if (ImGui::BeginCombo("##target", preview)) {
+        if (ui::beginCombo("##target", preview)) {
             for (int t = 0; t < ModTargetCount; ++t) {
                 if (master && (t == TargetScale || t == TargetSpeed)) {
                     continue;
@@ -118,7 +118,7 @@ void App::drawModulators(Modulators& modulators) {
         ImGui::Text("LFO %d", i + 1);
         ImGui::SameLine(52.0f);
         ImGui::SetNextItemWidth(ui::px(84.0f));
-        if (ImGui::BeginCombo("##shape", tr(lfoShapeName(lfo.shape)))) {
+        if (ui::beginCombo("##shape", tr(lfoShapeName(lfo.shape)))) {
             for (int s = 0; s < LfoShapeCount; ++s) {
                 if (ImGui::Selectable(tr(lfoShapeName(s)), lfo.shape == s)) {
                     lfo.shape = s;
@@ -128,7 +128,7 @@ void App::drawModulators(Modulators& modulators) {
         }
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ui::px(92.0f));
-        if (ImGui::BeginCombo("##rate", tr(lfoRateName(lfo.rate)))) {
+        if (ui::beginCombo("##rate", tr(lfoRateName(lfo.rate)))) {
             for (int r = 0; r < kLfoRateCount; ++r) {
                 if (ImGui::Selectable(tr(lfoRateName(r)), lfo.rate == r)) {
                     lfo.rate = r;
@@ -156,11 +156,49 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
     for (int s = 0; s < kEffectSlots; ++s) {
         EffectSlot& slot = slots[static_cast<size_t>(s)];
         ImGui::PushID(s);
-        ImGui::Checkbox("##enabled", &slot.enabled);
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
+        const bool flatRow = ui::kFlatLook;
+        const ImGuiID openId = ImGui::GetID("##fxopen");
+        ImGuiStorage* openStore = ImGui::GetStateStorage();
+        const bool expanded = !flatRow || openStore->GetInt(openId, 1) != 0;
+        int bandColors = 0;
+        if (flatRow) {
+            const ImGuiStyle& rowStyle = ImGui::GetStyle();
+            const float rowHeight = ImGui::GetFrameHeight();
+            const ImVec2 rowPos = ImGui::GetCursorScreenPos();
+            const float rowWidth = ImGui::GetContentRegionAvail().x;
+            const ImVec4 band(ui::kAccentDim.x * 0.62f + 0.05f, ui::kAccentDim.y * 0.62f + 0.05f, ui::kAccentDim.z * 0.62f + 0.05f, 1.0f);
+            const ImVec4 cell(band.x + 0.09f, band.y + 0.09f, band.z + 0.09f, 1.0f);
+            const ImVec4 cellHover(band.x + 0.17f, band.y + 0.17f, band.z + 0.17f, 1.0f);
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(rowPos.x - rowStyle.WindowPadding.x, rowPos.y), ImVec2(rowPos.x + rowWidth + rowStyle.WindowPadding.x, rowPos.y + rowHeight), ImGui::GetColorU32(band));
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, band);
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, cell);
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, cell);
+            ImGui::PushStyleColor(ImGuiCol_Button, cell);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, cellHover);
+            bandColors = 5;
+            ImGui::InvisibleButton("##fxopen", ImVec2(rowHeight * 0.8f, rowHeight));
+            if (ImGui::IsItemClicked()) {
+                openStore->SetInt(openId, expanded ? 0 : 1);
+            }
+            const ImVec2 arrowMin = ImGui::GetItemRectMin();
+            const float arrowSize = std::max(3.0f, rowHeight * 0.17f);
+            const float arrowX = arrowMin.x + rowHeight * 0.4f;
+            const float arrowY = arrowMin.y + rowHeight * 0.5f;
+            const ImU32 arrowColor = ImGui::GetColorU32(ImVec4(0.80f, 0.80f, 0.80f, 1.0f));
+            if (expanded) {
+                ImGui::GetWindowDrawList()->AddTriangleFilled(ImVec2(arrowX - arrowSize, arrowY - arrowSize * 0.6f), ImVec2(arrowX + arrowSize, arrowY - arrowSize * 0.6f), ImVec2(arrowX, arrowY + arrowSize * 0.7f), arrowColor);
+            } else {
+                ImGui::GetWindowDrawList()->AddTriangleFilled(ImVec2(arrowX - arrowSize * 0.6f, arrowY - arrowSize), ImVec2(arrowX - arrowSize * 0.6f, arrowY + arrowSize), ImVec2(arrowX + arrowSize * 0.7f, arrowY), arrowColor);
+            }
+            ImGui::SameLine(0.0f, 0.0f);
+            ImGui::SetNextItemWidth(-(rowHeight * 2.0f + rowStyle.ItemSpacing.x * 2.0f));
+        } else {
+            ImGui::Checkbox("##enabled", &slot.enabled);
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(-FLT_MIN);
+        }
         const char* preview = slot.effect >= 0 ? library[static_cast<size_t>(slot.effect)].name.c_str() : tr("- empty -");
-        if (ImGui::BeginCombo("##effect", preview)) {
+        if (ui::beginCombo("##effect", preview)) {
             if (ImGui::IsWindowAppearing()) {
                 effectPickFilter_[0] = '\0';
                 ImGui::SetKeyboardFocusHere();
@@ -194,7 +232,22 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             }
             ImGui::EndDragDropTarget();
         }
-        if (slot.effect >= 0) {
+        if (flatRow) {
+            const float rowHeight = ImGui::GetFrameHeight();
+            ImGui::SameLine();
+            bool bypassed = !slot.enabled;
+            ui::toggleButton("B", bypassed, ImVec2(rowHeight, rowHeight));
+            slot.enabled = !bypassed;
+            ImGui::SetItemTooltip("%s", tr("Bypass: skip this effect"));
+            ImGui::SameLine();
+            if (ImGui::Button("X", ImVec2(rowHeight, rowHeight))) {
+                setEffect(slot, -1);
+                slot.enabled = true;
+            }
+            ImGui::SetItemTooltip("%s", tr("Remove this effect"));
+            ImGui::PopStyleColor(bandColors);
+        }
+        if (slot.effect >= 0 && expanded) {
             const EffectDef& def = library[static_cast<size_t>(slot.effect)];
             if (def.isIsf) {
                 const std::string problem = engine_.effectError(slot.effect);
@@ -244,7 +297,7 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             if (slot.reactBand != BandOff) {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ui::px(92.0f));
-                if (ImGui::BeginCombo("##mode", tr(reactModeName(slot.reactMode)))) {
+                if (ui::beginCombo("##mode", tr(reactModeName(slot.reactMode)))) {
                     for (int m = 0; m < EffectReactModeCount; ++m) {
                         if (ImGui::Selectable(tr(reactModeName(m)), slot.reactMode == m)) {
                             slot.reactMode = m;
@@ -257,7 +310,7 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(-FLT_MIN);
                     const char* paramPreview = def.paramNames[static_cast<size_t>(slot.reactParam)] ? tr(def.paramNames[static_cast<size_t>(slot.reactParam)]) : "-";
-                    if (ImGui::BeginCombo("##param", paramPreview)) {
+                    if (ui::beginCombo("##param", paramPreview)) {
                         for (int p = 0; p < kParamCount; ++p) {
                             if (!def.paramNames[static_cast<size_t>(p)]) {
                                 continue;
@@ -311,7 +364,7 @@ void App::drawLayer() {
     ui::sliderFloat(trId("Opacity", "layerOpacity"), &layer.opacity, 0.0f, 1.0f, "%.2f");
     ui::fieldLabel(tr("Blend"));
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##layerBlendMode", tr(blendName(layer.blend)))) {
+    if (ui::beginCombo("##layerBlendMode", tr(blendName(layer.blend)))) {
         for (int b = 0; b < BlendModeCount; ++b) {
             if (ImGui::Selectable(tr(blendName(b)), layer.blend == b)) {
                 layer.blend = b;
@@ -326,10 +379,10 @@ void App::drawLayer() {
     ui::toggleButton("S", layer.solo);
     ImGui::SetItemTooltip("%s", tr("Solo: show only this layer"));
 
-    if (ImGui::CollapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawMods(layer.mods, false);
     }
-    if (ImGui::CollapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawEffectRack(layer.fx);
     }
     ImGui::End();
@@ -407,7 +460,7 @@ static void drawShaderControls(const ShaderPlan& plan, ClipPlayback& playback) {
         case ShaderParamKind::List: {
             int index = static_cast<int>(std::lround(value[0]));
             const char* preview = index >= 0 && index < static_cast<int>(param.labels.size()) ? param.labels[static_cast<size_t>(index)].c_str() : "-";
-            if (ImGui::BeginCombo(param.label.c_str(), preview)) {
+            if (ui::beginCombo(param.label.c_str(), preview)) {
                 for (int i = 0; i < static_cast<int>(param.labels.size()); ++i) {
                     if (ImGui::Selectable(param.labels[static_cast<size_t>(i)].c_str(), i == index)) {
                         index = i;
@@ -589,7 +642,7 @@ void App::drawClipPanel() {
     ImGui::Checkbox(trId("Rainbow", "rainbow"), &layer.rainbow);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##palette", tr("Palette"))) {
+    if (ui::beginCombo("##palette", tr("Palette"))) {
         for (const ui::Palette& palette : ui::kPalettes) {
             if (ImGui::Selectable(palette.name)) {
                 layer.colorA = palette.a;
@@ -600,7 +653,7 @@ void App::drawClipPanel() {
         ImGui::EndCombo();
     }
 
-    if (ImGui::CollapsingHeader(trId("Grade", "hdrGrade"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(trId("Grade", "hdrGrade"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawGrade(layer.grade);
     }
     ImGui::End();
@@ -622,7 +675,7 @@ void App::drawSpoutInputControls(int slot) {
     const std::vector<std::string>& senders = engine_.spoutSenders();
     const std::string preview = wanted.empty() ? std::string(tr("Automatic")) : wanted;
     ImGui::SetNextItemWidth(ui::px(-90.0f));
-    if (ImGui::BeginCombo(trId("Spout sender", "spoutPick"), preview.c_str())) {
+    if (ui::beginCombo(trId("Spout sender", "spoutPick"), preview.c_str())) {
         if (ImGui::Selectable(tr("Automatic"), wanted.empty())) {
             wanted.clear();
             persist();
@@ -758,7 +811,7 @@ void App::drawMaster() {
     ImGui::SameLine();
     ui::toggleButton(trId("Blackout", "blackout"), engine_.blackout);
 
-    if (ImGui::BeginCombo(trId("Resolution", "resolution"), kResolutions[comp.resolution].label)) {
+    if (ui::beginCombo(trId("Resolution", "resolution"), kResolutions[comp.resolution].label)) {
         for (int i = 0; i < kResolutionCount; ++i) {
             if (ImGui::Selectable(kResolutions[i].label, i == comp.resolution)) {
                 engine_.setResolutionIndex(i);
@@ -767,16 +820,16 @@ void App::drawMaster() {
         ImGui::EndCombo();
     }
 
-    if (ImGui::CollapsingHeader(trId("Grade", "hdrGrade"))) {
+    if (ui::collapsingHeader(trId("Grade", "hdrGrade"))) {
         drawGrade(comp.master.grade);
     }
-    if (ImGui::CollapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(trId("Audio reactivity", "hdrMods"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawMods(comp.master.mods, true);
     }
-    if (ImGui::CollapsingHeader(trId("Macros and LFOs", "hdrModulators"))) {
+    if (ui::collapsingHeader(trId("Macros and LFOs", "hdrModulators"))) {
         drawModulators(comp.modulators);
     }
-    if (ImGui::CollapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(trId("Effects", "hdrEffects"), ImGuiTreeNodeFlags_DefaultOpen)) {
         drawEffectRack(comp.master.fx);
     }
     ImGui::End();

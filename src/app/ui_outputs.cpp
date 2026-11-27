@@ -596,7 +596,7 @@ void App::drawOutputColor(OutputSpec& spec) {
     ImGui::TextUnformatted(tr("Colour gamut"));
     ImGui::SameLine(110.0f);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##gamut", tr(primariesLabel(spec.display.gamut)))) {
+    if (ui::beginCombo("##gamut", tr(primariesLabel(spec.display.gamut)))) {
         const Primaries choices[] = {Primaries::Rec709, Primaries::DisplayP3, Primaries::Rec2020};
         for (const Primaries choice : choices) {
             if (ImGui::Selectable(tr(primariesLabel(choice)), choice == spec.display.gamut)) {
@@ -609,7 +609,7 @@ void App::drawOutputColor(OutputSpec& spec) {
     ImGui::TextUnformatted(tr("Transfer"));
     ImGui::SameLine(110.0f);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##transfer", tr(transferLabel(spec.display.transfer)))) {
+    if (ui::beginCombo("##transfer", tr(transferLabel(spec.display.transfer)))) {
         for (int i = 0; i < kDisplayTransferCount; ++i) {
             const Transfer choice = displayTransferAt(i);
             if (ImGui::Selectable(tr(transferLabel(choice)), choice == spec.display.transfer)) {
@@ -774,7 +774,7 @@ void App::drawOutputMapping(int index) {
     drawMappingCanvas(spec, index);
     if (!map.spatial.enabled) {
         ImGui::SetNextItemWidth(ui::px(120.0f));
-        if (ImGui::BeginCombo(tr("Warp points"), (std::to_string(map.warpColumns) + " x " + std::to_string(map.warpRows)).c_str())) {
+        if (ui::beginCombo(tr("Warp points"), (std::to_string(map.warpColumns) + " x " + std::to_string(map.warpRows)).c_str())) {
             for (int n = kMinWarpPoints; n <= kMaxWarpPoints; ++n) {
                 const std::string label = std::to_string(n) + " x " + std::to_string(n);
                 if (ImGui::Selectable(label.c_str(), map.warpColumns == n && map.warpRows == n)) {
@@ -899,7 +899,7 @@ void App::drawVenueControls() {
     }
     const std::string preview = selectedVenue_ >= 0 ? venueList_[static_cast<size_t>(selectedVenue_)] : std::string(tr("(none saved)"));
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##venues", preview.c_str())) {
+    if (ui::beginCombo("##venues", preview.c_str())) {
         for (int i = 0; i < static_cast<int>(venueList_.size()); ++i) {
             if (ImGui::Selectable(venueList_[static_cast<size_t>(i)].c_str(), i == selectedVenue_)) {
                 selectedVenue_ = i;
@@ -1089,7 +1089,7 @@ void App::drawOutputControls() {
     } else {
         spec.monitor = std::clamp(spec.monitor, 0, static_cast<int>(monitors.size()) - 1);
         ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::BeginCombo("##display", monitors[static_cast<size_t>(spec.monitor)].c_str())) {
+        if (ui::beginCombo("##display", monitors[static_cast<size_t>(spec.monitor)].c_str())) {
             for (int i = 0; i < static_cast<int>(monitors.size()); ++i) {
                 if (ImGui::Selectable(monitors[static_cast<size_t>(i)].c_str(), i == spec.monitor)) {
                     spec.monitor = i;

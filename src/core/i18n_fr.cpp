@@ -496,6 +496,8 @@ const Translation kFrench[] = {
     {"3D model file", "Fichier de modèle 3D"},
     {"Blend", "Fusion"},
     {"Bypass: skip this layer", "Contourner : ignorer ce calque"},
+    {"Bypass: skip this effect", "Contourner : ignorer cet effet"},
+    {"Remove this effect", "Retirer cet effet"},
     {"Cancel loading", "Annuler le chargement"},
     {"Freezes the tempo clock and all clip motion", "Fige l'horloge du tempo et tout le mouvement des clips"},
     {"Looks for new model files without restarting. Removed files stay in the list until the next start.", "Recherche de nouveaux fichiers de modèle sans redémarrer. Les fichiers supprimés restent dans la liste jusqu'au prochain démarrage."},

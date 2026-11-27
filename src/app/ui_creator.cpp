@@ -51,7 +51,7 @@ bool colorEdit(const char* label, std::array<float, 3>& color) {
 
 bool comboList(const char* label, int& index, const char* const* items, int count) {
     bool changed = false;
-    if (ImGui::BeginCombo(label, items[std::clamp(index, 0, count - 1)])) {
+    if (ui::beginCombo(label, items[std::clamp(index, 0, count - 1)])) {
         for (int i = 0; i < count; ++i) {
             if (ImGui::Selectable(items[i], i == index)) {
                 index = i;
@@ -66,7 +66,7 @@ bool comboList(const char* label, int& index, const char* const* items, int coun
 bool assetCombo(const char* label, std::string& value, const std::vector<AssetFile>& assets, bool modelsOnly, const ScenePack* pack) {
     bool changed = false;
     const std::string preview = value.empty() ? std::string(tr("(none)")) : value;
-    if (ImGui::BeginCombo(label, preview.c_str())) {
+    if (ui::beginCombo(label, preview.c_str())) {
         if (ImGui::Selectable(tr("(none)"), value.empty())) {
             value.clear();
             changed = true;
@@ -316,7 +316,7 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
     ImGui::SameLine();
     changed |= ImGui::Checkbox(tr("Counts for camera framing"), &o.framing);
 
-    if (ImGui::CollapsingHeader(tr("Transform"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(tr("Transform"), ImGuiTreeNodeFlags_DefaultOpen)) {
         changed |= dragVec3(tr("Position"), o.position, 0.02f, -1000.0f, 1000.0f);
         changed |= dragVec3(tr("Rotation (degrees)"), o.rotation, 0.5f, -100000.0f, 100000.0f, "%.1f");
         changed |= dragVec3(tr("Scale"), o.scale, 0.01f, -1000.0f, 1000.0f);
@@ -337,7 +337,7 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
             }
         }
     }
-    if (o.kind != PrimitiveKind::Model && ImGui::CollapsingHeader(tr("Material"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (o.kind != PrimitiveKind::Model && ui::collapsingHeader(tr("Material"), ImGuiTreeNodeFlags_DefaultOpen)) {
         DocMaterial& m = o.material;
         changed |= colorEdit(tr("Color"), m.color);
         changed |= ui::sliderFloat(tr("Metallic"), &m.metallic, 0.0f, 1.0f, "%.2f");
@@ -351,10 +351,10 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
         ImGui::SetItemTooltip("%s", tr("The object takes the colors of the layer it plays on"));
         changed |= ImGui::Checkbox(tr("Double sided"), &m.doubleSided);
     }
-    if (ImGui::CollapsingHeader(tr("Animation"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(tr("Animation"), ImGuiTreeNodeFlags_DefaultOpen)) {
         changed |= animationEditor(o.animations);
     }
-    if (ImGui::CollapsingHeader(tr("Audio"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(tr("Audio"), ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushTextWrapPos(0.0f);
         ImGui::TextDisabled("%s", tr("A sound band moves this object: bigger, glowing, twisting or lifting"));
         ImGui::PopTextWrapPos();
@@ -375,7 +375,7 @@ bool lightInspector(DocLight& l) {
     changed |= dragVec3(l.point ? tr("Position") : tr("Direction (towards the light)"), l.position, 0.02f, -500.0f, 500.0f);
     changed |= colorEdit(tr("Color"), l.color);
     changed |= ImGui::DragFloat(tr("Intensity"), &l.intensity, 0.05f, 0.0f, 100.0f, "%.2f");
-    if (ImGui::CollapsingHeader(tr("Audio"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(tr("Audio"), ImGuiTreeNodeFlags_DefaultOpen)) {
         changed |= bindingEditor(l.bindings, true, false);
     }
     return changed;
@@ -384,7 +384,7 @@ bool lightInspector(DocLight& l) {
 bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
     bool changed = false;
     changed |= inputString(tr("Scene name"), doc.name, kDocMaxNameBytes);
-    if (ImGui::CollapsingHeader(tr("Cameras"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(tr("Cameras"), ImGuiTreeNodeFlags_DefaultOpen)) {
         const int count = docCameraCount(doc);
         cameraSelect = std::clamp(cameraSelect, 0, count - 1);
         for (int i = 0; i < count; ++i) {
@@ -442,7 +442,7 @@ bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
         ImGui::TextDisabled("%s", tr("Audio"));
         changed |= bindingEditor(c.bindings, false, true);
     }
-    if (ImGui::CollapsingHeader(tr("Sky and exposure"), ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ui::collapsingHeader(tr("Sky and exposure"), ImGuiTreeNodeFlags_DefaultOpen)) {
         changed |= colorEdit(tr("Sky top"), doc.sky.top);
         changed |= colorEdit(tr("Horizon"), doc.sky.horizon);
         changed |= colorEdit(tr("Ground"), doc.sky.ground);

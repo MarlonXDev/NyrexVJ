@@ -198,7 +198,7 @@ void App::drawRoutingWindow() {
         }
         ImGui::PushID(k);
         ImGui::SetNextItemWidth(ui::px(220.0f));
-        if (ImGui::BeginCombo(senderNames[k], sourceText(current).c_str())) {
+        if (ui::beginCombo(senderNames[k], sourceText(current).c_str())) {
             for (const routing::Source& choice : routing::senderChoices()) {
                 const bool selected = choice == current;
                 if (ImGui::Selectable(sourceText(choice).c_str(), selected)) {

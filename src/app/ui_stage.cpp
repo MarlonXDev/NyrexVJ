@@ -26,7 +26,7 @@ void warnText(const char* text) {
 bool sourceCombo(const char* id, int& source) {
     bool changed = false;
     ImGui::SetNextItemWidth(ui::px(110.0f));
-    if (ImGui::BeginCombo(id, source == 0 ? tr("Fixed") : tr(audioBandName(source)))) {
+    if (ui::beginCombo(id, source == 0 ? tr("Fixed") : tr(audioBandName(source)))) {
         if (ImGui::Selectable(tr("Fixed"), source == 0)) {
             source = 0;
             changed = true;
@@ -130,7 +130,7 @@ void App::drawStagePage() {
     }
     ImGui::BeginDisabled(!dmx.stripEnabled);
     ImGui::SetNextItemWidth(ui::px(160.0f));
-    if (ImGui::BeginCombo(trId("Position", "dmxStripPos"), dmx.stripAtTop ? tr("Top edge") : tr("Bottom edge"))) {
+    if (ui::beginCombo(trId("Position", "dmxStripPos"), dmx.stripAtTop ? tr("Top edge") : tr("Bottom edge"))) {
         if (ImGui::Selectable(tr("Top edge"), dmx.stripAtTop)) {
             dmx.stripAtTop = true;
             persist();
@@ -142,7 +142,7 @@ void App::drawStagePage() {
         ImGui::EndCombo();
     }
     ImGui::SetNextItemWidth(ui::px(300.0f));
-    if (ImGui::BeginCombo(trId("Channel layout", "dmxStripLayout"), dmx.stripPadUniverses ? tr("40 columns per universe (520 cells)") : tr("Universes back to back (512 cells)"))) {
+    if (ui::beginCombo(trId("Channel layout", "dmxStripLayout"), dmx.stripPadUniverses ? tr("40 columns per universe (520 cells)") : tr("Universes back to back (512 cells)"))) {
         if (ImGui::Selectable(tr("Universes back to back (512 cells)"), !dmx.stripPadUniverses)) {
             dmx.stripPadUniverses = false;
             persist();

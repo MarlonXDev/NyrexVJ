@@ -95,7 +95,7 @@ void App::drawVideoSettings() {
         }
     }
     ImGui::SetNextItemWidth(ui::px(220.0f));
-    if (ImGui::BeginCombo(trId("Video decoder", "optVideoDecoder"), labels[selected])) {
+    if (ui::beginCombo(trId("Video decoder", "optVideoDecoder"), labels[selected])) {
         for (int i = 0; i < 3; ++i) {
             if (ImGui::Selectable(labels[i], i == selected)) {
                 settings_.videoDecoder = videoDecodeModeName(modes[i]);

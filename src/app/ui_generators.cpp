@@ -137,7 +137,7 @@ const char* particleColorLabel(particles::ColorMode mode) {
 template <typename Enum, typename Label>
 bool enumCombo(const char* label, Enum& value, int count, Label labelOf) {
     bool changed = false;
-    if (ImGui::BeginCombo(label, tr(labelOf(value)))) {
+    if (ui::beginCombo(label, tr(labelOf(value)))) {
         for (int i = 0; i < count; ++i) {
             const Enum candidate = static_cast<Enum>(i);
             if (ImGui::Selectable(tr(labelOf(candidate)), candidate == value)) {
@@ -262,7 +262,7 @@ void App::drawGeneratorTextTab() {
         ImGui::TableSetColumnIndex(0);
 
         ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::BeginCombo("##savedTexts", tr("Open a saved text"))) {
+        if (ui::beginCombo("##savedTexts", tr("Open a saved text"))) {
             for (const std::string& name : d.textFiles) {
                 if (ImGui::Selectable(name.c_str(), name == d.textName)) {
                     openGeneratorStudio(0, name);
@@ -285,7 +285,7 @@ void App::drawGeneratorTextTab() {
         }
 
         ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::BeginCombo("##font", d.textDoc.font.c_str())) {
+        if (ui::beginCombo("##font", d.textDoc.font.c_str())) {
             for (const text::FontEntry& font : d.fonts) {
                 const std::string label = font.user ? font.name + "  (" + tr("your font") + ")" : font.name;
                 if (ImGui::Selectable(label.c_str(), font.name == d.textDoc.font)) {
@@ -410,7 +410,7 @@ void App::drawGeneratorParticleTab() {
         ImGui::TableSetColumnIndex(0);
 
         ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::BeginCombo("##startFrom", tr("Start from a preset or a saved file"))) {
+        if (ui::beginCombo("##startFrom", tr("Start from a preset or a saved file"))) {
             hint("%s", tr("Built-in"));
             for (const particles::Preset& preset : particles::builtinPresets()) {
                 if (ImGui::Selectable(preset.name.c_str())) {
@@ -444,7 +444,7 @@ void App::drawGeneratorParticleTab() {
         }
 
         particles::Params& p = d.params;
-        if (ImGui::CollapsingHeader(tr("Graphics card"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ui::collapsingHeader(tr("Graphics card"), ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox(tr("Run on the graphics card"), &p.gpu);
             ImGui::SetItemTooltip("%s", tr("The graphics card keeps and moves every particle itself, so far more particles are possible. It needs Experimental GPU particles turned on in Settings, Performance. Otherwise, or when the card cannot do it, the clip runs on the processor with fewer particles."));
             if (p.gpu) {
@@ -453,13 +453,13 @@ void App::drawGeneratorParticleTab() {
                 ImGui::SetItemTooltip("%s", tr("How many particles the graphics card keeps. When the pool is full, the oldest particles are reused for new ones."));
             }
         }
-        if (ImGui::CollapsingHeader(tr("Emission"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ui::collapsingHeader(tr("Emission"), ImGuiTreeNodeFlags_DefaultOpen)) {
             ui::sliderFloat(tr("Particles per second"), &p.rate, 0.0f, p.gpu ? particles::kGpuMaxRate : particles::kCpuMaxRate, "%.0f", p.gpu ? ImGuiSliderFlags_Logarithmic : 0);
             ui::sliderFloat(tr("Burst on every beat"), &p.burst, 0.0f, static_cast<float>(p.gpu ? particles::kGpuMaxBurst : particles::kMaxBurst), "%.0f", p.gpu ? ImGuiSliderFlags_Logarithmic : 0);
             ui::sliderFloat(tr("Lifetime"), &p.life, 0.2f, 10.0f, "%.1f s");
             ui::sliderFloat(tr("Lifetime variation"), &p.lifeJitter, 0.0f, 1.0f, "%.2f");
         }
-        if (ImGui::CollapsingHeader(tr("Motion"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ui::collapsingHeader(tr("Motion"), ImGuiTreeNodeFlags_DefaultOpen)) {
             ui::sliderFloat(tr("Speed"), &p.speed, 0.0f, 3.0f, "%.2f");
             ui::sliderFloat(tr("Speed variation"), &p.speedJitter, 0.0f, 1.0f, "%.2f");
             ui::sliderFloat(tr("Direction"), &p.direction, -360.0f, 360.0f, "%.0f deg");
@@ -469,7 +469,7 @@ void App::drawGeneratorParticleTab() {
             ui::sliderFloat(tr("Turbulence"), &p.turbulence, 0.0f, 1.0f, "%.2f");
             ui::sliderFloat(tr("Swirl"), &p.swirl, -4.0f, 4.0f, "%.2f");
         }
-        if (ImGui::CollapsingHeader(tr("Look"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ui::collapsingHeader(tr("Look"), ImGuiTreeNodeFlags_DefaultOpen)) {
             ui::sliderFloat(tr("Size"), &p.size, 0.002f, 0.25f, "%.3f");
             ui::sliderFloat(tr("Size at the end"), &p.sizeEnd, 0.0f, 3.0f, "%.2f");
             ui::sliderFloat(tr("Size variation"), &p.sizeJitter, 0.0f, 1.0f, "%.2f");
@@ -478,7 +478,7 @@ void App::drawGeneratorParticleTab() {
             enumCombo(tr("Colour"), p.color, 3, particleColorLabel);
             ImGui::Checkbox(tr("Add light (glow)"), &p.additive);
         }
-        if (ImGui::CollapsingHeader(tr("Emitter"))) {
+        if (ui::collapsingHeader(tr("Emitter"))) {
             enumCombo(tr("Shape"), p.shape, 4, shapeLabel);
             ui::sliderFloat(tr("Origin X"), &p.originX, -1.0f, 1.0f, "%.2f");
             ui::sliderFloat(tr("Origin Y"), &p.originY, -1.0f, 1.0f, "%.2f");
@@ -489,7 +489,7 @@ void App::drawGeneratorParticleTab() {
                 p.seed = static_cast<std::uint32_t>(std::max(seed, 0));
             }
         }
-        if (ImGui::CollapsingHeader(tr("Music"))) {
+        if (ui::collapsingHeader(tr("Music"))) {
             ui::sliderFloat(tr("Level adds particles"), &p.levelRate, 0.0f, 4.0f, "%.2f");
             ui::sliderFloat(tr("Level grows particles"), &p.levelSize, 0.0f, 2.0f, "%.2f");
             ui::sliderFloat(tr("Level speeds particles up"), &p.levelSpeed, 0.0f, 2.0f, "%.2f");
@@ -689,7 +689,7 @@ void App::drawChainLibrary() {
         std::snprintf(targetLabel, sizeof(targetLabel), "%s %d", tr("Layer"), d.target + 1);
     }
     ImGui::SetNextItemWidth(ui::px(160.0f));
-    if (ImGui::BeginCombo(tr("Applies to"), targetLabel)) {
+    if (ui::beginCombo(tr("Applies to"), targetLabel)) {
         for (int t = 0; t <= kLayerCount; ++t) {
             char label[64];
             if (t >= kLayerCount) {

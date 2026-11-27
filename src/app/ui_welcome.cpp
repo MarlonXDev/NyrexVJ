@@ -37,7 +37,7 @@ void App::drawWelcome() {
 
     ImGui::SameLine(ImGui::GetWindowWidth() - 190.0f);
     ImGui::SetNextItemWidth(ui::px(160.0f));
-    if (ImGui::BeginCombo("##welcomeLanguage", languageLabel(currentLanguage()))) {
+    if (ui::beginCombo("##welcomeLanguage", languageLabel(currentLanguage()))) {
         for (int i = 0; i < languageCount(); ++i) {
             Language language = static_cast<Language>(i);
             if (ImGui::Selectable(languageLabel(language), currentLanguage() == language)) {
@@ -80,7 +80,7 @@ void App::drawWelcome() {
         if (isNew) {
             ImGui::PushStyleColor(ImGuiCol_Text, ui::kAccent);
         }
-        bool open = ImGui::CollapsingHeader(label.c_str());
+        bool open = ui::collapsingHeader(label.c_str());
         if (isNew) {
             ImGui::PopStyleColor();
         }

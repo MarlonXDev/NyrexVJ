@@ -123,7 +123,7 @@ void App::drawRecovery() {
 
     if (!recoveryDetails_.empty()) {
         ImGui::Spacing();
-        if (ImGui::CollapsingHeader(tr("Details for bug reports"))) {
+        if (ui::collapsingHeader(tr("Details for bug reports"))) {
             if (ImGui::Button(trId("Copy details", "recoveryCopy"))) {
                 ImGui::SetClipboardText(recoveryDetails_.c_str());
             }

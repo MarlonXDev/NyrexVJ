@@ -226,6 +226,7 @@ void applyTheme(int index, const ThemeOptions& options) {
     const float factor = options.sizeScale > 0.0f ? options.sizeScale : 1.0f;
     style.FramePadding = ImVec2(7.0f * factor, 3.0f * factor);
 
+    style.TabMinWidthBase = high ? 0.0f : 72.0f * factor;
     ui::kHighContrast = high;
     ui::kFlatLook = !high;
     ui::kAccent = accent;

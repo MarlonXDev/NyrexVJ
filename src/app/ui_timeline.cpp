@@ -369,7 +369,7 @@ void App::drawTimelineToolbar() {
         ImGui::Spacing();
         const TimelineSourceChoice source = timelineSourceFromName(settings_.timelineSource);
         ImGui::SetNextItemWidth(ui::px(300.0f));
-        if (ImGui::BeginCombo(tr("Position source"), sourceLabel(source))) {
+        if (ui::beginCombo(tr("Position source"), sourceLabel(source))) {
             for (TimelineSourceChoice choice : {TimelineSourceChoice::Auto, TimelineSourceChoice::Timecode, TimelineSourceChoice::Transport}) {
                 if (ImGui::Selectable(sourceLabel(choice), choice == source)) {
                     settings_.timelineSource = timelineSourceName(choice);
@@ -381,7 +381,7 @@ void App::drawTimelineToolbar() {
         ImGui::SetItemTooltip("%s", tr("Automatic follows the timecode when one is present and otherwise uses the timeline's own transport."));
         const LostPolicy lost = lostPolicyFromName(settings_.timelineLost);
         ImGui::SetNextItemWidth(ui::px(300.0f));
-        if (ImGui::BeginCombo(tr("When the timecode is lost"), lostLabel(lost))) {
+        if (ui::beginCombo(tr("When the timecode is lost"), lostLabel(lost))) {
             for (LostPolicy policy : {LostPolicy::Hold, LostPolicy::Continue}) {
                 if (ImGui::Selectable(lostLabel(policy), policy == lost)) {
                     settings_.timelineLost = lostPolicyName(policy);
@@ -392,7 +392,7 @@ void App::drawTimelineToolbar() {
         }
         const OverridePolicy override = overridePolicyFromName(settings_.timelineOverride);
         ImGui::SetNextItemWidth(ui::px(300.0f));
-        if (ImGui::BeginCombo(tr("How long a hand move wins"), overrideLabel(override))) {
+        if (ui::beginCombo(tr("How long a hand move wins"), overrideLabel(override))) {
             for (OverridePolicy policy : {OverridePolicy::NextSegment, OverridePolicy::UntilReleased}) {
                 if (ImGui::Selectable(overrideLabel(policy), policy == override)) {
                     settings_.timelineOverride = overridePolicyName(policy);
@@ -1141,7 +1141,7 @@ void App::drawTimeline() {
         }
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ui::px(120.0f));
-        if (ImGui::BeginCombo("##keyShape", shapeLabel(key.shape))) {
+        if (ui::beginCombo("##keyShape", shapeLabel(key.shape))) {
             for (KeyShape candidate : {KeyShape::Linear, KeyShape::Smooth, KeyShape::Hold}) {
                 if (ImGui::Selectable(shapeLabel(candidate), candidate == key.shape)) {
                     timelineBeginEdit();

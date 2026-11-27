@@ -161,7 +161,7 @@ void App::drawSyncClockSection() {
 
     rowLabel(tr("Clock source"));
     ImGui::SetNextItemWidth(kFieldWidth);
-    if (ImGui::BeginCombo("##syncMode", modeLabel(current))) {
+    if (ui::beginCombo("##syncMode", modeLabel(current))) {
         for (SyncMode mode : kModes) {
             if (ImGui::Selectable(modeLabel(mode), mode == current)) {
                 settings_.syncMode = syncModeName(mode);
@@ -269,7 +269,7 @@ void App::drawSyncTimecodeSection() {
     }
     rowLabel(tr("LTC input"));
     ImGui::SetNextItemWidth(kFieldWidth + 80.0f);
-    if (ImGui::BeginCombo("##ltcDevice", currentName.c_str())) {
+    if (ui::beginCombo("##ltcDevice", currentName.c_str())) {
         if (ImGui::Selectable(tr("Off"), settings_.ltcDevice.empty())) {
             settings_.ltcDevice.clear();
             persist();
@@ -331,7 +331,7 @@ void App::drawSyncDjLinkSection() {
     const std::string playerText = selected == 0 ? std::string(tr("Automatic")) : std::string(tr("Player ")) + std::to_string(selected);
     rowLabel(tr("Follow player"));
     ImGui::SetNextItemWidth(kFieldWidth);
-    if (ImGui::BeginCombo("##djPlayer", playerText.c_str())) {
+    if (ui::beginCombo("##djPlayer", playerText.c_str())) {
         for (int i = 0; i <= kDjLinkMaxPlayer; ++i) {
             const std::string label = i == 0 ? std::string(tr("Automatic")) : std::string(tr("Player ")) + std::to_string(i);
             if (ImGui::Selectable(label.c_str(), selected == i)) {
@@ -395,7 +395,7 @@ void App::drawSyncNetworkSection() {
     }
     rowLabel(tr("Role"));
     ImGui::SetNextItemWidth(kFieldWidth);
-    if (ImGui::BeginCombo("##netRole", roleLabels[selected])) {
+    if (ui::beginCombo("##netRole", roleLabels[selected])) {
         for (int i = 0; i < 3; ++i) {
             if (ImGui::Selectable(roleLabels[i], i == selected)) {
                 settings_.netSyncRole = netsync::roleName(roles[i]);

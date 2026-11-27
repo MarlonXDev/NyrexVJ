@@ -496,6 +496,8 @@ const Translation kJapanese[] = {
     {"3D model file", "3Dモデルファイル"},
     {"Blend", "ブレンド"},
     {"Bypass: skip this layer", "バイパス: このレイヤーをスキップ"},
+    {"Bypass: skip this effect", "バイパス: このエフェクトを飛ばす"},
+    {"Remove this effect", "このエフェクトを削除"},
     {"Cancel loading", "読み込みをキャンセル"},
     {"Freezes the tempo clock and all clip motion", "テンポクロックとすべてのクリップの動きを停止します"},
     {"Looks for new model files without restarting. Removed files stay in the list until the next start.", "再起動せずに新しいモデルファイルを探します。削除したファイルは、次回起動までリストに残ります。"},

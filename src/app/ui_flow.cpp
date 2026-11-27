@@ -61,7 +61,7 @@ void App::drawFlowSettings() {
 
     const flow::Mode mode = flow::modeFromName(settings_.flowMode, flow::Mode::Off);
     ImGui::SetNextItemWidth(ui::px(260.0f));
-    if (ImGui::BeginCombo(trId("Optical flow mode (experimental)", "optFlowMode"), modeLabel(mode))) {
+    if (ui::beginCombo(trId("Optical flow mode (experimental)", "optFlowMode"), modeLabel(mode))) {
         for (int i = 0; i < flow::kModeCount; ++i) {
             const flow::Mode entry = static_cast<flow::Mode>(i);
             if (ImGui::Selectable(modeLabel(entry), entry == mode)) {
@@ -78,7 +78,7 @@ void App::drawFlowSettings() {
 
     const flow::Tier tier = flow::tierFromName(settings_.flowQuality, flow::Tier::Balanced);
     ImGui::SetNextItemWidth(ui::px(260.0f));
-    if (ImGui::BeginCombo(trId("Quality", "optFlowQuality"), tierLabel(tier))) {
+    if (ui::beginCombo(trId("Quality", "optFlowQuality"), tierLabel(tier))) {
         for (int i = 0; i < flow::kTierCount; ++i) {
             const flow::Tier entry = static_cast<flow::Tier>(i);
             if (ImGui::Selectable(tierLabel(entry), entry == tier)) {

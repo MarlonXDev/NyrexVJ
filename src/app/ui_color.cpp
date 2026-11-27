@@ -81,7 +81,7 @@ void App::drawColorSettings() {
         }
         const char* preview = settings_.colorLut.empty() ? tr("No LUT") : settings_.colorLut.c_str();
         ImGui::SetNextItemWidth(ui::px(260.0f));
-        if (ImGui::BeginCombo(trId("LUT file", "optColorLut"), preview)) {
+        if (ui::beginCombo(trId("LUT file", "optColorLut"), preview)) {
             if (ImGui::Selectable(tr("No LUT"), settings_.colorLut.empty())) {
                 settings_.colorLut.clear();
                 persist();
@@ -157,7 +157,7 @@ void App::drawColorSettings() {
         ImGui::SetItemTooltip("%s", tr("The brightest value the video was mastered for. This is where the tone mapping reaches white."));
         const ToneMapper current = toneMapperFromName(settings_.hdrTone, ToneMapper::Shoulder);
         ImGui::SetNextItemWidth(ui::px(220.0f));
-        if (ImGui::BeginCombo(trId("Tone mapping", "optHdrTone"), tr(toneMapperLabel(current)))) {
+        if (ui::beginCombo(trId("Tone mapping", "optHdrTone"), tr(toneMapperLabel(current)))) {
             for (int i = 0; i < kToneMapperCount; ++i) {
                 const ToneMapper mapper = static_cast<ToneMapper>(i);
                 if (ImGui::Selectable(tr(toneMapperLabel(mapper)), mapper == current)) {

@@ -424,7 +424,7 @@ void App::drawPlaybackControls(MediaPlayer& player, ClipPlayback& playback) {
     }
     const int beatIndex = syncBeatsIndex(playback.syncBeats);
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
-    if (ImGui::BeginCombo(trId("Clip length in beats", "playBeats"), beatLabels[static_cast<size_t>(beatIndex)].c_str())) {
+    if (ui::beginCombo(trId("Clip length in beats", "playBeats"), beatLabels[static_cast<size_t>(beatIndex)].c_str())) {
         for (int i = 0; i < kSyncBeatChoices; ++i) {
             if (ImGui::Selectable(beatLabels[static_cast<size_t>(i)].c_str(), i == beatIndex)) {
                 playback.syncBeats = syncBeatsChoice(i);
@@ -1074,7 +1074,7 @@ void App::drawAudioSource() {
 
     ImGui::TextDisabled("%s", tr("Audio source"));
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##audiosource", preview.c_str())) {
+    if (ui::beginCombo("##audiosource", preview.c_str())) {
         if (ImGui::Selectable(tr("Off"), audio_.selected().empty())) {
             audio_.select("");
             settings_.audioDevice.clear();

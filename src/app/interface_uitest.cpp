@@ -412,7 +412,7 @@ void App::buildInterfaceTest() {
         const ImGuiWindow* strip = ImGui::FindWindowByName("###stripMaster");
         if (strip) {
             const float label = std::clamp((strip->ContentRegionRect.GetWidth()) * 0.36f, ui::px(56.0f), ui::px(150.0f));
-            zoomMouse_ = ImVec2(strip->ContentRegionRect.Min.x + label + ui::px(76.0f), strip->ContentRegionRect.Min.y + ImGui::GetFrameHeight() * 0.5f);
+            zoomMouse_ = ImVec2(strip->ContentRegionRect.Min.x + label + ui::px(140.0f), strip->ContentRegionRect.Min.y + ImGui::GetFrameHeight() * 0.5f);
             ImGui::GetIO().AddMousePosEvent(zoomMouse_.x, zoomMouse_.y);
         }
     }, 4);
@@ -434,12 +434,34 @@ void App::buildInterfaceTest() {
     add(nullptr, 4, nullptr, [record]() {
         record("Esc closes the field and leaves the value as it was", ImGui::GetActiveID() == 0 || !ImGui::TempInputIsActive(ImGui::GetActiveID()), "active id " + std::to_string(ImGui::GetActiveID()));
     });
+    add([this]() {
+        engine_.comp.master.level = 0.5f;
+        const ImGuiWindow* strip = ImGui::FindWindowByName("###stripMaster");
+        if (strip) {
+            const float label = std::clamp((strip->ContentRegionRect.GetWidth()) * 0.36f, ui::px(56.0f), ui::px(150.0f));
+            const float valueWidth = std::max(ui::px(52.0f), ImGui::CalcTextSize("0.50").x + ui::px(14.0f));
+            zoomMouse_ = ImVec2(strip->ContentRegionRect.Min.x + label + valueWidth + ui::px(33.0f), strip->ContentRegionRect.Min.y + ImGui::GetFrameHeight() * 0.5f);
+            ImGui::GetIO().AddMousePosEvent(zoomMouse_.x, zoomMouse_.y);
+        }
+    }, 4);
+    add([]() { ImGui::GetIO().AddMouseButtonEvent(0, true); }, 2);
+    add([]() { ImGui::GetIO().AddMouseButtonEvent(0, false); }, 4, nullptr, [this, record]() {
+        const float level = engine_.comp.master.level;
+        record("the plus field next to a slider raises it by one percent of the range or more", level > 0.505f && level < 0.9f, std::to_string(level));
+    });
+    add([this]() { engine_.comp.master.level = 1.0f; }, 2);
 
     add([this]() { openSettings(SettingsAppearance); }, 8, nullptr, [this, record]() {
         const ImGuiWindow* window = ImGui::FindWindowByName("###settingsWindow");
         record("the Settings window opens inside the main window", window && insideMainWindow(window, 2.0f), describe(window));
+        record("the Settings window has no close button in its title bar", window && !window->HasCloseButton, describe(window));
     });
     shot("settings-appearance-100");
+    add([]() { ImGui::SetWindowFocus("###settingsWindow"); }, 3);
+    press(ImGuiKey_Escape, false, false);
+    add(nullptr, 3, nullptr, [this, record]() {
+        record("Esc closes the Settings window", !settingsOpen_, settingsOpen_ ? "still open" : "closed");
+    });
     add([this]() { settingsOpen_ = false; }, 3);
 
     add([this]() {

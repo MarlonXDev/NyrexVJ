@@ -2488,6 +2488,20 @@
           ],
           "measure": "a list of the differences from Resolume that disturb you, whether any control is hard to read or hit, and whether the font looks right on Windows",
           "criteria": "Proposed: no control is cut off or unreachable, every function from the old layout can still be found (the Audio window, Master level, Audio input, Network, MIDI and OSC are tabs on the right), and the differences left are ones that you accept"
+        },
+        {
+          "id": "M-UI-9",
+          "title": "The Resolume look with every colour, the stepper fields, the deck tabs and closing windows with Escape",
+          "needs": "A PC with this build and a screen of 1920x1080 or more; Resolume Arena or its screenshots for the comparison",
+          "steps": [
+            "Open Settings, Appearance and choose three different colours (for example Blue, Red and Mono); check that the look stays the same and only the accent changes (marker of the sliders, check marks, the selected column, layer and deck).",
+            "Compare a parameter panel (Master, Layer, Clip) with Resolume: the rows, the lines between them, the empty and the filled part of a slider bar, the marker, the minus and plus fields; click and hold the plus field and check that the value keeps rising.",
+            "Check that the Settings window, the manual, the Creator and the Timeline window have no close button in the title bar, that Escape closes the one in front when no field is being edited, and that the menu entry opens it again.",
+            "Create two more decks with the plus button, rename one, switch with the tabs and check the smooth transition and the context menu of a tab.",
+            "Switch high contrast on and off in the same session and check that the outlines come back and go away again."
+          ],
+          "measure": "which colours you tried, any difference to Resolume that disturbs you in the panels, sliders or tabs, whether holding the plus field keeps raising the value, and whether Escape closes every tool window",
+          "criteria": "Proposed: every colour gives the same shapes with its own accent, the stepper fields move a slider by one percent of its range, no tool window shows a close button and Escape closes it, and high contrast keeps its outlines."
         }
       ]
     },

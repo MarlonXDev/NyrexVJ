@@ -801,7 +801,7 @@ void App::drawShaderEditor() {
     }
     title += "###shaderEditorWindow";
     bool keepOpen = true;
-    if (!ImGui::Begin(title.c_str(), &keepOpen, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+    if (!ui::beginTool(title.c_str(), &keepOpen, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
         ImGui::End();
         return;
     }

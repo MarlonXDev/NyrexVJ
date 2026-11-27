@@ -129,7 +129,7 @@ void App::drawRoutingWindow() {
     }
     ui::setNextWindowSize(ImVec2(660.0f, 720.0f), ImGuiCond_FirstUseEver);
     std::string title = std::string(tr("Video routing")) + "###routingWindow";
-    if (!ImGui::Begin(title.c_str(), &routingOpen_)) {
+    if (!ui::beginTool(title.c_str(), &routingOpen_)) {
         ImGui::End();
         return;
     }

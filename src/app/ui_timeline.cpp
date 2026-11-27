@@ -1063,7 +1063,7 @@ void App::drawTimeline() {
     }
     applyTimelineDock();
     const std::string title = std::string(tr("Show timeline")) + "###timeline";
-    if (!ImGui::Begin(title.c_str(), &timelineOpen_)) {
+    if (!ui::beginTool(title.c_str(), &timelineOpen_)) {
         ImGui::End();
         timelineHasFocus_ = false;
         return;

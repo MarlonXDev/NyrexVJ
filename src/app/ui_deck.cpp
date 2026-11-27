@@ -61,17 +61,32 @@ void App::drawDeckBar() {
     Composition& comp = engine_.comp;
     const float buttonWidth = 34.0f;
 
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextDisabled("%s", tr("Decks"));
-    const bool compact = ImGui::GetContentRegionAvail().x < ui::px(1480.0f);
+    const bool namedTabs = ui::kFlatLook;
+    int firstFree = -1;
+    float tabsWidth = 0.0f;
+    for (int d = 0; d < kDeckCount; ++d) {
+        const bool used = comp.deckUsed[static_cast<size_t>(d)];
+        if (!used && d != comp.activeDeck) {
+            firstFree = firstFree < 0 ? d : firstFree;
+            continue;
+        }
+        tabsWidth += ImGui::CalcTextSize(deckDisplayName(comp, d).c_str()).x + ui::px(30.0f);
+    }
+    if (!namedTabs) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextDisabled("%s", tr("Decks"));
+    }
+    const bool compact = namedTabs ? tabsWidth + ui::px(200.0f) > ImGui::GetContentRegionAvail().x : ImGui::GetContentRegionAvail().x < ui::px(1480.0f);
+    bool firstTab = true;
     auto drawDeckButton = [&](int d, bool inPicker) {
         ImGui::PushID(d);
         const bool used = comp.deckUsed[static_cast<size_t>(d)];
         const bool active = d == comp.activeDeck;
         const bool outgoing = engine_.transitioning() && engine_.transitionSource() == d && !active;
+        const bool tab = namedTabs && !inPicker;
         int colors = 0;
         if (active) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ui::kAccent);
+            ImGui::PushStyleColor(ImGuiCol_Button, tab ? ui::kAccentHover : ui::kAccent);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ui::kAccentHover);
             ImGui::PushStyleColor(ImGuiCol_Text, ui::kBlack);
             colors = 3;
@@ -82,8 +97,13 @@ void App::drawDeckBar() {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.085f, 0.085f, 0.095f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.38f, 0.38f, 0.42f, 1.0f));
             colors = 2;
+        } else if (tab) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_Tab));
+            colors = 1;
         }
-        if (ImGui::Button(std::to_string(d + 1).c_str(), ImVec2(buttonWidth, 0.0f))) {
+        const std::string label = tab ? deckDisplayName(comp, d) : std::to_string(d + 1);
+        const float width = tab ? ImGui::CalcTextSize(label.c_str()).x + ui::px(26.0f) : buttonWidth;
+        if (ImGui::Button(label.c_str(), ImVec2(width, 0.0f))) {
             switchDeckTo(d);
             if (inPicker) {
                 ImGui::CloseCurrentPopup();
@@ -127,11 +147,26 @@ void App::drawDeckBar() {
     };
     if (!compact) {
         for (int d = 0; d < kDeckCount; ++d) {
-            ImGui::SameLine(0.0f, 4.0f);
+            if (namedTabs && !comp.deckUsed[static_cast<size_t>(d)] && d != comp.activeDeck) {
+                continue;
+            }
+            if (!(namedTabs && firstTab)) {
+                ImGui::SameLine(0.0f, 4.0f);
+            }
+            firstTab = false;
             drawDeckButton(d, false);
         }
+        if (namedTabs && firstFree >= 0) {
+            ImGui::SameLine(0.0f, 4.0f);
+            if (ImGui::Button("+", ImVec2(ui::px(28.0f), 0.0f))) {
+                switchDeckTo(firstFree);
+            }
+            ImGui::SetItemTooltip("%s", tr("Empty. Click to start a new deck here"));
+        }
     } else {
-        ImGui::SameLine(0.0f, 4.0f);
+        if (!namedTabs) {
+            ImGui::SameLine(0.0f, 4.0f);
+        }
         const std::string pickLabel = std::string(tr("Deck")) + " " + std::to_string(comp.activeDeck + 1) + "###deckPick";
         if (ImGui::Button(pickLabel.c_str(), ImVec2(ui::px(84.0f), 0.0f))) {
             ImGui::OpenPopup("###deckPicker");
@@ -295,7 +330,9 @@ void App::drawDeck() {
                     ImGui::EndCombo();
                 }
                 ImGui::SetNextItemWidth(-FLT_MIN);
+                ui::kSliderSteppers = false;
                 ui::sliderFloat("##opacity", &layer.opacity, 0.0f, 1.0f, "%.2f");
+                ui::kSliderSteppers = true;
                 ImGui::PopStyleVar();
             } else {
                 ImGui::Image(ui::texId(engine_.layerPreview(row)), ImVec2(96.0f, 54.0f), ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
@@ -315,7 +352,9 @@ void App::drawDeck() {
                     engine_.clearLayer(row);
                 }
                 ImGui::SetNextItemWidth(-FLT_MIN);
+                ui::kSliderSteppers = false;
                 ui::sliderFloat("##opacity", &layer.opacity, 0.0f, 1.0f, "%.2f");
+                ui::kSliderSteppers = true;
                 ImGui::SetNextItemWidth(-FLT_MIN);
                 if (ImGui::BeginCombo("##blend", tr(blendName(layer.blend)))) {
                     for (int b = 0; b < BlendModeCount; ++b) {

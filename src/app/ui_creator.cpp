@@ -11,6 +11,7 @@
 #include <array>
 #include <cctype>
 #include <cfloat>
+#include <cstdio>
 #include <cmath>
 #include <cstring>
 
@@ -215,13 +216,56 @@ const char* bindTargetLabel(BindTarget target) {
         return tr("Light intensity");
     case BindTarget::Zoom:
         return tr("Zoom");
+    case BindTarget::Hue:
+        return tr("Colour shift");
+    case BindTarget::Roughness:
+        return tr("Roughness");
+    case BindTarget::UvX:
+        return tr("Texture shift X");
+    case BindTarget::UvY:
+        return tr("Texture shift Y");
+    case BindTarget::Inflate:
+        return tr("Inflate");
+    case BindTarget::Ripple:
+        return tr("Ripple");
     }
     return tr("Size");
 }
 
-bool bindingEditor(std::array<DocBinding, 2>& bindings, bool light, bool camera) {
-    const char* sources[] = {tr("Bass"), tr("Mid"), tr("High"), tr("Level"), tr("Kick")};
-    const char* targets[] = {tr("Size"), tr("Glow"), tr("Twist"), tr("Lift")};
+const char* bindSourceLabel(BindSource source) {
+    static char bandLabels[kSceneBands][24];
+    switch (source) {
+    case BindSource::Bass:
+        return tr("Bass");
+    case BindSource::Mid:
+        return tr("Mid");
+    case BindSource::High:
+        return tr("High");
+    case BindSource::Level:
+        return tr("Level");
+    case BindSource::Kick:
+        return tr("Kick");
+    case BindSource::Beat:
+        return tr("Beat");
+    default:
+        break;
+    }
+    const int band = std::clamp(static_cast<int>(source) - static_cast<int>(BindSource::Band1), 0, kSceneBands - 1);
+    std::snprintf(bandLabels[band], sizeof(bandLabels[band]), tr("Band %d"), band + 1);
+    return bandLabels[band];
+}
+
+bool bindingEditor(DocBindings& bindings, bool light, bool camera) {
+    const char* sources[kBindSourceCount];
+    for (int i = 0; i < kBindSourceCount; ++i) {
+        sources[i] = bindSourceLabel(static_cast<BindSource>(i));
+    }
+    constexpr int kObjectTargets = 10;
+    constexpr BindTarget objectTargets[kObjectTargets] = {BindTarget::Scale, BindTarget::Emissive, BindTarget::Twist, BindTarget::Lift, BindTarget::Hue, BindTarget::Roughness, BindTarget::UvX, BindTarget::UvY, BindTarget::Inflate, BindTarget::Ripple};
+    const char* targets[kObjectTargets];
+    for (int i = 0; i < kObjectTargets; ++i) {
+        targets[i] = bindTargetLabel(objectTargets[i]);
+    }
     bool changed = false;
     for (size_t i = 0; i < bindings.size(); ++i) {
         DocBinding& b = bindings[i];
@@ -229,9 +273,9 @@ bool bindingEditor(std::array<DocBinding, 2>& bindings, bool light, bool camera)
         changed |= ImGui::Checkbox("##on", &b.enabled);
         ImGui::SameLine();
         ImGui::BeginDisabled(!b.enabled);
-        ImGui::SetNextItemWidth(ui::px(70.0f));
-        int source = static_cast<int>(b.source);
-        if (comboList("##source", source, sources, 5)) {
+        ImGui::SetNextItemWidth(ui::px(78.0f));
+        int source = std::clamp(static_cast<int>(b.source), 0, kBindSourceCount - 1);
+        if (comboList("##source", source, sources, kBindSourceCount)) {
             b.source = static_cast<BindSource>(source);
             changed = true;
         }
@@ -239,10 +283,15 @@ bool bindingEditor(std::array<DocBinding, 2>& bindings, bool light, bool camera)
         if (light || camera) {
             ImGui::TextUnformatted(bindTargetLabel(light ? BindTarget::Light : BindTarget::Zoom));
         } else {
-            ImGui::SetNextItemWidth(ui::px(70.0f));
-            int target = std::clamp(static_cast<int>(b.target), 0, 3);
-            if (comboList("##target", target, targets, 4)) {
-                b.target = static_cast<BindTarget>(target);
+            ImGui::SetNextItemWidth(ui::px(128.0f));
+            int target = 0;
+            for (int t = 0; t < kObjectTargets; ++t) {
+                if (objectTargets[t] == b.target) {
+                    target = t;
+                }
+            }
+            if (comboList("##target", target, targets, kObjectTargets)) {
+                b.target = objectTargets[target];
                 changed = true;
             }
         }
@@ -356,7 +405,7 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
     }
     if (ui::collapsingHeader(tr("Audio"), ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::TextDisabled("%s", tr("A sound band moves this object: bigger, glowing, twisting or lifting"));
+        ImGui::TextDisabled("%s", tr("Sound moves this object: size, glow, twist and lift, and also colour, roughness, texture shift, inflate and ripple. Four rows at most."));
         ImGui::PopTextWrapPos();
         changed |= bindingEditor(o.bindings, false, false);
     }
@@ -857,12 +906,8 @@ void App::drawCreator() {
             AudioFeatures audio = cs.simulateAudio ? virtualAudio(cs.time * 2.0, cs.time) : engine_.audio();
             SceneFrame frame;
             frame.time = static_cast<float>(cs.time);
-            frame.beat = cs.simulateAudio ? cs.time * 2.0 : engine_.beat();
-            frame.bass = audio.bass;
-            frame.mid = audio.mid;
-            frame.high = audio.high;
-            frame.level = audio.level;
-            frame.kick = audio.kick;
+            frame.setAudio(audio, cs.simulateAudio ? cs.time * 2.0 : engine_.beat());
+            frame.materialBindings = engine_.sceneMaterialBindings();
             frame.editor = true;
             frame.editorCamera = cs.freeCamera;
             frame.editYaw = cs.yaw;

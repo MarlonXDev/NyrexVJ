@@ -313,6 +313,16 @@ Off by default; with Use hot standby off the failover system does nothing, and a
 - **What carries over to a graphics card.** The number of passes does. The milliseconds do not: a pass costs 6 to 7 ms here because a processor draws every pixel, and on a graphics card a copy of this size is a fraction of a millisecond. Expect a smaller saving in time and the same saving in memory.
 - **Not measured.** A graphics card, Windows, 4K output, the cost next to VRChat and a run of hours (`M-GRF-1`).
 
+## What is new in 0.68.0: music on 3D materials
+
+[ADR 0062](adr/0062-audio-reactive-3d-materials-sources-and-targets-for-scene-bindings.md). The bindings of a 3D scene got the beat and eight spectrum bands as sources and six material targets (Colour shift, Roughness, Texture shift X and Y, Inflate, Ripple); an object, a light and a camera now have four rows instead of two. No new audio analysis runs: the bands are means of the bins the analyser already computes and the beat is a function of the beat position.
+
+- **Processor.** The evaluation of a scene adds up the rows once per frame. For 512 instances (64 objects with a ring of 8) it took 70.7 to 77.7 microseconds without bindings and 83.5 to 87.1 with four material bindings on every object (best of three rounds, three runs, llvmpipe machine), so 13 to 16 microseconds more per frame. Eight bands cost eight means of 16 numbers, computed once per frame and only for a scene that is drawn.
+- **Graphics card.** No texture, buffer, thread or readback is added, so the graphics memory does not change. Each draw sets six more uniforms (`uHue`, `uRoughAdd`, `uUvShift`, `uInflate`, `uRipple`, `uDeformRadius`); the vertex shader branches on `uInflate` and `uRipple`, the fragment shader on `uHue`, and a scene without material bindings takes none of them. A scene with deformation costs one normalisation and one sine per vertex.
+- **Measured here.** 24 spheres at 256 x 256 on Mesa llvmpipe, 40 frames, three runs, average milliseconds per frame: 6.0 to 6.3 without bindings, 5.2 to 6.2 with the bindings and the switch off, 5.6 to 7.9 with them on. The difference is inside the noise of this machine.
+- **The switch.** Settings, Performance, Music moves 3D materials (on at the start). Off leaves the six material targets out; Size, Glow, Twist, Lift, Light and Zoom are not affected.
+- **Not measured.** A graphics card, Windows, a deformed mesh with many vertices, and a long show (`M-MBD-1`).
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

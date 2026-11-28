@@ -113,6 +113,7 @@ bool loadSettings(Settings& settings) {
     }
     result.feedbackReuse = boolean("feedbackReuse", true);
     result.graphOptimizer = boolean("graphOptimizer", true);
+    result.sceneMaterialBindings = boolean("sceneMaterialBindings", true);
     result.diagWarnings = boolean("diagWarnings", true);
     auto diagP99 = doc.find("diagP99Percent");
     if (diagP99 != doc.end() && diagP99->is_number_integer()) {
@@ -524,6 +525,9 @@ bool saveSettings(const Settings& settings) {
     }
     if (!settings.graphOptimizer) {
         doc["graphOptimizer"] = false;
+    }
+    if (!settings.sceneMaterialBindings) {
+        doc["sceneMaterialBindings"] = false;
     }
     doc["diagWarnings"] = settings.diagWarnings;
     doc["diagP99Percent"] = std::clamp(settings.diagP99Percent, 110, 600);

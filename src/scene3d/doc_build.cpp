@@ -22,7 +22,7 @@ Quat eulerToQuat(Vec3 degrees) {
     return y * x * z;
 }
 
-std::vector<NodeBinding> convertBindings(const std::array<DocBinding, 2>& bindings) {
+std::vector<NodeBinding> convertBindings(const DocBindings& bindings) {
     std::vector<NodeBinding> out;
     for (const DocBinding& b : bindings) {
         if (b.enabled && b.amount != 0.0f) {
@@ -110,6 +110,9 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
     SceneDoc doc = source;
     sanitizeDoc(doc);
     Scene& scene = result.scene;
+    for (const std::string& note : doc.notes) {
+        result.warnings.push_back(note);
+    }
     scene.name = doc.name;
     scene.shading = Shading::Pbr;
     scene.exposure = doc.exposure;

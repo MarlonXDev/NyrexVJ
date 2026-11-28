@@ -9,12 +9,15 @@
 
 namespace nvj {
 
-constexpr int kDocVersion = 1;
+constexpr int kDocVersion = 2;
+constexpr int kDocBaseVersion = 1;
 constexpr size_t kDocMaxObjects = 64;
 constexpr size_t kDocMaxLights = 4;
 constexpr size_t kDocMaxCameras = 8;
 constexpr float kDocMaxCutBeats = 64.0f;
 constexpr size_t kDocMaxNameBytes = 64;
+constexpr size_t kDocMaxBindings = 4;
+constexpr size_t kDocMaxNotes = 16;
 constexpr size_t kDocMaxAssetNameBytes = 96;
 
 struct DocAnimation {
@@ -32,6 +35,8 @@ struct DocBinding {
     BindTarget target = BindTarget::Scale;
     float amount = 0.3f;
 };
+
+using DocBindings = std::array<DocBinding, kDocMaxBindings>;
 
 struct DocMaterial {
     std::array<float, 3> color{0.8f, 0.8f, 0.8f};
@@ -56,7 +61,7 @@ struct DocObject {
     NodeRepeat repeat;
     DocMaterial material;
     std::array<DocAnimation, 2> animations;
-    std::array<DocBinding, 2> bindings;
+    DocBindings bindings;
     bool framing = true;
     bool visible = true;
 };
@@ -67,7 +72,7 @@ struct DocLight {
     Vec3 position{0.5f, 0.8f, 0.6f};
     std::array<float, 3> color{1.0f, 1.0f, 1.0f};
     float intensity = 3.0f;
-    std::array<DocBinding, 2> bindings;
+    DocBindings bindings;
 };
 
 struct DocCamera {
@@ -78,7 +83,7 @@ struct DocCamera {
     float fovDegrees = 46.0f;
     float orbitSpeed = 0.4f;
     float pitchSway = 0.0f;
-    std::array<DocBinding, 2> bindings;
+    DocBindings bindings;
 };
 
 struct DocSky {
@@ -98,6 +103,7 @@ struct SceneDoc {
     float cutBeats = 0.0f;
     DocSky sky;
     float exposure = 1.0f;
+    std::vector<std::string> notes;
 };
 
 bool isSafeAssetName(const std::string& name);
@@ -112,6 +118,7 @@ const DocCamera& docCameraAt(const SceneDoc& doc, int index);
 int docAddCamera(SceneDoc& doc, const DocCamera& source);
 bool docRemoveCamera(SceneDoc& doc, int index);
 void sanitizeDoc(SceneDoc& doc);
+int docRequiredVersion(const SceneDoc& doc);
 std::string docToJson(const SceneDoc& doc);
 bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error);
 std::vector<std::string> docModelNames(const SceneDoc& doc);

@@ -1,5 +1,6 @@
 #include "app/scene_selftest.hpp"
 
+#include "audio/audio_features.hpp"
 #include "core/log.hpp"
 #include "render/scene_player.hpp"
 #include "scene3d/doc_build.hpp"
@@ -77,19 +78,16 @@ std::string number(double value) {
     return text;
 }
 
-Shot capture(Engine& engine, ScenePlayer& player, float time, RenderTarget& target) {
+Shot captureFrame(Engine& engine, ScenePlayer& player, SceneFrame frame, RenderTarget& target) {
     Shot shot;
     if (!player.wait()) {
         logLine("Scene self test: '" + player.label() + "' failed to load: " + player.error());
         return shot;
     }
-    SceneFrame frame;
-    frame.time = time;
     frame.editor = true;
     frame.editorCamera = true;
     frame.editYaw = 0.0f;
     frame.editPitch = 0.0f;
-    frame.editDistance = 1.0f;
     while (glGetError() != GL_NO_ERROR) {
     }
     engine.sceneRenderer().draw(player, frame, target);
@@ -112,6 +110,105 @@ Shot capture(Engine& engine, ScenePlayer& player, float time, RenderTarget& targ
         }
     }
     return shot;
+}
+
+Shot capture(Engine& engine, ScenePlayer& player, float time, RenderTarget& target) {
+    SceneFrame frame;
+    frame.time = time;
+    frame.editDistance = 1.0f;
+    return captureFrame(engine, player, frame, target);
+}
+
+struct Tint {
+    double r = 0.0;
+    double g = 0.0;
+    double b = 0.0;
+};
+
+Tint meanTint(const Shot& shot) {
+    Tint sum;
+    int count = 0;
+    for (int y = 0; y < kSize; ++y) {
+        for (int x = 0; x < kSize; ++x) {
+            const uint8_t* p = shot.at(x, y);
+            if (p[0] > 8 || p[1] > 8 || p[2] > 8) {
+                sum.r += p[0];
+                sum.g += p[1];
+                sum.b += p[2];
+                ++count;
+            }
+        }
+    }
+    if (count > 0) {
+        sum.r /= count;
+        sum.g /= count;
+        sum.b /= count;
+    }
+    return sum;
+}
+
+DocAssets bindingAssets() {
+    DocAssets assets;
+    assets.loadModel = [](const std::string&, const GltfLimits&) -> std::shared_ptr<const GltfResult> { return nullptr; };
+    assets.loadImage = [](const std::string& name, std::string& error) -> std::shared_ptr<const SceneImage> {
+        if (name != "ramp.png") {
+            error = "not here";
+            return nullptr;
+        }
+        auto image = std::make_shared<SceneImage>();
+        image->width = 64;
+        image->height = 64;
+        image->rgba.resize(64u * 64u * 4u);
+        for (int y = 0; y < 64; ++y) {
+            for (int x = 0; x < 64; ++x) {
+                uint8_t* p = &image->rgba[(static_cast<size_t>(y) * 64u + static_cast<size_t>(x)) * 4u];
+                const int ramp = x * 255 / 63;
+                p[0] = static_cast<uint8_t>(255 - ramp);
+                p[1] = static_cast<uint8_t>(40 + (x % 16) * 8);
+                p[2] = static_cast<uint8_t>(ramp);
+                p[3] = 255;
+            }
+        }
+        return image;
+    };
+    return assets;
+}
+
+std::unique_ptr<ScenePlayer> docScene(const SceneDoc& doc, const char* name) {
+    const DocAssets assets = bindingAssets();
+    return std::make_unique<ScenePlayer>(name, [doc, assets](const GltfLimits& limits) { return buildSceneFromDoc(doc, assets, limits); });
+}
+
+SceneDoc sphereDoc(std::initializer_list<DocBinding> list, bool textured) {
+    SceneDoc doc = makeDefaultDoc();
+    doc.objects.clear();
+    DocObject sphere = makeDefaultObject(PrimitiveKind::Sphere);
+    sphere.material.color = {0.9f, 0.12f, 0.1f};
+    sphere.material.metallic = 0.0f;
+    sphere.material.roughness = 0.35f;
+    sphere.material.emissiveStrength = 0.0f;
+    if (textured) {
+        sphere.material.color = {1.0f, 1.0f, 1.0f};
+        sphere.material.texture = "ramp.png";
+    }
+    size_t i = 0;
+    for (const DocBinding& binding : list) {
+        sphere.bindings[i++] = binding;
+    }
+    doc.objects.push_back(sphere);
+    return doc;
+}
+
+SceneFrame musicFrame(float kick, double beat, bool materials) {
+    AudioFeatures features;
+    features.kick = kick;
+    features.bass = kick;
+    SceneFrame frame;
+    frame.time = 1.1f;
+    frame.editDistance = 1.9f;
+    frame.setAudio(features, beat);
+    frame.materialBindings = materials;
+    return frame;
 }
 
 std::unique_ptr<ScenePlayer> fileScene(const fs::path& path) {
@@ -259,6 +356,192 @@ int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const st
             const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / 30.0;
             report["frameMs"][name] = ms;
         }
+    }
+    {
+        auto plain = docScene(sphereDoc({}, false), "matbind plain");
+        const Shot base = captureFrame(engine, *plain, musicFrame(1.0f, 0.0, true), target);
+        check.expect("material test sphere draws", base.ok && base.lit > 1500, "lit " + std::to_string(base.lit));
+        const Tint baseTint = meanTint(base);
+        check.expect("the plain sphere is red", baseTint.r > baseTint.g * 2.0 && baseTint.r > baseTint.b * 2.0, "tint " + number(baseTint.r) + "," + number(baseTint.g) + "," + number(baseTint.b));
+
+        auto hue = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::Hue, 1.0f / 3.0f}}, false), "matbind hue");
+        const Shot third = captureFrame(engine, *hue, musicFrame(1.0f, 0.0, true), target);
+        const Tint thirdTint = meanTint(third);
+        check.expect("a third of a colour turn moves red to green", third.ok && thirdTint.g > thirdTint.r * 2.0 && thirdTint.g > thirdTint.b * 2.0, "tint " + number(thirdTint.r) + "," + number(thirdTint.g) + "," + number(thirdTint.b));
+        const Shot silent = captureFrame(engine, *hue, musicFrame(0.0f, 0.5, true), target);
+        check.expect("without music the colour stays", meanDifference(base, silent) < 0.05 || meanDifference(captureFrame(engine, *plain, musicFrame(0.0f, 0.5, true), target), silent) < 0.05);
+        auto turn = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::Hue, 1.0f}}, false), "matbind turn");
+        const double whole = meanDifference(base, captureFrame(engine, *turn, musicFrame(1.0f, 0.0, true), target));
+        check.expect("a whole colour turn comes back to the start", whole < 0.6, "difference " + number(whole));
+        report["matbind"]["hueThirdTint"] = {thirdTint.r, thirdTint.g, thirdTint.b};
+
+        const double offByMusic = meanDifference(base, captureFrame(engine, *hue, musicFrame(1.0f, 0.0, false), target));
+        check.expect("switch off: material bindings are ignored", offByMusic < 0.001, "difference " + number(offByMusic));
+        auto scaled = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::Scale, 0.5f}, {true, BindSource::Kick, BindTarget::Hue, 0.4f}}, false), "matbind scale");
+        const Shot big = captureFrame(engine, *scaled, musicFrame(1.0f, 0.0, false), target);
+        check.expect("switch off: size still follows the music", big.lit > base.lit * 1.6, "lit " + std::to_string(base.lit) + " -> " + std::to_string(big.lit));
+        const Tint bigTint = meanTint(big);
+        check.expect("switch off: colour stays red", bigTint.r > bigTint.g * 2.0, "tint " + number(bigTint.r) + "," + number(bigTint.g));
+
+        SceneDoc shiny = sphereDoc({}, false);
+        shiny.objects[0].material.metallic = 0.9f;
+        shiny.objects[0].material.roughness = 0.2f;
+        auto glossy = docScene(shiny, "matbind glossy");
+        shiny.objects[0].bindings[0] = {true, BindSource::Kick, BindTarget::Roughness, 0.7f};
+        auto dull = docScene(shiny, "matbind dull");
+        const Shot sharp = captureFrame(engine, *glossy, musicFrame(1.0f, 0.0, true), target);
+        const Shot rough = captureFrame(engine, *dull, musicFrame(1.0f, 0.0, true), target);
+        const double roughDifference = meanDifference(sharp, rough);
+        check.expect("roughness changes the shine", sharp.ok && rough.ok && roughDifference > 0.8 && std::abs(sharp.lit - rough.lit) < sharp.lit / 20, "difference " + number(roughDifference));
+        report["matbind"]["roughnessDifference"] = roughDifference;
+
+        auto flat = docScene(sphereDoc({}, true), "matbind flat");
+        const Shot texturedBase = captureFrame(engine, *flat, musicFrame(1.0f, 0.0, true), target);
+        auto slid = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::UvX, 0.3f}}, true), "matbind slide");
+        const double slidDifference = meanDifference(texturedBase, captureFrame(engine, *slid, musicFrame(1.0f, 0.0, true), target));
+        check.expect("texture shift moves the texture", texturedBase.ok && slidDifference > 3.0, "difference " + number(slidDifference));
+        auto slidAround = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::UvX, 1.0f}, {true, BindSource::Kick, BindTarget::UvY, -2.0f}}, true), "matbind around");
+        const double aroundDifference = meanDifference(texturedBase, captureFrame(engine, *slidAround, musicFrame(1.0f, 0.0, true), target));
+        check.expect("a whole texture shift comes back to the start", aroundDifference < 0.6, "difference " + number(aroundDifference));
+        report["matbind"]["uvDifference"] = slidDifference;
+
+        auto inflated = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::Inflate, 0.5f}}, false), "matbind inflate");
+        auto deflated = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::Inflate, -0.5f}}, false), "matbind deflate");
+        const Shot grown = captureFrame(engine, *inflated, musicFrame(1.0f, 0.0, true), target);
+        const Shot shrunk = captureFrame(engine, *deflated, musicFrame(1.0f, 0.0, true), target);
+        check.expect("inflate makes the shape bigger", grown.lit > base.lit * 1.2, "lit " + std::to_string(base.lit) + " -> " + std::to_string(grown.lit));
+        check.expect("negative inflate makes the shape smaller", shrunk.lit < base.lit * 0.85 && shrunk.lit > 100, "lit " + std::to_string(base.lit) + " -> " + std::to_string(shrunk.lit));
+        const double calm = meanDifference(base, captureFrame(engine, *inflated, musicFrame(0.0f, 0.5, true), target));
+        check.expect("inflate does nothing without music", calm < 0.05 || meanDifference(captureFrame(engine, *plain, musicFrame(0.0f, 0.5, true), target), captureFrame(engine, *inflated, musicFrame(0.0f, 0.5, true), target)) < 0.001);
+        report["matbind"]["inflateLit"] = {base.lit, grown.lit, shrunk.lit};
+
+        auto ripple = docScene(sphereDoc({{true, BindSource::Kick, BindTarget::Ripple, 0.8f}}, false), "matbind ripple");
+        SceneFrame early = musicFrame(1.0f, 0.0, true);
+        SceneFrame later = early;
+        later.time = 1.45f;
+        const Shot waveA = captureFrame(engine, *ripple, early, target);
+        const Shot waveB = captureFrame(engine, *ripple, later, target);
+        const Shot waveC = captureFrame(engine, *ripple, early, target);
+        check.expect("ripple changes the surface", meanDifference(base, waveA) > 0.4, "difference " + number(meanDifference(base, waveA)));
+        check.expect("ripple moves with time", meanDifference(waveA, waveB) > 0.2, "difference " + number(meanDifference(waveA, waveB)));
+        check.expect("ripple repeats exactly at the same time", meanDifference(waveA, waveC) < 0.001);
+
+        auto everything = docScene(sphereDoc({{true, BindSource::Band2, BindTarget::Hue, 0.2f}, {true, BindSource::Beat, BindTarget::Roughness, 0.4f}, {true, BindSource::Kick, BindTarget::Ripple, 0.3f}, {true, BindSource::Band7, BindTarget::Inflate, 0.2f}}, false), "matbind all");
+        auto twin = docScene(sphereDoc({{true, BindSource::Band2, BindTarget::Hue, 0.2f}, {true, BindSource::Beat, BindTarget::Roughness, 0.4f}, {true, BindSource::Kick, BindTarget::Ripple, 0.3f}, {true, BindSource::Band7, BindTarget::Inflate, 0.2f}}, false), "matbind twin");
+        bool repeatable = true;
+        bool moving = false;
+        std::string firstHash;
+        for (int step = 0; step < 12; ++step) {
+            const double beat = 0.23 * step;
+            const double time = 0.31 * step;
+            SceneFrame frame;
+            frame.time = static_cast<float>(time);
+            frame.editDistance = 1.9f;
+            frame.setAudio(virtualAudio(beat, time), beat);
+            const Shot one = captureFrame(engine, *everything, frame, target);
+            const Shot two = captureFrame(engine, *twin, frame, target);
+            repeatable = repeatable && one.ok && two.ok && pixelHash(one.pixels) == pixelHash(two.pixels);
+            if (step == 0) {
+                firstHash = pixelHash(one.pixels);
+            } else {
+                moving = moving || pixelHash(one.pixels) != firstHash;
+            }
+            report["matbind"]["previewHashes"][std::to_string(step)] = pixelHash(one.pixels);
+        }
+        check.expect("the same music gives the same picture on two players", repeatable);
+        check.expect("different music moments give different pictures", moving);
+
+        const SceneDoc unknown = [] {
+            SceneDoc doc;
+            std::string error;
+            const std::string text = "{\"format\":\"nyxscene\",\"version\":2,\"name\":\"odd\",\"objects\":[{\"name\":\"Ball\",\"kind\":\"sphere\",\"bindings\":[{\"source\":\"band2\",\"target\":\"hue\",\"amount\":0.2},{\"source\":\"theremin\",\"target\":\"scale\",\"amount\":1},{\"source\":\"kick\",\"target\":\"sparkle\",\"amount\":1}]}]}";
+            docFromJson(text, doc, error);
+            return doc;
+        }();
+        auto odd = docScene(unknown, "matbind odd");
+        const Shot oddShot = captureFrame(engine, *odd, musicFrame(1.0f, 0.0, true), target);
+        int noted = 0;
+        for (const std::string& warning : odd->warnings()) {
+            noted += warning.find("unknown source 'theremin'") != std::string::npos || warning.find("unknown target 'sparkle'") != std::string::npos ? 1 : 0;
+        }
+        check.expect("unknown sources and targets are dropped with a note and the scene still draws", oddShot.ok && oddShot.lit > 300 && noted == 2, "lit " + std::to_string(oddShot.lit) + ", notes " + std::to_string(noted));
+
+        auto manual = docScene(sphereDoc({{true, BindSource::Beat, BindTarget::UvX, 0.5f}}, true), "matbind beat");
+        const Shot onBeat = captureFrame(engine, *manual, musicFrame(0.0f, 0.0, true), target);
+        const Shot offBeat = captureFrame(engine, *manual, musicFrame(0.0f, 0.5, true), target);
+        check.expect("the beat source follows the beat position", meanDifference(onBeat, offBeat) > 1.0, "difference " + number(meanDifference(onBeat, offBeat)));
+    }
+    {
+        const std::string materialsOn = "bindings on";
+        std::vector<double> frameMs;
+        for (int mode = 0; mode < 3; ++mode) {
+            SceneDoc doc = makeDefaultDoc();
+            doc.objects.clear();
+            for (int i = 0; i < 24; ++i) {
+                DocObject sphere = makeDefaultObject(PrimitiveKind::Sphere);
+                sphere.position = {static_cast<float>(i % 6) * 2.2f, static_cast<float>(i / 6) * 2.2f, 0.0f};
+                if (mode > 0) {
+                    sphere.bindings[0] = {true, BindSource::Band2, BindTarget::Hue, 0.3f};
+                    sphere.bindings[1] = {true, BindSource::Beat, BindTarget::Roughness, 0.3f};
+                    sphere.bindings[2] = {true, BindSource::Kick, BindTarget::Inflate, 0.2f};
+                    sphere.bindings[3] = {true, BindSource::Band5, BindTarget::Ripple, 0.2f};
+                }
+                doc.objects.push_back(sphere);
+            }
+            auto player = docScene(doc, "matbind cost");
+            captureFrame(engine, *player, musicFrame(1.0f, 0.0, mode == 2), target);
+            const auto begin = std::chrono::steady_clock::now();
+            for (int i = 0; i < 40; ++i) {
+                SceneFrame frame;
+                frame.time = static_cast<float>(i) * 0.05f;
+                frame.editDistance = 1.9f;
+                frame.setAudio(virtualAudio(0.1 * i, 0.05 * i), 0.1 * i);
+                frame.materialBindings = mode == 2;
+                captureFrame(engine, *player, frame, target);
+            }
+            frameMs.push_back(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / 40.0);
+        }
+        report["matbind"]["frameMs"] = {{"noBindings", frameMs[0]}, {"bindingsOff", frameMs[1]}, {"bindingsOn", frameMs[2]}};
+        {
+            SceneDoc crowd = makeDefaultDoc();
+            crowd.objects.clear();
+            for (int i = 0; i < 64; ++i) {
+                DocObject sphere = makeDefaultObject(PrimitiveKind::Cube);
+                sphere.repeat = {RepeatKind::Ring, 8, 3.0f, 1.0f};
+                crowd.objects.push_back(sphere);
+            }
+            const DocAssets assets = bindingAssets();
+            GltfResult plainBuild = buildSceneFromDoc(crowd, assets);
+            for (DocObject& object : crowd.objects) {
+                object.bindings[0] = {true, BindSource::Band2, BindTarget::Hue, 0.3f};
+                object.bindings[1] = {true, BindSource::Beat, BindTarget::Roughness, 0.3f};
+                object.bindings[2] = {true, BindSource::Kick, BindTarget::Inflate, 0.2f};
+                object.bindings[3] = {true, BindSource::Band5, BindTarget::Ripple, 0.2f};
+            }
+            GltfResult boundBuild = buildSceneFromDoc(crowd, assets);
+            SceneAudio audio;
+            audio.kick = 0.7f;
+            audio.bands[1] = 0.4f;
+            audio.bands[4] = 0.6f;
+            audio.beat = 0.5f;
+            double plainMicros = 0.0;
+            double boundMicros = 0.0;
+            size_t instances = 0;
+            for (int round = 0; round < 3; ++round) {
+                for (int mode = 0; mode < 2; ++mode) {
+                    const Scene& scene = mode == 0 ? plainBuild.scene : boundBuild.scene;
+                    const auto begin = std::chrono::steady_clock::now();
+                    for (int i = 0; i < 400; ++i) {
+                        instances = evaluateSceneFull(scene, -1, static_cast<float>(i) * 0.01f, &audio).instances.size();
+                    }
+                    const double micros = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - begin).count() / 400.0;
+                    (mode == 0 ? plainMicros : boundMicros) = round == 0 ? micros : std::min(mode == 0 ? plainMicros : boundMicros, micros);
+                }
+            }
+            report["matbind"]["evaluateMicros"] = {{"instances", instances}, {"noBindings", plainMicros}, {"fourBindings", boundMicros}};
+            check.expect("evaluating bindings stays cheap", instances == 512 && boundMicros < plainMicros * 3.0 + 200.0, "us " + number(plainMicros) + " -> " + number(boundMicros) + " for " + std::to_string(instances) + " instances");
+        }
+        check.expect("material bindings cost stays measured and small", frameMs[2] < frameMs[0] * 1.5 + 4.0, "ms " + number(frameMs[0]) + " / " + number(frameMs[1]) + " / " + number(frameMs[2]));
     }
     {
         size_t checked = 0;

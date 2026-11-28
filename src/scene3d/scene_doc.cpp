@@ -82,6 +82,8 @@ template <size_t N>
 void sanitizeBindings(std::array<DocBinding, N>& bindings, bool light, bool camera) {
     for (DocBinding& b : bindings) {
         b.amount = clampFinite(b.amount, -20.0f, 20.0f, 0.0f);
+        b.source = static_cast<BindSource>(std::clamp(static_cast<int>(b.source), 0, kBindSourceCount - 1));
+        b.target = static_cast<BindTarget>(std::clamp(static_cast<int>(b.target), 0, kBindTargetCount - 1));
         if (light) {
             b.target = BindTarget::Light;
         } else if (camera) {
@@ -100,7 +102,7 @@ json vecOf(const Vec3& v) {
     return json::array({v.x, v.y, v.z});
 }
 
-json bindingsToJson(const std::array<DocBinding, 2>& bindings) {
+json bindingsToJson(const DocBindings& bindings) {
     json out = json::array();
     for (const DocBinding& b : bindings) {
         if (b.enabled) {
@@ -188,7 +190,7 @@ bool motionFromKey(const std::string& key, MotionKind& kind) {
 }
 
 bool sourceFromKey(const std::string& key, BindSource& source) {
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < kBindSourceCount; ++i) {
         if (key == sourceKey(static_cast<BindSource>(i))) {
             source = static_cast<BindSource>(i);
             return true;
@@ -198,7 +200,7 @@ bool sourceFromKey(const std::string& key, BindSource& source) {
 }
 
 bool targetFromKey(const std::string& key, BindTarget& target) {
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < kBindTargetCount; ++i) {
         if (key == targetKey(static_cast<BindTarget>(i))) {
             target = static_cast<BindTarget>(i);
             return true;
@@ -207,8 +209,47 @@ bool targetFromKey(const std::string& key, BindTarget& target) {
     return false;
 }
 
+enum class BindingOwner { Object, Light, Camera };
+
+void addNote(std::vector<std::string>& notes, std::string text) {
+    if (notes.size() < kDocMaxNotes) {
+        if (text.size() > 200) {
+            text.resize(200);
+        }
+        notes.push_back(std::move(text));
+    } else if (notes.size() == kDocMaxNotes) {
+        notes.push_back("more notes were left out");
+    }
+}
+
+std::string shownKey(const std::string& text) {
+    std::string out;
+    for (const char c : text) {
+        const unsigned char u = static_cast<unsigned char>(c);
+        if (u >= 0x20 && u != 0x7f) {
+            out.push_back(c);
+        }
+        if (out.size() >= 24) {
+            break;
+        }
+    }
+    return out;
+}
+
+bool targetFitsOwner(BindingOwner owner, BindTarget target) {
+    switch (owner) {
+    case BindingOwner::Light:
+        return target == BindTarget::Light;
+    case BindingOwner::Camera:
+        return target == BindTarget::Zoom;
+    case BindingOwner::Object:
+        return target != BindTarget::Light && target != BindTarget::Zoom;
+    }
+    return false;
+}
+
 template <size_t N>
-void readBindings(const json& object, std::array<DocBinding, N>& out) {
+void readBindings(const json& object, std::array<DocBinding, N>& out, BindingOwner owner, const std::string& label, std::vector<std::string>& notes) {
     for (DocBinding& b : out) {
         b = DocBinding{};
     }
@@ -217,21 +258,32 @@ void readBindings(const json& object, std::array<DocBinding, N>& out) {
         return;
     }
     size_t index = 0;
+    size_t seen = 0;
     for (const json& entry : *it) {
-        if (index >= N) {
-            break;
-        }
+        ++seen;
+        const std::string where = label + ", binding " + std::to_string(seen);
         if (!entry.is_object()) {
+            addNote(notes, where + " is not an object and was ignored");
             continue;
+        }
+        if (index >= N) {
+            addNote(notes, label + " has more than " + std::to_string(N) + " bindings, the rest were ignored");
+            break;
         }
         DocBinding b;
         b.enabled = true;
         std::string text;
-        if (readString(entry, "source", text)) {
-            sourceFromKey(text, b.source);
+        if (!readString(entry, "source", text) || !sourceFromKey(text, b.source)) {
+            addNote(notes, where + " uses the unknown source '" + shownKey(text) + "' and was ignored");
+            continue;
         }
-        if (readString(entry, "target", text)) {
-            targetFromKey(text, b.target);
+        text.clear();
+        if (!readString(entry, "target", text) || !targetFromKey(text, b.target)) {
+            addNote(notes, where + " uses the unknown target '" + shownKey(text) + "' and was ignored");
+            continue;
+        }
+        if (!targetFitsOwner(owner, b.target)) {
+            addNote(notes, where + " has the target '" + shownKey(text) + "' that does not fit here and was changed to the one that does");
         }
         readFloat(entry, "amount", b.amount);
         out[index++] = b;
@@ -314,7 +366,7 @@ json cameraToJson(const DocCamera& cam) {
     return {{"name", cam.name}, {"distance", cam.distance}, {"pitch", cam.pitchDegrees}, {"yaw", cam.yawDegrees}, {"fov", cam.fovDegrees}, {"orbitSpeed", cam.orbitSpeed}, {"pitchSway", cam.pitchSway}, {"bindings", bindingsToJson(cam.bindings)}};
 }
 
-void readCamera(const json& node, DocCamera& out) {
+void readCamera(const json& node, DocCamera& out, std::vector<std::string>& notes) {
     readString(node, "name", out.name);
     readFloat(node, "distance", out.distance);
     readFloat(node, "pitch", out.pitchDegrees);
@@ -322,7 +374,7 @@ void readCamera(const json& node, DocCamera& out) {
     readFloat(node, "fov", out.fovDegrees);
     readFloat(node, "orbitSpeed", out.orbitSpeed);
     readFloat(node, "pitchSway", out.pitchSway);
-    readBindings(node, out.bindings);
+    readBindings(node, out.bindings, BindingOwner::Camera, "camera '" + out.name + "'", notes);
 }
 
 }
@@ -334,15 +386,15 @@ const char* motionKey(MotionKind kind) {
 }
 
 const char* sourceKey(BindSource source) {
-    static const char* const keys[5] = {"bass", "mid", "high", "level", "kick"};
+    static const char* const keys[kBindSourceCount] = {"bass", "mid", "high", "level", "kick", "beat", "band1", "band2", "band3", "band4", "band5", "band6", "band7", "band8"};
     const int i = static_cast<int>(source);
-    return i >= 0 && i < 5 ? keys[i] : "bass";
+    return i >= 0 && i < kBindSourceCount ? keys[i] : "bass";
 }
 
 const char* targetKey(BindTarget target) {
-    static const char* const keys[6] = {"scale", "emissive", "twist", "lift", "light", "zoom"};
+    static const char* const keys[kBindTargetCount] = {"scale", "emissive", "twist", "lift", "light", "zoom", "hue", "roughness", "uvx", "uvy", "inflate", "ripple"};
     const int i = static_cast<int>(target);
-    return i >= 0 && i < 6 ? keys[i] : "scale";
+    return i >= 0 && i < kBindTargetCount ? keys[i] : "scale";
 }
 
 bool isSafeAssetName(const std::string& name) {
@@ -529,12 +581,49 @@ void sanitizeDoc(SceneDoc& doc) {
     }
 }
 
+namespace {
+
+bool usesNewBindings(const DocBindings& bindings, BindingOwner owner) {
+    size_t used = 0;
+    for (const DocBinding& b : bindings) {
+        if (!b.enabled) {
+            continue;
+        }
+        ++used;
+        if (static_cast<int>(b.source) >= kBindOldSourceCount) {
+            return true;
+        }
+        if (owner == BindingOwner::Object && static_cast<int>(b.target) >= kBindOldTargetCount) {
+            return true;
+        }
+    }
+    return used > 2;
+}
+
+}
+
+int docRequiredVersion(const SceneDoc& source) {
+    SceneDoc doc = source;
+    sanitizeDoc(doc);
+    bool newer = usesNewBindings(doc.camera.bindings, BindingOwner::Camera);
+    for (const DocCamera& cam : doc.extraCameras) {
+        newer = newer || usesNewBindings(cam.bindings, BindingOwner::Camera);
+    }
+    for (const DocObject& o : doc.objects) {
+        newer = newer || usesNewBindings(o.bindings, BindingOwner::Object);
+    }
+    for (const DocLight& l : doc.lights) {
+        newer = newer || usesNewBindings(l.bindings, BindingOwner::Light);
+    }
+    return newer ? kDocVersion : kDocBaseVersion;
+}
+
 std::string docToJson(const SceneDoc& source) {
     SceneDoc doc = source;
     sanitizeDoc(doc);
     json root;
     root["format"] = "nyxscene";
-    root["version"] = kDocVersion;
+    root["version"] = docRequiredVersion(doc);
     root["name"] = doc.name;
     root["exposure"] = doc.exposure;
     root["sky"] = {{"top", arrayOf3(doc.sky.top)}, {"horizon", arrayOf3(doc.sky.horizon)}, {"ground", arrayOf3(doc.sky.ground)}, {"intensity", doc.sky.intensity}};
@@ -637,7 +726,7 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
     }
     const auto camera = root.find("camera");
     if (camera != root.end() && camera->is_object()) {
-        readCamera(*camera, out.camera);
+        readCamera(*camera, out.camera, out.notes);
     }
     const auto cameras = root.find("cameras");
     if (cameras != root.end() && cameras->is_array()) {
@@ -647,7 +736,7 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
             }
             DocCamera extra;
             extra.name = "Camera " + std::to_string(out.extraCameras.size() + 2);
-            readCamera(entry, extra);
+            readCamera(entry, extra, out.notes);
             out.extraCameras.push_back(std::move(extra));
         }
         float active = 0.0f;
@@ -704,7 +793,7 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
                 readString(*material, "emissiveTexture", o.material.emissiveTexture);
             }
             readAnimations(entry, o.animations);
-            readBindings(entry, o.bindings);
+            readBindings(entry, o.bindings, BindingOwner::Object, "object '" + o.name + "'", out.notes);
             out.objects.push_back(std::move(o));
         }
     }
@@ -723,7 +812,7 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
             readVec(entry, "position", l.position);
             readColor(entry, "color", l.color);
             readFloat(entry, "intensity", l.intensity);
-            readBindings(entry, l.bindings);
+            readBindings(entry, l.bindings, BindingOwner::Light, "light '" + l.name + "'", out.notes);
             out.lights.push_back(std::move(l));
         }
     }

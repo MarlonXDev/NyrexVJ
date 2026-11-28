@@ -606,7 +606,7 @@ void testMaster(Rig& rig, Report& report, json& out) {
     report.check(rig.run(4.0, step, [&] { return static_cast<int>(std::lround(peer.follower()->state()[show.layout.deck()])) == 1; }), "a deck switch on the master reaches the follower");
     rig.engine.switchDeck(0);
     report.check(rig.run(4.0, step, [&] { return static_cast<int>(std::lround(peer.follower()->state()[show.layout.deck()])) == 0; }), "switching back reaches the follower");
-    report.check(peer.follower()->manifest().deck == 0 && peer.follower()->manifest().cellKnown[0] && !peer.follower()->manifest().cells[1 * kColumns + 0].empty(), "the follower learns the clip names of the master but never receives media");
+    report.check(rig.run(4.0, step, [&] { return peer.follower()->manifest().deck == 0 && peer.follower()->manifest().cellKnown[0] && !peer.follower()->manifest().cells[1 * kColumns + 0].empty(); }), "the follower learns the clip names of the master but never receives media");
 
     rig.engine.comp.bpm = 133.0f;
     auto bpmArrived = [&] {

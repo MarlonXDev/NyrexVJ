@@ -72,6 +72,16 @@ Vec3 axisVector(int axis) {
     return axis == 0 ? Vec3{1.0f, 0.0f, 0.0f} : (axis == 2 ? Vec3{0.0f, 0.0f, 1.0f} : Vec3{0.0f, 1.0f, 0.0f});
 }
 
+struct NodeMods {
+    float emissive = 0.0f;
+    float hue = 0.0f;
+    float roughness = 0.0f;
+    float uvX = 0.0f;
+    float uvY = 0.0f;
+    float inflate = 0.0f;
+    float ripple = 0.0f;
+};
+
 struct EvalContext {
     float time = 0.0f;
     SceneAudio audio;
@@ -82,7 +92,7 @@ struct EvalContext {
     std::vector<int> stackCopy;
 };
 
-Mat4 localMatrix(const SceneNode& node, const Pose& pose, const EvalContext& ctx, int copy, float& emissive) {
+Mat4 localMatrix(const SceneNode& node, const Pose& pose, const EvalContext& ctx, int copy, NodeMods& mods) {
     Vec3 t = pose.translation;
     Quat r = pose.rotation;
     Vec3 s = pose.scale;
@@ -114,7 +124,37 @@ Mat4 localMatrix(const SceneNode& node, const Pose& pose, const EvalContext& ctx
         if (twist != 0.0f) {
             r = r * axisAngle({0.0f, 1.0f, 0.0f}, twist);
         }
-        emissive += std::max(bindingSum(node.bindings, BindTarget::Emissive, ctx.audio), 0.0f);
+        mods.emissive += std::max(bindingSum(node.bindings, BindTarget::Emissive, ctx.audio), 0.0f);
+        if (ctx.audio.materials) {
+            for (const NodeBinding& binding : node.bindings) {
+                if (!bindTargetIsMaterial(binding.target)) {
+                    continue;
+                }
+                const float value = binding.amount * audioValue(ctx.audio, binding.source);
+                switch (binding.target) {
+                case BindTarget::Hue:
+                    mods.hue += value;
+                    break;
+                case BindTarget::Roughness:
+                    mods.roughness += value;
+                    break;
+                case BindTarget::UvX:
+                    mods.uvX += value;
+                    break;
+                case BindTarget::UvY:
+                    mods.uvY += value;
+                    break;
+                case BindTarget::Inflate:
+                    mods.inflate += value;
+                    break;
+                case BindTarget::Ripple:
+                    mods.ripple += value;
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
     }
     return composeTrs(t, r, s);
 }
@@ -142,21 +182,31 @@ Mat4 nodeWorld(const EvalContext& ctx, int index) {
         const int copies = node.repeat.kind != RepeatKind::None ? std::clamp(node.repeat.count, 1, kSceneMaxRepeat) : 1;
         const int c = copies > 1 ? std::max(ctx.stackCopy[static_cast<size_t>(n)], 0) : 0;
         const int copyIndex = copies > 1 ? c : copy;
-        float emissive = 0.0f;
-        const Mat4 local = localMatrix(node, (*ctx.poses)[static_cast<size_t>(n)], ctx, copyIndex, emissive);
+        NodeMods mods;
+        const Mat4 local = localMatrix(node, (*ctx.poses)[static_cast<size_t>(n)], ctx, copyIndex, mods);
         world = copies > 1 ? world * repeatMatrix(node.repeat, c, copies) * local : world * local;
         copy = copyIndex;
     }
     return world;
 }
 
-void emitMesh(const Scene& scene, const std::vector<Pose>& poses, int nodeIndex, int mesh, const Mat4& world, float emissive, bool framing, EvalContext& ctx, int& jointBase, int& weightBase) {
+float clampOrZero(float value, float low, float high) {
+    return std::isfinite(value) ? std::clamp(value, low, high) : 0.0f;
+}
+
+void emitMesh(const Scene& scene, const std::vector<Pose>& poses, int nodeIndex, int mesh, const Mat4& world, const NodeMods& mods, bool framing, EvalContext& ctx, int& jointBase, int& weightBase) {
     SceneEval& out = *ctx.out;
     const SceneNode& node = scene.nodes[static_cast<size_t>(nodeIndex)];
     SceneInstance instance;
     instance.mesh = mesh;
     instance.world = world;
-    instance.emissive = emissive;
+    instance.emissive = mods.emissive;
+    instance.hue = clampOrZero(mods.hue, -kSceneMaxHueTurns, kSceneMaxHueTurns);
+    instance.roughness = clampOrZero(mods.roughness, -1.0f, 1.0f);
+    instance.uvX = clampOrZero(mods.uvX, -kSceneMaxUvShift, kSceneMaxUvShift);
+    instance.uvY = clampOrZero(mods.uvY, -kSceneMaxUvShift, kSceneMaxUvShift);
+    instance.inflate = clampOrZero(mods.inflate, -kSceneMaxDeform, kSceneMaxDeform);
+    instance.ripple = clampOrZero(mods.ripple, -kSceneMaxDeform, kSceneMaxDeform);
     instance.framing = framing;
     const SceneMesh& source = scene.meshes[static_cast<size_t>(mesh)];
     if (node.skin >= 0 && node.skin < static_cast<int>(scene.skins.size()) && source.skinned()) {
@@ -192,7 +242,7 @@ void emitMesh(const Scene& scene, const std::vector<Pose>& poses, int nodeIndex,
     out.instances.push_back(instance);
 }
 
-void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const Mat4& parent, int depth, EvalContext& ctx, int copy, float inheritedEmissive, bool framing) {
+void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const Mat4& parent, int depth, EvalContext& ctx, int copy, const NodeMods& inherited, bool framing) {
     if (depth > kSceneMaxDepth || index < 0 || index >= static_cast<int>(scene.nodes.size()) || ctx.out->instances.size() >= kSceneMaxInstances) {
         return;
     }
@@ -202,8 +252,8 @@ void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const M
     const bool nodeFraming = framing && node.framing;
     for (int c = 0; c < copies; ++c) {
         const int copyIndex = copies > 1 ? c : copy;
-        float emissive = inheritedEmissive;
-        const Mat4 local = localMatrix(node, pose, ctx, copyIndex, emissive);
+        NodeMods mods = inherited;
+        const Mat4 local = localMatrix(node, pose, ctx, copyIndex, mods);
         const Mat4 world = copies > 1 ? parent * repeatMatrix(node.repeat, c, copies) * local : parent * local;
         ctx.stackCopy[static_cast<size_t>(index)] = copies > 1 ? c : 0;
         int jointBase = -1;
@@ -212,10 +262,10 @@ void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const M
             if (ctx.out->instances.size() >= kSceneMaxInstances) {
                 return;
             }
-            emitMesh(scene, poses, index, mesh, world, emissive, nodeFraming, ctx, jointBase, weightBase);
+            emitMesh(scene, poses, index, mesh, world, mods, nodeFraming, ctx, jointBase, weightBase);
         }
         for (const int child : node.children) {
-            walk(scene, poses, child, world, depth + 1, ctx, copyIndex, emissive, nodeFraming);
+            walk(scene, poses, child, world, depth + 1, ctx, copyIndex, mods, nodeFraming);
         }
     }
     ctx.stackCopy[static_cast<size_t>(index)] = 0;
@@ -223,7 +273,7 @@ void walk(const Scene& scene, const std::vector<Pose>& poses, int index, const M
 
 }
 
-float audioValue(const SceneAudio& audio, BindSource source) {
+float rawAudioValue(const SceneAudio& audio, BindSource source) {
     switch (source) {
     case BindSource::Bass:
         return audio.bass;
@@ -235,8 +285,50 @@ float audioValue(const SceneAudio& audio, BindSource source) {
         return audio.level;
     case BindSource::Kick:
         return audio.kick;
+    case BindSource::Beat:
+        return audio.beat;
+    case BindSource::Band1:
+    case BindSource::Band2:
+    case BindSource::Band3:
+    case BindSource::Band4:
+    case BindSource::Band5:
+    case BindSource::Band6:
+    case BindSource::Band7:
+    case BindSource::Band8:
+        return audio.bands[static_cast<size_t>(static_cast<int>(source) - static_cast<int>(BindSource::Band1))];
     }
     return 0.0f;
+}
+
+float audioValue(const SceneAudio& audio, BindSource source) {
+    const float value = rawAudioValue(audio, source);
+    return std::isfinite(value) ? value : 0.0f;
+}
+
+float beatPulse(double beat) {
+    if (!std::isfinite(beat)) {
+        return 0.0f;
+    }
+    const double phase = beat - std::floor(beat);
+    return static_cast<float>(std::exp(-phase * 5.0));
+}
+
+std::array<float, kSceneBands> spectrumBands(const float* spectrum, int bins) {
+    std::array<float, kSceneBands> out{};
+    if (spectrum == nullptr || bins < kSceneBands) {
+        return out;
+    }
+    for (int band = 0; band < kSceneBands; ++band) {
+        const int from = band * bins / kSceneBands;
+        const int to = (band + 1) * bins / kSceneBands;
+        float sum = 0.0f;
+        for (int i = from; i < to; ++i) {
+            const float v = spectrum[i];
+            sum += std::isfinite(v) ? std::clamp(v, 0.0f, 1.0f) : 0.0f;
+        }
+        out[static_cast<size_t>(band)] = to > from ? sum / static_cast<float>(to - from) : 0.0f;
+    }
+    return out;
 }
 
 float bindingSum(const std::vector<NodeBinding>& bindings, BindTarget target, const SceneAudio& audio) {
@@ -300,7 +392,7 @@ SceneEval evaluateSceneFull(const Scene& scene, int animation, float time, const
         }
     }
     for (const int root : scene.roots) {
-        walk(scene, poses, root, Mat4{}, 0, ctx, 0, 0.0f, true);
+        walk(scene, poses, root, Mat4{}, 0, ctx, 0, NodeMods{}, true);
     }
     return out;
 }

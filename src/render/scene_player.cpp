@@ -28,6 +28,10 @@ uniform int uMorphVerts;
 uniform sampler2D uMorphTex;
 uniform int uMorphIndex[8];
 uniform float uMorphWeight[8];
+uniform float uInflate;
+uniform float uRipple;
+uniform float uDeformRadius;
+uniform float uTime;
 out vec3 vNormal;
 out vec3 vWorld;
 out vec2 vUv;
@@ -49,6 +53,15 @@ void main() {
         int base = (uMorphIndex[i] * uMorphVerts + gl_VertexID) * 2;
         position += uMorphWeight[i] * morphFetch(base);
         normal += uMorphWeight[i] * morphFetch(base + 1);
+    }
+    if (uInflate != 0.0 || uRipple != 0.0) {
+        float radius = max(uDeformRadius, 1e-4);
+        vec3 direction = normalize(normal + vec3(1e-6));
+        float shift = uInflate * 0.25;
+        if (uRipple != 0.0) {
+            shift += uRipple * 0.12 * sin(dot(position / radius, vec3(3.1, 4.3, 2.7)) + uTime * 5.0);
+        }
+        position += direction * (shift * radius);
     }
     vec4 local = vec4(position, 1.0);
     if (uSkinned != 0) {
@@ -143,6 +156,9 @@ uniform vec3 uColorB;
 uniform float uRainbow;
 uniform float uTime;
 uniform float uKick;
+uniform float uHue;
+uniform float uRoughAdd;
+uniform vec2 uUvShift;
 uniform int uLightCount;
 uniform vec4 uLightPos[4];
 uniform vec3 uLightColor[4];
@@ -197,6 +213,14 @@ vec3 perturb(vec3 n, vec3 p, vec2 uv, vec3 m) {
     return normalize(mat3(t * inv, b * inv, n) * m);
 }
 
+vec3 hueRotate(vec3 c, float turns) {
+    float a = 6.28318 * turns;
+    float cs = cos(a);
+    float sn = sin(a);
+    vec3 k = vec3(0.57735);
+    return max(c * cs + cross(k, c) * sn + k * dot(k, c) * (1.0 - cs), vec3(0.0));
+}
+
 vec3 aces(vec3 x) {
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
@@ -206,9 +230,10 @@ void main() {
     if (!gl_FrontFacing) {
         n = -n;
     }
+    vec2 uv = vUv + uUvShift;
     vec4 albedo = uBase * vColor;
     if ((uFlags & 1) != 0) {
-        vec4 t = texture(uTex, vUv);
+        vec4 t = texture(uTex, uv);
         albedo.rgb *= toLinear(t.rgb);
         albedo.a *= t.a;
     }
@@ -224,16 +249,16 @@ void main() {
     float metal = uMetal;
     float rough = uRough;
     if ((uFlags & 2) != 0) {
-        vec4 mr = texture(uTexMr, vUv);
+        vec4 mr = texture(uTexMr, uv);
         rough *= mr.g;
         metal *= mr.b;
     }
-    rough = clamp(rough, 0.045, 1.0);
+    rough = clamp(rough + uRoughAdd, 0.045, 1.0);
     metal = clamp(metal, 0.0, 1.0);
     if ((uFlags & 4) != 0) {
-        vec3 m = texture(uTexNormal, vUv).xyz * 2.0 - 1.0;
+        vec3 m = texture(uTexNormal, uv).xyz * 2.0 - 1.0;
         m.xy *= uNormalScale;
-        n = perturb(n, vWorld, vUv, m);
+        n = perturb(n, vWorld, uv, m);
     }
     vec3 base = albedo.rgb;
     if (uFollow > 0.5) {
@@ -244,12 +269,18 @@ void main() {
         }
         base = toLinear(tint) * (0.1 + 0.9 * l);
     }
-    float glowColor = max(max(uEmissive.r, uEmissive.g), uEmissive.b);
-    vec3 emissive = uEmissive.rgb * uEmissive.a;
-    if ((uFlags & 8) != 0) {
-        emissive *= toLinear(texture(uTexEmissive, vUv).rgb);
+    vec3 emissiveTint = uEmissive.rgb;
+    if (uHue != 0.0) {
+        base = hueRotate(base, uHue);
+        emissiveTint = hueRotate(emissiveTint, uHue);
     }
-    emissive += glowColor > 0.001 ? uEmissive.rgb * uBoost : base * uBoost;
+    float glowColor = max(max(uEmissive.r, uEmissive.g), uEmissive.b);
+    vec3 emissive = emissiveTint * uEmissive.a;
+    if ((uFlags & 8) != 0) {
+        vec3 glowTexture = toLinear(texture(uTexEmissive, uv).rgb);
+        emissive *= uHue != 0.0 ? hueRotate(glowTexture, uHue) : glowTexture;
+    }
+    emissive += glowColor > 0.001 ? emissiveTint * uBoost : base * uBoost;
 
     vec3 v = normalize(uCamera - vWorld);
     float nov = max(dot(n, v), 1e-4);
@@ -305,6 +336,17 @@ double nowMs() {
 
 constexpr float kFov = 0.8f;
 
+}
+
+void SceneFrame::setAudio(const AudioFeatures& features, double beatPosition) {
+    bass = features.bass;
+    mid = features.mid;
+    high = features.high;
+    level = features.level;
+    kick = features.kick;
+    beat = beatPosition;
+    beatPulse = nvj::beatPulse(beatPosition);
+    bands = spectrumBands(features.spectrum.data(), kSpectrumBins);
 }
 
 void ScenePlayer::touch() {
@@ -553,6 +595,7 @@ bool ScenePlayer::upload() {
             high = {std::max(high.x, point.x), std::max(high.y, point.y), std::max(high.z, point.z)};
         }
         gpu.centre = (low + high) * 0.5f;
+        gpu.radius = std::max(length((high - low) * 0.5f), 1e-4f);
         glGenVertexArrays(1, &gpu.vao);
         glGenBuffers(1, &gpu.vbo);
         glGenBuffers(1, &gpu.ebo);
@@ -627,6 +670,12 @@ void SceneRenderer::locate(Program& p) {
     p.rainbow = at("uRainbow");
     p.time = at("uTime");
     p.kick = at("uKick");
+    p.hue = at("uHue");
+    p.roughAdd = at("uRoughAdd");
+    p.uvShift = at("uUvShift");
+    p.inflate = at("uInflate");
+    p.ripple = at("uRipple");
+    p.deformRadius = at("uDeformRadius");
     p.metal = at("uMetal");
     p.rough = at("uRough");
     p.emissive = at("uEmissive");
@@ -776,6 +825,9 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     audio.high = frame.high;
     audio.level = frame.level;
     audio.kick = frame.kick;
+    audio.beat = frame.beatPulse;
+    audio.bands = frame.bands;
+    audio.materials = frame.materialBindings;
 
     const SceneCamera& camera = activeSceneCamera(scene, frame.beat);
     const float fov = camera.authored ? std::clamp(camera.fovDegrees, 15.0f, 110.0f) * 0.0174532925f : kFov;
@@ -945,6 +997,14 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
         } else {
             glUniform1i(p.hasTex, baseTexture ? 1 : 0);
             glUniform1i(p.blend, blended ? 1 : 0);
+        }
+        glUniform1f(p.inflate, instance.inflate);
+        glUniform1f(p.ripple, instance.ripple);
+        glUniform1f(p.deformRadius, mesh.radius);
+        if (usePbr) {
+            glUniform1f(p.hue, instance.hue);
+            glUniform1f(p.roughAdd, instance.roughness);
+            glUniform2f(p.uvShift, instance.uvX, instance.uvY);
         }
         glBindTexture(GL_TEXTURE_2D, baseTexture);
         const bool skinned = instance.skin >= 0 && mesh.skinned;

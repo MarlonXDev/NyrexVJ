@@ -1,5 +1,6 @@
 #pragma once
 
+#include "audio/audio_features.hpp"
 #include "render/gl_util.hpp"
 #include "scene3d/gltf.hpp"
 #include "scene3d/scene_model.hpp"
@@ -24,6 +25,9 @@ struct SceneFrame {
     float high = 0.0f;
     float level = 0.0f;
     float kick = 0.0f;
+    float beatPulse = 0.0f;
+    std::array<float, kSceneBands> bands{};
+    bool materialBindings = true;
     bool editor = false;
     bool editorCamera = false;
     float editYaw = 0.0f;
@@ -32,6 +36,8 @@ struct SceneFrame {
     std::array<float, 3> colorA{0.0f, 0.8f, 1.0f};
     std::array<float, 3> colorB{1.0f, 0.2f, 0.7f};
     bool rainbow = false;
+
+    void setAudio(const AudioFeatures& features, double beatPosition);
 };
 
 class ScenePlayer {
@@ -78,6 +84,7 @@ private:
         int morphTargets = 0;
         bool skinned = false;
         Vec3 centre;
+        float radius = 1.0f;
     };
 
     bool upload();
@@ -138,6 +145,12 @@ private:
         GLint rainbow = -1;
         GLint time = -1;
         GLint kick = -1;
+        GLint hue = -1;
+        GLint roughAdd = -1;
+        GLint uvShift = -1;
+        GLint inflate = -1;
+        GLint ripple = -1;
+        GLint deformRadius = -1;
         GLint metal = -1;
         GLint rough = -1;
         GLint emissive = -1;

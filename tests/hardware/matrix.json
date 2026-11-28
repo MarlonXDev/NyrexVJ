@@ -3703,6 +3703,80 @@
           "criteria": "Proposed: the picture with the setting on is the same as with it off in every case you try, no flash or jump when the setting is switched, the frame time with it on is not above the frame time with it off, the graphics memory with a colour look is lower with it on, and the memory after an hour is within 5 percent of the start."
         }
       ]
+    },
+    {
+      "id": "scene-materials",
+      "title": "Music on 3D materials: the beat and eight spectrum bands as sources, Colour shift, Roughness, Texture shift X and Y, Inflate and Ripple as targets, four rows, scene version 2 only when needed, notes for unknown keys, and the switch Music moves 3D materials",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SCENE3D.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/manual/manual.en.md",
+        "docs/TESTING.md",
+        "docs/adr/0062-audio-reactive-3d-materials-sources-and-targets-for-scene-bindings.md"
+      ],
+      "sources": [
+        "src/scene3d/scene_model.cpp",
+        "src/scene3d/scene_doc.cpp",
+        "src/scene3d/doc_build.cpp",
+        "src/render/scene_player.cpp",
+        "src/render/engine.cpp",
+        "src/core/settings.cpp",
+        "src/app/ui_creator.cpp",
+        "src/app/ui_settings.cpp",
+        "src/app/scene_selftest.cpp",
+        "tests/test_matbind.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-MBD-1",
+          "kind": "ctest",
+          "name": "nvj_matbind_tests",
+          "note": "the beat pulse and its wrap and bad values, the band means for flat, low, high, broken and too short spectra, every source reaching a target, every material target and its clamps, the switch, inheritance, repeating exactly, the document keys and their round trip, version 1 for old scenes and version 2 for new ones, unknown keys and their notes, the fix for a light and a camera, the notes reaching the build warnings, a clip pack round trip, and the setting (default on, written only when off, tolerant of wrong types)"
+        },
+        {
+          "id": "A-MBD-2",
+          "kind": "ctest",
+          "name": "nvj_creator_tests",
+          "note": "the existing document, build and evaluation checks still pass with four rows and the new keys"
+        },
+        {
+          "id": "A-MBD-3",
+          "kind": "cli",
+          "command": "NyrexVJ --scene-selftest tests/data/models",
+          "note": "draws spheres through a real OpenGL context: a third of a colour turn moves red to green and a whole turn leaves the picture byte for byte, Roughness changes the shine, a texture shift moves the texture and a whole shift comes back, Inflate and negative Inflate change the covered area, Ripple changes the surface, moves with the time and repeats exactly, the switch off equals a scene without bindings while Size still follows the music, two players give the same bytes in 12 music moments, a document with an unknown source and target plays with two notes, and it measures the frame time and the evaluation time"
+        },
+        {
+          "id": "A-MBD-4",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "the eight new texts have a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-MBD-1",
+          "title": "Music on 3D materials on a real graphics card, in the real editor and in a real show",
+          "needs": "A PC with a graphics card, a music source or a line input, a few 3D scenes with textures (made in the Clip Creator or glTF files), and optionally VRChat running next to NyrexVJ",
+          "steps": [
+            "Open the Clip Creator, add a textured sphere and open Audio reactions. Check that there are four rows, that the source list has Bass, Mid, High, Level, Kick, Beat and Band 1 to 8 and that the target list has Size, Glow, Twist, Lift, Colour shift, Roughness, Texture shift X, Texture shift Y, Inflate and Ripple, and that both lists can be operated with the mouse and the names fit.",
+            "Set Band 2 to Colour shift, Beat to Roughness, Kick to Ripple and Band 7 to Inflate, play music and check that each one moves with the part of the music it is named for and that nothing flickers.",
+            "Tick and untick Simulate audio, press Restart and check that the same moment of the pretend music gives the same picture each time.",
+            "Save the scene, use it as a clip, load it again from a preset and from a show package and check that all four rows are still there.",
+            "Open the saved file in 0.67.0 or older and check that a scene with only old rows still opens and a scene with new rows is refused with a message about a newer program.",
+            "Put a scene with an unknown source into a copy of the file by editing the text, open it and check that the warning names it and the rest still plays.",
+            "Turn Music moves 3D materials off in Settings, Performance and check that colour, roughness, texture, inflate and ripple stand still while size and glow keep moving.",
+            "Play four layers of such scenes at the output size you use, compare the frame time with the switch on and off, and watch the graphics memory.",
+            "Run a deep Ripple on a sharp shape (a cube) and look at the lighting."
+          ],
+          "measure": "the frame time with the switch off and on at the output size you play at, the graphics memory, how the lists and rows look at your interface scale, and the lighting of a deformed cube",
+          "criteria": "Proposed: every target moves what it is named for with the music, the preview repeats exactly, the rows survive saving and loading, an old program refuses only scenes that need the new rows, an unknown key is named and the scene plays, the frame time with the switch on is not more than 5 percent above the frame time with it off at the same scene, and the graphics memory does not change."
+        }
+      ]
     }
   ]
 }

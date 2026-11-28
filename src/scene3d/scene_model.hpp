@@ -20,8 +20,20 @@ struct SceneImage {
 enum class Shading { Classic, Pbr };
 enum class AlphaMode { Opaque, Mask, Blend };
 enum class MotionKind { Spin, Bob, Orbit, Pulse, Sway };
-enum class BindSource { Bass, Mid, High, Level, Kick };
-enum class BindTarget { Scale, Emissive, Twist, Lift, Light, Zoom };
+enum class BindSource { Bass, Mid, High, Level, Kick, Beat, Band1, Band2, Band3, Band4, Band5, Band6, Band7, Band8 };
+enum class BindTarget { Scale, Emissive, Twist, Lift, Light, Zoom, Hue, Roughness, UvX, UvY, Inflate, Ripple };
+constexpr int kBindSourceCount = 14;
+constexpr int kBindTargetCount = 12;
+constexpr int kBindOldSourceCount = 5;
+constexpr int kBindOldTargetCount = 6;
+constexpr int kSceneBands = 8;
+constexpr float kSceneMaxHueTurns = 8.0f;
+constexpr float kSceneMaxUvShift = 8.0f;
+constexpr float kSceneMaxDeform = 1.0f;
+
+constexpr bool bindTargetIsMaterial(BindTarget target) {
+    return static_cast<int>(target) >= static_cast<int>(BindTarget::Hue);
+}
 enum class RepeatKind { None, Ring, Line };
 
 struct SceneMaterial {
@@ -68,6 +80,9 @@ struct SceneAudio {
     float high = 0.0f;
     float level = 0.0f;
     float kick = 0.0f;
+    float beat = 0.0f;
+    std::array<float, kSceneBands> bands{};
+    bool materials = true;
 };
 
 struct SceneMorphTarget {
@@ -151,6 +166,12 @@ struct SceneInstance {
     int mesh = -1;
     Mat4 world;
     float emissive = 0.0f;
+    float hue = 0.0f;
+    float roughness = 0.0f;
+    float uvX = 0.0f;
+    float uvY = 0.0f;
+    float inflate = 0.0f;
+    float ripple = 0.0f;
     bool framing = true;
     int skin = -1;
     int jointOffset = 0;
@@ -252,6 +273,8 @@ constexpr size_t kSceneMaxFileLights = 16;
 constexpr size_t kSceneMaxFileCameras = 16;
 
 float audioValue(const SceneAudio& audio, BindSource source);
+float beatPulse(double beat);
+std::array<float, kSceneBands> spectrumBands(const float* spectrum, int bins);
 float bindingSum(const std::vector<NodeBinding>& bindings, BindTarget target, const SceneAudio& audio);
 std::vector<SceneInstance> evaluateScene(const Scene& scene, int animation, float time, const SceneAudio* audio = nullptr);
 SceneEval evaluateSceneFull(const Scene& scene, int animation, float time, const SceneAudio* audio = nullptr);

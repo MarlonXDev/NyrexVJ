@@ -108,6 +108,29 @@ Since v0.32.0 the benchmark JSON of `--bench-scene` also has `skins`, `joints`, 
 
 **Frame times are not measured yet on real hardware.** The numbers collected so far come from a software OpenGL renderer (llvmpipe) on a build server: 4 layers of Torus Knot Mesh took 190 ms per frame, 4 layers of the Plasma shader 209 ms. They show that the mesh path is not slower than a full screen shader there and that the benchmark works, they say nothing about a real GPU. The benchmark has to be run on the target PC (and on a weaker one) before anything is decided from it.
 
+## Music on materials (0.68.0)
+
+[ADR 0062](adr/0062-audio-reactive-3d-materials-sources-and-targets-for-scene-bindings.md). Every object, light and camera of a scene has up to four audio bindings (it was two): a source, a target and an amount. Rows on the same target add up and a child node takes the sum of its parent.
+
+| Sources | What they are |
+| --- | --- |
+| Bass, Mid, High, Level, Kick | the five values the scene player always had |
+| Beat | a pulse `exp(-5 * fract(beat))` from the beat position, so it follows tap tempo, MIDI clock or Link and works without sound |
+| Band 1 to 8 | the mean of 16 neighbouring bins of the 128 logarithmic bins of the spectrum, about 30, 66, 144, 316, 690, 1,500, 3,300, 7,300 and 16,000 Hz between the edges; no new analysis |
+
+| Targets on an object | Effect | Limit of the sum |
+| --- | --- | --- |
+| Size, Glow, Twist, Lift | as before | as before |
+| Colour shift | turns the hue of the base colour and of the glow colour, 1.0 is one whole turn | plus and minus 8 turns |
+| Roughness | added to the roughness before the shader's own clamp (0.045 to 1) | plus and minus 1 |
+| Texture shift X, Y | added to the texture coordinates of every lookup of the material; the textures repeat, so a whole number comes back to the start | plus and minus 8 |
+| Inflate | moves each vertex along its normal by 0.25 * amount * source times the half diagonal of the mesh bounding box | plus and minus 1 |
+| Ripple | a travelling wave along the normal, 0.12 * amount * source * radius * sin(dot(p / radius, (3.1, 4.3, 2.7)) + 5 * time) | plus and minus 1 |
+
+Lights keep Light intensity and the camera keeps Zoom. Inflate and Ripple run in the vertex shader after the morph targets and before the skin, in the local space of the mesh. They keep the old normals, so a deep ripple on a sharp shape is lit as if it were flat. Colour shift, Roughness and Texture shift live in the PBR fragment shader, which every scene from the Clip Creator and every glTF file uses; Inflate and Ripple also work in the classic shading of the built-in scenes, which have no material bindings of their own.
+
+A scene document is written as `"version": 1` while it uses only the old sources, the old targets and two rows, and as `"version": 2` otherwise; programs older than 0.68.0 refuse version 2 with their message about a newer program. A binding with an unknown source or target, a binding that is not an object and a binding after the fourth are dropped, the scene still plays, and each one adds a line to the warnings (at most 16) in the Clip Creator and the log. Settings, Performance, **Music moves 3D materials** (on at the start, written to `settings.json` only when off) leaves the six material targets out and draws the material as authored. The preview in the Clip Creator uses `virtualAudio(beat, time)` when Simulate audio is ticked, a fixed function, so the same moment always gives the same picture.
+
 ## Decisions
 
 ADR 0001 said to benchmark before committing. The decisions that followed are recorded in the ADRs and implemented in v0.9.0:
@@ -119,5 +142,6 @@ ADR 0001 said to benchmark before committing. The decisions that followed are re
 - Unloading: a scene that is in no cell and was not used for 120 seconds releases its GPU memory and loads again on demand; the models folder is rescanned without a restart.
 - glTF breadth (v0.9.0): materials and textures as listed above.
 - 3D Engine 2.0 (v0.32.0): skinning, morph targets, blended transparency, Meshopt and Draco import and the limits above, see [ADR 0025](adr/0025-3d-engine-2.md). glTF lights and cameras are read but not applied.
+- Music on materials (v0.68.0): eight spectrum bands and the beat as new sources, six material targets, four rows, see [ADR 0062](adr/0062-audio-reactive-3d-materials-sources-and-targets-for-scene-bindings.md).
 
 Still open: frame times on a real GPU. Run `NyrexVJ --bench-scene 4:300:"Torus Knot Mesh" --bench-out result.json` and the same with `Chrome Orbs Mesh` on the target PC and on a weaker one.

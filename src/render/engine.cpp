@@ -1411,11 +1411,8 @@ void Engine::renderSceneThumbnail(size_t index) {
     const Layer defaults;
     SceneFrame frame;
     frame.time = 2.6f;
-    frame.bass = sample.bass;
-    frame.mid = sample.mid;
-    frame.high = sample.high;
-    frame.level = sample.level;
-    frame.kick = sample.kick;
+    frame.setAudio(sample, 2.3);
+    frame.materialBindings = sceneMaterialBindings_;
     frame.colorA = defaults.colorA;
     frame.colorB = defaults.colorB;
     sceneRenderer_.draw(player, frame, clipThumbs_[index]);
@@ -3547,13 +3544,9 @@ void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, co
     if (scenes_[static_cast<size_t>(clipIndex)]) {
         SceneFrame frame;
         frame.time = static_cast<float>(clock);
-        frame.beat = beat_;
+        frame.setAudio(audio_, beat_);
+        frame.materialBindings = sceneMaterialBindings_;
         frame.scale = scale;
-        frame.bass = audio_.bass;
-        frame.mid = audio_.mid;
-        frame.high = audio_.high;
-        frame.level = audio_.level;
-        frame.kick = audio_.kick;
         frame.colorA = layer.colorA;
         frame.colorB = layer.colorB;
         frame.rainbow = layer.rainbow;

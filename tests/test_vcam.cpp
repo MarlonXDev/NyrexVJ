@@ -469,7 +469,7 @@ void testDocRoundTrip() {
     const SceneDoc doc = cameraDoc();
     CHECK(docRequiredVersion(doc) == kDocCameraVersion);
     CHECK(kDocCameraVersion == 3);
-    CHECK(kDocVersion == 4);
+    CHECK(kDocVersion == 5);
     const std::string text = docToJson(doc);
     const nlohmann::json parsed = nlohmann::json::parse(text);
     CHECK(parsed["version"] == 3);
@@ -531,10 +531,10 @@ void testOldFilesStayOld() {
     SceneDoc read;
     std::string future = text;
     nlohmann::json bumped = nlohmann::json::parse(text);
-    bumped["version"] = 5;
+    bumped["version"] = 6;
     CHECK(!docFromJson(bumped.dump(), read, error));
     CHECK(error.find("newer NyrexVJ") != std::string::npos);
-    bumped["version"] = 4;
+    bumped["version"] = 5;
     CHECK(docFromJson(bumped.dump(), read, error));
     bumped["version"] = 3;
     CHECK(docFromJson(bumped.dump(), read, error));

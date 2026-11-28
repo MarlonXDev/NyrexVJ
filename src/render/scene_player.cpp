@@ -1,6 +1,7 @@
 #include "render/scene_player.hpp"
 
 #include "core/log.hpp"
+#include "scene3d/geometry_graph.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -377,6 +378,7 @@ void ScenePlayer::start() {
         const double begin = nowMs();
         GltfLimits limits;
         limits.cancel = &flag;
+        limits.allowGraphs = geometryGraphsEnabled();
         GltfResult result = loader(limits);
         result.milliseconds = nowMs() - begin;
         return result;

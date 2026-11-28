@@ -806,6 +806,30 @@ Was man wissen sollte: Eine durchscheinende Fläche mischt sich nur innerhalb ih
 
 Der Schalter **Gemeinsame 3D-Welten** unter Einstellungen, Leistung schaltet das ab: Jeder Layer zeichnet wieder seine eigene Szene, egal auf welche Welt er gestellt ist. Ein Preset speichert die Weltwerte eines Layers nur, wenn sie nicht dem Standard entsprechen. Ein Beispiel liegt in `docs/examples/shared-3d-world`: ein Arm und ein Würfel, zwei Clips, die sich im Raum überlappen, und ein Preset, das sie in Welt 1 stellt.
 
+## Geometrie-Graphen {#geometry-graphs}
+
+Ein Geometrie-Graph baut eine 3D-Form in ein paar Schritten, statt eine der eingebauten Formen zu nehmen: Man startet mit einer Form, macht sie rau, verdreht sie, wiederholt sie im Kreis und lässt die Musik sie aufblähen. Er steckt im Clip Creator und ist ein eigener Graph, nicht der Node-Editor für Effekte.
+
+Objekt hinzufügen, Geometrie-Graph fügt ein Objekt hinzu, das einen Graphen zeigt. Wähle im Ausklapp-Menü Graph einen aus oder drücke Neuer Graph; Graph duplizieren und Graph löschen tun, was sie sagen, und der Graph-Name lässt sich ändern. Darunter ist der Graph eine Liste von Nodes. Jede Zeile hat eine Art, einen oder zwei Eingänge (die Nodes davor) und ihre Werte; Node hinzufügen fügt eine Zeile an, Node entfernen nimmt eine weg. Das Eingangs-Menü bietet nur Nodes an, die keine Schleife ergeben. Eine Zeile unter der Liste zeigt Eckpunkte, Dreiecke und Instanzen des Ergebnisses und die Zeit, die es gedauert hat. Objekte, die denselben Graphen benutzen und darin einen Material-Node haben, teilen sich ein Mesh.
+
+Die Arten von Nodes:
+- **Grundform** ist der Start, eine der eingebauten Formen.
+- **Unterteilen** teilt jedes Dreieck, 1 bis 4 Stufen. Jede Stufe macht etwa viermal so viele Dreiecke.
+- **Transformation** verschiebt, dreht und skaliert die Form. Eine negative Skalierung spiegelt sie, und die Form bleibt massiv.
+- **Rauschen** drückt die Oberfläche mit 3D-Rauschen hinein und heraus: Stärke (im Verhältnis zur Größe der Form), Frequenz, Oktaven (1 bis 4) und Startwert. Es wirkt am besten nach Unterteilen, weil eine grobe Form wenige Punkte zum Bewegen hat.
+- **Verdrehung** dreht die Form um die senkrechte Achse, je höher, desto mehr (Grad pro Einheit).
+- **Zusammenführen** fügt zwei Formen zu einer zusammen (der zweite Eingang wird benutzt).
+- **Instanz** wiederholt die Form als Ring, Reihe, Raster oder Streuung, bis zu 1.024-mal. Anzahl, Radius, Abstand und Startwert legen das Muster fest, und Größen-Abweichung macht jede Kopie etwas größer oder kleiner. Alles vor einer Instanz ist eine Form, also muss Zusammenführen davor stehen, und eine Instanz lässt sich nicht noch einmal wiederholen.
+- **Material** setzt Farbe, Metallisch, Rauheit, Glühen und Farben des Layers übernehmen für das Ergebnis. Ohne ihn gilt das Material des Objekts.
+- **Audio** fügt eine Musik-Reaktion hinzu (Quelle, Reaktion und Stärke); ein Graph kann bis zu vier haben. Wählbar sind die Reaktionen, die die Form im Shader oder als Ganzes bewegen: Größe, Glühen, Verdrehung, Anheben, Farbverschiebung, Rauheit, Textur-Versatz X und Y, Aufblasen und Wellen. Die Kopien einer Instanz folgen ihnen gemeinsam.
+- **Ausgabe** ist das Ende. Es muss genau eine geben.
+
+Der Graph wird einmal berechnet, wenn die Szene lädt, und das Ergebnis wird behalten, die Musik baut ihn also nie neu. Deshalb sind die Musik-Reaktionen auf das beschränkt, was der Shader kann. Wenn man im Editor einen Wert ändert, wird der Graph neu berechnet.
+
+Ein Graph hat Grenzen: 48 Nodes, 200.000 Eckpunkte, 1.000.000 Indizes, 1.024 Instanzen und 4.000.000 gezeichnete Dreiecke pro Bild (die Dreiecke der Form mal die Instanzen). Jede Instanz ist ein eigener Zeichenaufruf, tausend Instanzen einer detailreichen Form sind also schwer; nimm für die Form, die du wiederholst, wenige Dreiecke. Wenn ein Graph eine Grenze überschreitet, in sich selbst zurückläuft, keine Ausgabe oder einen fehlenden Eingang hat, wird das Objekt weggelassen, die Meldung unter der Vorschau nennt den Node, und der Rest der Szene läuft weiter.
+
+Der Schalter **Geometrie-Graphen** unter Einstellungen, Leistung schaltet das Ganze für Szenen aus, die ab dann geladen werden: Objekte mit einem Graphen werden weggelassen, und die Warnungen sagen es. Eine Szene mit einem Graphen wird als Version 5 gespeichert und braucht 0.71.0 oder neuer; eine ohne wird wie bisher gespeichert. Ein Beispiel liegt in `docs/examples/geometry-graph`: ein Ring aus 14 Steinen, der mit dem Kick wächst, und ein verdrehter Knoten, der mit dem Bass aufquillt.
+
 ## Vorlagen, Speichern und Benutzen {#creator-save}
 
 Starte mit einer Vorlage (Menü Creator, Mit einer Vorlage starten, oder Öffnen im Fenster) oder mit einer leeren Szene über Neu. Speichern schreibt eine `.nyxclip`-Datei in den Ordner clips. Sie enthält die Szenenbeschreibung und als Kopien die .glb-Modelle und die PNG- oder JPEG-Texturen, die die Szene nutzt, bis zu 200 MiB, eine Datei reicht also, um eine Szene weiterzugeben. Sie erscheint dann in der Bibliothek unter Szenen als Scene: Name. Als Clip nutzen legt sie außerdem in die gewählte Zelle des Decks. Kopie speichern speichert die Szene unter einem neuen Namen.

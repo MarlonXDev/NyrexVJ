@@ -49,6 +49,7 @@ struct Settings {
     bool sceneMaterialBindings = true;
     bool sceneCameraMoves = true;
     bool sceneWorlds = true;
+    bool sceneGeometryGraphs = true;
     bool diagWarnings = true;
     int diagP99Percent = 150;
     int diagDroppedPerMinute = 5;

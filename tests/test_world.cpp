@@ -206,7 +206,7 @@ void testSerialization() {
     CHECK(readFlat.notes.empty());
 
     nlohmann::json future = parsed;
-    future["version"] = 5;
+    future["version"] = 6;
     CHECK(!docFromJson(future.dump(), back, error));
     CHECK(error.find("newer NyrexVJ") != std::string::npos);
 

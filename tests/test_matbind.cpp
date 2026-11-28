@@ -315,7 +315,7 @@ void testOldFilesStayOld() {
     CHECK(docRequiredVersion(docWith({{true, BindSource::Kick, BindTarget::Scale, 0.5f}, {true, BindSource::Kick, BindTarget::Lift, 0.5f}, {true, BindSource::Kick, BindTarget::Twist, 0.5f}})) == kDocBindingsVersion);
     CHECK(docRequiredVersion(docWith({{false, BindSource::Band3, BindTarget::Hue, 0.5f}})) == kDocBaseVersion);
 
-    const std::string future = "{\"format\":\"nyxscene\",\"version\":5,\"name\":\"x\",\"objects\":[]}";
+    const std::string future = "{\"format\":\"nyxscene\",\"version\":6,\"name\":\"x\",\"objects\":[]}";
     CHECK(!docFromJson(future, back, error));
     CHECK(error.find("newer") != std::string::npos);
 

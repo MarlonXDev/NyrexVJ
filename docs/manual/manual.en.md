@@ -806,6 +806,30 @@ Some things to know. A translucent surface blends with what is behind it inside 
 
 The switch **Shared 3D worlds** under Settings, Performance turns it off: every layer draws its own scene again, whatever world it is set to. A preset only stores the world values of a layer when they are not the default. An example is in `docs/examples/shared-3d-world`: an arm and a cube, two clips that overlap in space, and a preset that puts them in World 1.
 
+## Geometry graphs {#geometry-graphs}
+
+A geometry graph builds a 3D shape in a few steps instead of taking one of the built-in shapes: start with a shape, roughen it, twist it, repeat it in a ring and let the music swell it. It lives in the Clip Creator and is a graph of its own, not the node editor for effects.
+
+Add object, Geometry graph adds an object that shows a graph. Pick one in the Graph drop-down or press New graph; Duplicate graph and Delete graph do what they say, and the Graph name can be changed. Below that the graph is a list of nodes. Every row has a kind, one or two inputs (the nodes that come before it) and its values; Add node adds a row and Remove node takes one away. The input drop-down offers only nodes that would not make a loop. A line under the list shows the vertices, triangles and instances of the result and the time it took. Objects that use the same graph and have a Material node in it share one mesh.
+
+The kinds of node:
+- **Primitive** is the start, one of the built-in shapes.
+- **Subdivide** splits every triangle, 1 to 4 levels. Every level makes about four times as many triangles.
+- **Transform** moves, turns and scales the shape. A negative scale mirrors it and the shape stays solid.
+- **Noise** pushes the surface in and out with 3D noise: Amount (relative to the size of the shape), Frequency, Octaves (1 to 4) and Seed. It works best after Subdivide, because a coarse shape has few points to move.
+- **Twist** turns the shape around the vertical axis, more the higher it is (degrees per unit).
+- **Merge** joins two shapes into one (the second input is used).
+- **Instance** repeats the shape as a Ring, Line, Grid or Scatter, up to 1,024 times. Count, Radius, Spacing and Seed set the layout and Size variation makes each copy a little bigger or smaller. Everything before an Instance is one shape, so Merge has to come before it, and an Instance cannot be repeated again.
+- **Material** sets the colour, Metallic, Roughness, glow and Follow the layer colors for the result. Without it the material of the object is used.
+- **Audio** adds one music reaction (Source, Reaction and Amount); a graph can have up to four. The reactions you can pick are the ones that move the shape in the shader or as a whole: Size, Glow, Twist, Lift, Colour shift, Roughness, Texture shift X and Y, Inflate and Ripple. The copies of an Instance follow them together.
+- **Output** is the end. There must be exactly one.
+
+The graph is worked out once, when the scene loads, and the result is kept, so the music never builds it again. That is why the music reactions are limited to what the shader can do. Changing a value in the editor works the graph out again.
+
+A graph has limits: 48 nodes, 200,000 vertices, 1,000,000 indices, 1,024 instances and 4,000,000 triangles drawn per frame (the triangles of the shape times the instances). Every instance is its own draw call, so a thousand instances of a detailed shape are heavy; use few triangles for the shape you repeat. If a graph breaks a limit, loops back on itself, has no Output or a missing input, the object is left out, the message under the preview names the node, and the rest of the scene plays.
+
+The switch **Geometry graphs** under Settings, Performance turns the feature off for scenes that load from then on: objects with a graph are left out and the warnings say so. A scene that uses a graph is saved as version 5 and needs 0.71.0 or newer; one that does not is saved as before. An example is in `docs/examples/geometry-graph`: a ring of 14 rocks that grows with the kick, and a twisted knot that swells with the bass.
+
 ## Templates, saving and using {#creator-save}
 
 Start from a template (Creator menu, Start from a template, or Open in the window) or from an empty scene with New. Save writes a `.nyxclip` file into the clips folder. It contains the scene description and, as copies, the .glb models and the PNG or JPEG textures the scene uses, up to 200 MiB, so one file is all you need to share a scene. It then shows up in the Library under Scenes as Scene: name. Use as clip also puts it into the selected cell of the deck. Save copy saves the scene under a new name.

@@ -371,7 +371,7 @@ void testAssetNames() {
 void testPrimitives() {
     for (int i = 0; i < kPrimitiveKindCount; ++i) {
         const PrimitiveKind kind = static_cast<PrimitiveKind>(i);
-        if (kind == PrimitiveKind::Model) {
+        if (kind == PrimitiveKind::Model || kind == PrimitiveKind::Graph) {
             continue;
         }
         const SceneMesh mesh = primitiveMesh(kind);

@@ -34,7 +34,7 @@ The diagram is a target abstraction, not a description of existing code.
 
 ## Native 3D runtime and Clip Creator
 
-**Implemented as a prototype (v0.6.0, Issue #6):** glTF/GLB loading on a worker thread, node animation, base colour textures, fixed lighting, rendering into the layer texture (with one depth buffer per shared world since v0.70.0), built-in 3D clips and user models from a folder. Details, limits and measurements: [SCENE3D.md](SCENE3D.md). Everything below that is not listed there is still a proposal.
+**Implemented as a prototype (v0.6.0, Issue #6):** glTF/GLB loading on a worker thread, node animation, base colour textures, fixed lighting, rendering into the layer texture (with one depth buffer per shared world since v0.70.0), geometry built from an optional node graph (since v0.71.0), built-in 3D clips and user models from a folder. Details, limits and measurements: [SCENE3D.md](SCENE3D.md). Everything below that is not listed there is still a proposal.
 
 - Prefer a focused native renderer integrated with the existing graphics backend, not an embedded game engine.
 - Investigate glTF/GLB loading, scene graph, cameras, materials, simple lights, reusable GPU resources, and shader caching.

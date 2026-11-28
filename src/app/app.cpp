@@ -13,6 +13,7 @@
 #include "render/clip_library.hpp"
 #include "render/effect_library.hpp"
 #include "scene3d/builtin_docs.hpp"
+#include "scene3d/geometry_graph.hpp"
 #include "scene3d/scene_pack.hpp"
 #include "update/changelog.hpp"
 
@@ -799,6 +800,7 @@ void App::frame(double dt, bool drawUi) {
     engine_.setSceneMaterialBindings(settings_.sceneMaterialBindings);
     engine_.setSceneCameraMoves(settings_.sceneCameraMoves);
     engine_.setSceneWorlds(settings_.sceneWorlds);
+    setGeometryGraphsEnabled(settings_.sceneGeometryGraphs);
     engine_.update(dt);
     netSync_.afterEngineUpdate(steadyNowSeconds(), dt);
     updatePlugins();

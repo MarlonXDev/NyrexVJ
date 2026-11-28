@@ -4,6 +4,7 @@
 #include "core/log.hpp"
 #include "render/scene_player.hpp"
 #include "scene3d/doc_build.hpp"
+#include "scene3d/geometry_graph.hpp"
 #include "scene3d/gltf.hpp"
 #include "scene3d/procedural.hpp"
 #include "scene3d/scene_doc.hpp"
@@ -743,6 +744,250 @@ void runWorldChecks(Engine& engine, const fs::path& models, RenderTarget& target
     }
 }
 
+SceneDoc graphDoc(const GeometryGraph& graph, std::array<float, 3> color = {0.9f, 0.1f, 0.08f}) {
+    SceneDoc doc = makeDefaultDoc();
+    doc.objects.clear();
+    GeometryGraph copy = graph;
+    docAddGraph(doc, copy);
+    DocObject object = makeDefaultObject(PrimitiveKind::Graph);
+    object.name = "Graph object";
+    object.graph = doc.graphs[0].name;
+    object.material.color = color;
+    object.material.metallic = 0.0f;
+    object.material.roughness = 0.4f;
+    object.material.emissiveStrength = 0.0f;
+    doc.objects.push_back(object);
+    sanitizeDoc(doc);
+    return doc;
+}
+
+GeometryGraph crowdGraph(int count, bool audio) {
+    GeometryGraph graph;
+    graph.name = "Crowd";
+    GeoNode sphere = makeGeoNode(GeoNodeType::Primitive, "n1");
+    GeoNode shrink = makeGeoNode(GeoNodeType::Transform, "n2");
+    shrink.inputs[0] = "n1";
+    shrink.scale = {0.25f, 0.25f, 0.25f};
+    GeoNode ring = makeGeoNode(GeoNodeType::Instance, "n3");
+    ring.inputs[0] = "n2";
+    ring.instance = count > 64 ? GeoInstanceKind::Scatter : GeoInstanceKind::Ring;
+    ring.count = count;
+    ring.radius = 2.0f;
+    graph.nodes = {sphere, shrink, ring};
+    std::string last = "n3";
+    if (audio) {
+        GeoNode kick = makeGeoNode(GeoNodeType::Audio, "n4");
+        kick.inputs[0] = last;
+        kick.source = BindSource::Kick;
+        kick.target = BindTarget::Scale;
+        kick.bindAmount = 0.6f;
+        GeoNode ripple = makeGeoNode(GeoNodeType::Audio, "n5");
+        ripple.inputs[0] = "n4";
+        ripple.source = BindSource::Bass;
+        ripple.target = BindTarget::Inflate;
+        ripple.bindAmount = 0.4f;
+        graph.nodes.push_back(kick);
+        graph.nodes.push_back(ripple);
+        last = "n5";
+    }
+    GeoNode output = makeGeoNode(GeoNodeType::Output, "n9");
+    output.inputs[0] = last;
+    graph.nodes.push_back(output);
+    return graph;
+}
+
+GeometryGraph plainSphereGraph() {
+    GeometryGraph graph;
+    graph.name = "Plain";
+    GeoNode sphere = makeGeoNode(GeoNodeType::Primitive, "n1");
+    GeoNode output = makeGeoNode(GeoNodeType::Output, "n2");
+    output.inputs[0] = "n1";
+    graph.nodes = {sphere, output};
+    return graph;
+}
+
+double graphFrameMs(SceneRenderer& renderer, ScenePlayer& player, RenderTarget& target, bool audio) {
+    constexpr int kRuns = 60;
+    double best = 0.0;
+    for (int round = 0; round < 3; ++round) {
+        glFinish();
+        const auto begin = std::chrono::steady_clock::now();
+        for (int run = 0; run < kRuns; ++run) {
+            renderer.beginFrame();
+            SceneFrame frame = worldFrame(0, false);
+            frame.time = static_cast<float>(run) * 0.02f;
+            if (audio) {
+                const float pulse = 0.5f + 0.5f * std::sin(static_cast<float>(run) * 0.5f);
+                frame.kick = pulse;
+                frame.bass = pulse;
+                frame.beatPulse = pulse;
+            }
+            renderer.draw(player, frame, target);
+        }
+        glFinish();
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / kRuns;
+        best = round == 0 ? ms : std::min(best, ms);
+    }
+    return best;
+}
+
+void runGeometryChecks(Engine& engine, RenderTarget& target, Checker& check, json& report) {
+    SceneRenderer& renderer = engine.sceneRenderer();
+    const std::array<float, 3> red{0.9f, 0.1f, 0.08f};
+    geometryGraphCacheClear();
+
+    {
+        auto sphere = docScene(ballDoc(red), "geometry sphere");
+        auto graph = docScene(graphDoc(plainSphereGraph(), red), "geometry plain graph");
+        const Shot a = captureFrame(engine, *sphere, worldFrame(0, false), target, true);
+        const Shot b = captureFrame(engine, *graph, worldFrame(0, false), target, true);
+        check.expect("geometry graph: a graph with one sphere draws exactly like the sphere object", a.ok && b.ok && a.lit > 500 && pixelHash(a.pixels) == pixelHash(b.pixels), "lit " + std::to_string(a.lit) + " and " + std::to_string(b.lit));
+        report["geometry"]["plainSphereHash"] = pixelHash(b.pixels);
+    }
+
+    {
+        auto sphere = docScene(ballDoc(red), "geometry sphere");
+        auto rock = docScene(graphDoc(makeDefaultGeometryGraph(), red), "geometry rock");
+        rock->wait();
+        const Shot flat = captureFrame(engine, *sphere, worldFrame(0, false), target, true);
+        const Shot first = captureFrame(engine, *rock, worldFrame(0, false), target, true);
+        const Shot second = captureFrame(engine, *rock, worldFrame(0, false), target, true);
+        check.expect("geometry graph: the default rock draws, differs from a sphere and draws the same twice", first.ok && second.ok && first.lit > 500 && pixelHash(first.pixels) != pixelHash(flat.pixels) && pixelHash(first.pixels) == pixelHash(second.pixels), "lit " + std::to_string(first.lit));
+        report["geometry"]["rockHash"] = pixelHash(first.pixels);
+        report["geometry"]["rockVertices"] = rock->stats().vertices;
+        report["geometry"]["rockGpuBytes"] = rock->stats().gpuBytes;
+        report["geometry"]["rockLoadMs"] = rock->loadMilliseconds();
+        report["geometry"]["rockUploadMs"] = rock->uploadMilliseconds();
+    }
+
+    {
+        size_t gpuOne = 0;
+        int litOne = 0;
+        for (const int count : {1, 10, 1000}) {
+            auto crowd = docScene(graphDoc(crowdGraph(count, false), red), "geometry crowd");
+            crowd->wait();
+            const Shot shot = captureFrame(engine, *crowd, worldFrame(0, false), target, true);
+            const size_t drawn = renderer.drawnInstances();
+            const size_t culled = renderer.culledInstances();
+            if (count == 1) {
+                gpuOne = crowd->stats().gpuBytes;
+                litOne = shot.lit;
+            }
+            check.expect("geometry graph: " + std::to_string(count) + " instance(s) share one mesh and all are drawn or culled", shot.ok && shot.lit > 100 && (count != 10 || shot.lit < litOne / 4) && crowd->stats().meshes == 1 && crowd->stats().gpuBytes == gpuOne && drawn + culled == static_cast<size_t>(count), "drawn " + std::to_string(drawn) + ", culled " + std::to_string(culled) + ", lit " + std::to_string(shot.lit));
+            report["geometry"]["instances"][std::to_string(count)] = {{"drawn", drawn}, {"culled", culled}, {"lit", shot.lit}, {"nodes", crowd->stats().nodes}, {"meshes", crowd->stats().meshes}, {"vertices", crowd->stats().vertices}, {"gpuBytes", crowd->stats().gpuBytes}, {"loadMs", crowd->loadMilliseconds()}, {"uploadMs", crowd->uploadMilliseconds()}};
+        }
+    }
+
+    {
+        auto reactive = docScene(graphDoc(crowdGraph(24, true), red), "geometry reactive");
+        reactive->wait();
+        const GeoCacheStats before = geometryGraphCacheStats();
+        const Shot quiet = captureFrame(engine, *reactive, musicFrame(0.0f, 0.0, true), target, true);
+        const Shot loud = captureFrame(engine, *reactive, musicFrame(1.0f, 0.0, true), target, true);
+        const Shot quietAgain = captureFrame(engine, *reactive, musicFrame(0.0f, 0.0, true), target, true);
+        const GeoCacheStats after = geometryGraphCacheStats();
+        auto still = docScene(graphDoc(crowdGraph(24, false), red), "geometry unreactive");
+        still->wait();
+        const Shot stillLoud = captureFrame(engine, *still, musicFrame(1.0f, 0.0, true), target, true);
+        check.expect("geometry graph: audio changes the picture and nothing is regenerated", quiet.ok && loud.ok && stillLoud.ok && pixelHash(loud.pixels) != pixelHash(stillLoud.pixels) && pixelHash(quiet.pixels) != pixelHash(loud.pixels) && pixelHash(quiet.pixels) == pixelHash(quietAgain.pixels) && after.misses == before.misses, "lit " + std::to_string(quiet.lit) + " -> " + std::to_string(loud.lit) + ", cache misses " + std::to_string(before.misses) + " -> " + std::to_string(after.misses));
+        report["geometry"]["audio"] = {{"quietLit", quiet.lit}, {"loudLit", loud.lit}};
+    }
+
+    {
+        GeometryGraph rock = makeDefaultGeometryGraph();
+        GeoNode swell = makeGeoNode(GeoNodeType::Audio, "n6");
+        swell.inputs[0] = "n3";
+        swell.source = BindSource::Bass;
+        swell.target = BindTarget::Inflate;
+        swell.bindAmount = 0.5f;
+        rock.nodes.insert(rock.nodes.begin() + 3, swell);
+        rock.nodes[4].inputs[0] = "n6";
+        auto deforming = docScene(graphDoc(rock, red), "geometry deform");
+        deforming->wait();
+        SceneFrame still = musicFrame(0.0f, 0.0, true);
+        SceneFrame bass = musicFrame(0.0f, 0.0, true);
+        bass.bass = 1.0f;
+        const GeoCacheStats before = geometryGraphCacheStats();
+        const Shot calm = captureFrame(engine, *deforming, still, target, true);
+        const Shot swollen = captureFrame(engine, *deforming, bass, target, true);
+        const GeoCacheStats after = geometryGraphCacheStats();
+        check.expect("geometry graph: a bass reaction deforms the mesh in the shader", calm.ok && swollen.ok && pixelHash(calm.pixels) != pixelHash(swollen.pixels) && after.misses == before.misses, "lit " + std::to_string(calm.lit) + " -> " + std::to_string(swollen.lit));
+    }
+
+    {
+        SceneDoc withCube = graphDoc(makeDefaultGeometryGraph(), red);
+        DocObject cube = makeDefaultObject(PrimitiveKind::Cube);
+        cube.position = {2.5f, 0.0f, 0.0f};
+        withCube.objects.push_back(cube);
+        auto on = docScene(withCube, "geometry on");
+        const Shot withGraph = captureFrame(engine, *on, worldFrame(0, false), target, true);
+        setGeometryGraphsEnabled(false);
+        auto off = docScene(withCube, "geometry off");
+        const Shot withoutGraph = captureFrame(engine, *off, worldFrame(0, false), target, true);
+        setGeometryGraphsEnabled(true);
+        SceneDoc cubeOnly = withCube;
+        cubeOnly.objects.erase(cubeOnly.objects.begin());
+        cubeOnly.graphs.clear();
+        auto plain = docScene(cubeOnly, "geometry cube only");
+        const Shot justCube = captureFrame(engine, *plain, worldFrame(0, false), target, true);
+        bool warned = false;
+        for (const std::string& w : off->warnings()) {
+            warned = warned || w.compare(0, 40, "Geometry graphs are off in the settings,") == 0;
+        }
+        check.expect("geometry graph: with the setting off the graph object is left out, the rest draws and a warning is shown", withGraph.ok && withoutGraph.ok && withoutGraph.lit > 100 && justCube.ok && pixelHash(justCube.pixels) == pixelHash(withoutGraph.pixels) && pixelHash(withGraph.pixels) != pixelHash(withoutGraph.pixels) && warned && off->stats().meshes == 1 && on->stats().meshes == 2, "lit " + std::to_string(withGraph.lit) + " -> " + std::to_string(withoutGraph.lit));
+    }
+
+    {
+        SceneDoc broken = graphDoc(makeDefaultGeometryGraph(), red);
+        broken.graphs[0].nodes[1].inputs[0] = "n3";
+        broken.graphs[0].nodes[2].inputs[0] = "n2";
+        DocObject cube = makeDefaultObject(PrimitiveKind::Cube);
+        broken.objects.push_back(cube);
+        auto player = docScene(broken, "geometry loop");
+        const Shot shot = captureFrame(engine, *player, worldFrame(0, false), target, true);
+        bool named = false;
+        for (const std::string& w : player->warnings()) {
+            named = named || w.compare(0, 19, "Loop through node: ") == 0;
+        }
+        check.expect("geometry graph: a graph with a loop is reported and the rest of the scene still draws", shot.ok && shot.lit > 100 && named && player->stats().meshes == 1);
+    }
+
+    {
+        SceneDoc repeated = ballDoc(red);
+        repeated.objects[0].scale = {0.25f, 0.25f, 0.25f};
+        repeated.objects[0].repeat = {RepeatKind::Ring, 64, 2.0f, 1.0f};
+        auto builtIn = docScene(repeated, "geometry repeat");
+        auto viaGraph = docScene(graphDoc(crowdGraph(64, false), red), "geometry 64");
+        builtIn->wait();
+        viaGraph->wait();
+        const double repeatMs = graphFrameMs(renderer, *builtIn, target, false);
+        const double graphMs = graphFrameMs(renderer, *viaGraph, target, false);
+        report["geometry"]["frameMs"]["repeat64"] = repeatMs;
+        report["geometry"]["frameMs"]["graph64"] = graphMs;
+        check.expect("geometry graph: 64 instances cost about the same as the built-in repeat with 64 copies", graphMs < repeatMs * 1.5 + 0.5, "repeat " + number(repeatMs) + " ms, graph " + number(graphMs) + " ms");
+        for (const int count : {1, 10, 1000}) {
+            for (const bool audio : {false, true}) {
+                auto crowd = docScene(graphDoc(crowdGraph(count, audio), red), "geometry speed");
+                crowd->wait();
+                const double ms = graphFrameMs(renderer, *crowd, target, audio);
+                report["geometry"]["frameMs"][std::to_string(count)][audio ? "withAudio" : "plain"] = ms;
+            }
+        }
+        report["geometry"]["frameMs"]["rock"] = [&]() {
+            auto rock = docScene(graphDoc(makeDefaultGeometryGraph(), red), "geometry rock speed");
+            rock->wait();
+            return graphFrameMs(renderer, *rock, target, false);
+        }();
+        report["geometry"]["frameMs"]["sphere"] = [&]() {
+            auto sphere = docScene(ballDoc(red), "geometry sphere speed");
+            sphere->wait();
+            return graphFrameMs(renderer, *sphere, target, false);
+        }();
+    }
+    const GeoCacheStats stats = geometryGraphCacheStats();
+    report["geometry"]["cache"] = {{"entries", stats.entries}, {"vertices", stats.vertices}, {"hits", stats.hits}, {"misses", stats.misses}};
+}
+
 int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const std::string& outputPath) {
     Checker check;
     json report;
@@ -1350,6 +1595,7 @@ int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const st
         report["builtinScenes"] = checked;
     }
     runWorldChecks(engine, models, target, check, report);
+    runGeometryChecks(engine, target, check, report);
     target.destroy();
 
     report["checks"] = std::move(check.items);

@@ -17,6 +17,7 @@ struct GltfLimits {
     size_t maxVertices = 2000000;
     size_t maxIndices = 6000000;
     size_t maxNodes = 10000;
+    bool allowGraphs = true;
     size_t maxMeshes = 4096;
     size_t maxAnimationKeys = 200000;
     int maxImageDimension = 4096;

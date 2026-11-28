@@ -3017,6 +3017,11 @@ const Translation kFrench[] = {
     {"Clears all feedback pictures and restarts the buffers of shaders. MIDI, OSC and the web interface can do the same.", "Efface toutes les images de feedback et redémarre les tampons des shaders. MIDI, OSC et l'interface web peuvent faire de même."},
     {"Holds the feedback pictures where they are. Applies to all feedback effects.", "Garde les images de feedback telles quelles. S'applique à tous les effets de feedback."},
     {"Clears all feedback pictures.", "Efface toutes les images de feedback."},
+    {"Render graph", "Graphe de rendu"},
+    {"Skip passes that only copy", "Ignorer les passes qui ne font que copier"},
+    {"When the master picture needs no colour change, no effect and full level, it is built straight into the output instead of being copied there in an extra pass. With a colour look (LUT) the extra target and the copy back are dropped as well. The picture is bit for bit the same. Turn it off if you suspect a difference.", "Si l'image master n'a besoin d'aucun changement de couleur ni d'aucun effet et qu'elle est au niveau complet, elle est construite directement dans la sortie au lieu d'y être copiée dans une passe supplémentaire. Avec un look colorimétrique (LUT), la cible supplémentaire et la copie de retour disparaissent aussi. L'image est identique bit pour bit. Désactivez-le si vous soupçonnez une différence."},
+    {"%llu passes and %llu copies skipped in %llu frames.", "%llu passes et %llu copies ignorées sur %llu images."},
+    {"Counted since the program started or since the switch was last changed.", "Compté depuis le démarrage du programme ou depuis le dernier changement de l'interrupteur."},
 };
 
 }

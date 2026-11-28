@@ -1640,6 +1640,14 @@ The page also shows:
 
 Particle limit per layer is the most particles a particle clip may have alive at once, from 64 to 16,384, and 2048 at the start. When the limit is reached newer particles are dropped and the picture stays smooth. Each particle costs 24 bytes of graphics memory. Show text and particle clips in the library hides them all from the Library. Experimental GPU particles lets clips that ask for it run on the graphics card, and Graphics memory for GPU particles is the budget for all of them together, 8 to 512 MB. See [Text, particles and effect chains](#generators/gpu-particles).
 
+## Passes that only copy {#perf-graph}
+
+NyrexVJ builds the picture layer by layer and then copies the result into the output. When the master picture has no effect, no colour change and a full level, that last copy is a whole extra pass over the picture that changes nothing, so the last layer is drawn straight into the output instead. The same holds for each of the two decks while a transition runs. With a colour look (LUT) the extra picture it used to need and the copy back are gone too, which also gives that graphics memory back. The result is the same picture, bit for bit; the tests compare every pixel with the switch on and off.
+
+The switch is **Skip passes that only copy** under Settings, Performance, Render graph. It is on at the start. The line below it counts the passes and copies that were skipped. Turn it off if you ever suspect a difference; nothing else changes.
+
+A master effect, a master colour change, a level below full, Blackout and a standby that keeps its outputs black really change the picture, so for them the pass stays. Feedback effects keep their buffers and their copies as described in [Feedback effects](#effects/feedback-effects). Effects are not merged into one shader, because they would no longer be exactly the effects you chose.
+
 ## What costs time {#perf-cost}
 
 - A layer faded to zero opacity is not drawn, so hidden layers cost nothing.

@@ -6,6 +6,7 @@
 #include "core/color_model.hpp"
 #include "core/composition.hpp"
 #include "core/gpu_diag.hpp"
+#include "core/graph_plan.hpp"
 #include "core/hardware_sync.hpp"
 #include "core/launch_quantizer.hpp"
 #include "core/optical_flow.hpp"
@@ -263,6 +264,10 @@ public:
     void setFeedbackFrozen(bool on) { feedbackFrozen_ = on; }
     bool feedbackFrozen() const { return feedbackFrozen_; }
     void resetFeedback();
+    void setGraphOptimizer(bool on);
+    bool graphOptimizer() const { return graphOptimizer_; }
+    const GraphStats& graphStats() const { return graphStats_; }
+    void resetGraphStats() { graphStats_ = GraphStats{}; }
     void requestShaderPlayground(double clock);
     void submitShaderPlayground(const std::string& text, std::uint64_t revision);
     void restartShaderPlayground();
@@ -525,8 +530,10 @@ private:
     void customTransitionPass(const CustomTransitionProgram& program, const RenderTarget& a, const RenderTarget& b, float progress, const ShaderValues& values, const RenderTarget& destination);
     void renderTransitionPreview();
     void runLaunch(const LaunchRequest& request);
-    RenderTarget* renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews);
+    RenderTarget* renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews, RenderTarget* landing = nullptr);
     void finalPass(const RenderTarget& source, const ColorGrade& grade, float level, const RenderTarget& destination);
+    void settleDeck(RenderTarget* result, const ColorGrade& grade, float level, RenderTarget& destination);
+    void applyColorStageFrom(const RenderTarget& source);
     void transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination);
     void setAudioUniforms(GLint audio, GLint kick, GLint audioTex);
     void drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale);
@@ -641,6 +648,8 @@ private:
     ColorStageStatus colorStatus_;
     bool colorActive_ = false;
     float colorStrength_ = 1.0f;
+    bool graphOptimizer_ = true;
+    GraphStats graphStats_;
     void applyColorStage();
     VideoDecodeMode videoMode_ = VideoDecodeMode::Auto;
     flow::Settings flowSettings_;

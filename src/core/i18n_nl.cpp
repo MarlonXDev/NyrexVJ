@@ -3017,6 +3017,11 @@ const Translation kDutch[] = {
     {"Clears all feedback pictures and restarts the buffers of shaders. MIDI, OSC and the web interface can do the same.", "Wist alle feedbackbeelden en herstart de buffers van shaders. MIDI, OSC en de webinterface kunnen hetzelfde."},
     {"Holds the feedback pictures where they are. Applies to all feedback effects.", "Houdt de feedbackbeelden vast zoals ze zijn. Geldt voor alle feedbackeffecten."},
     {"Clears all feedback pictures.", "Wist alle feedbackbeelden."},
+    {"Render graph", "Rendergraaf"},
+    {"Skip passes that only copy", "Passes overslaan die alleen kopiëren"},
+    {"When the master picture needs no colour change, no effect and full level, it is built straight into the output instead of being copied there in an extra pass. With a colour look (LUT) the extra target and the copy back are dropped as well. The picture is bit for bit the same. Turn it off if you suspect a difference.", "Heeft het masterbeeld geen kleurwijziging en geen effect nodig en staat het op volledig niveau, dan wordt het direct in de uitvoer opgebouwd in plaats van er in een extra pass naartoe gekopieerd. Met een kleurlook (LUT) vervallen ook het extra doel en het terugkopiëren. Het beeld blijft bit voor bit gelijk. Zet het uit als je een verschil vermoedt."},
+    {"%llu passes and %llu copies skipped in %llu frames.", "%llu passes en %llu kopieën overgeslagen in %llu beelden."},
+    {"Counted since the program started or since the switch was last changed.", "Geteld sinds het programma startte of sinds de schakelaar voor het laatst is gewijzigd."},
 };
 
 }

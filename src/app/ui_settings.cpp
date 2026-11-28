@@ -759,6 +759,8 @@ void App::drawPerformancePage() {
 
     drawFeedbackSettings();
 
+    drawGraphSettings();
+
     drawGpuDiagnostics();
 
     ui::sectionHeader(tr("Load"));

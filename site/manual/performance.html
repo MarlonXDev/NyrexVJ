@@ -108,7 +108,7 @@
 <li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
 </li>
 <li><a href="performance.html" aria-current="page">Performance</a>
-<ul><li><a href="#perf-why">Why it matters</a></li><li><a href="#perf-frame">Frame rate and budget</a></li><li><a href="#perf-quality">Render quality</a></li><li><a href="#perf-memory">Graphics memory and warnings</a></li><li><a href="#perf-generators">Text and particles</a></li><li><a href="#perf-cost">What costs time</a></li></ul>
+<ul><li><a href="#perf-why">Why it matters</a></li><li><a href="#perf-frame">Frame rate and budget</a></li><li><a href="#perf-quality">Render quality</a></li><li><a href="#perf-memory">Graphics memory and warnings</a></li><li><a href="#perf-generators">Text and particles</a></li><li><a href="#perf-graph">Passes that only copy</a></li><li><a href="#perf-cost">What costs time</a></li></ul>
 </li>
 <li><a href="files.html">Files and the data folder</a>
 </li>
@@ -202,7 +202,7 @@
 <li><a href="shortcuts.html">Keyboard shortcuts and mouse</a>
 </li>
 <li><a href="performance.html" aria-current="page">Performance</a>
-<ul><li><a href="#perf-why">Why it matters</a></li><li><a href="#perf-frame">Frame rate and budget</a></li><li><a href="#perf-quality">Render quality</a></li><li><a href="#perf-memory">Graphics memory and warnings</a></li><li><a href="#perf-generators">Text and particles</a></li><li><a href="#perf-cost">What costs time</a></li></ul>
+<ul><li><a href="#perf-why">Why it matters</a></li><li><a href="#perf-frame">Frame rate and budget</a></li><li><a href="#perf-quality">Render quality</a></li><li><a href="#perf-memory">Graphics memory and warnings</a></li><li><a href="#perf-generators">Text and particles</a></li><li><a href="#perf-graph">Passes that only copy</a></li><li><a href="#perf-cost">What costs time</a></li></ul>
 </li>
 <li><a href="files.html">Files and the data folder</a>
 </li>
@@ -217,8 +217,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Manual</a> / Reference and help</p>
 <h1>Performance</h1>
-<p class="meta">Chapter 33 of 38 &middot; 4 min read</p>
-<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#perf-why">Why it matters</a><a href="#perf-frame">Frame rate and budget</a><a href="#perf-quality">Render quality</a><a href="#perf-memory">Graphics memory and warnings</a><a href="#perf-generators">Text and particles</a><a href="#perf-cost">What costs time</a></nav>
+<p class="meta">Chapter 33 of 38 &middot; 5 min read</p>
+<nav class="onpage" aria-label="On this page"><span>On this page</span><a href="#perf-why">Why it matters</a><a href="#perf-frame">Frame rate and budget</a><a href="#perf-quality">Render quality</a><a href="#perf-memory">Graphics memory and warnings</a><a href="#perf-generators">Text and particles</a><a href="#perf-graph">Passes that only copy</a><a href="#perf-cost">What costs time</a></nav>
 <h2 id="perf-why"><a class="anchor" href="#perf-why" aria-label="Link">#</a>Why it matters</h2>
 <p>A live show needs a steady frame rate. NyrexVJ is light, but many layers, heavy effects, large videos and 3D models add up. Settings, Performance shows what takes the time, and the status bar can show the timings if you tick Show timings in the status bar.</p>
 <figure class="shot"><a href="../assets/manual/en/settings-performance.webp"><img src="../assets/manual/en/settings-performance.webp" width="874" height="584" loading="lazy" alt="The Performance page of the settings"></a><figcaption>The Performance page of the settings</figcaption></figure>
@@ -234,6 +234,10 @@
 <aside class="note warning"><strong class="note-label">Warning</strong><p>The estimate counts what NyrexVJ allocated, not what the card has left, and a budget cannot see VRChat. If the budget is lower than what the playing clips need, nothing can be released and the page says so. Raise the budget or lower the layer resolution.</p></aside>
 <h2 id="perf-generators"><a class="anchor" href="#perf-generators" aria-label="Link">#</a>Text and particles</h2>
 <p>Particle limit per layer is the most particles a particle clip may have alive at once, from 64 to 16,384, and 2048 at the start. When the limit is reached newer particles are dropped and the picture stays smooth. Each particle costs 24 bytes of graphics memory. Show text and particle clips in the library hides them all from the Library. Experimental GPU particles lets clips that ask for it run on the graphics card, and Graphics memory for GPU particles is the budget for all of them together, 8 to 512 MB. See <a href="generators.html#gpu-particles">Text, particles and effect chains</a>.</p>
+<h2 id="perf-graph"><a class="anchor" href="#perf-graph" aria-label="Link">#</a>Passes that only copy</h2>
+<p>NyrexVJ builds the picture layer by layer and then copies the result into the output. When the master picture has no effect, no colour change and a full level, that last copy is a whole extra pass over the picture that changes nothing, so the last layer is drawn straight into the output instead. The same holds for each of the two decks while a transition runs. With a colour look (LUT) the extra picture it used to need and the copy back are gone too, which also gives that graphics memory back. The result is the same picture, bit for bit; the tests compare every pixel with the switch on and off.</p>
+<p>The switch is <strong>Skip passes that only copy</strong> under Settings, Performance, Render graph. It is on at the start. The line below it counts the passes and copies that were skipped. Turn it off if you ever suspect a difference; nothing else changes.</p>
+<p>A master effect, a master colour change, a level below full, Blackout and a standby that keeps its outputs black really change the picture, so for them the pass stays. Feedback effects keep their buffers and their copies as described in <a href="effects.html#feedback-effects">Feedback effects</a>. Effects are not merged into one shader, because they would no longer be exactly the effects you chose.</p>
 <h2 id="perf-cost"><a class="anchor" href="#perf-cost" aria-label="Link">#</a>What costs time</h2>
 <ul><li>A layer faded to zero opacity is not drawn, so hidden layers cost nothing.</li><li>Every effect is one more pass over the picture. Replace a stack of effects with one node effect if you can.</li><li>Large videos cost decoding time. HAP videos cost almost nothing on the processor, see <a href="video.html">Video and image clips</a>.</li><li>Live sources are closed three seconds after the last use.</li><li>3D models and scenes cost graphics time by their triangle count.</li></ul>
 <p>The page also shows the memory: an estimate of the graphics memory, the video memory and the program memory, and which clip or effect takes the time. What the driver measures, the memory budget and the warnings are in <a href="performance.html#perf-memory">Graphics memory and warnings</a>. Measured numbers and limits are in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PERFORMANCE.md" target="_blank" rel="noopener noreferrer">docs/PERFORMANCE.md</a> of the project.</p>

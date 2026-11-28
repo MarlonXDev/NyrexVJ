@@ -4,6 +4,7 @@
 #include "render/gl_util.hpp"
 #include "scene3d/gltf.hpp"
 #include "scene3d/scene_model.hpp"
+#include "scene3d/scene_world.hpp"
 
 #include <array>
 #include <atomic>
@@ -40,6 +41,9 @@ struct SceneFrame {
     std::array<float, 3> colorA{0.0f, 0.8f, 1.0f};
     std::array<float, 3> colorB{1.0f, 0.2f, 0.7f};
     bool rainbow = false;
+    int world = 0;
+    bool worldOwner = false;
+    WorldPlacement placement;
 
     void setAudio(const AudioFeatures& features, double beatPosition);
 };
@@ -123,8 +127,15 @@ public:
     bool pbrReady() const { return pbr_.id != 0; }
     size_t depthBytes() const;
     void draw(const ScenePlayer& player, const SceneFrame& frame, const RenderTarget& target);
+    void beginFrame();
+    void resetWorlds();
+    void setCulling(bool on) { culling_ = on; }
     size_t skippedSkinned() const { return skippedSkinned_; }
     size_t blendedDraws() const { return blendedDraws_; }
+    size_t drawnInstances() const { return drawnInstances_; }
+    size_t culledInstances() const { return culledInstances_; }
+    bool lastDrawShared() const { return lastShared_; }
+    size_t worldDepthBytes() const;
 
 private:
     struct Surface {
@@ -189,9 +200,33 @@ private:
         GLint morphWeight = -1;
     };
 
+    struct LightSetup {
+        std::array<float, 16> positions{};
+        std::array<float, 12> colors{};
+        int count = 0;
+        Vec3 sunDir{0.5f, 0.8f, 0.6f};
+        std::array<float, 3> sunColor{1.0f, 0.95f, 0.9f};
+        std::array<float, 3> skyTop{};
+        std::array<float, 3> skyHorizon{};
+        std::array<float, 3> skyGround{};
+        float skyIntensity = 1.0f;
+        float exposure = 1.0f;
+    };
+
+    struct WorldState {
+        bool valid = false;
+        Mat4 viewProj;
+        Vec3 eye;
+        Vec3 forward;
+        Vec3 ownerCenter;
+        float ownerRadius = 1.0f;
+        LightSetup lights;
+    };
+
     bool prepare(Surface& surface, const RenderTarget& target);
     void destroy(Surface& surface);
     void locate(Program& program);
+    static LightSetup makeLights(const Scene& scene, const SceneAudio& audio);
 
     Program classic_;
     Program pbr_;
@@ -199,9 +234,17 @@ private:
     size_t skippedSkinned_ = 0;
     size_t blendedDraws_ = 0;
     bool skipLogged_ = false;
+    size_t drawnInstances_ = 0;
+    size_t culledInstances_ = 0;
+    bool lastShared_ = false;
+    bool culling_ = true;
+    uint64_t frame_ = 0;
     Surface main_;
     Surface thumb_;
     Surface editor_;
+    std::array<Surface, kWorldCount> worlds_{};
+    std::array<uint64_t, kWorldCount> worldUsed_{};
+    std::array<WorldState, kWorldCount> worldState_{};
 };
 
 }

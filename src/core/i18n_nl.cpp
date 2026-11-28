@@ -3048,6 +3048,21 @@ const Translation kDutch[] = {
     {"When off, 3D scenes keep the old camera: no glide between cameras, no look-at offset, no roll, no shot lengths, and the camera bindings and the layer camera controls are ignored. Cuts and zoom work as before.", "Uitgeschakeld houden 3D-scènes de oude camera: geen glijden tussen camera's, geen verschuiving, geen rollen, geen shotduur, en de camerakoppelingen en de camerabedieningen van de lagen worden genegeerd. Cut en zoom werken als voorheen."},
     {"orthographic", "orthografisch"},
     {"Cameras in the file (usable in the Clip Creator)", "Camera's in het bestand (bruikbaar in de Clip Creator)"},
+    {"3D world", "3D-wereld"},
+    {"Shared 3D world", "Gedeelde 3D-wereld"},
+    {"Shared 3D worlds", "Gedeelde 3D-werelden"},
+    {"Own scene", "Eigen scène"},
+    {"World", "Wereld"},
+    {"World position X", "Wereldpositie X"},
+    {"World position Y", "Wereldpositie Y"},
+    {"World position Z", "Wereldpositie Z"},
+    {"World turn", "Wereldrotatie"},
+    {"World size", "Wereldgrootte"},
+    {"Parent", "Ouder"},
+    {"The object moves, turns and scales with its parent and takes the music reactions of its parent on top of its own. Objects can be nested up to 8 levels. Deleting a parent moves its children up one level.", "Het object beweegt, draait en schaalt mee met zijn ouder en neemt daarnaast de muziekreacties van de ouder over. Objecten kunnen tot 8 niveaus diep genest worden. Als je een ouder verwijdert, schuiven de kinderen een niveau omhoog."},
+    {"Layers set to the same world are drawn into one space with one depth buffer, so their objects hide each other where they overlap. The lowest visible layer of the world sets the camera, lights and sky; the other layers are placed relative to it. Layers of one world must have the same resolution.", "Lagen die op dezelfde wereld staan, worden in één ruimte met één dieptebuffer getekend, zodat hun objecten elkaar verbergen waar ze overlappen. De laagste zichtbare laag van de wereld bepaalt camera, licht en lucht; de andere lagen worden daar relatief aan geplaatst. Lagen van één wereld moeten dezelfde resolutie hebben."},
+    {"Where this layer sits in the shared world, in units of the size of the lowest layer of the world. The lowest layer itself moves too, relative to the camera.", "Waar deze laag in de gedeelde wereld staat, in eenheden van de grootte van de laagste laag van de wereld. De laagste laag beweegt ook, ten opzichte van de camera."},
+    {"When off, every 3D layer draws its own scene with its own depth buffer, whatever world the layers are set to. Turn this off if shared worlds cost too much on your graphics card.", "Uitgeschakeld tekent elke 3D-laag zijn eigen scène met een eigen dieptebuffer, op welke wereld de lagen ook staan. Zet dit uit als gedeelde werelden te veel kosten op je grafische kaart."},
 };
 
 }

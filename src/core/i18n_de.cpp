@@ -3048,6 +3048,21 @@ const Translation kGerman[] = {
     {"When off, 3D scenes keep the old camera: no glide between cameras, no look-at offset, no roll, no shot lengths, and the camera bindings and the layer camera controls are ignored. Cuts and zoom work as before.", "Wenn aus, behalten 3D-Szenen die alte Kamera: kein Gleiten zwischen Kameras, kein Versatz, kein Rollen, keine Einstellungslängen, und die Kamera-Bindungen sowie die Kamera-Regler der Ebenen werden ignoriert. Schnitte und Zoom funktionieren wie bisher."},
     {"orthographic", "orthografisch"},
     {"Cameras in the file (usable in the Clip Creator)", "Kameras in der Datei (im Clip Creator nutzbar)"},
+    {"3D world", "3D-Welt"},
+    {"Shared 3D world", "Gemeinsame 3D-Welt"},
+    {"Shared 3D worlds", "Gemeinsame 3D-Welten"},
+    {"Own scene", "Eigene Szene"},
+    {"World", "Welt"},
+    {"World position X", "Weltposition X"},
+    {"World position Y", "Weltposition Y"},
+    {"World position Z", "Weltposition Z"},
+    {"World turn", "Weltdrehung"},
+    {"World size", "Weltgröße"},
+    {"Parent", "Eltern"},
+    {"The object moves, turns and scales with its parent and takes the music reactions of its parent on top of its own. Objects can be nested up to 8 levels. Deleting a parent moves its children up one level.", "Das Objekt bewegt, dreht und skaliert sich mit seinem Elternobjekt und übernimmt zusätzlich dessen Musikreaktionen. Objekte lassen sich bis zu 8 Ebenen tief verschachteln. Beim Löschen eines Elternobjekts rücken seine Kinder eine Ebene nach oben."},
+    {"Layers set to the same world are drawn into one space with one depth buffer, so their objects hide each other where they overlap. The lowest visible layer of the world sets the camera, lights and sky; the other layers are placed relative to it. Layers of one world must have the same resolution.", "Ebenen, die auf dieselbe Welt gestellt sind, werden in einem Raum mit einem Tiefenpuffer gezeichnet, sodass sich ihre Objekte dort verdecken, wo sie sich überlappen. Die unterste sichtbare Ebene der Welt bestimmt Kamera, Lichter und Himmel; die anderen Ebenen werden relativ dazu platziert. Ebenen einer Welt müssen dieselbe Auflösung haben."},
+    {"Where this layer sits in the shared world, in units of the size of the lowest layer of the world. The lowest layer itself moves too, relative to the camera.", "Wo diese Ebene in der gemeinsamen Welt sitzt, in Einheiten der Größe der untersten Ebene der Welt. Die unterste Ebene bewegt sich ebenfalls, relativ zur Kamera."},
+    {"When off, every 3D layer draws its own scene with its own depth buffer, whatever world the layers are set to. Turn this off if shared worlds cost too much on your graphics card.", "Wenn aus, zeichnet jede 3D-Ebene ihre eigene Szene mit eigenem Tiefenpuffer, egal auf welche Welt die Ebenen gestellt sind. Schalte das aus, wenn gemeinsame Welten auf deiner Grafikkarte zu viel kosten."},
 };
 
 }

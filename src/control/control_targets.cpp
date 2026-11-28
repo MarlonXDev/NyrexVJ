@@ -67,6 +67,10 @@ std::vector<ControlTarget> buildTargets() {
         list.push_back(make(prefix + "camera-orbit", ControlKind::Continuous, ControlItem::CameraOrbit, layer));
         list.push_back(make(prefix + "camera-tilt", ControlKind::Continuous, ControlItem::CameraTilt, layer));
         list.push_back(make(prefix + "camera-fov", ControlKind::Continuous, ControlItem::CameraFov, layer));
+        list.push_back(make(prefix + "world-x", ControlKind::Continuous, ControlItem::WorldX, layer));
+        list.push_back(make(prefix + "world-y", ControlKind::Continuous, ControlItem::WorldY, layer));
+        list.push_back(make(prefix + "world-z", ControlKind::Continuous, ControlItem::WorldZ, layer));
+        list.push_back(make(prefix + "world-yaw", ControlKind::Continuous, ControlItem::WorldYaw, layer));
         addGrade(list, prefix, layer);
         list.push_back(make(prefix + "bypass", ControlKind::Toggle, ControlItem::Bypass, layer));
         list.push_back(make(prefix + "solo", ControlKind::Toggle, ControlItem::Solo, layer));
@@ -252,6 +256,14 @@ float ControlRouter::value(int index) const {
         return unlerp(-60.0f, 60.0f, comp_.layers[static_cast<size_t>(target.layer)].cameraTilt);
     case ControlItem::CameraFov:
         return unlerp(-30.0f, 30.0f, comp_.layers[static_cast<size_t>(target.layer)].cameraFov);
+    case ControlItem::WorldX:
+        return unlerp(-4.0f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].worldX);
+    case ControlItem::WorldY:
+        return unlerp(-4.0f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].worldY);
+    case ControlItem::WorldZ:
+        return unlerp(-4.0f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].worldZ);
+    case ControlItem::WorldYaw:
+        return unlerp(-180.0f, 180.0f, comp_.layers[static_cast<size_t>(target.layer)].worldYaw);
     case ControlItem::EffectParam:
         return std::clamp(slotFor(target).params[static_cast<size_t>(target.param)], 0.0f, 1.0f);
     case ControlItem::Macro:
@@ -328,6 +340,18 @@ void ControlRouter::setContinuous(const ControlTarget& target, float value) {
         break;
     case ControlItem::CameraFov:
         comp_.layers[static_cast<size_t>(target.layer)].cameraFov = lerp(-30.0f, 30.0f, value);
+        break;
+    case ControlItem::WorldX:
+        comp_.layers[static_cast<size_t>(target.layer)].worldX = lerp(-4.0f, 4.0f, value);
+        break;
+    case ControlItem::WorldY:
+        comp_.layers[static_cast<size_t>(target.layer)].worldY = lerp(-4.0f, 4.0f, value);
+        break;
+    case ControlItem::WorldZ:
+        comp_.layers[static_cast<size_t>(target.layer)].worldZ = lerp(-4.0f, 4.0f, value);
+        break;
+    case ControlItem::WorldYaw:
+        comp_.layers[static_cast<size_t>(target.layer)].worldYaw = lerp(-180.0f, 180.0f, value);
         break;
     case ControlItem::EffectParam:
         slotFor(target).params[static_cast<size_t>(target.param)] = value;

@@ -309,6 +309,440 @@ double meanDifference(const Shot& a, const Shot& b) {
 
 }
 
+SceneDoc ballDoc(std::array<float, 3> color, float roughness = 0.4f) {
+    SceneDoc doc = makeDefaultDoc();
+    doc.objects.clear();
+    DocObject sphere = makeDefaultObject(PrimitiveKind::Sphere);
+    sphere.material.color = color;
+    sphere.material.metallic = 0.0f;
+    sphere.material.roughness = roughness;
+    sphere.material.emissiveStrength = 0.0f;
+    doc.objects.push_back(sphere);
+    return doc;
+}
+
+DocAssets modelFileAssets(const fs::path& models) {
+    DocAssets assets = bindingAssets();
+    assets.loadModel = [models](const std::string& name, const GltfLimits& limits) -> std::shared_ptr<const GltfResult> {
+        if (name == "cube.glb" || name == "cube_copy.glb") {
+            return std::make_shared<GltfResult>(loadGltfFile(models / "morph_cube.glb", limits));
+        }
+        if (name == "arm.glb") {
+            return std::make_shared<GltfResult>(loadGltfFile(models / "skin_arm.glb", limits));
+        }
+        return nullptr;
+    };
+    return assets;
+}
+
+std::unique_ptr<ScenePlayer> docSceneWith(const SceneDoc& doc, const char* name, const DocAssets& assets) {
+    return std::make_unique<ScenePlayer>(name, [doc, assets](const GltfLimits& limits) { return buildSceneFromDoc(doc, assets, limits); });
+}
+
+SceneFrame worldFrame(int world, bool owner, WorldPlacement placement = {}) {
+    SceneFrame frame;
+    frame.time = 0.0f;
+    frame.beat = 0.0;
+    frame.world = world;
+    frame.worldOwner = owner;
+    frame.placement = placement;
+    return frame;
+}
+
+Shot layerOver(const Shot& below, const Shot& above) {
+    Shot out = below;
+    for (size_t i = 0; i + 3 < out.pixels.size(); i += 4) {
+        if (above.pixels[i + 3] > 0) {
+            for (size_t c = 0; c < 4; ++c) {
+                out.pixels[i + c] = above.pixels[i + c];
+            }
+        }
+    }
+    return out;
+}
+
+double differingShare(const Shot& a, const Shot& b) {
+    if (a.pixels.size() != b.pixels.size() || a.pixels.empty()) {
+        return 1.0;
+    }
+    size_t different = 0;
+    for (size_t i = 0; i + 3 < a.pixels.size(); i += 4) {
+        int largest = 0;
+        for (size_t c = 0; c < 3; ++c) {
+            largest = std::max(largest, std::abs(static_cast<int>(a.pixels[i + c]) - static_cast<int>(b.pixels[i + c])));
+        }
+        if (largest > 6) {
+            ++different;
+        }
+    }
+    return static_cast<double>(different) / static_cast<double>(a.pixels.size() / 4);
+}
+
+int dominantCount(const Shot& shot, int channel) {
+    int count = 0;
+    for (int y = 0; y < kSize; ++y) {
+        for (int x = 0; x < kSize; ++x) {
+            const uint8_t* p = shot.at(x, y);
+            const int own = p[channel];
+            const int a = p[(channel + 1) % 3];
+            const int b = p[(channel + 2) % 3];
+            if (own > 60 && own > a * 2 && own > b * 2) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+SceneDoc jointDoc(std::array<float, 3> ownerColor, std::array<float, 3> memberColor, Vec3 memberAt) {
+    SceneDoc doc = ballDoc(ownerColor);
+    DocObject other = doc.objects[0];
+    other.material.color = memberColor;
+    other.position = memberAt;
+    other.framing = false;
+    other.name = "Second";
+    doc.objects.push_back(other);
+    sanitizeDoc(doc);
+    return doc;
+}
+
+void runWorldChecks(Engine& engine, const fs::path& models, RenderTarget& target, Checker& check, json& report) {
+    SceneRenderer& renderer = engine.sceneRenderer();
+    const std::array<float, 3> red{0.9f, 0.1f, 0.08f};
+    const std::array<float, 3> green{0.1f, 0.85f, 0.15f};
+    const std::array<float, 3> blue{0.1f, 0.2f, 0.95f};
+
+    {
+        auto owner = docScene(ballDoc(red), "world owner");
+        const Shot isolated = captureFrame(engine, *owner, worldFrame(0, false), target, true);
+        renderer.resetWorlds();
+        const Shot inWorld = captureFrame(engine, *owner, worldFrame(1, true), target, true);
+        check.expect("world: an owner alone looks exactly like an isolated scene", isolated.ok && inWorld.ok && isolated.lit > 500 && renderer.lastDrawShared() && pixelHash(isolated.pixels) == pixelHash(inWorld.pixels), "lit " + std::to_string(isolated.lit));
+        renderer.resetWorlds();
+        WorldPlacement turn;
+        turn.yawDegrees = 40.0f;
+        const Shot turned = captureFrame(engine, *owner, worldFrame(1, true, turn), target, true);
+        check.expect("world: the owner can be moved inside its own world", turned.ok && turned.lit > 100 && renderer.lastDrawShared());
+    }
+
+    for (const float depth : {0.8f, -0.8f}) {
+        auto owner = docScene(ballDoc(red), "world red");
+        auto member = docScene(ballDoc(green), "world green");
+        owner->wait();
+        member->wait();
+        const float radius = owner->fitRadius();
+        const Vec3 centre = owner->fitCenter();
+        WorldPlacement place;
+        place.x = 0.6f;
+        place.z = depth;
+        const Vec3 memberAt = centre + Vec3{place.x * radius, 0.0f, place.z * radius};
+        auto joint = docScene(jointDoc(red, green, memberAt), "world joint");
+
+        renderer.resetWorlds();
+        const Shot below = captureFrame(engine, *owner, worldFrame(1, true), target, true);
+        const Shot above = captureFrame(engine, *member, worldFrame(1, false, place), target, true);
+        const bool sharedMember = renderer.lastDrawShared();
+        const Shot layered = layerOver(below, above);
+        const Shot reference = captureFrame(engine, *joint, worldFrame(0, false), target, true);
+        const std::string label = depth > 0.0f ? "member in front" : "member behind";
+        const double share = differingShare(layered, reference);
+        check.expect("world: " + label + " matches one scene drawn together", below.ok && above.ok && sharedMember && layered.lit > 500 && share < 0.004 && meanDifference(layered, reference) < 0.25, "differing share " + number(share * 100.0) + " %, mean " + number(meanDifference(layered, reference)));
+        const int greens = dominantCount(layered, 1);
+        const int reds = dominantCount(layered, 0);
+        report["world"]["occlusion"][depth > 0.0f ? "front" : "behind"] = {{"green", greens}, {"red", reds}, {"differingShare", share}};
+        if (depth > 0.0f) {
+            report["world"]["frontGreens"] = greens;
+        } else {
+            const int frontGreens = report["world"]["frontGreens"].get<int>();
+            check.expect("world: occlusion depends on real depth, not on layer order", frontGreens > greens + 200, "green pixels " + std::to_string(frontGreens) + " in front, " + std::to_string(greens) + " behind");
+        }
+    }
+
+    {
+        auto first = docScene(ballDoc(red), "world a");
+        auto big = docScene(ballDoc(blue), "world b big");
+        auto member = docScene(ballDoc(green), "world a member");
+        first->wait();
+        WorldPlacement place;
+        place.x = 0.5f;
+        place.z = 0.3f;
+        WorldPlacement huge;
+        huge.z = 2.0f;
+        huge.scale = 3.0f;
+        renderer.resetWorlds();
+        captureFrame(engine, *first, worldFrame(1, true), target, true);
+        const Shot alone = captureFrame(engine, *member, worldFrame(1, false, place), target, true);
+        renderer.resetWorlds();
+        captureFrame(engine, *first, worldFrame(1, true), target, true);
+        captureFrame(engine, *big, worldFrame(2, true, huge), target, true);
+        const Shot withOther = captureFrame(engine, *member, worldFrame(1, false, place), target, true);
+        check.expect("world: two worlds do not share a depth buffer", alone.ok && withOther.ok && alone.lit > 100 && pixelHash(alone.pixels) == pixelHash(withOther.pixels), "lit " + std::to_string(alone.lit));
+        const size_t twoWorlds = renderer.worldDepthBytes();
+        check.expect("world: each world in use holds one depth buffer", twoWorlds == 2u * kSize * kSize * 4u, "bytes " + std::to_string(twoWorlds));
+        report["world"]["depthBytesTwoWorlds"] = twoWorlds;
+        check.expect("world: depth memory is part of the 3D depth total", renderer.depthBytes() >= twoWorlds);
+        for (int i = 0; i < 400; ++i) {
+            renderer.beginFrame();
+        }
+        check.expect("world: depth buffers of idle worlds are freed", renderer.worldDepthBytes() == 0, "bytes " + std::to_string(renderer.worldDepthBytes()));
+    }
+
+    {
+        auto owner = docScene(ballDoc(red), "world size owner");
+        auto member = docScene(ballDoc(green), "world size member");
+        owner->wait();
+        member->wait();
+        RenderTarget small;
+        if (small.create(192, 192)) {
+            renderer.resetWorlds();
+            captureFrame(engine, *owner, worldFrame(1, true), target, true);
+            const size_t before = renderer.worldDepthBytes();
+            while (glGetError() != GL_NO_ERROR) {
+            }
+            renderer.draw(*member, worldFrame(1, false), small);
+            const bool shared = renderer.lastDrawShared();
+            const bool clean = glGetError() == GL_NO_ERROR;
+            check.expect("world: a layer with another resolution falls back to its own scene", !shared && clean && renderer.worldDepthBytes() == before);
+            small.destroy();
+        }
+    }
+
+    {
+        auto member = docScene(ballDoc(green), "world orphan");
+        ScenePlayer broken("world broken", [](const GltfLimits&) {
+            GltfResult result;
+            result.ok = false;
+            result.error = "broken on purpose";
+            return result;
+        });
+        broken.wait();
+        const Shot isolated = captureFrame(engine, *member, worldFrame(0, false), target, true);
+        renderer.resetWorlds();
+        while (glGetError() != GL_NO_ERROR) {
+        }
+        renderer.draw(broken, worldFrame(1, true), target);
+        const Shot orphan = captureFrame(engine, *member, worldFrame(1, false, WorldPlacement{}), target, true);
+        check.expect("world: a broken owner leaves the other layers drawing on their own", broken.state() == SceneState::Failed && orphan.ok && !renderer.lastDrawShared() && pixelHash(isolated.pixels) == pixelHash(orphan.pixels) && glGetError() == GL_NO_ERROR);
+    }
+
+    {
+        SceneDoc bound = ballDoc(green);
+        bound.objects[0].bindings[0] = {true, BindSource::Kick, BindTarget::Scale, 0.8f};
+        auto still = docScene(ballDoc(green), "world still");
+        auto moving = docScene(bound, "world moving");
+        auto owner = docScene(ballDoc(red), "world beat owner");
+        owner->wait();
+        WorldPlacement place;
+        place.x = 0.9f;
+        place.z = 0.9f;
+        place.scale = 0.5f;
+        SceneFrame loud = worldFrame(1, false, place);
+        loud.kick = 1.0f;
+        loud.bass = 1.0f;
+        loud.beatPulse = 1.0f;
+        SceneFrame loudOwner = worldFrame(1, true);
+        loudOwner.kick = 1.0f;
+        loudOwner.bass = 1.0f;
+        renderer.resetWorlds();
+        captureFrame(engine, *owner, loudOwner, target, true);
+        const Shot quietShot = captureFrame(engine, *still, loud, target, true);
+        renderer.resetWorlds();
+        captureFrame(engine, *owner, loudOwner, target, true);
+        const Shot movingShot = captureFrame(engine, *moving, loud, target, true);
+        check.expect("world: each layer keeps its own music bindings", quietShot.ok && movingShot.ok && quietShot.lit > 50 && movingShot.lit > quietShot.lit * 1.2, "lit " + std::to_string(quietShot.lit) + " -> " + std::to_string(movingShot.lit));
+    }
+
+    {
+        const DocAssets assets = modelFileAssets(models);
+        const auto modelDoc = [&](bool cubeFirst) {
+            SceneDoc doc = makeDefaultDoc();
+            doc.objects.clear();
+            DocObject cube = makeDefaultObject(PrimitiveKind::Model);
+            cube.model = "cube.glb";
+            cube.name = "Cube";
+            cube.position = {-0.25f, 0.0f, 0.35f};
+            DocObject arm = makeDefaultObject(PrimitiveKind::Model);
+            arm.model = "arm.glb";
+            arm.name = "Arm";
+            arm.position = {0.25f, 0.0f, -0.35f};
+            if (cubeFirst) {
+                doc.objects = {cube, arm};
+            } else {
+                doc.objects = {arm, cube};
+            }
+            sanitizeDoc(doc);
+            return doc;
+        };
+        auto a = docSceneWith(modelDoc(true), "models a", assets);
+        auto b = docSceneWith(modelDoc(false), "models b", assets);
+        const Shot first = captureFrame(engine, *a, worldFrame(0, false), target, true);
+        const Shot second = captureFrame(engine, *b, worldFrame(0, false), target, true);
+        SceneDoc onlyCube = modelDoc(true);
+        onlyCube.objects.pop_back();
+        auto solo = docSceneWith(onlyCube, "models solo", assets);
+        const Shot single = captureFrame(engine, *solo, worldFrame(0, false), target, true);
+        SceneDoc swapped = modelDoc(true);
+        std::swap(swapped.objects[0].position.z, swapped.objects[1].position.z);
+        auto behind = docSceneWith(swapped, "models swapped", assets);
+        const Shot flipped = captureFrame(engine, *behind, worldFrame(0, false), target, true);
+        check.expect("shared scene: two models hide each other by depth, in any object order", first.ok && second.ok && first.lit > 1000 && pixelHash(first.pixels) == pixelHash(second.pixels), "lit " + std::to_string(first.lit) + ", one model alone " + std::to_string(single.lit));
+        check.expect("shared scene: moving a model in front of the other changes what is hidden", flipped.ok && pixelHash(flipped.pixels) != pixelHash(first.pixels) && meanDifference(flipped, first) > 0.5, "mean difference " + number(meanDifference(flipped, first)));
+
+        const auto reuseDoc = [&](const char* secondName) {
+            SceneDoc doc = makeDefaultDoc();
+            doc.objects.clear();
+            DocObject one = makeDefaultObject(PrimitiveKind::Model);
+            one.model = "cube.glb";
+            one.name = "One";
+            one.position = {-0.3f, 0.0f, 0.0f};
+            DocObject two = one;
+            two.model = secondName;
+            two.name = "Two";
+            two.position = {0.3f, 0.1f, -0.2f};
+            doc.objects = {one, two};
+            sanitizeDoc(doc);
+            return doc;
+        };
+        auto shared = docSceneWith(reuseDoc("cube.glb"), "models shared", assets);
+        auto copied = docSceneWith(reuseDoc("cube_copy.glb"), "models copied", assets);
+        const Shot sharedShot = captureFrame(engine, *shared, worldFrame(0, false), target, true);
+        const Shot copiedShot = captureFrame(engine, *copied, worldFrame(0, false), target, true);
+        const size_t sharedVertices = shared->stats().vertices;
+        const size_t copiedVertices = copied->stats().vertices;
+        check.expect("shared scene: a model used twice is stored once and looks the same", sharedShot.ok && copiedShot.ok && sharedVertices * 2 == copiedVertices && pixelHash(sharedShot.pixels) == pixelHash(copiedShot.pixels), "vertices " + std::to_string(sharedVertices) + " vs " + std::to_string(copiedVertices));
+        report["world"]["modelReuse"] = {{"sharedVertices", sharedVertices}, {"copiedVertices", copiedVertices}, {"sharedGpuBytes", shared->stats().gpuBytes}, {"copiedGpuBytes", copied->stats().gpuBytes}};
+    }
+
+    {
+        SceneDoc tree = makeDefaultDoc();
+        tree.objects.clear();
+        DocObject parent = makeDefaultObject(PrimitiveKind::Sphere);
+        parent.name = "Parent";
+        parent.position = {0.4f, 0.0f, 0.0f};
+        parent.scale = {1.2f, 1.2f, 1.2f};
+        parent.material.color = red;
+        DocObject child = makeDefaultObject(PrimitiveKind::Sphere);
+        child.name = "Child";
+        child.position = {0.5f, 0.3f, 0.0f};
+        child.scale = {0.6f, 0.6f, 0.6f};
+        child.material.color = green;
+        tree.objects = {parent, child};
+        sanitizeDoc(tree);
+        docSetParent(tree, 1, 0);
+        SceneDoc flat = tree;
+        flat.objects[1].parent.clear();
+        flat.objects[1].position = {0.4f + 1.2f * 0.5f, 1.2f * 0.3f, 0.0f};
+        flat.objects[1].scale = {0.72f, 0.72f, 0.72f};
+        auto nested = docScene(tree, "tree nested");
+        auto baked = docScene(flat, "tree baked");
+        const Shot a = captureFrame(engine, *nested, worldFrame(0, false), target, true);
+        const Shot b = captureFrame(engine, *baked, worldFrame(0, false), target, true);
+        const double share = differingShare(a, b);
+        check.expect("shared scene: a child follows its parent exactly like the baked transform", a.ok && b.ok && a.lit > 500 && share < 0.001 && meanDifference(a, b) < 0.05, "differing share " + number(share * 100.0) + " %");
+    }
+
+    {
+        SceneDoc many = ballDoc(red);
+        many.objects[0].repeat = {RepeatKind::Line, 40, 2.0f, 1.2f};
+        auto crowd = docScene(many, "world culling");
+        crowd->wait();
+        SceneFrame zoomed = worldFrame(0, false);
+        zoomed.scale = 3.5f;
+        renderer.setCulling(false);
+        const Shot plain = captureFrame(engine, *crowd, zoomed, target, true);
+        const size_t drawnPlain = renderer.drawnInstances();
+        const size_t culledPlain = renderer.culledInstances();
+        renderer.setCulling(true);
+        const Shot culled = captureFrame(engine, *crowd, zoomed, target, true);
+        const size_t drawnCulled = renderer.drawnInstances();
+        const size_t culledCulled = renderer.culledInstances();
+        check.expect("culling: instances outside the view are skipped and the picture stays the same", plain.ok && culled.ok && culledPlain == 0 && culledCulled > 10 && drawnCulled < drawnPlain && pixelHash(plain.pixels) == pixelHash(culled.pixels), "drawn " + std::to_string(drawnPlain) + " -> " + std::to_string(drawnCulled) + ", skipped " + std::to_string(culledCulled));
+        report["world"]["culling"] = {{"instances", drawnPlain}, {"drawnWithCulling", drawnCulled}, {"skipped", culledCulled}};
+
+        size_t scenes = 0;
+        size_t same = 0;
+        for (const BuiltinSceneInfo& info : builtinScenes()) {
+            const auto build = info.build;
+            ScenePlayer player(info.name, [build](const GltfLimits&) {
+                GltfResult result;
+                result.ok = true;
+                result.scene = build();
+                return result;
+            });
+            for (const float zoom : {1.0f, 2.5f, 4.0f}) {
+                SceneFrame frame = worldFrame(0, false);
+                frame.scale = zoom;
+                frame.time = 0.9f;
+                frame.beat = 1.7;
+                renderer.setCulling(false);
+                const Shot without = captureFrame(engine, player, frame, target, true);
+                renderer.setCulling(true);
+                const Shot with = captureFrame(engine, player, frame, target, true);
+                ++scenes;
+                if (without.ok && with.ok && pixelHash(without.pixels) == pixelHash(with.pixels)) {
+                    ++same;
+                }
+            }
+        }
+        check.expect("culling: every built-in scene looks the same with and without it, at three zoom levels", scenes > 0 && same == scenes, std::to_string(same) + " of " + std::to_string(scenes));
+        for (const char* file : {"skin_arm.glb", "skin_morph.glb", "morph_cube.glb", "blend_far_first.glb"}) {
+            auto player = fileScene(models / file);
+            bool identical = true;
+            for (const float zoom : {1.0f, 4.0f}) {
+                SceneFrame frame = worldFrame(0, false);
+                frame.scale = zoom;
+                renderer.setCulling(false);
+                const Shot without = captureFrame(engine, *player, frame, target, true);
+                renderer.setCulling(true);
+                const Shot with = captureFrame(engine, *player, frame, target, true);
+                identical = identical && without.ok && with.ok && pixelHash(without.pixels) == pixelHash(with.pixels);
+            }
+            check.expect(std::string("culling: model ") + file + " looks the same with and without it", identical);
+        }
+        renderer.setCulling(true);
+    }
+
+    {
+        SceneDoc many = ballDoc(red);
+        many.objects[0].repeat = {RepeatKind::Ring, 48, 1.5f, 1.0f};
+        std::vector<std::unique_ptr<ScenePlayer>> layers;
+        for (int i = 0; i < 4; ++i) {
+            SceneDoc doc = many;
+            doc.objects[0].material.color = i == 0 ? red : (i == 1 ? green : (i == 2 ? blue : std::array<float, 3>{0.9f, 0.8f, 0.1f}));
+            layers.push_back(docScene(doc, "world speed"));
+            layers.back()->wait();
+        }
+        constexpr int kRuns = 90;
+        double isolatedMs = 0.0;
+        double sharedMs = 0.0;
+        for (int round = 0; round < 3; ++round) {
+            for (const bool shared : {false, true}) {
+                glFinish();
+                const auto begin = std::chrono::steady_clock::now();
+                for (int run = 0; run < kRuns; ++run) {
+                    renderer.beginFrame();
+                    renderer.resetWorlds();
+                    for (int i = 0; i < 4; ++i) {
+                        SceneFrame frame = worldFrame(shared ? 1 : 0, i == 0);
+                        frame.time = static_cast<float>(run) * 0.02f;
+                        if (shared && i > 0) {
+                            frame.placement.x = 0.4f * static_cast<float>(i);
+                            frame.placement.z = -0.3f * static_cast<float>(i);
+                        }
+                        renderer.draw(*layers[static_cast<size_t>(i)], frame, target);
+                    }
+                }
+                glFinish();
+                const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / kRuns;
+                double& best = shared ? sharedMs : isolatedMs;
+                best = round == 0 ? ms : std::min(best, ms);
+            }
+        }
+        report["world"]["frameMs"] = {{"fourIsolated", isolatedMs}, {"fourShared", sharedMs}};
+        check.expect("world: four layers in one world cost about the same as four separate scenes", sharedMs < isolatedMs * 1.5 + 0.5, "isolated " + number(isolatedMs) + " ms, shared " + number(sharedMs) + " ms");
+    }
+}
+
 int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const std::string& outputPath) {
     Checker check;
     json report;
@@ -915,6 +1349,7 @@ int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const st
         }
         report["builtinScenes"] = checked;
     }
+    runWorldChecks(engine, models, target, check, report);
     target.destroy();
 
     report["checks"] = std::move(check.items);

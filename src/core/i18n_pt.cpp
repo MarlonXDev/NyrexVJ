@@ -3048,6 +3048,21 @@ const Translation kPortuguese[] = {
     {"When off, 3D scenes keep the old camera: no glide between cameras, no look-at offset, no roll, no shot lengths, and the camera bindings and the layer camera controls are ignored. Cuts and zoom work as before.", "Desativado, as cenas 3D mantêm a câmera antiga: sem transição entre câmeras, sem deslocamento, sem rolagem, sem duração de plano, e as ligações da câmera e os controles de câmera das camadas são ignorados. Cortes e zoom funcionam como antes."},
     {"orthographic", "ortográfica"},
     {"Cameras in the file (usable in the Clip Creator)", "Câmeras no arquivo (utilizáveis no Clip Creator)"},
+    {"3D world", "Mundo 3D"},
+    {"Shared 3D world", "Mundo 3D compartilhado"},
+    {"Shared 3D worlds", "Mundos 3D compartilhados"},
+    {"Own scene", "Cena própria"},
+    {"World", "Mundo"},
+    {"World position X", "Posição no mundo X"},
+    {"World position Y", "Posição no mundo Y"},
+    {"World position Z", "Posição no mundo Z"},
+    {"World turn", "Giro no mundo"},
+    {"World size", "Tamanho no mundo"},
+    {"Parent", "Pai"},
+    {"The object moves, turns and scales with its parent and takes the music reactions of its parent on top of its own. Objects can be nested up to 8 levels. Deleting a parent moves its children up one level.", "O objeto se move, gira e muda de escala junto com o pai e, além disso, assume as reações à música dele. Os objetos podem ser aninhados em até 8 níveis. Ao apagar um pai, os filhos sobem um nível."},
+    {"Layers set to the same world are drawn into one space with one depth buffer, so their objects hide each other where they overlap. The lowest visible layer of the world sets the camera, lights and sky; the other layers are placed relative to it. Layers of one world must have the same resolution.", "As camadas ajustadas para o mesmo mundo são desenhadas em um único espaço com um único buffer de profundidade, então seus objetos se escondem onde se sobrepõem. A camada visível mais baixa do mundo define câmera, luzes e céu; as outras camadas são posicionadas em relação a ela. As camadas de um mundo precisam ter a mesma resolução."},
+    {"Where this layer sits in the shared world, in units of the size of the lowest layer of the world. The lowest layer itself moves too, relative to the camera.", "Onde esta camada fica no mundo compartilhado, em unidades do tamanho da camada mais baixa do mundo. A camada mais baixa também se move, em relação à câmera."},
+    {"When off, every 3D layer draws its own scene with its own depth buffer, whatever world the layers are set to. Turn this off if shared worlds cost too much on your graphics card.", "Desativado, cada camada 3D desenha a própria cena com o próprio buffer de profundidade, seja qual for o mundo escolhido. Desative se os mundos compartilhados custarem muito na sua placa de vídeo."},
 };
 
 }

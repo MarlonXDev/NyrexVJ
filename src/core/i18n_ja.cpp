@@ -3048,6 +3048,21 @@ const Translation kJapanese[] = {
     {"When off, 3D scenes keep the old camera: no glide between cameras, no look-at offset, no roll, no shot lengths, and the camera bindings and the layer camera controls are ignored. Cuts and zoom work as before.", "オフにすると、3Dシーンは従来のカメラのままになります。カメラ間のグライド、注視点のオフセット、ロール、ショットの長さはなく、カメラのバインドとレイヤーのカメラコントロールは無視されます。カットとズームは従来どおり動作します。"},
     {"orthographic", "オルソ"},
     {"Cameras in the file (usable in the Clip Creator)", "ファイル内のカメラ(クリエイターで使用可)"},
+    {"3D world", "3Dワールド"},
+    {"Shared 3D world", "共有3Dワールド"},
+    {"Shared 3D worlds", "共有3Dワールド機能"},
+    {"Own scene", "独立したシーン"},
+    {"World", "ワールド"},
+    {"World position X", "ワールド位置 X"},
+    {"World position Y", "ワールド位置 Y"},
+    {"World position Z", "ワールド位置 Z"},
+    {"World turn", "ワールド回転"},
+    {"World size", "ワールドサイズ"},
+    {"Parent", "親"},
+    {"The object moves, turns and scales with its parent and takes the music reactions of its parent on top of its own. Objects can be nested up to 8 levels. Deleting a parent moves its children up one level.", "オブジェクトは親と一緒に移動・回転・拡大縮小し、親の音楽反応も自分の分に加えて引き継ぎます。オブジェクトは最大8階層まで入れ子にできます。親を削除すると、子は1階層上に移ります。"},
+    {"Layers set to the same world are drawn into one space with one depth buffer, so their objects hide each other where they overlap. The lowest visible layer of the world sets the camera, lights and sky; the other layers are placed relative to it. Layers of one world must have the same resolution.", "同じワールドに設定したレイヤーは、1つの空間と1つの深度バッファに描画されるため、重なる部分ではオブジェクト同士が隠し合います。ワールドの最下位の表示レイヤーがカメラ・ライト・空を決め、他のレイヤーはそれを基準に配置されます。同じワールドのレイヤーは同じ解像度である必要があります。"},
+    {"Where this layer sits in the shared world, in units of the size of the lowest layer of the world. The lowest layer itself moves too, relative to the camera.", "このレイヤーが共有ワールドのどこに置かれるかを、ワールドの最下位レイヤーのサイズを単位として指定します。最下位レイヤー自身もカメラに対して動きます。"},
+    {"When off, every 3D layer draws its own scene with its own depth buffer, whatever world the layers are set to. Turn this off if shared worlds cost too much on your graphics card.", "オフにすると、レイヤーがどのワールドに設定されていても、各3Dレイヤーは独自の深度バッファで自分のシーンを描画します。共有ワールドがグラフィックスカードに重すぎる場合はオフにしてください。"},
 };
 
 }

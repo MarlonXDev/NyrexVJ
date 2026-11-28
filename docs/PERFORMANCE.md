@@ -333,6 +333,16 @@ Off by default; with Use hot standby off the failover system does nothing, and a
 - **The switch.** Settings, Performance, Camera moves in 3D scenes (on at the start). Off gives the old camera.
 - **Not measured.** A graphics card, Windows, a long show with a gliding camera and live audio, and the cost next to VRChat (`M-VCM-1`).
 
+## What is new in 0.70.0: the shared 3D scene
+
+[ADR 0064](adr/0064-shared-3d-scene-hierarchy-model-reuse-and-shared-worlds-across-layers.md). A scene document got a parent for its objects, a model that is used twice is built once, layers can be drawn into shared worlds with one depth buffer each, and instances outside the view are not drawn.
+
+- **Processor.** The frustum test is six plane tests per instance and runs only for instances that are not skinned and have no Inflate, Ripple or morph target; it was not timed on its own. In a wide test scene 26 of 40 instances were skipped (14 drawn). The hierarchy is linked once when a scene is built, not per frame; the evaluation of a scene adds the parent's matrix as it did for a node with a parent in a model.
+- **Graphics card.** Each world in use has a depth renderbuffer of the size of its layers, 4 bytes per pixel: two worlds of 256 x 256 held 524,288 bytes in the test, and at 1920 x 1080 it is about 8 MiB per world (the 8.0 MiB of the depth buffer in [SCENE3D.md](SCENE3D.md)), at most four worlds. The sum is part of the 3D depth total in the memory report, and a world that no layer used for 180 frames is freed (0 bytes in the test). A model used twice has half the vertices and half the graphics memory (24 against 48 vertices, 2,448 against 4,896 bytes). A member layer needs no extra picture: it is drawn into its own layer texture as before.
+- **Measured here.** Four layers of the same scene at 256 x 256 on Mesa llvmpipe, average milliseconds per frame, one run: 63.42 with every layer on its own and 41.11 in one shared world. That is one run on a software rasteriser, so it says that sharing was not slower here and no more; no speedup is claimed. A scene that does not use a world or a parent draws byte for byte the same picture as in 0.69.0 (the built-in scenes at three times in both paths and the twelve music moments of 0.68.0).
+- **The switch.** Settings, Performance, Shared 3D worlds (on at the start). Off draws every layer on its own scene as before 0.70.0.
+- **Not measured.** A graphics card, Windows, four worlds with four layers each at 1920 x 1080, a long show, and the cost next to VRChat (`M-WLD-1`).
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

@@ -220,6 +220,24 @@ json layersToJson(const std::array<Layer, kLayerCount>& source) {
         if (layer.cameraFov != 0.0f) {
             entry["cameraFov"] = layer.cameraFov;
         }
+        if (layer.world != 0) {
+            entry["world"] = layer.world;
+        }
+        if (layer.worldX != 0.0f) {
+            entry["worldX"] = layer.worldX;
+        }
+        if (layer.worldY != 0.0f) {
+            entry["worldY"] = layer.worldY;
+        }
+        if (layer.worldZ != 0.0f) {
+            entry["worldZ"] = layer.worldZ;
+        }
+        if (layer.worldYaw != 0.0f) {
+            entry["worldYaw"] = layer.worldYaw;
+        }
+        if (layer.worldScale != 1.0f) {
+            entry["worldScale"] = layer.worldScale;
+        }
         entry["grade"] = gradeToJson(layer.grade);
         entry["mods"] = modsToJson(layer.mods);
         entry["fx"] = effectsToJson(layer.fx);
@@ -294,6 +312,12 @@ void layersFromJson(const json& layers, std::array<Layer, kLayerCount>& result, 
         layer.cameraOrbit = readNumber(entry, "cameraOrbit", 0.0f, -180.0f, 180.0f);
         layer.cameraTilt = readNumber(entry, "cameraTilt", 0.0f, -60.0f, 60.0f);
         layer.cameraFov = readNumber(entry, "cameraFov", 0.0f, -30.0f, 30.0f);
+        layer.world = static_cast<int>(readNumber(entry, "world", 0.0f, 0.0f, static_cast<float>(kWorldCount)));
+        layer.worldX = readNumber(entry, "worldX", 0.0f, -4.0f, 4.0f);
+        layer.worldY = readNumber(entry, "worldY", 0.0f, -4.0f, 4.0f);
+        layer.worldZ = readNumber(entry, "worldZ", 0.0f, -4.0f, 4.0f);
+        layer.worldYaw = readNumber(entry, "worldYaw", 0.0f, -180.0f, 180.0f);
+        layer.worldScale = readNumber(entry, "worldScale", 1.0f, 0.1f, 4.0f);
         if (entry.contains("grade")) {
             layer.grade = gradeFromJson(entry["grade"]);
         }

@@ -3941,6 +3941,73 @@
           "criteria": "Proposed: objects of two layers in one world hide each other by depth in either layer order, every layer keeps its own effects, blend mode, opacity and music reaction, a child follows its parent, a model used twice looks like two copies, the settings survive saving and loading, an old program refuses only scenes that need version 4, the follower shows the same placement as the master, the frame time with the switch on is not more than 5 percent above the frame time with it off at the same scenes, and the graphics memory grows by one depth buffer per world and no more."
         }
       ]
+    },
+    {
+      "id": "scene-geometry",
+      "title": "Geometry graphs for 3D scenes: a separate node graph that builds, changes and repeats a mesh once on the processor, cached by content, with instances that share one mesh, music through the shader, limits, visible errors, scene version 5 only when used, and the switch Geometry graphs",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SCENE3D.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/manual/manual.en.md",
+        "docs/TESTING.md",
+        "docs/adr/0065-procedural-geometry-graph-for-3d-scenes.md"
+      ],
+      "sources": [
+        "src/scene3d/geometry_graph.hpp",
+        "src/scene3d/geometry_graph.cpp",
+        "src/scene3d/geometry_graph_json.hpp",
+        "src/scene3d/scene_doc.cpp",
+        "src/scene3d/doc_build.cpp",
+        "src/render/scene_player.cpp",
+        "src/core/settings.cpp",
+        "src/app/ui_creator.cpp",
+        "src/app/ui_settings.cpp",
+        "src/app/scene_selftest.cpp",
+        "tests/test_geometry.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-GEO-1",
+          "kind": "ctest",
+          "name": "nvj_geometry_tests",
+          "note": "every node (primitive, subdivide, transform with normals and mirror, noise, twist, merge, instance in four layouts, material, audio), loops and missing inputs, the vertex, index, node, instance and graph limits, determinism, the cache and its limits, the JSON of a graph and of a document with damaged and extreme input, scene version 5 only when used and version 6 refused, the build of a scene with graphs, the setting and the switch, a clip pack round trip and the demo file; no OpenGL"
+        },
+        {
+          "id": "A-GEO-2",
+          "kind": "cli",
+          "command": "NyrexVJ --scene-selftest tests/data/models",
+          "note": "in the real renderer: a graph with one sphere draws the same picture as the sphere object, the default rock differs and draws the same twice, 1, 10 and 1000 instances share one mesh and are drawn or culled, music changes the picture without a new graph (cache misses unchanged) and a graph without Audio nodes does not react, a bass reaction deforms in the shader, the setting off leaves the graph object out and draws the rest as the same picture without it, a graph with a loop is reported while the rest of the scene draws, and 64 instances cost about the same as the built-in repeat; on a virtual screen with software OpenGL"
+        },
+        {
+          "id": "A-GEO-3",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every text of the graph editor, the node kinds, the warnings and the new setting has a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-GEO-1",
+          "title": "Geometry graphs on a real graphics card, in the real editor and in a real show",
+          "needs": "A PC with a graphics card, a music source or a line input, the demo file of docs/examples/geometry-graph, and optionally VRChat running next to NyrexVJ",
+          "steps": [
+            "Copy Rock Garden.nyxclip to the clips folder, put the clip on a layer and check that the ring of rocks and the crystal show, that the rocks swell with the kick and the crystal with the bass, and that the picture stays smooth.",
+            "Open the clip in the Clip Creator, pick the Rocks graph, change the node values (count, radius, noise amount, seed, subdivide levels) and check that the preview follows after each change and that a value beyond a limit is held at the limit.",
+            "Add a node, point an input at a node downstream and check that the picker does not offer the loop; remove a node that others use and check the message; make a second Output and check that the object is left out with a warning and the rest of the scene still plays.",
+            "Make a graph with 1, 10, 100 and 1,000 instances of the sphere and note the frame time of NyrexVJ at each size, with and without music rows, at the output size you use; then lower the triangles of the primitive and note the difference.",
+            "Turn Geometry graphs off in Settings, Performance, load the clip again and check that the graph objects are left out with a warning and the rest of the scene is as it was; turn it on again.",
+            "Save the clip, load it again, also from a preset and from a show package, and open the file in 0.70.0 or older to check that it is refused with the message about a newer program.",
+            "Run the graph clip next to VRChat for 30 minutes at the largest size you would use in a show and note the frame time, the graphics memory and any stutter when a graph clip is launched."
+          ],
+          "measure": "Frame time and late frames with 1, 10, 100 and 1,000 instances with and without music, the time a graph clip needs to show after it is launched, graphics memory with the graph clips loaded (the report in Settings, Performance), and anything on the editor that looks wrong or cannot be used",
+          "criteria": "Proposed: a graph clip of the size used in a show keeps the 16.7 ms budget with the other layers, a launch shows without a visible gap, a graph with an error never stops the clip, and the editor can be used without the 2D node editor. The maintainer sets the real thresholds after the first runs."
+        }
+      ]
     }
   ]
 }

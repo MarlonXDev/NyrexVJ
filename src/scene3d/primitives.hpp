@@ -4,9 +4,9 @@
 
 namespace nvj {
 
-enum class PrimitiveKind { Sphere, Cube, Cylinder, Cone, Plane, Torus, TorusKnot, Model };
+enum class PrimitiveKind { Sphere, Cube, Cylinder, Cone, Plane, Torus, TorusKnot, Model, Graph };
 
-constexpr int kPrimitiveKindCount = 8;
+constexpr int kPrimitiveKindCount = 9;
 
 const char* primitiveKey(PrimitiveKind kind);
 const char* primitiveLabel(PrimitiveKind kind);

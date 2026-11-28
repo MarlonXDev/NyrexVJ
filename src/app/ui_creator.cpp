@@ -6,6 +6,7 @@
 #include "core/log.hpp"
 #include "platform/platform.hpp"
 #include "scene3d/builtin_docs.hpp"
+#include "scene3d/geometry_graph.hpp"
 
 #include <algorithm>
 #include <array>
@@ -409,6 +410,270 @@ bool parentCombo(SceneDoc& doc, int index) {
     return changed;
 }
 
+bool geoInputPicker(GeometryGraph& graph, int index, size_t slot) {
+    GeoNode& self = graph.nodes[static_cast<size_t>(index)];
+    const std::string& current = self.inputs[slot];
+    const int currentIndex = geoNodeIndex(graph, current);
+    std::string preview = current.empty() ? std::string(tr("(none)")) : current;
+    if (currentIndex >= 0) {
+        preview = std::string(tr(geoNodeLabel(graph.nodes[static_cast<size_t>(currentIndex)].type))) + "  " + current;
+    }
+    bool changed = false;
+    if (ui::beginCombo(slot == 0 ? tr("Input") : tr("Second input"), preview.c_str())) {
+        if (ImGui::Selectable(tr("(none)"), current.empty())) {
+            self.inputs[slot].clear();
+            changed = true;
+        }
+        for (int i = 0; i < static_cast<int>(graph.nodes.size()); ++i) {
+            const GeoNode& candidate = graph.nodes[static_cast<size_t>(i)];
+            if (i == index || candidate.type == GeoNodeType::Output || geoInputWouldLoop(graph, index, candidate.id)) {
+                continue;
+            }
+            ImGui::PushID(i);
+            const std::string label = std::string(tr(geoNodeLabel(candidate.type))) + "  " + candidate.id;
+            if (ImGui::Selectable(label.c_str(), candidate.id == current)) {
+                self.inputs[slot] = candidate.id;
+                changed = true;
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+    return changed;
+}
+
+bool geoNodeParameters(GeoNode& n) {
+    bool changed = false;
+    switch (n.type) {
+    case GeoNodeType::Primitive: {
+        const char* kinds[7];
+        for (int k = 0; k < 7; ++k) {
+            kinds[k] = tr(primitiveLabel(static_cast<PrimitiveKind>(k)));
+        }
+        int kind = std::clamp(static_cast<int>(n.primitive), 0, 6);
+        if (comboList(tr("Shape"), kind, kinds, 7)) {
+            n.primitive = static_cast<PrimitiveKind>(kind);
+            changed = true;
+        }
+        break;
+    }
+    case GeoNodeType::Subdivide:
+        changed |= ui::sliderInt(tr("Levels"), &n.levels, 1, kGeoMaxLevels);
+        break;
+    case GeoNodeType::Transform:
+        changed |= dragVec3(tr("Position"), n.move, 0.02f, -100.0f, 100.0f);
+        changed |= dragVec3(tr("Rotation (degrees)"), n.rotate, 0.5f, -720.0f, 720.0f, "%.1f");
+        changed |= dragVec3(tr("Scale"), n.scale, 0.01f, -100.0f, 100.0f);
+        break;
+    case GeoNodeType::Noise:
+        changed |= ui::sliderFloat(tr("Amount"), &n.amount, -1.0f, 1.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Frequency"), &n.frequency, 0.05f, 16.0f, "%.2f");
+        changed |= ui::sliderInt(tr("Octaves"), &n.octaves, 1, kGeoMaxOctaves);
+        changed |= ImGui::DragInt(tr("Seed"), &n.seed, 1.0f, 0, 99999);
+        break;
+    case GeoNodeType::Twist:
+        changed |= ImGui::DragFloat(tr("Twist (degrees per unit)"), &n.amount, 0.5f, -720.0f, 720.0f, "%.1f");
+        break;
+    case GeoNodeType::Instance: {
+        const char* kinds[kGeoInstanceKindCount];
+        for (int k = 0; k < kGeoInstanceKindCount; ++k) {
+            kinds[k] = tr(geoInstanceLabel(static_cast<GeoInstanceKind>(k)));
+        }
+        int kind = std::clamp(static_cast<int>(n.instance), 0, kGeoInstanceKindCount - 1);
+        if (comboList(tr("Pattern"), kind, kinds, kGeoInstanceKindCount)) {
+            n.instance = static_cast<GeoInstanceKind>(kind);
+            changed = true;
+        }
+        changed |= ui::sliderInt(tr("Count"), &n.count, 1, static_cast<int>(kGeoMaxInstances));
+        if (n.instance == GeoInstanceKind::Ring || n.instance == GeoInstanceKind::Scatter) {
+            changed |= ImGui::DragFloat(tr("Radius"), &n.radius, 0.02f, 0.0f, 50.0f, "%.2f");
+        } else {
+            changed |= ImGui::DragFloat(tr("Spacing"), &n.spacing, 0.02f, 0.0f, 50.0f, "%.2f");
+        }
+        changed |= ui::sliderFloat(tr("Size variation"), &n.jitter, 0.0f, 1.0f, "%.2f");
+        if (n.instance == GeoInstanceKind::Scatter || n.jitter > 0.0f) {
+            changed |= ImGui::DragInt(tr("Seed"), &n.seed, 1.0f, 0, 99999);
+        }
+        break;
+    }
+    case GeoNodeType::Material:
+        changed |= colorEdit(tr("Color"), n.color);
+        changed |= ui::sliderFloat(tr("Metallic"), &n.metallic, 0.0f, 1.0f, "%.2f");
+        changed |= ui::sliderFloat(tr("Roughness"), &n.roughness, 0.04f, 1.0f, "%.2f");
+        changed |= colorEdit(tr("Glow color"), n.emissive);
+        changed |= ui::sliderFloat(tr("Glow strength"), &n.emissiveStrength, 0.0f, 6.0f, "%.2f");
+        changed |= ImGui::Checkbox(tr("Follow the layer colors"), &n.followPalette);
+        break;
+    case GeoNodeType::Audio: {
+        const char* sources[kBindSourceCount];
+        for (int i = 0; i < kBindSourceCount; ++i) {
+            sources[i] = bindSourceLabel(static_cast<BindSource>(i));
+        }
+        const char* targets[kGeoAudioTargetCount];
+        int target = 0;
+        for (int i = 0; i < kGeoAudioTargetCount; ++i) {
+            targets[i] = bindTargetLabel(kGeoAudioTargets[i]);
+            if (kGeoAudioTargets[i] == n.target) {
+                target = i;
+            }
+        }
+        int source = std::clamp(static_cast<int>(n.source), 0, kBindSourceCount - 1);
+        if (comboList(tr("Source"), source, sources, kBindSourceCount)) {
+            n.source = static_cast<BindSource>(source);
+            changed = true;
+        }
+        if (comboList(tr("Reaction"), target, targets, kGeoAudioTargetCount)) {
+            n.target = kGeoAudioTargets[target];
+            changed = true;
+        }
+        changed |= ImGui::DragFloat(tr("Amount"), &n.bindAmount, 0.01f, -4.0f, 4.0f, "%.2f");
+        break;
+    }
+    case GeoNodeType::Merge:
+    case GeoNodeType::Output:
+        break;
+    }
+    return changed;
+}
+
+bool geometryGraphEditor(GeometryGraph& graph) {
+    bool changed = false;
+    const std::shared_ptr<const GeoResult> result = evaluateGeometryGraphCached(graph);
+    if (result->ok) {
+        ImGui::TextDisabled("%zu %s, %zu %s, %zu %s, %.1f ms", result->vertices, tr("vertices"), result->indices / 3, tr("triangles"), std::max<size_t>(result->instances.size(), 1), tr("instances"), result->milliseconds);
+    }
+    for (const std::string& error : result->errors) {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.35f, 1.0f), "%s", trMessage(error).c_str());
+        ImGui::PopTextWrapPos();
+    }
+    for (const std::string& note : result->notes) {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.3f, 1.0f), "%s", trMessage(note).c_str());
+        ImGui::PopTextWrapPos();
+    }
+    int removeIndex = -1;
+    for (int i = 0; i < static_cast<int>(graph.nodes.size()); ++i) {
+        GeoNode& n = graph.nodes[static_cast<size_t>(i)];
+        ImGui::PushID(i);
+        const std::string header = std::string(tr(geoNodeLabel(n.type))) + "  " + n.id + "###geoNode";
+        const bool open = ui::collapsingHeader(header.c_str(), n.type == GeoNodeType::Output ? 0 : ImGuiTreeNodeFlags_DefaultOpen);
+        if (open) {
+            for (size_t slot = 0; slot < static_cast<size_t>(geoInputCount(n.type)); ++slot) {
+                ImGui::PushID(static_cast<int>(slot));
+                changed |= geoInputPicker(graph, i, slot);
+                ImGui::PopID();
+            }
+            changed |= geoNodeParameters(n);
+            if (ImGui::Button(tr("Remove node"))) {
+                removeIndex = i;
+            }
+        }
+        ImGui::PopID();
+    }
+    if (removeIndex >= 0) {
+        changed |= geoRemoveNode(graph, removeIndex);
+    }
+    ImGui::Spacing();
+    if (graph.nodes.size() >= kGeoMaxNodes) {
+        ImGui::TextDisabled("%s", tr("The graph has reached its limit of nodes"));
+    } else if (ImGui::Button(tr("Add node"), ImVec2(-FLT_MIN, 0.0f))) {
+        ImGui::OpenPopup("geoAddNode");
+    }
+    if (ImGui::BeginPopup("geoAddNode")) {
+        bool hasOutput = false;
+        std::string last;
+        for (const GeoNode& n : graph.nodes) {
+            hasOutput = hasOutput || n.type == GeoNodeType::Output;
+            if (n.type != GeoNodeType::Output) {
+                last = n.id;
+            }
+        }
+        for (int k = 0; k < kGeoNodeTypeCount; ++k) {
+            const GeoNodeType type = static_cast<GeoNodeType>(k);
+            ImGui::BeginDisabled(type == GeoNodeType::Output && hasOutput);
+            if (ImGui::MenuItem(tr(geoNodeLabel(type)))) {
+                GeoNode created = makeGeoNode(type, geoNewNodeId(graph));
+                if (geoInputCount(type) > 0) {
+                    created.inputs[0] = last;
+                }
+                graph.nodes.push_back(created);
+                changed = true;
+            }
+            ImGui::EndDisabled();
+        }
+        ImGui::EndPopup();
+    }
+    return changed;
+}
+
+bool graphObjectSection(CreatorState& cs, DocObject& o) {
+    bool changed = false;
+    SceneDoc& doc = cs.doc;
+    int index = docGraphIndex(doc, o.graph);
+    const std::string preview = index >= 0 ? o.graph : std::string(tr("(none)"));
+    if (ui::beginCombo(tr("Graph"), preview.c_str())) {
+        if (ImGui::Selectable(tr("(none)"), index < 0)) {
+            o.graph.clear();
+            changed = true;
+        }
+        for (int i = 0; i < static_cast<int>(doc.graphs.size()); ++i) {
+            ImGui::PushID(i);
+            if (ImGui::Selectable(doc.graphs[static_cast<size_t>(i)].name.c_str(), i == index)) {
+                o.graph = doc.graphs[static_cast<size_t>(i)].name;
+                changed = true;
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("Edit the graph below, every object that uses it follows."));
+    const bool full = doc.graphs.size() >= kGeoMaxGraphs;
+    ImGui::BeginDisabled(full);
+    if (ImGui::Button(tr("New graph"))) {
+        GeometryGraph fresh = makeDefaultGeometryGraph();
+        fresh.name = docNewGraphName(doc);
+        const int added = docAddGraph(doc, fresh);
+        if (added >= 0) {
+            o.graph = doc.graphs[static_cast<size_t>(added)].name;
+            changed = true;
+        }
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(index < 0);
+    if (ImGui::Button(tr("Duplicate graph"))) {
+        const int added = docDuplicateGraph(doc, index);
+        if (added >= 0) {
+            o.graph = doc.graphs[static_cast<size_t>(added)].name;
+            changed = true;
+        }
+    }
+    ImGui::EndDisabled();
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::BeginDisabled(index < 0);
+    if (ImGui::Button(tr("Delete graph"))) {
+        changed |= docRemoveGraph(doc, index);
+        index = -1;
+    }
+    ImGui::EndDisabled();
+    index = docGraphIndex(doc, o.graph);
+    if (index >= 0) {
+        std::string name = doc.graphs[static_cast<size_t>(index)].name;
+        if (inputString(tr("Graph name"), name, kGeoMaxNameBytes)) {
+            changed |= docRenameGraph(doc, index, name);
+        }
+        if (ui::collapsingHeader(tr("Geometry graph"), ImGuiTreeNodeFlags_DefaultOpen)) {
+            changed |= geometryGraphEditor(doc.graphs[static_cast<size_t>(index)]);
+        }
+    } else {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextDisabled("%s", tr("Pick a graph or make a new one."));
+        ImGui::PopTextWrapPos();
+    }
+    return changed;
+}
+
 bool objectInspector(CreatorState& cs, DocObject& o) {
     bool changed = false;
     const char* repeatKinds[] = {tr("Off"), tr("Ring"), tr("Line")};
@@ -417,6 +682,9 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
         changed |= assetCombo(tr("Model"), o.model, cs.models, true, cs.pack.get());
     } else {
         ImGui::TextDisabled("%s", tr(primitiveLabel(o.kind)));
+    }
+    if (o.kind == PrimitiveKind::Graph) {
+        changed |= graphObjectSection(cs, o);
     }
     changed |= ImGui::Checkbox(tr("Visible"), &o.visible);
     ImGui::SameLine();
@@ -448,6 +716,12 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
     }
     if (o.kind != PrimitiveKind::Model && ui::collapsingHeader(tr("Material"), ImGuiTreeNodeFlags_DefaultOpen)) {
         DocMaterial& m = o.material;
+        const int graphIndex = o.kind == PrimitiveKind::Graph ? docGraphIndex(cs.doc, o.graph) : -1;
+        if (graphIndex >= 0 && evaluateGeometryGraphCached(cs.doc.graphs[static_cast<size_t>(graphIndex)])->hasMaterial) {
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextDisabled("%s", tr("The Material node of the graph replaces these values."));
+            ImGui::PopTextWrapPos();
+        }
         changed |= colorEdit(tr("Color"), m.color);
         changed |= ui::sliderFloat(tr("Metallic"), &m.metallic, 0.0f, 1.0f, "%.2f");
         changed |= ui::sliderFloat(tr("Roughness"), &m.roughness, 0.04f, 1.0f, "%.2f");
@@ -908,6 +1182,21 @@ void App::drawCreator() {
                     cs.selectIndex = static_cast<int>(cs.doc.objects.size()) - 1;
                     markChanged(cs);
                 }
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem(tr("Geometry graph")) && cs.doc.objects.size() < kDocMaxObjects) {
+                snapshot();
+                if (cs.doc.graphs.empty()) {
+                    docAddGraph(cs.doc, makeDefaultGeometryGraph());
+                }
+                DocObject object = makeDefaultObject(PrimitiveKind::Graph);
+                object.id = docNewObjectId(cs.doc);
+                object.name = tr("Geometry graph");
+                object.graph = cs.doc.graphs.empty() ? std::string() : cs.doc.graphs[0].name;
+                cs.doc.objects.push_back(object);
+                cs.selectKind = CreatorSelect::Object;
+                cs.selectIndex = static_cast<int>(cs.doc.objects.size()) - 1;
+                markChanged(cs);
             }
             if (ImGui::BeginMenu(tr("Model from the library"))) {
                 bool any = false;

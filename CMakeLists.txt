@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.70.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.71.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -201,6 +201,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/pack_workflow.cpp
     src/scene3d/builtin_docs.cpp
     src/scene3d/doc_build.cpp
+    src/scene3d/geometry_graph.cpp
     src/scene3d/glb_writer.cpp
     src/scene3d/gltf.cpp
     src/scene3d/gltf_compression.cpp
@@ -547,6 +548,11 @@ if(NYREXVJ_BUILD_TESTS)
     target_include_directories(nvj_world_tests PRIVATE tests)
     target_compile_definitions(nvj_world_tests PRIVATE NYREXVJ_TEST_DATA="${CMAKE_SOURCE_DIR}/tests/data" NYREXVJ_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
     add_test(NAME nvj_world_tests COMMAND nvj_world_tests)
+    add_executable(nvj_geometry_tests tests/test_geometry.cpp)
+    target_link_libraries(nvj_geometry_tests PRIVATE nvj_core)
+    target_include_directories(nvj_geometry_tests PRIVATE tests)
+    target_compile_definitions(nvj_geometry_tests PRIVATE NYREXVJ_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    add_test(NAME nvj_geometry_tests COMMAND nvj_geometry_tests)
     add_executable(nvj_i18n_tests tests/test_i18n.cpp)
     target_link_libraries(nvj_i18n_tests PRIVATE nvj_core)
     target_include_directories(nvj_i18n_tests PRIVATE tests)

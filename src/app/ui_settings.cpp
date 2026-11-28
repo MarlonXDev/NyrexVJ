@@ -5,6 +5,7 @@
 #include "core/frame_pacer.hpp"
 #include "core/log.hpp"
 #include "platform/platform.hpp"
+#include "scene3d/geometry_graph.hpp"
 #include "update/update_logic.hpp"
 
 #include <GLFW/glfw3.h>
@@ -771,6 +772,11 @@ void App::drawPerformancePage() {
         saveSettings(settings_);
     }
     ImGui::SetItemTooltip("%s", tr("When off, every 3D layer draws its own scene with its own depth buffer, whatever world the layers are set to. Turn this off if shared worlds cost too much on your graphics card."));
+    if (ImGui::Checkbox(trId("Geometry graphs", "optSceneGeometryGraphs"), &settings_.sceneGeometryGraphs)) {
+        setGeometryGraphsEnabled(settings_.sceneGeometryGraphs);
+        saveSettings(settings_);
+    }
+    ImGui::SetItemTooltip("%s", tr("When off, objects that use a geometry graph are left out of 3D scenes that load from now on. Scenes without a geometry graph are not affected."));
 
     drawFeedbackSettings();
 

@@ -194,6 +194,7 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
     std::vector<Link> links;
     std::map<std::string, int> nodeOfObject;
     std::map<std::string, MergedModel> mergedModels;
+    std::map<uint64_t, int> graphMeshes;
     const auto addRoot = [&](const DocObject& object, int nodeIndex) {
         nodeOfObject[object.id] = nodeIndex;
         if (object.parent.empty()) {
@@ -288,6 +289,94 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
                 offsets = reused->second;
             }
             mergeModel(scene, model->scene, nodeIndex, nodeOffset, offsets.meshOffset, offsets.materialOffset, offsets.imageOffset, addGeometry);
+            addRoot(object, nodeIndex);
+            continue;
+        }
+        if (object.kind == PrimitiveKind::Graph) {
+            if (!limits.allowGraphs) {
+                result.warnings.push_back("Geometry graphs are off in the settings, object skipped: " + object.name);
+                continue;
+            }
+            const int graphIndex = docGraphIndex(doc, object.graph);
+            if (graphIndex < 0) {
+                result.warnings.push_back("The geometry graph does not exist, object skipped: " + object.name + " (" + object.graph + ")");
+                continue;
+            }
+            const GeometryGraph& graph = doc.graphs[static_cast<size_t>(graphIndex)];
+            const std::shared_ptr<const GeoResult> built = evaluateGeometryGraphCached(graph);
+            if (!built->ok) {
+                result.warnings.push_back("The geometry graph has errors, object skipped: " + object.name + " (" + graph.name + ")");
+                for (const std::string& problem : built->errors) {
+                    result.warnings.push_back(problem);
+                }
+                continue;
+            }
+            for (const std::string& note : built->notes) {
+                result.warnings.push_back(note);
+            }
+            const size_t copies = std::max<size_t>(built->instances.size(), 1);
+            const auto shared = built->hasMaterial ? graphMeshes.find(built->hash) : graphMeshes.end();
+            const size_t newVertices = shared == graphMeshes.end() ? built->vertices : 0;
+            if (vertices + newVertices > limits.maxVertices || scene.nodes.size() + copies + 1 > limits.maxNodes || scene.meshes.size() + (shared == graphMeshes.end() ? 1 : 0) > limits.maxMeshes) {
+                result.error = "the scene is too large for its geometry graphs";
+                return result;
+            }
+            vertices += newVertices;
+            int meshIndex = 0;
+            if (shared != graphMeshes.end()) {
+                meshIndex = shared->second;
+            } else {
+                SceneMesh mesh = built->mesh;
+                SceneMaterial material;
+                if (built->hasMaterial) {
+                    const GeoMaterial& gm = built->material;
+                    material.baseColor = {linear(gm.color[0]), linear(gm.color[1]), linear(gm.color[2]), 1.0f};
+                    material.metallic = gm.metallic;
+                    material.roughness = gm.roughness;
+                    material.emissive = {linear(gm.emissive[0]), linear(gm.emissive[1]), linear(gm.emissive[2])};
+                    material.emissiveStrength = gm.emissiveStrength;
+                    material.followPalette = gm.followPalette;
+                } else {
+                    material.baseColor = {linear(object.material.color[0]), linear(object.material.color[1]), linear(object.material.color[2]), 1.0f};
+                    material.metallic = object.material.metallic;
+                    material.roughness = object.material.roughness;
+                    material.emissive = {linear(object.material.emissive[0]), linear(object.material.emissive[1]), linear(object.material.emissive[2])};
+                    material.emissiveStrength = object.material.emissiveStrength;
+                    material.followPalette = object.material.followPalette;
+                }
+                material.doubleSided = object.material.doubleSided;
+                scene.materials.push_back(material);
+                mesh.material = static_cast<int>(scene.materials.size()) - 1;
+                meshIndex = static_cast<int>(scene.meshes.size());
+                scene.meshes.push_back(std::move(mesh));
+                if (built->hasMaterial) {
+                    graphMeshes[built->hash] = meshIndex;
+                }
+            }
+            for (const GeoBinding& binding : built->bindings) {
+                if (node.bindings.size() < kDocMaxBindings * 2) {
+                    node.bindings.push_back({binding.source, binding.target, binding.amount});
+                }
+            }
+            if (built->instances.empty()) {
+                node.meshes = {meshIndex};
+                scene.nodes.push_back(std::move(node));
+            } else {
+                for (size_t k = 0; k < built->instances.size(); ++k) {
+                    node.children.push_back(nodeIndex + 1 + static_cast<int>(k));
+                }
+                scene.nodes.push_back(std::move(node));
+                for (size_t k = 0; k < built->instances.size(); ++k) {
+                    const GeoInstance& item = built->instances[k];
+                    SceneNode child;
+                    child.name = object.name + " " + std::to_string(k + 1);
+                    child.translation = item.position;
+                    child.rotation = eulerToQuat(item.rotation);
+                    child.scale = {item.scale, item.scale, item.scale};
+                    child.meshes = {meshIndex};
+                    scene.nodes.push_back(std::move(child));
+                }
+            }
             addRoot(object, nodeIndex);
             continue;
         }

@@ -205,6 +205,41 @@ The old renderer had **one depth renderbuffer for all scene layers** and cleared
 
 **Demo.** `docs/examples/shared-3d-world/` has three clips and a preset. `World Demo Arm.nyxclip` is a skinned arm with a smaller copy of the same model as its child (one model used twice, with a parent). `World Demo Cube.nyxclip` is a spinning cube with a moon as its child. `Shared Scene Demo.nyxclip` puts the arm and the cube, two separately added models, into one scene where they overlap in space, with the moon as a child of the cube. `Shared 3D World.json` is a preset that plays the first two clips on two layers in World 1, the cube placed at 0.45 owner sizes in X and 0.6 in Z, turned 20 degrees and at 0.8 of the size, so the two clips overlap and hide each other by depth. Copy the clips to the `clips` folder and the preset to the `presets` folder of the user data folder (`%APPDATA%\NyrexVJ` on Windows, `~/.config/NyrexVJ` on Linux). `nvj_world_tests --write-demo <folder>` writes the same files.
 
+## Geometry graphs (0.71.0)
+
+[ADR 0065](adr/0065-procedural-geometry-graph-for-3d-scenes.md). Until 0.70.0 every object of a scene was one of eight fixed primitives or an imported model. 0.71.0 adds an optional **geometry graph**: a small node graph that builds a mesh from a primitive, changes it and repeats it. It is a graph of its own for 3D shapes. It does not use the 2D effect node editor, and it does not touch model import (glTF) or GPU particles.
+
+**Where it lives.** A scene document has up to 8 graphs (`graphs`). An object of the kind **Geometry graph** names one of them. The graph is evaluated **once** on the processor, in the loader thread of the scene, and the result is cached by the content of the graph, so a scene that is shown again, a second layer with the same clip or a graph used by two objects does not build it again. Nothing is rebuilt per frame.
+
+| Node | What it does |
+| --- | --- |
+| Primitive | one of the eight built-in shapes |
+| Subdivide | splits every triangle at its edges, 1 to 4 levels (a cube at level 4 has 1,734 vertices) |
+| Transform | move, turn and scale; normals are corrected for uneven scale; a mirror (negative scale) flips the triangles so the shape stays solid |
+| Noise | pushes vertices along their normals with 3D noise (1 to 4 octaves), in relation to the size of the mesh, then recomputes the normals |
+| Twist | turns the mesh around the vertical axis by an angle per unit of height |
+| Merge | joins two meshes into one |
+| Instance | repeats the mesh as a Ring, Line, Grid or Scatter (up to 1,024 instances); the seed decides the places and turns of Scatter and the jitter varies the size of each instance |
+| Material | colour, metallic, roughness, emissive and Follow palette for the result |
+| Audio | one music reaction (a source, a target and an amount); at most four in a graph |
+| Output | the end of the graph; there must be exactly one |
+
+**Limits.** 48 nodes, 200,000 vertices, 1,000,000 indices, 1,024 instances, 4 subdivision levels, 4 noise octaves, 8 graphs per document. A scene as a whole keeps its own limits: 10,000 nodes, and the flattening of a scene stops at 8,192 instances. The cache keeps 8 graphs and at most 600,000 vertices. A limit that is hit is an error of the graph (the node is named), never a crash.
+
+**Instances.** An Instance node does not make one huge mesh. The scene gets **one node per instance, all using the same mesh**, so the geometry is stored and uploaded once (114,480 bytes for 1, 10 or 1,000 instances of a sphere in the test) and the frustum culling of 0.70.0 applies to every instance. It is **not GL instancing**: each instance is still one draw call. The cost therefore grows with the number of instances times their triangles (see below).
+
+**Music.** The Audio node writes the same music reactions as the Audio rows of an object (ADR 0062) onto the object. The children, which are the instances, take them from their parent. Only the targets that work in the shader or on the whole object can be chosen: Scale, Emissive, Twist, Lift, Hue, Roughness, Texture scroll X and Y, Inflate and Ripple. Inflate and Ripple move vertices in the vertex shader, so a shape that swells with the bass does not make a new mesh. Music never runs the graph again.
+
+**Errors.** A loop (a node that reaches itself through its inputs), a missing input, an input that does not exist, no Output or a second Output, a limit that is hit, a Merge that is fed with repeated geometry and an Instance that is fed with repeated geometry make the graph fail. The object is **left out**, the warnings say which node, and the rest of the scene plays. In the editor an input that would make a loop is not offered.
+
+**Files.** A scene document is written as `"version": 5` only when it has graphs or an object of the kind Geometry graph; a document without them is version 1 to 4 and byte for byte the old file. A program older than 0.71.0 refuses version 5 with its message about a newer version; version 6 is refused by this program.
+
+**The switch.** Settings, Performance, **Geometry graphs** (on at the start, written to `settings.json` only when off). It is read when a scene is loaded. Off leaves every graph object out of newly loaded scenes and names it in the warnings; the rest of the scene plays as before. A document without a graph does not depend on it.
+
+**The editor.** In the Clip Creator, Add object has **Geometry graph**. The object has a Graph drop-down, New graph, Duplicate graph, Delete graph and a name field, and below them a list-based graph editor: every node is a row with its kind, its inputs (a drop-down that offers only nodes that would not make a loop) and its values, with Add node and Remove node, and a line that shows the vertices, the triangles, the instances and the time the graph took. Objects that use the same graph and have a Material node in it share one mesh. There is no canvas with draggable boxes yet.
+
+**Demo.** `docs/examples/geometry-graph/Rock Garden.nyxclip` has two graphs: a ring of 14 rocks (a sphere subdivided twice, roughened with noise and flattened, with a stone material) that grows with the kick, and a crystal (a twisted torus knot with a glowing material) that swells with the bass. The scene has 16 nodes and 2 meshes. Copy it to the `clips` folder of the user data folder. `nvj_geometry_tests --write-demo <folder>` writes the same file.
+
 ## Decisions
 
 ADR 0001 said to benchmark before committing. The decisions that followed are recorded in the ADRs and implemented in v0.9.0:
@@ -219,5 +254,6 @@ ADR 0001 said to benchmark before committing. The decisions that followed are re
 - Music on materials (v0.68.0): eight spectrum bands and the beat as new sources, six material targets, four rows, see [ADR 0062](adr/0062-audio-reactive-3d-materials-sources-and-targets-for-scene-bindings.md).
 - Virtual camera (v0.69.0): roll, look-at offset, shot lengths and a glide between cameras, seven camera targets, three layer controls, model cameras as a choice, see [ADR 0063](adr/0063-virtual-camera-glide-roll-offsets-and-gltf-cameras-for-3d-scenes.md).
 - Shared 3D scene (v0.70.0): a parent for objects, a model used twice is built once, shared worlds with one depth buffer across layers, culling, four layer controls, see [ADR 0064](adr/0064-shared-3d-scene-hierarchy-model-reuse-and-shared-worlds-across-layers.md).
+- Geometry graphs (v0.71.0): an optional node graph that builds, changes and repeats a mesh once on the processor, cached, music through the shader, at most 1,024 instances, scene version 5 only when used, see [ADR 0065](adr/0065-procedural-geometry-graph-for-3d-scenes.md).
 
 Still open: frame times on a real GPU. Run `NyrexVJ --bench-scene 4:300:"Torus Knot Mesh" --bench-out result.json` and the same with `Chrome Orbs Mesh` on the target PC and on a weaker one.

@@ -146,13 +146,13 @@ SceneMesh planeMesh() {
 }
 
 const char* primitiveKey(PrimitiveKind kind) {
-    static const char* const keys[kPrimitiveKindCount] = {"sphere", "cube", "cylinder", "cone", "plane", "torus", "torusknot", "model"};
+    static const char* const keys[kPrimitiveKindCount] = {"sphere", "cube", "cylinder", "cone", "plane", "torus", "torusknot", "model", "graph"};
     const int index = static_cast<int>(kind);
     return index >= 0 && index < kPrimitiveKindCount ? keys[index] : "sphere";
 }
 
 const char* primitiveLabel(PrimitiveKind kind) {
-    static const char* const labels[kPrimitiveKindCount] = {"Sphere", "Cube", "Cylinder", "Cone", "Plane", "Torus", "Torus Knot", "Model"};
+    static const char* const labels[kPrimitiveKindCount] = {"Sphere", "Cube", "Cylinder", "Cone", "Plane", "Torus", "Torus Knot", "Model", "Geometry graph"};
     const int index = static_cast<int>(kind);
     return index >= 0 && index < kPrimitiveKindCount ? labels[index] : "Sphere";
 }
@@ -194,6 +194,7 @@ SceneMesh primitiveMesh(PrimitiveKind kind) {
         normalizeExtent(mesh);
         break;
     case PrimitiveKind::Model:
+    case PrimitiveKind::Graph:
         break;
     }
     if (kind == PrimitiveKind::Sphere) {

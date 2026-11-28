@@ -1,5 +1,7 @@
 #include "scene3d/scene_doc.hpp"
 
+#include "scene3d/geometry_graph_json.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -779,6 +781,97 @@ bool docUsesHierarchy(const SceneDoc& doc) {
     return false;
 }
 
+bool docUsesGraphs(const SceneDoc& doc) {
+    if (!doc.graphs.empty()) {
+        return true;
+    }
+    for (const DocObject& o : doc.objects) {
+        if (o.kind == PrimitiveKind::Graph) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int docGraphIndex(const SceneDoc& doc, const std::string& name) {
+    for (size_t i = 0; i < doc.graphs.size(); ++i) {
+        if (doc.graphs[i].name == name) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+std::string docNewGraphName(const SceneDoc& doc) {
+    for (size_t n = 1; n < 1000; ++n) {
+        const std::string name = "Graph " + std::to_string(n);
+        if (docGraphIndex(doc, name) < 0) {
+            return name;
+        }
+    }
+    return "Graph";
+}
+
+int docAddGraph(SceneDoc& doc, GeometryGraph graph) {
+    if (doc.graphs.size() >= kGeoMaxGraphs) {
+        return -1;
+    }
+    sanitizeGeometryGraph(graph, nullptr);
+    if (docGraphIndex(doc, graph.name) >= 0) {
+        graph.name = docNewGraphName(doc);
+    }
+    doc.graphs.push_back(std::move(graph));
+    return static_cast<int>(doc.graphs.size()) - 1;
+}
+
+int docDuplicateGraph(SceneDoc& doc, int index) {
+    if (index < 0 || index >= static_cast<int>(doc.graphs.size())) {
+        return -1;
+    }
+    GeometryGraph copy = doc.graphs[static_cast<size_t>(index)];
+    copy.name = cleanName(copy.name + " copy", "Graph");
+    if (docGraphIndex(doc, copy.name) >= 0) {
+        copy.name = docNewGraphName(doc);
+    }
+    return docAddGraph(doc, std::move(copy));
+}
+
+bool docRemoveGraph(SceneDoc& doc, int index) {
+    if (index < 0 || index >= static_cast<int>(doc.graphs.size())) {
+        return false;
+    }
+    const std::string name = doc.graphs[static_cast<size_t>(index)].name;
+    doc.graphs.erase(doc.graphs.begin() + index);
+    for (DocObject& o : doc.objects) {
+        if (o.kind == PrimitiveKind::Graph && o.graph == name) {
+            o.graph.clear();
+        }
+    }
+    return true;
+}
+
+bool docRenameGraph(SceneDoc& doc, int index, const std::string& name) {
+    if (index < 0 || index >= static_cast<int>(doc.graphs.size())) {
+        return false;
+    }
+    const std::string clean = cleanName(name, "");
+    if (clean.empty()) {
+        return false;
+    }
+    const int other = docGraphIndex(doc, clean);
+    if (other >= 0 && other != index) {
+        return false;
+    }
+    const std::string before = doc.graphs[static_cast<size_t>(index)].name;
+    doc.graphs[static_cast<size_t>(index)].name = clean;
+    for (DocObject& o : doc.objects) {
+        if (o.kind == PrimitiveKind::Graph && o.graph == before) {
+            o.graph = clean;
+        }
+    }
+    return true;
+}
+
 void sanitizeDoc(SceneDoc& doc) {
     doc.name = cleanName(doc.name, "Untitled");
     if (doc.objects.size() > kDocMaxObjects) {
@@ -836,6 +929,11 @@ void sanitizeDoc(SceneDoc& doc) {
         } else {
             o.model.clear();
         }
+        if (o.kind == PrimitiveKind::Graph) {
+            o.graph = cleanName(o.graph, "");
+        } else {
+            o.graph.clear();
+        }
         for (DocAnimation& a : o.animations) {
             a.speed = clampFinite(a.speed, -8.0f, 8.0f, 0.25f);
             a.amount = clampFinite(a.amount, -50.0f, 50.0f, 1.0f);
@@ -846,6 +944,20 @@ void sanitizeDoc(SceneDoc& doc) {
     }
     assignObjectIds(doc);
     repairHierarchy(doc, nullptr);
+    if (doc.graphs.size() > kGeoMaxGraphs) {
+        doc.graphs.resize(kGeoMaxGraphs);
+    }
+    for (GeometryGraph& graph : doc.graphs) {
+        sanitizeGeometryGraph(graph, nullptr);
+    }
+    for (size_t i = 0; i < doc.graphs.size(); ++i) {
+        for (size_t j = 0; j < i; ++j) {
+            if (doc.graphs[i].name == doc.graphs[j].name) {
+                doc.graphs[i].name = cleanName(doc.graphs[i].name + " " + std::to_string(i + 1), "Graph");
+                j = static_cast<size_t>(-1);
+            }
+        }
+    }
     for (DocLight& l : doc.lights) {
         l.name = cleanName(l.name, "Light");
         sanitizeVec(l.position, 500.0f);
@@ -908,6 +1020,9 @@ DocCamera docCameraFromScene(const SceneCamera& camera, const std::string& name)
 int docRequiredVersion(const SceneDoc& source) {
     SceneDoc doc = source;
     sanitizeDoc(doc);
+    if (docUsesGraphs(doc)) {
+        return kDocGraphVersion;
+    }
     if (docUsesHierarchy(doc)) {
         return kDocHierarchyVersion;
     }
@@ -967,6 +1082,9 @@ std::string docToJson(const SceneDoc& source) {
         if (o.kind == PrimitiveKind::Model) {
             entry["model"] = o.model;
         }
+        if (o.kind == PrimitiveKind::Graph) {
+            entry["graph"] = o.graph;
+        }
         entry["visible"] = o.visible;
         entry["framing"] = o.framing;
         entry["position"] = vecOf(o.position);
@@ -1001,6 +1119,15 @@ std::string docToJson(const SceneDoc& source) {
         lights.push_back({{"name", l.name}, {"type", l.point ? "point" : "directional"}, {"position", vecOf(l.position)}, {"color", arrayOf3(l.color)}, {"intensity", l.intensity}, {"bindings", bindingsToJson(l.bindings)}});
     }
     root["lights"] = std::move(lights);
+    if (!doc.graphs.empty()) {
+        json graphs = json::array();
+        for (const GeometryGraph& graph : doc.graphs) {
+            json entry;
+            geometryGraphToJson(graph, entry);
+            graphs.push_back(std::move(entry));
+        }
+        root["graphs"] = std::move(graphs);
+    }
     return root.dump(2);
 }
 
@@ -1088,6 +1215,7 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
                 primitiveFromKey(key, o.kind);
             }
             readString(entry, "model", o.model);
+            readString(entry, "graph", o.graph);
             readBool(entry, "visible", o.visible);
             readBool(entry, "framing", o.framing);
             readVec(entry, "position", o.position);
@@ -1141,6 +1269,21 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
             readFloat(entry, "intensity", l.intensity);
             readBindings(entry, l.bindings, BindingOwner::Light, "light '" + l.name + "'", out.notes);
             out.lights.push_back(std::move(l));
+        }
+    }
+    const auto graphs = root.find("graphs");
+    if (graphs != root.end() && graphs->is_array()) {
+        for (const json& entry : *graphs) {
+            if (out.graphs.size() >= kGeoMaxGraphs) {
+                addNote(out.notes, "more than " + std::to_string(kGeoMaxGraphs) + " geometry graphs, the rest were left out");
+                break;
+            }
+            GeometryGraph graph;
+            if (geometryGraphFromJson(entry, graph, &out.notes)) {
+                out.graphs.push_back(std::move(graph));
+            } else {
+                addNote(out.notes, "a geometry graph could not be read and was left out");
+            }
         }
     }
     for (DocObject& o : out.objects) {

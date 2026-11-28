@@ -1,5 +1,6 @@
 #pragma once
 
+#include "scene3d/geometry_graph.hpp"
 #include "scene3d/primitives.hpp"
 #include "scene3d/scene_model.hpp"
 
@@ -9,11 +10,12 @@
 
 namespace nvj {
 
-constexpr int kDocVersion = 4;
+constexpr int kDocVersion = 5;
 constexpr int kDocBaseVersion = 1;
 constexpr int kDocBindingsVersion = 2;
 constexpr int kDocCameraVersion = 3;
 constexpr int kDocHierarchyVersion = 4;
+constexpr int kDocGraphVersion = 5;
 constexpr size_t kDocMaxObjects = 64;
 constexpr size_t kDocMaxLights = 4;
 constexpr size_t kDocMaxCameras = 8;
@@ -62,6 +64,7 @@ struct DocObject {
     std::string name = "Object";
     PrimitiveKind kind = PrimitiveKind::Sphere;
     std::string model;
+    std::string graph;
     Vec3 position;
     Vec3 rotation;
     Vec3 scale{1.0f, 1.0f, 1.0f};
@@ -115,6 +118,7 @@ struct SceneDoc {
     CameraGlide glideShape = CameraGlide::Smooth;
     DocSky sky;
     float exposure = 1.0f;
+    std::vector<GeometryGraph> graphs;
     std::vector<std::string> notes;
 };
 
@@ -133,6 +137,13 @@ void sanitizeDoc(SceneDoc& doc);
 int docRequiredVersion(const SceneDoc& doc);
 bool docUsesCameraMoves(const SceneDoc& doc);
 bool docUsesHierarchy(const SceneDoc& doc);
+bool docUsesGraphs(const SceneDoc& doc);
+int docGraphIndex(const SceneDoc& doc, const std::string& name);
+std::string docNewGraphName(const SceneDoc& doc);
+int docAddGraph(SceneDoc& doc, GeometryGraph graph);
+int docDuplicateGraph(SceneDoc& doc, int index);
+bool docRemoveGraph(SceneDoc& doc, int index);
+bool docRenameGraph(SceneDoc& doc, int index, const std::string& name);
 bool isSafeObjectId(const std::string& id);
 std::string docNewObjectId(const SceneDoc& doc);
 int docObjectById(const SceneDoc& doc, const std::string& id);

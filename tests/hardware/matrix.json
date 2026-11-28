@@ -3644,7 +3644,8 @@
         "src/app/ui_diagnostics.cpp",
         "src/app/shader_selftest.cpp",
         "src/app/color_selftest.cpp",
-        "tests/test_graph.cpp"
+        "tests/test_graph.cpp",
+        "src/app/gpu_diag_selftest.cpp"
       ],
       "automated": [
         {
@@ -3676,6 +3677,12 @@
           "kind": "script",
           "command": "python3 scripts/check_i18n.py",
           "note": "the five new texts of the Render graph section have a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-GRF-6",
+          "kind": "cli",
+          "command": "NyrexVJ --gpu-diag-selftest",
+          "note": "runs with the optimizer on and found that a released image takes more wall time to load than 1,200 empty frames take to draw; the wait now follows the clock as well as the frame count"
         }
       ],
       "manual": [

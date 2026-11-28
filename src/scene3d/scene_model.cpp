@@ -1,5 +1,7 @@
 #include "scene3d/scene_model.hpp"
 
+#include "core/show_timeline.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -665,9 +667,12 @@ bool validateScene(const Scene& scene, std::string& error) {
     const auto cameraValid = [](const SceneCamera& camera) {
         return std::isfinite(camera.fovDegrees) && std::isfinite(camera.distance) && std::isfinite(camera.pitchDegrees) && camera.fovDegrees >= 10.0f && camera.fovDegrees <= 120.0f && camera.distance > 0.0f;
     };
-    bool camerasValid = cameraValid(scene.camera) && std::isfinite(scene.cameraCutBeats);
+    const auto cameraPoseValid = [](const SceneCamera& camera) {
+        return std::isfinite(camera.move.x) && std::isfinite(camera.move.y) && std::isfinite(camera.move.z) && std::isfinite(camera.rollDegrees) && std::isfinite(camera.beats) && camera.beats >= 0.0f;
+    };
+    bool camerasValid = cameraValid(scene.camera) && cameraPoseValid(scene.camera) && std::isfinite(scene.cameraCutBeats) && std::isfinite(scene.cameraGlide);
     for (const SceneCamera& camera : scene.cameras) {
-        camerasValid = camerasValid && cameraValid(camera);
+        camerasValid = camerasValid && cameraValid(camera) && cameraPoseValid(camera);
     }
     if (!camerasValid) {
         error = "the camera has invalid values";
@@ -870,6 +875,202 @@ const SceneCamera& activeSceneCamera(const Scene& scene, double beat) {
         return scene.cameras[std::min(index, scene.cameras.size() - 1)];
     }
     return scene.camera;
+}
+
+namespace {
+
+float wrapAngle(float angle) {
+    constexpr float turn = 6.2831853f;
+    return angle - turn * std::round(angle / turn);
+}
+
+float finiteOr(float value, float fallback) {
+    return std::isfinite(value) ? value : fallback;
+}
+
+KeyShape glideShape(CameraGlide shape) {
+    switch (shape) {
+    case CameraGlide::Cut:
+        return KeyShape::Hold;
+    case CameraGlide::Linear:
+        return KeyShape::Linear;
+    case CameraGlide::Smooth:
+        break;
+    }
+    return KeyShape::Smooth;
+}
+
+float shotLength(const Scene& scene, const SceneCamera& camera) {
+    return camera.beats > 0.0f ? camera.beats : scene.cameraCutBeats;
+}
+
+}
+
+CameraShot cameraShotAt(const Scene& scene, double beat, bool glide) {
+    CameraShot shot;
+    const size_t count = scene.cameras.size();
+    const double cut = scene.cameraCutBeats;
+    if (!(cut > 0.0) || count < 2 || !std::isfinite(beat)) {
+        shot.from = &scene.camera;
+        shot.to = &scene.camera;
+        return shot;
+    }
+    const double at = std::max(beat, 0.0);
+    bool timed = false;
+    if (glide) {
+        for (const SceneCamera& camera : scene.cameras) {
+            timed = timed || camera.beats > 0.0f;
+        }
+    }
+    size_t index = 0;
+    double fraction = 0.0;
+    if (!timed) {
+        const double step = std::floor(at / cut);
+        index = std::min(static_cast<size_t>(std::fmod(step, static_cast<double>(count))), count - 1);
+        fraction = at / cut - step;
+    } else {
+        double total = 0.0;
+        for (const SceneCamera& camera : scene.cameras) {
+            total += static_cast<double>(shotLength(scene, camera));
+        }
+        double position = total > 0.0 ? std::fmod(at, total) : 0.0;
+        for (size_t i = 0; i < count; ++i) {
+            const double length = static_cast<double>(shotLength(scene, scene.cameras[i]));
+            if (position < length || i + 1 == count) {
+                index = i;
+                fraction = length > 0.0 ? std::clamp(position / length, 0.0, 1.0) : 0.0;
+                break;
+            }
+            position -= length;
+        }
+    }
+    shot.from = &scene.cameras[index];
+    shot.to = shot.from;
+    if (glide && scene.cameraGlide > 0.0f && scene.cameraGlideShape != CameraGlide::Cut) {
+        const double window = std::clamp(static_cast<double>(scene.cameraGlide), 0.0, 1.0);
+        const double start = 1.0 - window;
+        if (fraction > start) {
+            shot.to = &scene.cameras[(index + 1) % count];
+            shot.blend = static_cast<float>(easeAlong(glideShape(scene.cameraGlideShape), (fraction - start) / window));
+        }
+    }
+    return shot;
+}
+
+CameraPose cameraPoseOf(const SceneCamera& camera, float time, const SceneAudio& audio, bool moves) {
+    CameraPose pose;
+    if (!camera.authored) {
+        pose.fov = kSceneDefaultFov;
+        pose.distance = 1.0f - 0.04f * audio.kick;
+        pose.yaw = time * 0.4f;
+        pose.pitch = 0.32f + 0.12f * std::sin(time * 0.31f);
+        return pose;
+    }
+    pose.fov = std::clamp(camera.fovDegrees, 15.0f, 110.0f) * kSceneRadians;
+    pose.distance = camera.distance * std::clamp(1.0f - bindingSum(camera.bindings, BindTarget::Zoom, audio), 0.3f, 3.0f);
+    pose.yaw = camera.yawDegrees * kSceneRadians + time * camera.orbitSpeed;
+    pose.pitch = (camera.pitchDegrees + camera.pitchSway * std::sin(time * 0.31f)) * kSceneRadians;
+    if (!moves) {
+        return pose;
+    }
+    pose.roll = camera.rollDegrees * kSceneRadians;
+    pose.move = camera.move;
+    if (!camera.bindings.empty()) {
+        pose.yaw += bindingSum(camera.bindings, BindTarget::Orbit, audio) * kSceneOrbitPerAmount;
+        const float tilt = bindingSum(camera.bindings, BindTarget::Tilt, audio) * kSceneTiltPerAmount;
+        if (tilt != 0.0f) {
+            pose.pitch = std::clamp(pose.pitch + tilt, -kSceneMaxPitch, kSceneMaxPitch);
+        }
+        pose.roll += bindingSum(camera.bindings, BindTarget::Roll, audio) * kSceneTiltPerAmount;
+        const float fov = bindingSum(camera.bindings, BindTarget::Fov, audio) * kSceneFovPerAmount;
+        if (fov != 0.0f) {
+            pose.fov = std::clamp(pose.fov + fov, 15.0f * kSceneRadians, 110.0f * kSceneRadians);
+        }
+        pose.move.x += bindingSum(camera.bindings, BindTarget::MoveX, audio) * kSceneMovePerAmount;
+        pose.move.y += bindingSum(camera.bindings, BindTarget::MoveY, audio) * kSceneMovePerAmount;
+        pose.move.z += bindingSum(camera.bindings, BindTarget::MoveZ, audio) * kSceneMovePerAmount;
+    }
+    pose.move.x = std::clamp(finiteOr(pose.move.x, 0.0f), -kSceneMaxMove, kSceneMaxMove);
+    pose.move.y = std::clamp(finiteOr(pose.move.y, 0.0f), -kSceneMaxMove, kSceneMaxMove);
+    pose.move.z = std::clamp(finiteOr(pose.move.z, 0.0f), -kSceneMaxMove, kSceneMaxMove);
+    pose.roll = finiteOr(pose.roll, 0.0f);
+    return pose;
+}
+
+CameraPose blendCameraPose(const CameraPose& a, const CameraPose& b, float blend) {
+    const float u = std::clamp(finiteOr(blend, 0.0f), 0.0f, 1.0f);
+    CameraPose out;
+    out.yaw = a.yaw + wrapAngle(b.yaw - a.yaw) * u;
+    out.pitch = a.pitch + (b.pitch - a.pitch) * u;
+    out.roll = a.roll + wrapAngle(b.roll - a.roll) * u;
+    out.fov = a.fov + (b.fov - a.fov) * u;
+    out.distance = a.distance > 0.0f && b.distance > 0.0f ? a.distance * std::pow(b.distance / a.distance, u) : a.distance + (b.distance - a.distance) * u;
+    out.move = a.move + (b.move - a.move) * u;
+    return out;
+}
+
+CameraPose cameraPoseAt(const Scene& scene, double beat, float time, const SceneAudio& audio, bool moves) {
+    const CameraShot shot = cameraShotAt(scene, beat, moves);
+    CameraPose pose = cameraPoseOf(*shot.from, time, audio, moves);
+    if (shot.blend > 0.0f && shot.to != shot.from) {
+        pose = blendCameraPose(pose, cameraPoseOf(*shot.to, time, audio, moves), shot.blend);
+    }
+    return pose;
+}
+
+CameraView cameraView(const CameraPose& pose, Vec3 center, float radius, float zoom) {
+    CameraView view;
+    view.fov = pose.fov;
+    float distance = radius / std::sin(pose.fov * 0.5f) * 1.04f / zoom;
+    distance *= pose.distance;
+    const Vec3 offset{std::cos(pose.pitch) * std::sin(pose.yaw), std::sin(pose.pitch), std::cos(pose.pitch) * std::cos(pose.yaw)};
+    view.target = center + pose.move * radius;
+    view.eye = view.target + offset * distance;
+    view.distance = distance;
+    if (pose.roll != 0.0f) {
+        const Vec3 forward = normalize(view.target - view.eye);
+        const Vec3 right = normalize(cross(forward, Vec3{0.0f, 1.0f, 0.0f}));
+        const Vec3 level = cross(right, forward);
+        view.up = level * std::cos(pose.roll) + right * std::sin(pose.roll);
+    }
+    return view;
+}
+
+SceneCamera sceneCameraFromFile(const SceneFileCamera& file, Vec3 center, float radius) {
+    SceneCamera camera;
+    camera.authored = true;
+    camera.orbitSpeed = 0.0f;
+    camera.pitchSway = 0.0f;
+    const float size = std::max(radius, 1e-4f);
+    const float fov = std::clamp(finiteOr(file.yfov, kSceneDefaultFov), 15.0f * kSceneRadians, 110.0f * kSceneRadians);
+    camera.fovDegrees = fov / kSceneRadians;
+    const auto axis = [&](int column) {
+        return normalize(Vec3{file.world.m[static_cast<size_t>(column * 4)], file.world.m[static_cast<size_t>(column * 4 + 1)], file.world.m[static_cast<size_t>(column * 4 + 2)]});
+    };
+    const Vec3 forward = axis(2) * -1.0f;
+    const Vec3 upAxis = axis(1);
+    const Vec3 eye{file.world.m[12], file.world.m[13], file.world.m[14]};
+    float depth = dot(center - eye, forward);
+    if (!(depth >= 0.05f * size)) {
+        depth = std::max(length(center - eye), 0.5f * size);
+    }
+    const Vec3 target = eye + forward * depth;
+    const float fit = size / std::sin(fov * 0.5f) * 1.04f;
+    camera.distance = std::clamp(depth / fit, 0.2f, 6.0f);
+    const Vec3 back = normalize(eye - target);
+    camera.yawDegrees = std::atan2(back.x, back.z) / kSceneRadians;
+    camera.pitchDegrees = std::clamp(std::asin(std::clamp(back.y, -1.0f, 1.0f)) / kSceneRadians, -85.0f, 85.0f);
+    camera.move = (target - center) * (1.0f / size);
+    camera.move.x = std::clamp(camera.move.x, -kSceneMaxMove, kSceneMaxMove);
+    camera.move.y = std::clamp(camera.move.y, -kSceneMaxMove, kSceneMaxMove);
+    camera.move.z = std::clamp(camera.move.z, -kSceneMaxMove, kSceneMaxMove);
+    const Vec3 right = cross(forward, Vec3{0.0f, 1.0f, 0.0f});
+    if (length(right) > 1e-4f) {
+        const Vec3 side = normalize(right);
+        const Vec3 level = cross(side, forward);
+        camera.rollDegrees = std::atan2(dot(upAxis, side), dot(upAxis, level)) / kSceneRadians;
+    }
+    return camera;
 }
 
 }

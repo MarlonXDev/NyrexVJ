@@ -1413,6 +1413,7 @@ void Engine::renderSceneThumbnail(size_t index) {
     frame.time = 2.6f;
     frame.setAudio(sample, 2.3);
     frame.materialBindings = sceneMaterialBindings_;
+    frame.cameraMoves = sceneCameraMoves_;
     frame.colorA = defaults.colorA;
     frame.colorB = defaults.colorB;
     sceneRenderer_.draw(player, frame, clipThumbs_[index]);
@@ -3546,6 +3547,10 @@ void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, co
         frame.time = static_cast<float>(clock);
         frame.setAudio(audio_, beat_);
         frame.materialBindings = sceneMaterialBindings_;
+        frame.cameraMoves = sceneCameraMoves_;
+        frame.cameraOrbit = layer.cameraOrbit;
+        frame.cameraTilt = layer.cameraTilt;
+        frame.cameraFov = layer.cameraFov;
         frame.scale = scale;
         frame.colorA = layer.colorA;
         frame.colorB = layer.colorB;

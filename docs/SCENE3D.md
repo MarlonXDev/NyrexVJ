@@ -26,7 +26,7 @@ This is the 3D scene player that [ADR 0001](adr/0001-native-3d-runtime.md) asked
 | Container | `.glb` and `.gltf` (external `.bin`, `data:` URIs, relative image files), `EXT_meshopt_compression` (the decoder of meshoptimizer, on by default), `KHR_draco_mesh_compression` (Draco, off by default, see "Compressed files") | any other required extension |
 | Geometry | triangles, triangle strips, triangle fans, indexed or not, `POSITION`, `NORMAL` (computed when missing), `TEXCOORD_0`, `COLOR_0`, normalized and quantized integer attributes, sparse accessors, `JOINTS_0` and `WEIGHTS_0`, morph targets with `POSITION` and `NORMAL` deltas | points, lines, second UV set, tangents, morph target tangents and colours |
 | Materials | base colour factor and texture (PNG and JPEG), metallic-roughness factors and texture, normal texture, emissive factor, texture and `KHR_materials_emissive_strength`, alpha mode opaque, mask and blend, double sided | occlusion, texture transforms, other material extensions |
-| Hierarchy | node tree with translation, rotation, scale or matrix, mesh sharing between nodes, skins (joints with inverse bind matrices), default morph weights per mesh and per node | cameras and lights from the file are read and counted but **not applied** (see "Lights and cameras in a file") |
+| Hierarchy | node tree with translation, rotation, scale or matrix, mesh sharing between nodes, skins (joints with inverse bind matrices), default morph weights per mesh and per node | lights from the file are read and counted but **not applied**; perspective cameras can be added to a scene by hand since 0.69.0 (see "Lights and cameras in a file") |
 | Animation | translation, rotation and scale channels, weights channels (morph targets), skeletal animation through the joints of a skin, linear and step, cubic spline approximated as linear, looping | none that was asked for |
 
 Shading is a fixed, cheap model: two directional lights, a little ambient light and a rim light. Built-in scenes are drawn in the layer palette (Color A to Color B, or the rainbow switch); models keep their own colours. The camera orbits the scene automatically, is fitted to its bounding sphere and zooms with the layer Scale. Layer Speed drives both the orbit and the animation, Bass pulses the scale and Kick adds a small punch and a stronger rim.
@@ -52,7 +52,7 @@ The meshoptimizer decoder (v1.3, MIT) is a few small C++ files that are compiled
 
 ## Lights and cameras in a file
 
-Lights (`KHR_lights_punctual`) and cameras of a `.glb` are read and counted (up to 16 each; the library details show the numbers), a spot light is stored as a point light with a note, but **they are not applied automatically**. The scene keeps its own lights, sky and automatic or authored camera, so a model that brings its own lights looks like it did before, and a scene made in the Clip Creator is not changed by a model that is added to it. The data is in `Scene::fileLights` and `Scene::fileCameras` so a later step can offer them as a choice. A test renders a model with lights and cameras and compares it with the same model without them.
+Lights (`KHR_lights_punctual`) and cameras of a `.glb` are read and counted (up to 16 each; the library details show the numbers), a spot light is stored as a point light with a note, but **they are not applied automatically**. The scene keeps its own lights, sky and automatic or authored camera, so a model that brings its own lights looks like it did before, and a scene made in the Clip Creator is not changed by a model that is added to it. The data is in `Scene::fileLights` and `Scene::fileCameras`. Since 0.69.0 a perspective camera can be added to a scene as a choice, see "Virtual camera (0.69.0)"; the lights are still not offered. A test renders a model with lights and cameras and compares it with the same model without them.
 
 ## Loading safety
 
@@ -131,6 +131,40 @@ Lights keep Light intensity and the camera keeps Zoom. Inflate and Ripple run in
 
 A scene document is written as `"version": 1` while it uses only the old sources, the old targets and two rows, and as `"version": 2` otherwise; programs older than 0.68.0 refuse version 2 with their message about a newer program. A binding with an unknown source or target, a binding that is not an object and a binding after the fourth are dropped, the scene still plays, and each one adds a line to the warnings (at most 16) in the Clip Creator and the log. Settings, Performance, **Music moves 3D materials** (on at the start, written to `settings.json` only when off) leaves the six material targets out and draws the material as authored. The preview in the Clip Creator uses `virtualAudio(beat, time)` when Simulate audio is ticked, a fixed function, so the same moment always gives the same picture.
 
+## Virtual camera (0.69.0)
+
+[ADR 0063](adr/0063-virtual-camera-glide-roll-offsets-and-gltf-cameras-for-3d-scenes.md). The camera of a scene is a virtual one: it moves inside the scene. It does not follow a real camera (see the open question in the ADR).
+
+| Camera setting | What it does | Range |
+| --- | --- | --- |
+| Distance, Height angle, Start angle, Field of view, Orbit speed, Height sway | as before | as before |
+| Roll | turns the picture around the line of sight | plus and minus 180 degrees |
+| Move X, Y, Z | moves the point the camera looks at, in scene radii, and the camera with it | plus and minus 4 |
+| Shot length (beats) | how long this camera stays in the cut sequence, 0 uses Cut (beats) | 0 to 32 |
+| Glide into the next camera (scene) | the share of each shot used to move to the next camera; 0 is the old hard cut | 0 to 1 |
+| Glide curve (scene) | Smooth or Linear, the same curves as the keys of the Show timeline | |
+
+| Camera target of a binding | One unit of the source is | Limit of the sum |
+| --- | --- | --- |
+| Zoom | as before | as before |
+| Orbit | 90 degrees around the scene | none (it turns) |
+| Tilt | 45 degrees up | the height angle stays between plus and minus 85 degrees |
+| Roll | 45 degrees | none (it turns) |
+| Field of view | 30 degrees | 15 to 110 degrees |
+| Move X, Y, Z | half a scene radius | plus and minus 4 |
+
+Rows on the same target add up. The camera has the same four rows as every other node.
+
+**The glide.** With Cut (beats) above 0 and two or more cameras, a camera plays for its shot (its own length or Cut (beats)). Over the last part of the shot, as long as Glide says, the pose moves to the pose of the next camera, with the curve chosen. The blend is of poses: yaw and roll take the short way round, the distance changes by a ratio, field of view, height angle and look-at offset change in a straight line. Glide 0, or a scene with one camera, is a hard cut as before. A glide needs the beat, so it follows the beat clock, tap tempo and MIDI clock like the cuts do.
+
+**Controls for the automation.** `layer/N/camera-orbit` (plus and minus 180 degrees), `layer/N/camera-tilt` (plus and minus 60) and `layer/N/camera-fov` (plus and minus 30) are control targets like `layer/N/scale`. They add to the camera of the scene the layer plays and do nothing for other clips. MIDI mapping, OSC, the web interface, macros and Show timeline lanes can drive them, so a camera move over time is a lane with keys (Hold, Linear, Smooth), not a second keyframe system. The Clip window shows them under Camera for a scene clip. They are saved in presets only when not 0.
+
+**Model cameras.** The Clip Creator lists the perspective cameras of the models of the scene under Cameras in the models. Use camera adds one as a normal camera: its world matrix, with the transform of the object, becomes a height angle, a start angle, a distance, a roll and a look-at offset relative to the middle and size of the whole scene, with the field of view of the file. It is the rest pose at that moment (animation of the camera node is not applied), it follows the scene and not the model if you move the model later, the distance is held between 0.2 and 6 and the height angle between plus and minus 85 degrees. Orthographic cameras are listed and cannot be used. At most eight cameras per scene.
+
+**The switch.** Settings, Performance, **Camera moves in 3D scenes** (on at the start, written to `settings.json` only when off). Off draws the old camera: no glide (a hard cut), no roll, no look-at offset, no shot lengths, and the seven camera targets and the three layer controls are ignored; cuts and Zoom still work.
+
+**Files.** A scene is written as `"version": 3` when it uses a camera feature (roll, offset, shot length, glide, a camera target), as 2 when it uses the 0.68.0 bindings and as 1 otherwise; a program that does not know the version refuses it with its message about a newer program. The keys `move`, `roll` and `beats` of a camera and `glide` and `glideShape` of the scene are written only when they are not 0 (the curve only when the glide is above 0). The Free camera of the editor ignores all of it, as it ignored the camera of the scene before.
+
 ## Decisions
 
 ADR 0001 said to benchmark before committing. The decisions that followed are recorded in the ADRs and implemented in v0.9.0:
@@ -141,7 +175,8 @@ ADR 0001 said to benchmark before committing. The decisions that followed are re
 - The Clip Creator as a floating window with a live preview ([ADR 0006](adr/0006-clip-creator.md)).
 - Unloading: a scene that is in no cell and was not used for 120 seconds releases its GPU memory and loads again on demand; the models folder is rescanned without a restart.
 - glTF breadth (v0.9.0): materials and textures as listed above.
-- 3D Engine 2.0 (v0.32.0): skinning, morph targets, blended transparency, Meshopt and Draco import and the limits above, see [ADR 0025](adr/0025-3d-engine-2.md). glTF lights and cameras are read but not applied.
+- 3D Engine 2.0 (v0.32.0): skinning, morph targets, blended transparency, Meshopt and Draco import and the limits above, see [ADR 0025](adr/0025-3d-engine-2.md). glTF lights and cameras are read but not applied (cameras can be chosen by hand since v0.69.0).
 - Music on materials (v0.68.0): eight spectrum bands and the beat as new sources, six material targets, four rows, see [ADR 0062](adr/0062-audio-reactive-3d-materials-sources-and-targets-for-scene-bindings.md).
+- Virtual camera (v0.69.0): roll, look-at offset, shot lengths and a glide between cameras, seven camera targets, three layer controls, model cameras as a choice, see [ADR 0063](adr/0063-virtual-camera-glide-roll-offsets-and-gltf-cameras-for-3d-scenes.md).
 
 Still open: frame times on a real GPU. Run `NyrexVJ --bench-scene 4:300:"Torus Knot Mesh" --bench-out result.json` and the same with `Chrome Orbs Mesh` on the target PC and on a weaker one.

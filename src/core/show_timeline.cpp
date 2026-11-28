@@ -90,6 +90,17 @@ size_t keySegment(const std::vector<Keyframe>& keys, double seconds) {
     return keyIndexAfter(keys, seconds);
 }
 
+double easeAlong(KeyShape shape, double u) {
+    u = std::clamp(u, 0.0, 1.0);
+    if (shape == KeyShape::Hold) {
+        return u >= 1.0 ? 1.0 : 0.0;
+    }
+    if (shape == KeyShape::Smooth) {
+        return u * u * (3.0 - 2.0 * u);
+    }
+    return u;
+}
+
 float evaluateKeys(const std::vector<Keyframe>& keys, double seconds, bool stepsOnly) {
     if (keys.empty()) {
         return 0.0f;
@@ -107,11 +118,7 @@ float evaluateKeys(const std::vector<Keyframe>& keys, double seconds, bool steps
         return a.value;
     }
     const double span = b.seconds - a.seconds;
-    double u = span > 0.0 ? (seconds - a.seconds) / span : 1.0;
-    u = std::clamp(u, 0.0, 1.0);
-    if (a.shape == KeyShape::Smooth) {
-        u = u * u * (3.0 - 2.0 * u);
-    }
+    const double u = easeAlong(a.shape, span > 0.0 ? (seconds - a.seconds) / span : 1.0);
     return a.value + (b.value - a.value) * static_cast<float>(u);
 }
 

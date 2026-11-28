@@ -216,7 +216,7 @@ void App::drawSceneDetails(const ScenePlayer& player) {
             ImGui::TextDisabled("%s: %zu", tr("Lights in the file (not used)"), player.scene().fileLights.size());
         }
         if (!player.scene().fileCameras.empty()) {
-            ImGui::TextDisabled("%s: %zu", tr("Cameras in the file (not used)"), player.scene().fileCameras.size());
+            ImGui::TextDisabled("%s: %zu", tr("Cameras in the file (usable in the Clip Creator)"), player.scene().fileCameras.size());
         }
         ImGui::Text("%s: %.2f MB", tr("GPU memory"), static_cast<double>(player.stats().gpuBytes) / (1024.0 * 1024.0));
         ImGui::Text("%s: %.0f ms", tr("Load time"), player.loadMilliseconds());

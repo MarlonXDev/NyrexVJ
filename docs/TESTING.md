@@ -68,6 +68,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | GPU feedback lab: a memory budget for feedback buffers, buffer reuse, freeze and reset, the frame time as uDelta, and the new effects Time Echo, Motion Smear, Feedback Transform and Accumulate | implemented | implemented | 6 | M-FBK-1 open |
 | GPU effect graph optimizer: the last layer is drawn straight into the output, the colour look needs no extra picture, and a transition draws its two decks without a copy, with the switch Skip passes that only copy | implemented | implemented | 6 | M-GRF-1 open |
 | Music on 3D materials: the beat and eight spectrum bands as sources, Colour shift, Roughness, Texture shift X and Y, Inflate and Ripple as targets, four rows, scene version 2 only when needed, notes for unknown keys, and the switch Music moves 3D materials | implemented | implemented | 4 | M-MBD-1 open |
+| Virtual camera for 3D scenes: roll, look-at offset and shot length per camera, a glide between cameras on the Show timeline curves, seven camera targets for the audio bindings, three layer controls (camera-orbit, camera-tilt, camera-fov), model cameras as a choice in the Clip Creator, scene version 3 only when needed, and the switch Camera moves in 3D scenes | implemented | implemented | 4 | M-VCM-1 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

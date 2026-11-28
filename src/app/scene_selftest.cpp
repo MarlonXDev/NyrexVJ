@@ -17,6 +17,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -78,16 +79,18 @@ std::string number(double value) {
     return text;
 }
 
-Shot captureFrame(Engine& engine, ScenePlayer& player, SceneFrame frame, RenderTarget& target) {
+Shot captureFrame(Engine& engine, ScenePlayer& player, SceneFrame frame, RenderTarget& target, bool sceneCamera = false) {
     Shot shot;
     if (!player.wait()) {
         logLine("Scene self test: '" + player.label() + "' failed to load: " + player.error());
         return shot;
     }
-    frame.editor = true;
-    frame.editorCamera = true;
-    frame.editYaw = 0.0f;
-    frame.editPitch = 0.0f;
+    if (!sceneCamera) {
+        frame.editor = true;
+        frame.editorCamera = true;
+        frame.editYaw = 0.0f;
+        frame.editPitch = 0.0f;
+    }
     while (glGetError() != GL_NO_ERROR) {
     }
     engine.sceneRenderer().draw(player, frame, target);
@@ -213,6 +216,84 @@ SceneFrame musicFrame(float kick, double beat, bool materials) {
 
 std::unique_ptr<ScenePlayer> fileScene(const fs::path& path) {
     return std::make_unique<ScenePlayer>(path.filename().string(), [path](const GltfLimits& limits) { return loadGltfFile(path, limits); });
+}
+
+struct Centre {
+    double x = 0.0;
+    double y = 0.0;
+};
+
+Centre centroid(const Shot& shot) {
+    Centre sum;
+    int count = 0;
+    for (int y = 0; y < kSize; ++y) {
+        for (int x = 0; x < kSize; ++x) {
+            const uint8_t* p = shot.at(x, y);
+            if (p[0] > 8 || p[1] > 8 || p[2] > 8) {
+                sum.x += x;
+                sum.y += y;
+                ++count;
+            }
+        }
+    }
+    if (count > 0) {
+        sum.x /= count;
+        sum.y /= count;
+    }
+    return sum;
+}
+
+SceneDoc lopsidedDoc() {
+    SceneDoc doc = makeDefaultDoc();
+    doc.objects.clear();
+    DocObject bar = makeDefaultObject(PrimitiveKind::Cube);
+    bar.scale = {3.0f, 0.5f, 0.5f};
+    bar.material.color = {0.15f, 0.8f, 0.25f};
+    bar.material.metallic = 0.0f;
+    bar.material.roughness = 0.5f;
+    bar.material.emissiveStrength = 0.0f;
+    bar.animations[0].enabled = false;
+    DocObject ball = makeDefaultObject(PrimitiveKind::Sphere);
+    ball.position = {1.8f, 1.1f, 0.0f};
+    ball.scale = {0.7f, 0.7f, 0.7f};
+    ball.material.color = {0.9f, 0.15f, 0.1f};
+    ball.material.metallic = 0.0f;
+    ball.material.roughness = 0.4f;
+    ball.material.emissiveStrength = 0.0f;
+    doc.objects.push_back(bar);
+    doc.objects.push_back(ball);
+    doc.camera.yawDegrees = 0.0f;
+    doc.camera.pitchDegrees = 0.0f;
+    doc.camera.orbitSpeed = 0.0f;
+    doc.camera.pitchSway = 0.0f;
+    doc.camera.distance = 1.0f;
+    return doc;
+}
+
+SceneFrame stillFrame(double beat, bool moves = true) {
+    SceneFrame frame;
+    frame.time = 1.1f;
+    frame.beat = beat;
+    frame.cameraMoves = moves;
+    return frame;
+}
+
+SceneFrame beatFrame(double beat) {
+    SceneFrame frame;
+    frame.time = 1.1f;
+    frame.setAudio(AudioFeatures{}, beat);
+    return frame;
+}
+
+SceneFrame loudFrame(double beat, bool moves = true) {
+    AudioFeatures features;
+    features.kick = 1.0f;
+    features.bass = 1.0f;
+    SceneFrame frame;
+    frame.time = 1.1f;
+    frame.setAudio(features, beat);
+    frame.cameraMoves = moves;
+    return frame;
 }
 
 double meanDifference(const Shot& a, const Shot& b) {
@@ -544,6 +625,273 @@ int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const st
         check.expect("material bindings cost stays measured and small", frameMs[2] < frameMs[0] * 1.5 + 4.0, "ms " + number(frameMs[0]) + " / " + number(frameMs[1]) + " / " + number(frameMs[2]));
     }
     {
+        const SceneDoc base = lopsidedDoc();
+        auto basePlayer = docScene(base, "camera base");
+        const Shot still = captureFrame(engine, *basePlayer, stillFrame(0.0), target, true);
+        check.expect("camera test scene draws", still.ok && still.lit > 1500 && still.width() > still.height() * 1.5, "lit " + std::to_string(still.lit) + ", " + std::to_string(still.width()) + "x" + std::to_string(still.height()));
+        const Centre stillCentre = centroid(still);
+
+        bool identical = true;
+        for (const double beat : {0.0, 1.3, 4.7, 9.9}) {
+            const Shot on = captureFrame(engine, *basePlayer, stillFrame(beat, true), target, true);
+            const Shot off = captureFrame(engine, *basePlayer, stillFrame(beat, false), target, true);
+            identical = identical && on.ok && off.ok && pixelHash(on.pixels) == pixelHash(off.pixels);
+        }
+        check.expect("without camera features the switch changes nothing", identical);
+
+        const auto variant = [&](const char* name, const std::function<void(SceneDoc&)>& edit) {
+            SceneDoc doc = base;
+            edit(doc);
+            return docScene(doc, name);
+        };
+
+        auto moveRight = variant("camera move x", [](SceneDoc& doc) { doc.camera.move.x = 1.0f; });
+        const Shot shifted = captureFrame(engine, *moveRight, stillFrame(0.0), target, true);
+        const Centre shiftedCentre = centroid(shifted);
+        check.expect("look-at offset moves the view sideways", shifted.ok && stillCentre.x - shiftedCentre.x > 12.0, "centre x " + number(stillCentre.x) + " -> " + number(shiftedCentre.x));
+        const Shot shiftedOff = captureFrame(engine, *moveRight, stillFrame(0.0, false), target, true);
+        check.expect("switch off: look-at offset is ignored", meanDifference(still, shiftedOff) < 0.001);
+
+        auto moveUp = variant("camera move y", [](SceneDoc& doc) { doc.camera.move.y = 1.0f; });
+        auto moveDown = variant("camera move y down", [](SceneDoc& doc) { doc.camera.move.y = -1.0f; });
+        const Centre upCentre = centroid(captureFrame(engine, *moveUp, stillFrame(0.0), target, true));
+        const Centre downCentre = centroid(captureFrame(engine, *moveDown, stillFrame(0.0), target, true));
+        check.expect("look-at offset up and down move the view in opposite ways", (upCentre.y - stillCentre.y) * (downCentre.y - stillCentre.y) < 0.0 && std::abs(upCentre.y - downCentre.y) > 20.0, "centre y " + number(upCentre.y) + " / " + number(stillCentre.y) + " / " + number(downCentre.y));
+
+        auto moveDepth = variant("camera move z", [](SceneDoc& doc) { doc.camera.move.z = 1.5f; });
+        check.expect("look-at offset in depth changes the picture", meanDifference(still, captureFrame(engine, *moveDepth, stillFrame(0.0), target, true)) > 0.5);
+
+        auto rolled = variant("camera roll", [](SceneDoc& doc) { doc.camera.rollDegrees = 90.0f; });
+        const Shot turned = captureFrame(engine, *rolled, stillFrame(0.0), target, true);
+        check.expect("roll turns the picture sideways", turned.ok && turned.height() > turned.width() * 1.5 && turned.lit > still.lit * 0.9 && turned.lit < still.lit * 1.1, "size " + std::to_string(turned.width()) + "x" + std::to_string(turned.height()) + ", lit " + std::to_string(still.lit) + " -> " + std::to_string(turned.lit));
+        check.expect("switch off: roll is ignored", meanDifference(still, captureFrame(engine, *rolled, stillFrame(0.0, false), target, true)) < 0.001);
+        const Shot editorBase = captureFrame(engine, *basePlayer, stillFrame(0.0), target);
+        check.expect("the free preview camera ignores roll and look-at offset of the scene camera", editorBase.ok && meanDifference(editorBase, captureFrame(engine, *rolled, stillFrame(0.0), target)) < 0.001 && meanDifference(editorBase, captureFrame(engine, *moveRight, stillFrame(0.0), target)) < 0.001);
+        auto rolledHalf = variant("camera roll half", [](SceneDoc& doc) { doc.camera.rollDegrees = 180.0f; });
+        const Centre flipped = centroid(captureFrame(engine, *rolledHalf, stillFrame(0.0), target, true));
+        check.expect("a half turn of roll mirrors the picture through the centre", std::abs((flipped.x - 127.5) + (stillCentre.x - 127.5)) < 2.0 && std::abs((flipped.y - 127.5) + (stillCentre.y - 127.5)) < 2.0, "centre " + number(stillCentre.x) + "," + number(stillCentre.y) + " -> " + number(flipped.x) + "," + number(flipped.y));
+
+        const auto bound = [&](BindSource source, BindTarget goal, float amount, const char* name) {
+            return variant(name, [&](SceneDoc& doc) { doc.camera.bindings[0] = {true, source, goal, amount}; });
+        };
+        auto turnedByMusic = bound(BindSource::Bass, BindTarget::Orbit, 1.0f, "camera orbit binding");
+        auto sideCamera = variant("camera side", [](SceneDoc& doc) { doc.camera.yawDegrees = 90.0f; });
+        const Shot side = captureFrame(engine, *sideCamera, loudFrame(0.0), target, true);
+        const Shot orbited = captureFrame(engine, *turnedByMusic, loudFrame(0.0), target, true);
+        check.expect("orbit binding turns the camera like a camera placed there", orbited.ok && meanDifference(side, orbited) < 0.05 && meanDifference(still, orbited) > 1.5, "difference " + number(meanDifference(side, orbited)));
+        check.expect("orbit binding is quiet without music", meanDifference(still, captureFrame(engine, *turnedByMusic, stillFrame(0.0), target, true)) < 0.001);
+        check.expect("switch off: orbit binding is ignored", meanDifference(captureFrame(engine, *basePlayer, loudFrame(0.0, false), target, true), captureFrame(engine, *turnedByMusic, loudFrame(0.0, false), target, true)) < 0.001);
+
+        auto tiltedByMusic = bound(BindSource::Kick, BindTarget::Tilt, 1.0f, "camera tilt binding");
+        auto highCamera = variant("camera high", [](SceneDoc& doc) { doc.camera.pitchDegrees = 45.0f; });
+        const double tiltDifference = meanDifference(captureFrame(engine, *highCamera, loudFrame(0.0), target, true), captureFrame(engine, *tiltedByMusic, loudFrame(0.0), target, true));
+        check.expect("tilt binding raises the camera like a camera placed there", tiltDifference < 0.05, "difference " + number(tiltDifference));
+
+        auto widenedByMusic = bound(BindSource::Bass, BindTarget::Fov, 1.0f, "camera fov binding");
+        auto wideCamera = variant("camera wide", [](SceneDoc& doc) { doc.camera.fovDegrees = 76.0f; });
+        const double fovDifference = meanDifference(captureFrame(engine, *wideCamera, loudFrame(0.0), target, true), captureFrame(engine, *widenedByMusic, loudFrame(0.0), target, true));
+        check.expect("field of view binding widens the lens like a camera set there", fovDifference < 0.05 && fovDifference + 0.0 < meanDifference(still, captureFrame(engine, *widenedByMusic, loudFrame(0.0), target, true)), "difference " + number(fovDifference));
+
+        auto rollByMusic = bound(BindSource::Beat, BindTarget::Roll, 2.0f, "camera roll binding");
+        auto moveByMusic = bound(BindSource::Bass, BindTarget::MoveX, 2.0f, "camera move binding");
+        check.expect("roll binding follows the beat", meanDifference(captureFrame(engine, *rollByMusic, beatFrame(0.0), target, true), captureFrame(engine, *rollByMusic, beatFrame(0.5), target, true)) > 1.0);
+        const Centre movedByMusic = centroid(captureFrame(engine, *moveByMusic, loudFrame(0.0), target, true));
+        check.expect("move binding shifts the view", stillCentre.x - movedByMusic.x > 12.0, "centre x " + number(stillCentre.x) + " -> " + number(movedByMusic.x));
+
+        SceneFrame layerOrbit = stillFrame(0.0);
+        layerOrbit.cameraOrbit = 90.0f;
+        const Shot layerSide = captureFrame(engine, *basePlayer, layerOrbit, target, true);
+        const Shot sideStill = captureFrame(engine, *sideCamera, stillFrame(0.0), target, true);
+        check.expect("layer orbit control turns the camera like a camera placed there", layerSide.ok && meanDifference(sideStill, layerSide) < 0.001, "difference " + number(meanDifference(sideStill, layerSide)));
+        layerOrbit.cameraMoves = false;
+        check.expect("switch off: layer orbit control is ignored", meanDifference(still, captureFrame(engine, *basePlayer, layerOrbit, target, true)) < 0.001);
+        SceneFrame layerTilt = stillFrame(0.0);
+        layerTilt.cameraTilt = 45.0f;
+        check.expect("layer tilt control raises the camera like a camera placed there", meanDifference(captureFrame(engine, *highCamera, stillFrame(0.0), target, true), captureFrame(engine, *basePlayer, layerTilt, target, true)) < 0.001);
+        SceneFrame layerFov = stillFrame(0.0);
+        layerFov.cameraFov = 30.0f;
+        check.expect("layer field of view control widens the lens like a camera set there", meanDifference(captureFrame(engine, *wideCamera, stillFrame(0.0), target, true), captureFrame(engine, *basePlayer, layerFov, target, true)) < 0.05);
+
+        const auto twoCameras = [&](float glide, CameraGlide shape, float firstBeats) {
+            SceneDoc doc = base;
+            doc.cutBeats = 4.0f;
+            doc.glide = glide;
+            doc.glideShape = shape;
+            doc.camera.beats = firstBeats;
+            DocCamera second = doc.camera;
+            second.name = "Camera 2";
+            second.yawDegrees = 90.0f;
+            second.beats = 0.0f;
+            docAddCamera(doc, second);
+            docCameraAt(doc, 0).beats = firstBeats;
+            return docScene(doc, "camera glide");
+        };
+        auto cuts = twoCameras(0.0f, CameraGlide::Smooth, 0.0f);
+        auto gliding = twoCameras(1.0f, CameraGlide::Linear, 0.0f);
+        const Shot first = captureFrame(engine, *cuts, stillFrame(1.0), target, true);
+        const Shot second = captureFrame(engine, *cuts, stillFrame(5.0), target, true);
+        check.expect("hard cut shows the first camera, then the second", meanDifference(still, first) < 0.001 && meanDifference(sideStill, second) < 0.001 && meanDifference(first, second) > 1.5);
+        const double jumpCut = meanDifference(captureFrame(engine, *cuts, stillFrame(3.999), target, true), captureFrame(engine, *cuts, stillFrame(4.001), target, true));
+        const double jumpGlide = meanDifference(captureFrame(engine, *gliding, stillFrame(3.999), target, true), captureFrame(engine, *gliding, stillFrame(4.001), target, true));
+        check.expect("gliding removes the jump at the cut", jumpCut > 1.5 && jumpGlide < 0.3, "difference at the cut " + number(jumpCut) + " -> " + number(jumpGlide));
+        auto halfWay = variant("camera halfway", [](SceneDoc& doc) { doc.camera.yawDegrees = 45.0f; });
+        const double halfDifference = meanDifference(captureFrame(engine, *halfWay, stillFrame(0.0), target, true), captureFrame(engine, *gliding, stillFrame(2.0), target, true));
+        check.expect("a linear glide is halfway between the cameras in the middle of the shot", halfDifference < 0.3, "difference " + number(halfDifference));
+        const double offGlide = meanDifference(first, captureFrame(engine, *gliding, stillFrame(2.0, false), target, true));
+        check.expect("switch off: no glide, the old hard cut stays", offGlide < 0.001 && meanDifference(second, captureFrame(engine, *gliding, stillFrame(5.0, false), target, true)) < 0.3, "difference " + number(offGlide));
+        auto timed = twoCameras(0.0f, CameraGlide::Smooth, 2.0f);
+        check.expect("shot length keeps a camera for its own beats", meanDifference(still, captureFrame(engine, *timed, stillFrame(1.9), target, true)) < 0.001 && meanDifference(sideStill, captureFrame(engine, *timed, stillFrame(2.1), target, true)) < 0.001);
+        check.expect("switch off: shot lengths are ignored", meanDifference(still, captureFrame(engine, *timed, stillFrame(2.1, false), target, true)) < 0.001);
+
+        bool repeatable = true;
+        bool moving = false;
+        auto busy = variant("camera busy", [](SceneDoc& doc) {
+            doc.cutBeats = 4.0f;
+            doc.glide = 0.5f;
+            doc.camera.move = {0.4f, 0.2f, 0.0f};
+            doc.camera.rollDegrees = 8.0f;
+            doc.camera.orbitSpeed = 0.2f;
+            doc.camera.bindings[0] = {true, BindSource::Bass, BindTarget::Orbit, 0.1f};
+            doc.camera.bindings[1] = {true, BindSource::Band3, BindTarget::MoveY, 0.3f};
+            DocCamera other = doc.camera;
+            other.yawDegrees = 120.0f;
+            other.rollDegrees = -20.0f;
+            docAddCamera(doc, other);
+        });
+        auto busyTwin = variant("camera busy twin", [](SceneDoc& doc) {
+            doc.cutBeats = 4.0f;
+            doc.glide = 0.5f;
+            doc.camera.move = {0.4f, 0.2f, 0.0f};
+            doc.camera.rollDegrees = 8.0f;
+            doc.camera.orbitSpeed = 0.2f;
+            doc.camera.bindings[0] = {true, BindSource::Bass, BindTarget::Orbit, 0.1f};
+            doc.camera.bindings[1] = {true, BindSource::Band3, BindTarget::MoveY, 0.3f};
+            DocCamera other = doc.camera;
+            other.yawDegrees = 120.0f;
+            other.rollDegrees = -20.0f;
+            docAddCamera(doc, other);
+        });
+        std::string firstHash;
+        for (int step = 0; step < 16; ++step) {
+            const double beat = 0.55 * step;
+            const double time = 0.31 * step;
+            SceneFrame frame;
+            frame.time = static_cast<float>(time);
+            frame.setAudio(virtualAudio(beat, time), beat);
+            const Shot one = captureFrame(engine, *busy, frame, target, true);
+            const Shot two = captureFrame(engine, *busyTwin, frame, target, true);
+            repeatable = repeatable && one.ok && two.ok && pixelHash(one.pixels) == pixelHash(two.pixels);
+            if (step == 0) {
+                firstHash = pixelHash(one.pixels);
+            } else {
+                moving = moving || pixelHash(one.pixels) != firstHash;
+            }
+            report["camera"]["previewHashes"][std::to_string(step)] = pixelHash(one.pixels);
+        }
+        check.expect("the same music and beats give the same camera on two players", repeatable);
+        check.expect("the camera moves from moment to moment", moving);
+
+        const fs::path cameraModel = models / "lights_cameras.glb";
+        if (fs::exists(cameraModel)) {
+            SceneDoc doc = makeDefaultDoc();
+            doc.objects.clear();
+            DocObject triangle = makeDefaultObject(PrimitiveKind::Model);
+            triangle.model = "lights_cameras.glb";
+            triangle.material.emissiveStrength = 0.0f;
+            doc.objects.push_back(triangle);
+            DocAssets assets;
+            assets.loadModel = [models](const std::string& name, const GltfLimits& limits) -> std::shared_ptr<const GltfResult> {
+                return std::make_shared<GltfResult>(loadGltfFile(models / name, limits));
+            };
+            assets.loadImage = [](const std::string&, std::string& error) -> std::shared_ptr<const SceneImage> {
+                error = "not here";
+                return nullptr;
+            };
+            ScenePlayer plain("camera file", [doc, assets](const GltfLimits& limits) { return buildSceneFromDoc(doc, assets, limits); });
+            plain.wait();
+            const std::vector<SceneFileCamera>& found = plain.scene().fileCameras;
+            check.expect("cameras of a model file are found with their names", found.size() == 2 && found[0].name.find("main") != std::string::npos && !found[0].orthographic && found[1].orthographic, "found " + std::to_string(found.size()));
+            if (found.size() == 2) {
+                SceneDoc withFile = doc;
+                withFile.camera = docCameraFromScene(sceneCameraFromFile(found[0], plain.fitCenter(), plain.fitRadius()), "main");
+                withFile.camera.orbitSpeed = 0.0f;
+                ScenePlayer used("camera file used", [withFile, assets](const GltfLimits& limits) { return buildSceneFromDoc(withFile, assets, limits); });
+                const Shot view = captureFrame(engine, used, stillFrame(0.0), target, true);
+                const bool placed = view.ok && view.lit > 300 && std::abs(view.minX - 128) <= 8 && view.width() >= 68 && view.width() <= 98 && view.height() >= 68 && view.height() <= 98;
+                check.expect("an imported model camera shows the model as the file's camera would", placed, "x " + std::to_string(view.minX) + ".." + std::to_string(view.maxX) + ", y " + std::to_string(view.minY) + ".." + std::to_string(view.maxY));
+                report["camera"]["fileCameraBox"] = {view.minX, view.maxX, view.minY, view.maxY};
+            }
+        } else {
+            logLine("Scene self test: lights_cameras.glb is not in the model folder, the model camera check is skipped");
+        }
+
+        {
+            std::vector<double> frameMs;
+            for (int mode = 0; mode < 3; ++mode) {
+                SceneDoc doc = base;
+                doc.cutBeats = 4.0f;
+                for (int i = 0; i < 7; ++i) {
+                    DocCamera extra = doc.camera;
+                    extra.yawDegrees = 45.0f * static_cast<float>(i + 1);
+                    extra.beats = static_cast<float>(1 + i % 3);
+                    extra.rollDegrees = 3.0f * static_cast<float>(i);
+                    extra.move = {0.1f * static_cast<float>(i), 0.0f, 0.0f};
+                    docAddCamera(doc, extra);
+                }
+                if (mode > 0) {
+                    doc.glide = 0.6f;
+                    doc.camera.bindings[0] = {true, BindSource::Bass, BindTarget::Orbit, 0.2f};
+                    doc.camera.bindings[1] = {true, BindSource::Band3, BindTarget::MoveX, 0.2f};
+                    doc.camera.bindings[2] = {true, BindSource::Beat, BindTarget::Roll, 0.2f};
+                }
+                auto player = docScene(doc, "camera cost");
+                captureFrame(engine, *player, stillFrame(0.0, mode == 2), target, true);
+                const auto begin = std::chrono::steady_clock::now();
+                for (int i = 0; i < 60; ++i) {
+                    SceneFrame frame;
+                    frame.time = static_cast<float>(i) * 0.05f;
+                    frame.setAudio(virtualAudio(0.2 * i, 0.05 * i), 0.2 * i);
+                    frame.cameraMoves = mode != 1;
+                    captureFrame(engine, *player, frame, target, true);
+                }
+                frameMs.push_back(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count() / 60.0);
+            }
+            report["camera"]["frameMs"] = {{"eightCamerasMovesOff", frameMs[1]}, {"eightCuts", frameMs[0]}, {"eightGlidingWithBindings", frameMs[2]}};
+            check.expect("eight gliding cameras cost stays measured and small", frameMs[2] < frameMs[0] * 1.5 + 4.0, "ms " + number(frameMs[0]) + " / " + number(frameMs[1]) + " / " + number(frameMs[2]));
+        }
+        {
+            SceneDoc doc = base;
+            doc.cutBeats = 4.0f;
+            doc.glide = 0.6f;
+            doc.camera.bindings[0] = {true, BindSource::Bass, BindTarget::Orbit, 0.2f};
+            doc.camera.bindings[1] = {true, BindSource::Band3, BindTarget::MoveX, 0.2f};
+            doc.camera.bindings[2] = {true, BindSource::Beat, BindTarget::Roll, 0.2f};
+            for (int i = 0; i < 7; ++i) {
+                DocCamera extra = doc.camera;
+                extra.yawDegrees = 45.0f * static_cast<float>(i + 1);
+                docAddCamera(doc, extra);
+            }
+            const GltfResult built = buildSceneFromDoc(doc, bindingAssets());
+            SceneAudio audio;
+            audio.bass = 0.8f;
+            audio.bands[2] = 0.5f;
+            audio.beat = 0.4f;
+            double best = 1e9;
+            float sink = 0.0f;
+            for (int round = 0; round < 5; ++round) {
+                const auto begin = std::chrono::steady_clock::now();
+                for (int i = 0; i < 20000; ++i) {
+                    const CameraPose pose = cameraPoseAt(built.scene, 0.013 * i, 0.01f * static_cast<float>(i), audio, true);
+                    const CameraView view = cameraView(pose, {}, 1.0f, 1.0f);
+                    sink += view.eye.x;
+                }
+                best = std::min(best, std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - begin).count() / 20000.0);
+            }
+            report["camera"]["poseMicros"] = best;
+            check.expect("working out the camera pose takes a few microseconds", best < 25.0 && std::isfinite(sink), "us " + number(best));
+        }
+    }
+    {
         size_t checked = 0;
         for (const BuiltinSceneInfo& info : builtinScenes()) {
             const auto build = info.build;
@@ -557,6 +905,10 @@ int runSceneSelfTest(Engine& engine, const std::string& modelDirectory, const st
             const Shot b = capture(engine, player, 0.7f, target);
             for (const float time : {0.0f, 0.7f, 2.3f}) {
                 report["builtinHashes"][info.name][number(time)] = pixelHash(capture(engine, player, time, target).pixels);
+                SceneFrame frame;
+                frame.time = time;
+                frame.beat = static_cast<double>(time) * 2.0;
+                report["builtinCameraHashes"][info.name][number(time)] = pixelHash(captureFrame(engine, player, frame, target, true).pixels);
             }
             check.expect(std::string("built-in scene ") + info.name + " draws the same twice", a.ok && a.lit > 300 && meanDifference(a, b) < 0.001);
             ++checked;

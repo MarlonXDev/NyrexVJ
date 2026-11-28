@@ -35,7 +35,10 @@ enum class ControlItem {
     EffectParam,
     Macro,
     FeedbackFreeze,
-    FeedbackReset
+    FeedbackReset,
+    CameraOrbit,
+    CameraTilt,
+    CameraFov
 };
 
 struct ControlTarget {

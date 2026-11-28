@@ -268,6 +268,8 @@ public:
     bool graphOptimizer() const { return graphOptimizer_; }
     void setSceneMaterialBindings(bool on) { sceneMaterialBindings_ = on; }
     bool sceneMaterialBindings() const { return sceneMaterialBindings_; }
+    void setSceneCameraMoves(bool on) { sceneCameraMoves_ = on; }
+    bool sceneCameraMoves() const { return sceneCameraMoves_; }
     const GraphStats& graphStats() const { return graphStats_; }
     void resetGraphStats() { graphStats_ = GraphStats{}; }
     void requestShaderPlayground(double clock);
@@ -652,6 +654,7 @@ private:
     float colorStrength_ = 1.0f;
     bool graphOptimizer_ = true;
     bool sceneMaterialBindings_ = true;
+    bool sceneCameraMoves_ = true;
     GraphStats graphStats_;
     void applyColorStage();
     VideoDecodeMode videoMode_ = VideoDecodeMode::Auto;

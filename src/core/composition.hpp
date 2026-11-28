@@ -212,6 +212,9 @@ struct Layer {
     bool rainbow = false;
     float speed = 1.0f;
     float scale = 1.0f;
+    float cameraOrbit = 0.0f;
+    float cameraTilt = 0.0f;
+    float cameraFov = 0.0f;
     ColorGrade grade;
     std::array<AudioMod, kModSlots> mods;
     std::array<EffectSlot, kEffectSlots> fx;

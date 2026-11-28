@@ -761,6 +761,11 @@ void App::drawPerformancePage() {
         saveSettings(settings_);
     }
     ImGui::SetItemTooltip("%s", tr("When off, the colour, roughness, texture shift and surface bindings of 3D scenes are ignored. Size, glow, twist, lift, light and zoom still follow the music."));
+    if (ImGui::Checkbox(trId("Camera moves in 3D scenes", "optSceneCameraMoves"), &settings_.sceneCameraMoves)) {
+        engine_.setSceneCameraMoves(settings_.sceneCameraMoves);
+        saveSettings(settings_);
+    }
+    ImGui::SetItemTooltip("%s", tr("When off, 3D scenes keep the old camera: no glide between cameras, no look-at offset, no roll, no shot lengths, and the camera bindings and the layer camera controls are ignored. Cuts and zoom work as before."));
 
     drawFeedbackSettings();
 

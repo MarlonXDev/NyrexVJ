@@ -829,29 +829,34 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     audio.bands = frame.bands;
     audio.materials = frame.materialBindings;
 
+    const bool moves = frame.cameraMoves;
     const SceneCamera& camera = activeSceneCamera(scene, frame.beat);
-    const float fov = camera.authored ? std::clamp(camera.fovDegrees, 15.0f, 110.0f) * 0.0174532925f : kFov;
-    const float zoom = std::clamp(frame.scale, 0.2f, 4.0f);
-    float distance = player.radius_ / std::sin(fov * 0.5f) * 1.04f / zoom;
-    float yaw;
-    float pitch;
-    if (camera.authored) {
-        distance *= camera.distance * std::clamp(1.0f - bindingSum(camera.bindings, BindTarget::Zoom, audio), 0.3f, 3.0f);
-        yaw = camera.yawDegrees * 0.0174532925f + frame.time * camera.orbitSpeed;
-        pitch = (camera.pitchDegrees + camera.pitchSway * std::sin(frame.time * 0.31f)) * 0.0174532925f;
-    } else {
-        distance *= 1.0f - 0.04f * frame.kick;
-        yaw = frame.time * 0.4f;
-        pitch = 0.32f + 0.12f * std::sin(frame.time * 0.31f);
+    CameraPose pose = cameraPoseAt(scene, frame.beat, frame.time, audio, moves);
+    if (moves) {
+        if (frame.cameraOrbit != 0.0f) {
+            pose.yaw += frame.cameraOrbit * kSceneRadians;
+        }
+        if (frame.cameraTilt != 0.0f) {
+            pose.pitch = std::clamp(pose.pitch + frame.cameraTilt * kSceneRadians, -kSceneMaxPitch, kSceneMaxPitch);
+        }
+        if (frame.cameraFov != 0.0f) {
+            pose.fov = std::clamp(pose.fov + frame.cameraFov * kSceneRadians, 15.0f * kSceneRadians, 110.0f * kSceneRadians);
+        }
     }
+    float zoom = std::clamp(frame.scale, 0.2f, 4.0f);
     if (frame.editorCamera) {
-        yaw = frame.editYaw;
-        pitch = std::clamp(frame.editPitch, -1.5f, 1.5f);
-        distance = player.radius_ / std::sin(fov * 0.5f) * 1.04f * std::clamp(frame.editDistance, 0.05f, 20.0f);
+        pose.yaw = frame.editYaw;
+        pose.pitch = std::clamp(frame.editPitch, -1.5f, 1.5f);
+        pose.distance = std::clamp(frame.editDistance, 0.05f, 20.0f);
+        pose.roll = 0.0f;
+        pose.move = Vec3{};
+        zoom = 1.0f;
     }
-    const Vec3 eye = player.center_ + Vec3{std::cos(pitch) * std::sin(yaw), std::sin(pitch), std::cos(pitch) * std::cos(yaw)} * distance;
+    const CameraView view = cameraView(pose, player.center_, player.radius_, zoom);
+    const Vec3 eye = view.eye;
+    const float distance = view.distance;
     const float aspect = static_cast<float>(target.width) / static_cast<float>(std::max(target.height, 1));
-    const Mat4 viewProj = perspective(fov, aspect, std::max(distance * 0.02f, 1e-3f), distance + player.radius_ * 8.0f) * lookAt(eye, player.center_, {0.0f, 1.0f, 0.0f});
+    const Mat4 viewProj = perspective(view.fov, aspect, std::max(distance * 0.02f, 1e-3f), distance + player.radius_ * (8.0f + length(pose.move))) * lookAt(eye, view.target, view.up);
     const float pulse = camera.authored ? 1.0f : 1.0f + 0.07f * frame.kick + 0.04f * frame.bass;
     const Mat4 pivot = translation(player.center_) * scaling({pulse, pulse, pulse}) * translation(player.center_ * -1.0f);
 

@@ -41,6 +41,9 @@ SceneCamera convertCamera(const DocCamera& source) {
     camera.yawDegrees = source.yawDegrees;
     camera.orbitSpeed = source.orbitSpeed;
     camera.pitchSway = source.pitchSway;
+    camera.move = source.move;
+    camera.rollDegrees = source.rollDegrees;
+    camera.beats = source.beats;
     camera.bindings = convertBindings(source.bindings);
     return camera;
 }
@@ -123,6 +126,8 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
     scene.camera = convertCamera(docCameraAt(doc, doc.activeCamera));
     if (doc.cutBeats > 0.0f && docCameraCount(doc) > 1) {
         scene.cameraCutBeats = doc.cutBeats;
+        scene.cameraGlide = doc.glide;
+        scene.cameraGlideShape = doc.glideShape;
         for (int i = 0; i < docCameraCount(doc); ++i) {
             scene.cameras.push_back(convertCamera(docCameraAt(doc, i)));
         }
@@ -224,6 +229,15 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
             }
             vertices += modelVertices;
             const int nodeOffset = nodeIndex + 1;
+            const Mat4 wrapper = composeTrs(node.translation, node.rotation, node.scale);
+            for (SceneFileCamera camera : model->scene.fileCameras) {
+                if (scene.fileCameras.size() >= kSceneMaxFileCameras) {
+                    break;
+                }
+                camera.world = wrapper * camera.world;
+                camera.name = camera.name.empty() ? object.name : object.name + ": " + camera.name;
+                scene.fileCameras.push_back(std::move(camera));
+            }
             scene.nodes.push_back(std::move(node));
             mergeModel(scene, model->scene, nodeIndex, nodeOffset, static_cast<int>(scene.meshes.size()), static_cast<int>(scene.materials.size()), static_cast<int>(scene.images.size()));
             scene.roots.push_back(nodeIndex);

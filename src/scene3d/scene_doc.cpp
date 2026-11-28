@@ -87,8 +87,10 @@ void sanitizeBindings(std::array<DocBinding, N>& bindings, bool light, bool came
         if (light) {
             b.target = BindTarget::Light;
         } else if (camera) {
-            b.target = BindTarget::Zoom;
-        } else if (b.target == BindTarget::Light || b.target == BindTarget::Zoom) {
+            if (!bindTargetIsCamera(b.target)) {
+                b.target = BindTarget::Zoom;
+            }
+        } else if (b.target == BindTarget::Light || bindTargetIsCamera(b.target)) {
             b.target = BindTarget::Scale;
         }
     }
@@ -241,9 +243,9 @@ bool targetFitsOwner(BindingOwner owner, BindTarget target) {
     case BindingOwner::Light:
         return target == BindTarget::Light;
     case BindingOwner::Camera:
-        return target == BindTarget::Zoom;
+        return bindTargetIsCamera(target);
     case BindingOwner::Object:
-        return target != BindTarget::Light && target != BindTarget::Zoom;
+        return target != BindTarget::Light && !bindTargetIsCamera(target);
     }
     return false;
 }
@@ -359,11 +361,58 @@ void sanitizeCamera(DocCamera& cam, const std::string& fallback) {
     cam.fovDegrees = clampFinite(cam.fovDegrees, 15.0f, 110.0f, 46.0f);
     cam.orbitSpeed = clampFinite(cam.orbitSpeed, -4.0f, 4.0f, 0.4f);
     cam.pitchSway = clampFinite(cam.pitchSway, 0.0f, 40.0f, 0.0f);
+    sanitizeVec(cam.move, kSceneMaxMove);
+    cam.rollDegrees = clampFinite(cam.rollDegrees, -180.0f, 180.0f, 0.0f);
+    cam.beats = clampFinite(cam.beats, 0.0f, kDocMaxCutBeats, 0.0f);
     sanitizeBindings(cam.bindings, false, true);
 }
 
+bool cameraHasMoves(const DocCamera& cam) {
+    if (cam.move.x != 0.0f || cam.move.y != 0.0f || cam.move.z != 0.0f || cam.rollDegrees != 0.0f || cam.beats > 0.0f) {
+        return true;
+    }
+    for (const DocBinding& b : cam.bindings) {
+        if (b.enabled && bindTargetIsCameraMove(b.target)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+const char* glideKey(CameraGlide shape) {
+    switch (shape) {
+    case CameraGlide::Cut:
+        return "cut";
+    case CameraGlide::Linear:
+        return "linear";
+    case CameraGlide::Smooth:
+        break;
+    }
+    return "smooth";
+}
+
+bool glideFromKey(const std::string& key, CameraGlide& shape) {
+    for (const CameraGlide candidate : {CameraGlide::Cut, CameraGlide::Linear, CameraGlide::Smooth}) {
+        if (key == glideKey(candidate)) {
+            shape = candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
 json cameraToJson(const DocCamera& cam) {
-    return {{"name", cam.name}, {"distance", cam.distance}, {"pitch", cam.pitchDegrees}, {"yaw", cam.yawDegrees}, {"fov", cam.fovDegrees}, {"orbitSpeed", cam.orbitSpeed}, {"pitchSway", cam.pitchSway}, {"bindings", bindingsToJson(cam.bindings)}};
+    json out = {{"name", cam.name}, {"distance", cam.distance}, {"pitch", cam.pitchDegrees}, {"yaw", cam.yawDegrees}, {"fov", cam.fovDegrees}, {"orbitSpeed", cam.orbitSpeed}, {"pitchSway", cam.pitchSway}, {"bindings", bindingsToJson(cam.bindings)}};
+    if (cam.move.x != 0.0f || cam.move.y != 0.0f || cam.move.z != 0.0f) {
+        out["move"] = vecOf(cam.move);
+    }
+    if (cam.rollDegrees != 0.0f) {
+        out["roll"] = cam.rollDegrees;
+    }
+    if (cam.beats > 0.0f) {
+        out["beats"] = cam.beats;
+    }
+    return out;
 }
 
 void readCamera(const json& node, DocCamera& out, std::vector<std::string>& notes) {
@@ -374,6 +423,9 @@ void readCamera(const json& node, DocCamera& out, std::vector<std::string>& note
     readFloat(node, "fov", out.fovDegrees);
     readFloat(node, "orbitSpeed", out.orbitSpeed);
     readFloat(node, "pitchSway", out.pitchSway);
+    readVec(node, "move", out.move);
+    readFloat(node, "roll", out.rollDegrees);
+    readFloat(node, "beats", out.beats);
     readBindings(node, out.bindings, BindingOwner::Camera, "camera '" + out.name + "'", notes);
 }
 
@@ -392,7 +444,7 @@ const char* sourceKey(BindSource source) {
 }
 
 const char* targetKey(BindTarget target) {
-    static const char* const keys[kBindTargetCount] = {"scale", "emissive", "twist", "lift", "light", "zoom", "hue", "roughness", "uvx", "uvy", "inflate", "ripple"};
+    static const char* const keys[kBindTargetCount] = {"scale", "emissive", "twist", "lift", "light", "zoom", "hue", "roughness", "uvx", "uvy", "inflate", "ripple", "orbit", "tilt", "roll", "fov", "movex", "movey", "movez"};
     const int i = static_cast<int>(target);
     return i >= 0 && i < kBindTargetCount ? keys[i] : "scale";
 }
@@ -528,6 +580,8 @@ void sanitizeDoc(SceneDoc& doc) {
     }
     doc.activeCamera = std::clamp(doc.activeCamera, 0, docCameraCount(doc) - 1);
     doc.cutBeats = clampFinite(doc.cutBeats, 0.0f, kDocMaxCutBeats, 0.0f);
+    doc.glide = clampFinite(doc.glide, 0.0f, 1.0f, 0.0f);
+    doc.glideShape = static_cast<CameraGlide>(std::clamp(static_cast<int>(doc.glideShape), 0, 2));
     for (DocObject& o : doc.objects) {
         o.name = cleanName(o.name, "Object");
         sanitizeVec(o.position, 1000.0f);
@@ -602,9 +656,38 @@ bool usesNewBindings(const DocBindings& bindings, BindingOwner owner) {
 
 }
 
+bool docUsesCameraMoves(const SceneDoc& source) {
+    SceneDoc doc = source;
+    sanitizeDoc(doc);
+    bool used = doc.glide > 0.0f || cameraHasMoves(doc.camera);
+    for (const DocCamera& cam : doc.extraCameras) {
+        used = used || cameraHasMoves(cam);
+    }
+    return used;
+}
+
+DocCamera docCameraFromScene(const SceneCamera& camera, const std::string& name) {
+    DocCamera out;
+    out.name = name;
+    out.distance = camera.distance;
+    out.pitchDegrees = camera.pitchDegrees;
+    out.yawDegrees = camera.yawDegrees;
+    out.fovDegrees = camera.fovDegrees;
+    out.orbitSpeed = camera.orbitSpeed;
+    out.pitchSway = camera.pitchSway;
+    out.move = camera.move;
+    out.rollDegrees = camera.rollDegrees;
+    out.beats = camera.beats;
+    sanitizeCamera(out, "Camera");
+    return out;
+}
+
 int docRequiredVersion(const SceneDoc& source) {
     SceneDoc doc = source;
     sanitizeDoc(doc);
+    if (docUsesCameraMoves(doc)) {
+        return kDocVersion;
+    }
     bool newer = usesNewBindings(doc.camera.bindings, BindingOwner::Camera);
     for (const DocCamera& cam : doc.extraCameras) {
         newer = newer || usesNewBindings(cam.bindings, BindingOwner::Camera);
@@ -615,7 +698,7 @@ int docRequiredVersion(const SceneDoc& source) {
     for (const DocLight& l : doc.lights) {
         newer = newer || usesNewBindings(l.bindings, BindingOwner::Light);
     }
-    return newer ? kDocVersion : kDocBaseVersion;
+    return newer ? kDocBindingsVersion : kDocBaseVersion;
 }
 
 std::string docToJson(const SceneDoc& source) {
@@ -638,6 +721,10 @@ std::string docToJson(const SceneDoc& source) {
     }
     if (doc.cutBeats > 0.0f) {
         root["cutBeats"] = doc.cutBeats;
+    }
+    if (doc.glide > 0.0f) {
+        root["glide"] = doc.glide;
+        root["glideShape"] = glideKey(doc.glideShape);
     }
     json objects = json::array();
     for (const DocObject& o : doc.objects) {
@@ -745,6 +832,11 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
         }
     }
     readFloat(root, "cutBeats", out.cutBeats);
+    readFloat(root, "glide", out.glide);
+    std::string glideName;
+    if (readString(root, "glideShape", glideName) && !glideFromKey(glideName, out.glideShape)) {
+        addNote(out.notes, "the camera glide '" + shownKey(glideName) + "' is not known and was replaced by smooth");
+    }
     const auto objects = root.find("objects");
     if (objects != root.end() && objects->is_array()) {
         for (const json& entry : *objects) {

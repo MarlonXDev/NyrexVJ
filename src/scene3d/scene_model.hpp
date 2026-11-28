@@ -21,9 +21,10 @@ enum class Shading { Classic, Pbr };
 enum class AlphaMode { Opaque, Mask, Blend };
 enum class MotionKind { Spin, Bob, Orbit, Pulse, Sway };
 enum class BindSource { Bass, Mid, High, Level, Kick, Beat, Band1, Band2, Band3, Band4, Band5, Band6, Band7, Band8 };
-enum class BindTarget { Scale, Emissive, Twist, Lift, Light, Zoom, Hue, Roughness, UvX, UvY, Inflate, Ripple };
+enum class BindTarget { Scale, Emissive, Twist, Lift, Light, Zoom, Hue, Roughness, UvX, UvY, Inflate, Ripple, Orbit, Tilt, Roll, Fov, MoveX, MoveY, MoveZ };
+enum class CameraGlide { Cut, Linear, Smooth };
 constexpr int kBindSourceCount = 14;
-constexpr int kBindTargetCount = 12;
+constexpr int kBindTargetCount = 19;
 constexpr int kBindOldSourceCount = 5;
 constexpr int kBindOldTargetCount = 6;
 constexpr int kSceneBands = 8;
@@ -31,8 +32,25 @@ constexpr float kSceneMaxHueTurns = 8.0f;
 constexpr float kSceneMaxUvShift = 8.0f;
 constexpr float kSceneMaxDeform = 1.0f;
 
+constexpr float kSceneMaxMove = 4.0f;
+constexpr float kSceneDefaultFov = 0.8f;
+constexpr float kSceneRadians = 0.0174532925f;
+constexpr float kSceneOrbitPerAmount = 1.5707963f;
+constexpr float kSceneTiltPerAmount = 0.7853982f;
+constexpr float kSceneFovPerAmount = 0.5235988f;
+constexpr float kSceneMovePerAmount = 0.5f;
+constexpr float kSceneMaxPitch = 1.4835299f;
+
 constexpr bool bindTargetIsMaterial(BindTarget target) {
-    return static_cast<int>(target) >= static_cast<int>(BindTarget::Hue);
+    return static_cast<int>(target) >= static_cast<int>(BindTarget::Hue) && static_cast<int>(target) <= static_cast<int>(BindTarget::Ripple);
+}
+
+constexpr bool bindTargetIsCameraMove(BindTarget target) {
+    return static_cast<int>(target) >= static_cast<int>(BindTarget::Orbit);
+}
+
+constexpr bool bindTargetIsCamera(BindTarget target) {
+    return target == BindTarget::Zoom || bindTargetIsCameraMove(target);
 }
 enum class RepeatKind { None, Ring, Line };
 
@@ -224,7 +242,33 @@ struct SceneCamera {
     float yawDegrees = 0.0f;
     float orbitSpeed = 0.4f;
     float pitchSway = 0.0f;
+    Vec3 move{};
+    float rollDegrees = 0.0f;
+    float beats = 0.0f;
     std::vector<NodeBinding> bindings;
+};
+
+struct CameraPose {
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+    float roll = 0.0f;
+    float distance = 1.0f;
+    float fov = kSceneDefaultFov;
+    Vec3 move{};
+};
+
+struct CameraShot {
+    const SceneCamera* from = nullptr;
+    const SceneCamera* to = nullptr;
+    float blend = 0.0f;
+};
+
+struct CameraView {
+    Vec3 eye;
+    Vec3 target;
+    Vec3 up{0.0f, 1.0f, 0.0f};
+    float fov = kSceneDefaultFov;
+    float distance = 1.0f;
 };
 
 struct SceneFileCamera {
@@ -247,6 +291,8 @@ struct Scene {
     SceneCamera camera;
     std::vector<SceneCamera> cameras;
     float cameraCutBeats = 0.0f;
+    float cameraGlide = 0.0f;
+    CameraGlide cameraGlideShape = CameraGlide::Smooth;
     float exposure = 1.0f;
     std::vector<SceneImage> images;
     std::vector<SceneMaterial> materials;
@@ -285,6 +331,12 @@ SceneSphere sceneSphere(const Scene& scene, int animation, int samples);
 SceneStats sceneStats(const Scene& scene);
 bool validateScene(const Scene& scene, std::string& error);
 const SceneCamera& activeSceneCamera(const Scene& scene, double beat);
+CameraShot cameraShotAt(const Scene& scene, double beat, bool glide);
+CameraPose cameraPoseOf(const SceneCamera& camera, float time, const SceneAudio& audio, bool moves);
+CameraPose blendCameraPose(const CameraPose& a, const CameraPose& b, float blend);
+CameraPose cameraPoseAt(const Scene& scene, double beat, float time, const SceneAudio& audio, bool moves);
+CameraView cameraView(const CameraPose& pose, Vec3 center, float radius, float zoom);
+SceneCamera sceneCameraFromFile(const SceneFileCamera& file, Vec3 center, float radius);
 float sceneDuration(const Scene& scene, int animation);
 
 }

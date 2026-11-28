@@ -65,8 +65,35 @@ struct ShaderPlaygroundStatus {
     unsigned long long frames = 0;
 };
 
+struct FeedbackTarget : RenderTarget {
+    int sourceWidth = 0;
+    int sourceHeight = 0;
+    unsigned long long idleSince = 0;
+};
+
+constexpr unsigned long long kDefaultFeedbackBudgetBytes = 256ull * 1024ull * 1024ull;
+constexpr size_t kFeedbackPoolMax = 8;
+constexpr unsigned long long kFeedbackPoolIdleFrames = 300;
+
+struct FeedbackStats {
+    size_t liveBytes = 0;
+    size_t pooledBytes = 0;
+    unsigned long long budget = 0;
+    int live = 0;
+    int pooled = 0;
+    int reduced = 0;
+    unsigned long long created = 0;
+    unsigned long long reused = 0;
+    unsigned long long denied = 0;
+    bool frozen = false;
+    bool reuse = true;
+
+    size_t total() const { return liveBytes + pooledBytes; }
+};
+
 struct GpuMemory {
     size_t targets = 0;
+    size_t feedback = 0;
     size_t thumbnails = 0;
     size_t sceneDepth = 0;
     size_t sceneGeometry = 0;
@@ -77,7 +104,7 @@ struct GpuMemory {
     size_t routing = 0;
     VideoMemory video;
 
-    size_t total() const { return targets + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers + generators + routing; }
+    size_t total() const { return targets + feedback + thumbnails + sceneDepth + sceneGeometry + media + live + shaderBuffers + generators + routing; }
 };
 
 struct RouteSlotStatus {
@@ -228,6 +255,14 @@ public:
     std::string shaderRuntimeError(int clip) const;
     size_t shaderBufferBytes() const;
     void setShaderBufferBudget(unsigned long long bytes);
+    FeedbackStats feedbackStats() const;
+    size_t feedbackBytes() const;
+    void setFeedbackBudget(unsigned long long bytes);
+    unsigned long long feedbackBudget() const { return feedbackBudget_; }
+    void setFeedbackReuse(bool on);
+    void setFeedbackFrozen(bool on) { feedbackFrozen_ = on; }
+    bool feedbackFrozen() const { return feedbackFrozen_; }
+    void resetFeedback();
     void requestShaderPlayground(double clock);
     void submitShaderPlayground(const std::string& text, std::uint64_t revision);
     void restartShaderPlayground();
@@ -354,6 +389,7 @@ private:
         GLint kick = -1;
         GLint audioTex = -1;
         GLint mix = -1;
+        GLint delta = -1;
         GLint macros = -1;
         GLint person = -1;
         GLint personOn = -1;
@@ -453,6 +489,9 @@ private:
     bool createTargets(int width, int height);
     void destroyTargets();
     void destroyFeedback();
+    bool acquireFeedback(FeedbackTarget& slot, int width, int height);
+    void releaseFeedback(FeedbackTarget& slot);
+    void trimFeedbackPool(bool everything);
     void renderClipThumbnails(int maxCount);
     bool ensureClip(size_t index);
     bool ensureScene(size_t index);
@@ -491,8 +530,8 @@ private:
     void transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination);
     void setAudioUniforms(GLint audio, GLint kick, GLint audioTex);
     void drawClip(const ClipProgram& clip, float time, float beat, float bpm, float width, float height, const std::array<float, 3>& colorA, const std::array<float, 3>& colorB, bool rainbow, float scale);
-    RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, RenderTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner);
-    RenderTarget* chainFeedback(int chain) { return &feedback_[static_cast<size_t>(chain * kEffectSlots)]; }
+    RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, FeedbackTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner);
+    FeedbackTarget* chainFeedback(int chain) { return &feedback_[static_cast<size_t>(chain * kEffectSlots)]; }
     bool* chainUsed(int chain) { return &feedbackUsed_[static_cast<size_t>(chain * kEffectSlots)]; }
     void drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target);
     void releaseClipProgram(ClipProgram& clip);
@@ -631,7 +670,7 @@ private:
     int chainPreviewClip_ = -2;
     RenderTarget chainPreviewA_;
     RenderTarget chainPreviewB_;
-    std::array<RenderTarget, kEffectSlots> chainPreviewFeedback_;
+    std::array<FeedbackTarget, kEffectSlots> chainPreviewFeedback_;
     std::array<bool, kEffectSlots> chainPreviewFeedbackUsed_{};
     RenderTarget* chainPreviewResult_ = nullptr;
     void renderEditorPreviews();
@@ -712,7 +751,7 @@ private:
     double gpuMs_ = 0.0;
     RenderTarget previewA_;
     RenderTarget previewB_;
-    std::array<RenderTarget, kEffectSlots> previewFeedback_;
+    std::array<FeedbackTarget, kEffectSlots> previewFeedback_;
     std::array<bool, kEffectSlots> previewFeedbackUsed_{};
     RenderTarget* previewResult_ = nullptr;
     bool previewRequested_ = false;
@@ -752,7 +791,17 @@ private:
     static constexpr int kEffectKeyBase = 1000;
     static constexpr int kChainsPerSet = kLayerCount + 1;
     static constexpr int kFeedbackSets = 2;
-    std::array<RenderTarget, kFeedbackSets * kChainsPerSet * kEffectSlots> feedback_;
+    std::array<FeedbackTarget, kFeedbackSets * kChainsPerSet * kEffectSlots> feedback_;
+    std::vector<FeedbackTarget> feedbackPool_;
+    unsigned long long feedbackBudget_ = kDefaultFeedbackBudgetBytes;
+    bool feedbackReuse_ = true;
+    bool feedbackFrozen_ = false;
+    float frameDelta_ = 0.0f;
+    unsigned long long feedbackCreated_ = 0;
+    unsigned long long feedbackReused_ = 0;
+    unsigned long long feedbackDenied_ = 0;
+    bool feedbackReduceLogged_ = false;
+    bool feedbackDenyLogged_ = false;
     std::array<bool, kFeedbackSets * kChainsPerSet * kEffectSlots> feedbackUsed_{};
     std::array<double, kLayerCount> layerClock_{};
     FullscreenTriangle triangle_;

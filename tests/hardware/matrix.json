@@ -3539,6 +3539,89 @@
           "criteria": "Proposed: no visible jump or black frame at the start or end, the frame time during a custom transition within 10 percent of a built-in one with the same number of taps, a broken file never stops the output, and the choice survives a restart."
         }
       ]
+    },
+    {
+      "id": "feedback-lab",
+      "title": "GPU feedback lab: a memory budget for feedback buffers, buffer reuse, freeze and reset, the frame time as uDelta, and the new effects Time Echo, Motion Smear, Feedback Transform and Accumulate",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SHADERS.md",
+        "docs/PERFORMANCE.md",
+        "docs/manual/manual.en.md",
+        "docs/INTERFACES.md",
+        "docs/TESTING.md",
+        "docs/adr/0060-gpu-feedback-lab-budget-pool-freeze-reset-and-feedback-effects.md"
+      ],
+      "sources": [
+        "src/render/engine.cpp",
+        "src/render/effect_library.cpp",
+        "src/render/effects_feedback.cpp",
+        "src/control/control_targets.cpp",
+        "src/core/settings.cpp",
+        "src/app/ui_diagnostics.cpp",
+        "src/app/ui_panels.cpp",
+        "src/app/shader_selftest.cpp",
+        "tests/test_feedback.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-FBK-1",
+          "kind": "ctest",
+          "name": "nvj_feedback_tests",
+          "note": "the settings keys and their limits, the two control targets and what they call, the four new effects (order, four controls, defaults, feedback flag, novelty entry), the unchanged source of Trails and Hue Feedback, the budget arithmetic, and a node graph with feedback, a chain that fills the 96 node limit and a graph forced into a loop"
+        },
+        {
+          "id": "A-FBK-2",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest",
+          "note": "renders the feedback effects through a real OpenGL context: the half-life of Time Echo at 30, 60 and 120 frames per second and across a pause, the 8 bit residue of Trails next to a Time Echo that reaches black, Freeze, Reset, the three modes of Accumulate, Motion Smear and Feedback Transform, the direction of the echo, the budget (four buffers, smaller buffers, a refused buffer), eight resolution changes, the layer resolution, reuse on and off, the pool, deck switches, and a 1200 frame run with random changes of resolution, deck, quality, budget, freeze, reset and effect"
+        },
+        {
+          "id": "A-FBK-3",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest 60",
+          "note": "adds the frame time, the first frame and the feedback memory of no effect, Trails, the four new effects, a frozen Time Echo and four layers with and without Time Echo"
+        },
+        {
+          "id": "A-FBK-4",
+          "kind": "cli",
+          "command": "NyrexVJ --check-shaders",
+          "note": "compiles the four new effects on the driver in use"
+        },
+        {
+          "id": "A-FBK-5",
+          "kind": "ctest",
+          "name": "nvj_compat_tests",
+          "note": "the frozen settings and preset fixtures are still written byte for byte as before (the two new settings keys are written only when they are not the default)"
+        },
+        {
+          "id": "A-FBK-6",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "every new text has a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-FBK-1",
+          "title": "Feedback effects, the memory budget, freeze and reset on a real graphics card in a real show",
+          "needs": "A PC with a graphics card, an output window or Spout or NDI to OBS, a song or a live input, and optionally a MIDI controller and a second PC on the network sync",
+          "steps": [
+            "Put Time Echo, Motion Smear, Feedback Transform and Accumulate on four layers over moving clips, play with the four controls and check that the half-life sliders feel the same at 30, 60 and 144 frames per second (switch the frame rate limit).",
+            "Open Settings, Performance, Feedback, set the budget to 64 MB at 4K output, and check that the buffers shrink without a jump, the message says how many run smaller, and the show keeps playing; then raise it and check that they return to full size.",
+            "Set the budget so small that a buffer is refused and check that the effect shows the live picture without trails, the orange message appears, and nothing crashes or flashes.",
+            "Map Freeze feedback and Reset feedback to MIDI notes and OSC, hit them during a drop, and check that the trails hold while frozen, that Reset clears them in one frame, and that Freeze is off after a restart.",
+            "Switch decks quickly for ten minutes with feedback on both, change the resolution twice, and watch the graphics memory in Settings, Performance for growth.",
+            "Run the show for an hour with a changing mix of feedback effects and compare the graphics memory at the start and at the end.",
+            "On two PCs with the network sync, update both to 0.66.0, trigger Freeze and Reset on the master, and check that both follow."
+          ],
+          "measure": "the frame time with and without feedback effects at the output size you play at, the graphics memory of the feedback buffers (Settings, Performance, Memory) at the start and after an hour, the time of the first frame after an effect starts, and any visible jump when a buffer changes size",
+          "criteria": "Proposed: the half-life within 10 percent of the slider value at 30, 60 and 144 frames per second, no visible jump or black frame when a buffer shrinks or grows, a refused buffer never stops the output, the feedback memory after an hour within 5 percent of the start, and Freeze and Reset through MIDI and OSC working in the same frame."
+        }
+      ]
     }
   ]
 }

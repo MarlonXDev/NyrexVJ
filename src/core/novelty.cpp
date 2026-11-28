@@ -59,6 +59,10 @@ constexpr Entry kEffects[] = {
     {"Shatter", 0, 8},
     {"Prism Glass", 0, 60},
     {"Frosted Glass", 0, 60},
+    {"Time Echo", 0, 66},
+    {"Motion Smear", 0, 66},
+    {"Feedback Transform", 0, 66},
+    {"Accumulate", 0, 66},
 };
 
 constexpr Entry kPresets[] = {

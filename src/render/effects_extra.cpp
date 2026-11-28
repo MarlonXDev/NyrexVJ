@@ -1263,6 +1263,7 @@ vec4 effect(vec2 uv, vec4 p) {
     return vec4(col, 1.0);
 }
 )glsl", false, false});
+    appendFeedbackEffects(fx);
 }
 
 }

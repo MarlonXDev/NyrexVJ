@@ -336,6 +336,23 @@ void App::drawEffectRack(std::array<EffectSlot, kEffectSlots>& slots) {
             ImGui::Separator();
         }
     }
+    bool feedbackInChain = false;
+    for (const EffectSlot& slot : slots) {
+        feedbackInChain = feedbackInChain || (slot.enabled && slot.effect >= 0 && slot.effect < static_cast<int>(library.size()) && library[static_cast<size_t>(slot.effect)].usesPrevious);
+    }
+    if (feedbackInChain) {
+        ImGui::Separator();
+        bool frozen = engine_.feedbackFrozen();
+        if (ImGui::Checkbox(trId("Freeze feedback", "fbFreezeRack"), &frozen)) {
+            engine_.setFeedbackFrozen(frozen);
+        }
+        ImGui::SetItemTooltip("%s", tr("Holds the feedback pictures where they are. Applies to all feedback effects."));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(trId("Reset feedback", "fbResetRack"))) {
+            engine_.resetFeedback();
+        }
+        ImGui::SetItemTooltip("%s", tr("Clears all feedback pictures."));
+    }
     ImGui::Separator();
     drawChainButtons(slots);
 }

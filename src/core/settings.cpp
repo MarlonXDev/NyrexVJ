@@ -106,6 +106,12 @@ bool loadSettings(Settings& settings) {
     }
     result.gpuMemoryTrim = boolean("gpuMemoryTrim", true);
     result.gpuMemoryLowerQuality = boolean("gpuMemoryLowerQuality", false);
+    auto feedbackBudget = doc.find("feedbackBudgetMb");
+    if (feedbackBudget != doc.end() && feedbackBudget->is_number_integer()) {
+        const int value = feedbackBudget->get<int>();
+        result.feedbackBudgetMb = value <= 0 ? 0 : std::clamp(value, 64, 8192);
+    }
+    result.feedbackReuse = boolean("feedbackReuse", true);
     result.diagWarnings = boolean("diagWarnings", true);
     auto diagP99 = doc.find("diagP99Percent");
     if (diagP99 != doc.end() && diagP99->is_number_integer()) {
@@ -509,6 +515,12 @@ bool saveSettings(const Settings& settings) {
     doc["gpuMemoryBudgetMb"] = settings.gpuMemoryBudgetMb <= 0 ? 0 : std::clamp(settings.gpuMemoryBudgetMb, 256, 65536);
     doc["gpuMemoryTrim"] = settings.gpuMemoryTrim;
     doc["gpuMemoryLowerQuality"] = settings.gpuMemoryLowerQuality;
+    if (settings.feedbackBudgetMb != 256) {
+        doc["feedbackBudgetMb"] = settings.feedbackBudgetMb <= 0 ? 0 : std::clamp(settings.feedbackBudgetMb, 64, 8192);
+    }
+    if (!settings.feedbackReuse) {
+        doc["feedbackReuse"] = false;
+    }
     doc["diagWarnings"] = settings.diagWarnings;
     doc["diagP99Percent"] = std::clamp(settings.diagP99Percent, 110, 600);
     doc["diagDroppedPerMinute"] = std::clamp(settings.diagDroppedPerMinute, 1, 600);

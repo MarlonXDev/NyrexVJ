@@ -74,6 +74,8 @@ std::vector<ControlTarget> buildTargets() {
         addEffects(list, prefix, layer);
     }
     addEffects(list, "master/", -1);
+    list.push_back(make("master/feedback-freeze", ControlKind::Toggle, ControlItem::FeedbackFreeze));
+    list.push_back(make("master/feedback-reset", ControlKind::Trigger, ControlItem::FeedbackReset));
     return list;
 }
 
@@ -168,6 +170,8 @@ bool ControlRouter::state(int index) const {
     switch (target.item) {
     case ControlItem::Blackout:
         return host_.blackout();
+    case ControlItem::FeedbackFreeze:
+        return host_.feedbackFrozen();
     case ControlItem::Bypass:
         return comp_.layers[static_cast<size_t>(target.layer)].bypass;
     case ControlItem::Solo:
@@ -261,6 +265,9 @@ void ControlRouter::setToggle(const ControlTarget& target, bool on) {
     case ControlItem::Blackout:
         host_.setBlackout(on);
         break;
+    case ControlItem::FeedbackFreeze:
+        host_.setFeedbackFrozen(on);
+        break;
     case ControlItem::Bypass:
         comp_.layers[static_cast<size_t>(target.layer)].bypass = on;
         break;
@@ -322,6 +329,9 @@ void ControlRouter::fire(const ControlTarget& target) {
         break;
     case ControlItem::Resync:
         host_.resync();
+        break;
+    case ControlItem::FeedbackReset:
+        host_.resetFeedback();
         break;
     case ControlItem::ClipTrigger:
         host_.triggerClip(target.layer, target.index);

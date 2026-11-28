@@ -23,7 +23,7 @@ The table is generated from the results file by `python3 scripts/check_test_matr
 | NVIDIA | no hardware run recorded | no hardware run recorded |
 | AMD | no hardware run recorded | no hardware run recorded |
 | Intel | no hardware run recorded | no hardware run recorded |
-| Software OpenGL (CI, containers, virtual machines) | software OpenGL, automated 0 of 154 checks, not hardware | software OpenGL, automated 132 of 151 checks, not hardware |
+| Software OpenGL (CI, containers, virtual machines) | software OpenGL, automated 0 of 160 checks, not hardware | software OpenGL, automated 132 of 157 checks, not hardware |
 <!-- vendors:end -->
 
 Reading it today: no hardware run is recorded for any card on any system. The program is built and unit tested on Windows and Linux for every change. It was run (self tests, soak, screenshots) on Linux with software OpenGL only. No test starts it on Windows.

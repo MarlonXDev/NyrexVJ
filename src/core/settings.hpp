@@ -43,6 +43,8 @@ struct Settings {
     int gpuMemoryBudgetMb = 0;
     bool gpuMemoryTrim = true;
     bool gpuMemoryLowerQuality = false;
+    int feedbackBudgetMb = 256;
+    bool feedbackReuse = true;
     bool diagWarnings = true;
     int diagP99Percent = 150;
     int diagDroppedPerMinute = 5;

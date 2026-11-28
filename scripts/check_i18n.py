@@ -80,7 +80,7 @@ def table_keys():
 
 def parameter_keys():
     keys = set()
-    for path in ("src/render/effect_library.cpp", "src/render/effects_extra.cpp"):
+    for path in ("src/render/effect_library.cpp", "src/render/effects_extra.cpp", "src/render/effects_feedback.cpp"):
         for match in re.finditer(r'fx\.push_back\(\{"[^"]+", \{([^}]*)\}', read(path)):
             keys.update(re.findall(r'"([^"]+)"', match.group(1)))
     return keys

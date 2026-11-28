@@ -76,6 +76,10 @@ std::string itemName(const ControlTarget& target) {
         return std::string(tr("Effect")) + " " + std::to_string(target.slot + 1) + " / " + tr("Parameter") + " " + std::to_string(target.param + 1);
     case ControlItem::Macro:
         return std::string(tr("Macro")) + " " + std::to_string(target.index + 1);
+    case ControlItem::FeedbackFreeze:
+        return tr("Freeze feedback");
+    case ControlItem::FeedbackReset:
+        return tr("Reset feedback");
     }
     return "";
 }

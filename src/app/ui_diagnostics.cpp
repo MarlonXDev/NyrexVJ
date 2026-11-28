@@ -75,6 +75,55 @@ void App::drawDiagnosticsBadge() {
     }
 }
 
+void App::drawFeedbackSettings() {
+    auto persist = [this]() { saveSettings(settings_); };
+    const auto megabytes = [](unsigned long long bytes) { return static_cast<double>(bytes) / (1024.0 * 1024.0); };
+    const FeedbackStats stats = engine_.feedbackStats();
+
+    ui::sectionHeader(tr("Feedback"));
+    ImGui::Text(tr("%d buffers in use: %.1f MB. %d kept for reuse: %.1f MB."), stats.live, megabytes(stats.liveBytes), stats.pooled, megabytes(stats.pooledBytes));
+    ImGui::SetItemTooltip("%s", tr("Effects such as Trails, Hue Feedback and Time Echo keep the last picture in a buffer. A buffer is made when such an effect starts and released when it stops, the picture size changes or the deck changes."));
+
+    int budgetMb = settings_.feedbackBudgetMb;
+    ImGui::SetNextItemWidth(ui::px(220.0f));
+    if (ImGui::DragInt(trId("Feedback budget (0 = off)", "optFeedbackBudget"), &budgetMb, 16.0f, 0, 8192, "%d MB")) {
+        if (budgetMb > 0 && budgetMb < 64) {
+            budgetMb = settings_.feedbackBudgetMb >= 64 ? 0 : 64;
+        }
+        settings_.feedbackBudgetMb = std::max(budgetMb, 0);
+        persist();
+    }
+    ImGui::SetItemTooltip("%s", tr("The most graphics memory the feedback buffers may use. When it is used up, new buffers are made smaller (three quarters, half, down to a quarter of the picture) and, if even that does not fit, the effect runs without feedback. 0 turns the limit off. Changing it clears the feedback pictures once."));
+    if (settings_.feedbackBudgetMb > 0) {
+        const double budgetBytes = static_cast<double>(settings_.feedbackBudgetMb) * 1024.0 * 1024.0;
+        char overlay[64];
+        std::snprintf(overlay, sizeof(overlay), tr("%.0f of %.0f MB"), megabytes(stats.liveBytes), megabytes(static_cast<unsigned long long>(budgetBytes)));
+        const float fill = static_cast<float>(std::min(1.0, static_cast<double>(stats.liveBytes) / budgetBytes));
+        ImGui::ProgressBar(fill, ImVec2(-1.0f, 0.0f), overlay);
+    }
+    if (ImGui::Checkbox(trId("Reuse feedback buffers", "optFeedbackReuse"), &settings_.feedbackReuse)) {
+        persist();
+    }
+    ImGui::SetItemTooltip("%s", tr("A released buffer of the right size is kept for a few seconds and used again instead of asking the graphics card for a new one."));
+    if (stats.reduced > 0) {
+        ImGui::TextDisabled(tr("%d buffers run smaller than the picture because of the budget."), stats.reduced);
+    }
+    if (stats.denied > 0) {
+        ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.2f, 1.0f), tr("%d buffers were refused because the budget is used up."), static_cast<int>(stats.denied));
+    }
+
+    bool frozen = engine_.feedbackFrozen();
+    if (ImGui::Checkbox(trId("Freeze feedback", "optFeedbackFreeze"), &frozen)) {
+        engine_.setFeedbackFrozen(frozen);
+    }
+    ImGui::SetItemTooltip("%s", tr("Holds the feedback pictures where they are. The effects keep drawing the live picture over the held trails. Not saved with the show."));
+    ImGui::SameLine();
+    if (ImGui::Button(trId("Reset feedback", "optFeedbackReset"))) {
+        engine_.resetFeedback();
+    }
+    ImGui::SetItemTooltip("%s", tr("Clears all feedback pictures and restarts the buffers of shaders. MIDI, OSC and the web interface can do the same."));
+}
+
 void App::drawGpuDiagnostics() {
     auto persist = [this]() { saveSettings(settings_); };
     const Diagnostics& d = engine_.diagnostics();

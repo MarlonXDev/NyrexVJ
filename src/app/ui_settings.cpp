@@ -766,6 +766,11 @@ void App::drawPerformancePage() {
         saveSettings(settings_);
     }
     ImGui::SetItemTooltip("%s", tr("When off, 3D scenes keep the old camera: no glide between cameras, no look-at offset, no roll, no shot lengths, and the camera bindings and the layer camera controls are ignored. Cuts and zoom work as before."));
+    if (ImGui::Checkbox(trId("Shared 3D worlds", "optSceneWorlds"), &settings_.sceneWorlds)) {
+        engine_.setSceneWorlds(settings_.sceneWorlds);
+        saveSettings(settings_);
+    }
+    ImGui::SetItemTooltip("%s", tr("When off, every 3D layer draws its own scene with its own depth buffer, whatever world the layers are set to. Turn this off if shared worlds cost too much on your graphics card."));
 
     drawFeedbackSettings();
 

@@ -752,6 +752,10 @@ void SceneRenderer::shutdown() {
     destroy(main_);
     destroy(thumb_);
     destroy(editor_);
+    for (Surface& surface : worlds_) {
+        destroy(surface);
+    }
+    resetWorlds();
     for (Program* program : {&classic_, &pbr_}) {
         if (program->id) {
             glDeleteProgram(program->id);
@@ -760,12 +764,77 @@ void SceneRenderer::shutdown() {
     }
 }
 
-size_t SceneRenderer::depthBytes() const {
+size_t SceneRenderer::worldDepthBytes() const {
     size_t total = 0;
+    for (const Surface& surface : worlds_) {
+        total += static_cast<size_t>(surface.width) * static_cast<size_t>(surface.height) * 4;
+    }
+    return total;
+}
+
+size_t SceneRenderer::depthBytes() const {
+    size_t total = worldDepthBytes();
     for (const Surface* surface : {&main_, &thumb_, &editor_}) {
         total += static_cast<size_t>(surface->width) * static_cast<size_t>(surface->height) * 4;
     }
     return total;
+}
+
+void SceneRenderer::resetWorlds() {
+    for (WorldState& state : worldState_) {
+        state.valid = false;
+    }
+}
+
+void SceneRenderer::beginFrame() {
+    ++frame_;
+    resetWorlds();
+    constexpr uint64_t kIdleFrames = 180;
+    for (size_t i = 0; i < worlds_.size(); ++i) {
+        if (worlds_[i].fbo && frame_ > worldUsed_[i] + kIdleFrames) {
+            destroy(worlds_[i]);
+        }
+    }
+}
+
+SceneRenderer::LightSetup SceneRenderer::makeLights(const Scene& scene, const SceneAudio& audio) {
+    LightSetup setup;
+    bool sunSet = false;
+    const auto addLight = [&](bool point, Vec3 position, std::array<float, 3> color, float intensity) {
+        if (setup.count >= static_cast<int>(kSceneMaxLights)) {
+            return;
+        }
+        const size_t at = static_cast<size_t>(setup.count);
+        setup.positions[at * 4 + 0] = position.x;
+        setup.positions[at * 4 + 1] = position.y;
+        setup.positions[at * 4 + 2] = position.z;
+        setup.positions[at * 4 + 3] = point ? 1.0f : 0.0f;
+        for (size_t c = 0; c < 3; ++c) {
+            setup.colors[at * 3 + c] = color[c] * intensity;
+        }
+        if (!point && !sunSet) {
+            setup.sunDir = normalize(position);
+            setup.sunColor = color;
+            sunSet = true;
+        }
+        ++setup.count;
+    };
+    if (scene.lights.empty()) {
+        addLight(false, {0.5f, 0.8f, 0.6f}, {1.0f, 0.96f, 0.9f}, 3.2f);
+        addLight(false, {-0.6f, -0.2f, -0.5f}, {0.6f, 0.7f, 1.0f}, 0.8f);
+        addLight(false, {0.0f, 0.3f, -1.0f}, {1.0f, 1.0f, 1.0f}, 1.5f);
+    } else {
+        for (const SceneLight& light : scene.lights) {
+            const float reactive = std::max(1.0f + bindingSum(light.bindings, BindTarget::Light, audio), 0.0f);
+            addLight(light.point, light.position, light.color, light.intensity * reactive);
+        }
+    }
+    setup.skyTop = {scene.sky.top[0], scene.sky.top[1], scene.sky.top[2]};
+    setup.skyHorizon = {scene.sky.horizon[0], scene.sky.horizon[1], scene.sky.horizon[2]};
+    setup.skyGround = {scene.sky.ground[0], scene.sky.ground[1], scene.sky.ground[2]};
+    setup.skyIntensity = scene.sky.intensity;
+    setup.exposure = scene.exposure;
+    return setup;
 }
 
 bool SceneRenderer::prepare(Surface& surface, const RenderTarget& target) {
@@ -806,18 +875,36 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     const Scene& scene = player.scene_;
     const bool usePbr = scene.shading == Shading::Pbr && pbr_.id != 0;
     const Program& p = usePbr ? pbr_ : classic_;
-    Surface& surface = frame.editor ? editor_ : (target.width >= 512 ? main_ : thumb_);
+    int worldIndex = -1;
+    bool worldOwner = false;
+    if (frame.world >= 1 && frame.world <= kWorldCount && !frame.editor) {
+        const size_t candidate = static_cast<size_t>(frame.world - 1);
+        if (frame.worldOwner) {
+            worldIndex = static_cast<int>(candidate);
+            worldOwner = true;
+            worldState_[candidate].valid = false;
+        } else if (worldState_[candidate].valid && worlds_[candidate].width == target.width && worlds_[candidate].height == target.height) {
+            worldIndex = static_cast<int>(candidate);
+        }
+    }
+    const bool shared = worldIndex >= 0;
+    const bool member = shared && !worldOwner;
+    Surface& surface = shared ? worlds_[static_cast<size_t>(worldIndex)] : (frame.editor ? editor_ : (target.width >= 512 ? main_ : thumb_));
     if (!prepare(surface, target)) {
         return;
     }
+    if (shared) {
+        worldUsed_[static_cast<size_t>(worldIndex)] = frame_;
+    }
+    lastShared_ = shared;
     glViewport(0, 0, target.width, target.height);
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, member ? 0.0f : 1.0f);
     glClearDepth(1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(member ? GL_COLOR_BUFFER_BIT : (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 
     SceneAudio audio;
     audio.bass = frame.bass;
@@ -829,34 +916,70 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     audio.bands = frame.bands;
     audio.materials = frame.materialBindings;
 
+    const WorldState* ownerState = member ? &worldState_[static_cast<size_t>(worldIndex)] : nullptr;
     const bool moves = frame.cameraMoves;
     const SceneCamera& camera = activeSceneCamera(scene, frame.beat);
-    CameraPose pose = cameraPoseAt(scene, frame.beat, frame.time, audio, moves);
-    if (moves) {
-        if (frame.cameraOrbit != 0.0f) {
-            pose.yaw += frame.cameraOrbit * kSceneRadians;
+    Mat4 viewProj;
+    Vec3 eye;
+    Vec3 forward;
+    if (member) {
+        viewProj = ownerState->viewProj;
+        eye = ownerState->eye;
+        forward = ownerState->forward;
+    } else {
+        CameraPose pose = cameraPoseAt(scene, frame.beat, frame.time, audio, moves);
+        if (moves) {
+            if (frame.cameraOrbit != 0.0f) {
+                pose.yaw += frame.cameraOrbit * kSceneRadians;
+            }
+            if (frame.cameraTilt != 0.0f) {
+                pose.pitch = std::clamp(pose.pitch + frame.cameraTilt * kSceneRadians, -kSceneMaxPitch, kSceneMaxPitch);
+            }
+            if (frame.cameraFov != 0.0f) {
+                pose.fov = std::clamp(pose.fov + frame.cameraFov * kSceneRadians, 15.0f * kSceneRadians, 110.0f * kSceneRadians);
+            }
         }
-        if (frame.cameraTilt != 0.0f) {
-            pose.pitch = std::clamp(pose.pitch + frame.cameraTilt * kSceneRadians, -kSceneMaxPitch, kSceneMaxPitch);
+        float zoom = std::clamp(frame.scale, 0.2f, 4.0f);
+        if (frame.editorCamera) {
+            pose.yaw = frame.editYaw;
+            pose.pitch = std::clamp(frame.editPitch, -1.5f, 1.5f);
+            pose.distance = std::clamp(frame.editDistance, 0.05f, 20.0f);
+            pose.roll = 0.0f;
+            pose.move = Vec3{};
+            zoom = 1.0f;
         }
-        if (frame.cameraFov != 0.0f) {
-            pose.fov = std::clamp(pose.fov + frame.cameraFov * kSceneRadians, 15.0f * kSceneRadians, 110.0f * kSceneRadians);
-        }
+        const CameraView view = cameraView(pose, player.center_, player.radius_, zoom);
+        eye = view.eye;
+        const float distance = view.distance;
+        const float aspect = static_cast<float>(target.width) / static_cast<float>(std::max(target.height, 1));
+        viewProj = perspective(view.fov, aspect, std::max(distance * 0.02f, 1e-3f), distance + player.radius_ * (8.0f + length(pose.move))) * lookAt(eye, view.target, view.up);
+        forward = normalize(player.center_ - eye);
     }
-    float zoom = std::clamp(frame.scale, 0.2f, 4.0f);
-    if (frame.editorCamera) {
-        pose.yaw = frame.editYaw;
-        pose.pitch = std::clamp(frame.editPitch, -1.5f, 1.5f);
-        pose.distance = std::clamp(frame.editDistance, 0.05f, 20.0f);
-        pose.roll = 0.0f;
-        pose.move = Vec3{};
-        zoom = 1.0f;
+    Mat4 place;
+    bool placed = false;
+    if (member) {
+        place = worldPlacementMatrix(ownerState->ownerCenter, ownerState->ownerRadius, player.center_, player.radius_, frame.placement);
+        placed = true;
+    } else if (shared && !worldPlacementIsIdentity(frame.placement)) {
+        place = worldPlacementMatrix(player.center_, player.radius_, player.center_, player.radius_, frame.placement);
+        placed = true;
     }
-    const CameraView view = cameraView(pose, player.center_, player.radius_, zoom);
-    const Vec3 eye = view.eye;
-    const float distance = view.distance;
-    const float aspect = static_cast<float>(target.width) / static_cast<float>(std::max(target.height, 1));
-    const Mat4 viewProj = perspective(view.fov, aspect, std::max(distance * 0.02f, 1e-3f), distance + player.radius_ * (8.0f + length(pose.move))) * lookAt(eye, view.target, view.up);
+    LightSetup ownLights;
+    if (worldOwner || (usePbr && !member)) {
+        ownLights = makeLights(scene, audio);
+    }
+    const LightSetup& lights = member ? ownerState->lights : ownLights;
+    if (worldOwner) {
+        WorldState& state = worldState_[static_cast<size_t>(worldIndex)];
+        state.viewProj = viewProj;
+        state.eye = eye;
+        state.forward = forward;
+        state.ownerCenter = player.center_;
+        state.ownerRadius = player.radius_;
+        state.lights = ownLights;
+        state.valid = true;
+    }
+    const FrustumPlanes frustum = frustumFromViewProjection(viewProj);
     const float pulse = camera.authored ? 1.0f : 1.0f + 0.07f * frame.kick + 0.04f * frame.bass;
     const Mat4 pivot = translation(player.center_) * scaling({pulse, pulse, pulse}) * translation(player.center_ * -1.0f);
 
@@ -873,50 +996,16 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
     glActiveTexture(GL_TEXTURE0);
 
     if (usePbr) {
-        float positions[16] = {};
-        float colors[12] = {};
-        int count = 0;
-        Vec3 sunDir{0.5f, 0.8f, 0.6f};
-        std::array<float, 3> sunColor{1.0f, 0.95f, 0.9f};
-        bool sunSet = false;
-        const auto addLight = [&](bool point, Vec3 position, std::array<float, 3> color, float intensity) {
-            if (count >= static_cast<int>(kSceneMaxLights)) {
-                return;
-            }
-            positions[count * 4 + 0] = position.x;
-            positions[count * 4 + 1] = position.y;
-            positions[count * 4 + 2] = position.z;
-            positions[count * 4 + 3] = point ? 1.0f : 0.0f;
-            for (int c = 0; c < 3; ++c) {
-                colors[count * 3 + c] = color[static_cast<size_t>(c)] * intensity;
-            }
-            if (!point && !sunSet) {
-                sunDir = normalize(position);
-                sunColor = color;
-                sunSet = true;
-            }
-            ++count;
-        };
-        if (scene.lights.empty()) {
-            addLight(false, {0.5f, 0.8f, 0.6f}, {1.0f, 0.96f, 0.9f}, 3.2f);
-            addLight(false, {-0.6f, -0.2f, -0.5f}, {0.6f, 0.7f, 1.0f}, 0.8f);
-            addLight(false, {0.0f, 0.3f, -1.0f}, {1.0f, 1.0f, 1.0f}, 1.5f);
-        } else {
-            for (const SceneLight& light : scene.lights) {
-                const float reactive = std::max(1.0f + bindingSum(light.bindings, BindTarget::Light, audio), 0.0f);
-                addLight(light.point, light.position, light.color, light.intensity * reactive);
-            }
-        }
-        glUniform1i(p.lightCount, count);
-        glUniform4fv(p.lightPos, 4, positions);
-        glUniform3fv(p.lightColor, 4, colors);
-        glUniform3f(p.skyTop, scene.sky.top[0], scene.sky.top[1], scene.sky.top[2]);
-        glUniform3f(p.skyHorizon, scene.sky.horizon[0], scene.sky.horizon[1], scene.sky.horizon[2]);
-        glUniform3f(p.skyGround, scene.sky.ground[0], scene.sky.ground[1], scene.sky.ground[2]);
-        glUniform1f(p.skyIntensity, scene.sky.intensity);
-        glUniform3f(p.sunDir, sunDir.x, sunDir.y, sunDir.z);
-        glUniform3f(p.sunColor, sunColor[0], sunColor[1], sunColor[2]);
-        glUniform1f(p.exposure, scene.exposure);
+        glUniform1i(p.lightCount, lights.count);
+        glUniform4fv(p.lightPos, 4, lights.positions.data());
+        glUniform3fv(p.lightColor, 4, lights.colors.data());
+        glUniform3f(p.skyTop, lights.skyTop[0], lights.skyTop[1], lights.skyTop[2]);
+        glUniform3f(p.skyHorizon, lights.skyHorizon[0], lights.skyHorizon[1], lights.skyHorizon[2]);
+        glUniform3f(p.skyGround, lights.skyGround[0], lights.skyGround[1], lights.skyGround[2]);
+        glUniform1f(p.skyIntensity, lights.skyIntensity);
+        glUniform3f(p.sunDir, lights.sunDir.x, lights.sunDir.y, lights.sunDir.z);
+        glUniform3f(p.sunColor, lights.sunColor[0], lights.sunColor[1], lights.sunColor[2]);
+        glUniform1f(p.exposure, lights.exposure);
         glUniform1i(p.texMr, 1);
         glUniform1i(p.texNormal, 2);
         glUniform1i(p.texEmissive, 3);
@@ -962,9 +1051,19 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
         }
         return material;
     };
+    const auto modelOf = [&](const SceneInstance& instance) {
+        return placed ? place * pivot * instance.world : pivot * instance.world;
+    };
+    const auto outsideView = [&](const SceneInstance& instance, const ScenePlayer::GpuMesh& mesh) {
+        if (!culling_ || instance.skin >= 0 || instance.inflate != 0.0f || instance.ripple != 0.0f || instance.weightCount > 0) {
+            return false;
+        }
+        const Mat4 model = modelOf(instance);
+        return !sphereMayBeVisible(frustum, transformPoint(model, mesh.centre), mesh.radius * largestAxisScale(model) * 1.02f + 1e-4f);
+    };
     const auto drawInstance = [&](const SceneInstance& instance, int pass) {
         const ScenePlayer::GpuMesh& mesh = player.meshes_[static_cast<size_t>(instance.mesh)];
-        const Mat4 model = pivot * instance.world;
+        const Mat4 model = modelOf(instance);
         const std::array<float, 9> normal = normalMatrix(model);
         glUniformMatrix4fv(p.model, 1, GL_FALSE, model.m.data());
         glUniformMatrix3fv(p.normalMat, 1, GL_FALSE, normal.data());
@@ -1074,19 +1173,26 @@ void SceneRenderer::draw(const ScenePlayer& player, const SceneFrame& frame, con
         float depth;
     };
     std::vector<Pending> blendList;
-    const Vec3 forward = normalize(player.center_ - eye);
+    drawnInstances_ = 0;
+    culledInstances_ = 0;
     for (size_t i = 0; i < eval.instances.size(); ++i) {
         const SceneInstance& instance = eval.instances[i];
         if (instance.mesh < 0 || instance.mesh >= static_cast<int>(player.meshes_.size())) {
             continue;
         }
         const ScenePlayer::GpuMesh& mesh = player.meshes_[static_cast<size_t>(instance.mesh)];
+        if (outsideView(instance, mesh)) {
+            ++culledInstances_;
+            continue;
+        }
+        ++drawnInstances_;
         if (materialOf(mesh).alphaMode == AlphaMode::Blend) {
-            Vec3 centre = transformPoint(pivot * instance.world, mesh.centre);
+            const Mat4 placedPivot = placed ? place * pivot : pivot;
+            Vec3 centre = transformPoint(placedPivot * instance.world, mesh.centre);
             if (instance.skin >= 0 && instance.jointCount > 0) {
                 Vec3 sum{0.0f, 0.0f, 0.0f};
                 for (int k = 0; k < instance.jointCount; ++k) {
-                    sum = sum + transformPoint(pivot * eval.joints[static_cast<size_t>(instance.jointOffset + k)], mesh.centre);
+                    sum = sum + transformPoint(placedPivot * eval.joints[static_cast<size_t>(instance.jointOffset + k)], mesh.centre);
                 }
                 centre = sum * (1.0f / static_cast<float>(instance.jointCount));
             }

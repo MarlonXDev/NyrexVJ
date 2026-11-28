@@ -3048,6 +3048,21 @@ const Translation kFrench[] = {
     {"When off, 3D scenes keep the old camera: no glide between cameras, no look-at offset, no roll, no shot lengths, and the camera bindings and the layer camera controls are ignored. Cuts and zoom work as before.", "Désactivé, les scènes 3D gardent l'ancienne caméra : pas de glissement entre les caméras, pas de décalage, pas de roulis, pas de durée de plan, et les liaisons de la caméra ainsi que les commandes de caméra des calques sont ignorées. Les coupes et le zoom fonctionnent comme avant."},
     {"orthographic", "orthographique"},
     {"Cameras in the file (usable in the Clip Creator)", "Caméras dans le fichier (utilisables dans le Créateur de clips)"},
+    {"3D world", "Monde 3D"},
+    {"Shared 3D world", "Monde 3D partagé"},
+    {"Shared 3D worlds", "Mondes 3D partagés"},
+    {"Own scene", "Scène propre"},
+    {"World", "Monde"},
+    {"World position X", "Position dans le monde X"},
+    {"World position Y", "Position dans le monde Y"},
+    {"World position Z", "Position dans le monde Z"},
+    {"World turn", "Rotation dans le monde"},
+    {"World size", "Taille dans le monde"},
+    {"Parent", "Parent"},
+    {"The object moves, turns and scales with its parent and takes the music reactions of its parent on top of its own. Objects can be nested up to 8 levels. Deleting a parent moves its children up one level.", "L'objet se déplace, tourne et change d'échelle avec son parent et reprend en plus ses réactions à la musique. Les objets peuvent être imbriqués sur 8 niveaux. Supprimer un parent fait remonter ses enfants d'un niveau."},
+    {"Layers set to the same world are drawn into one space with one depth buffer, so their objects hide each other where they overlap. The lowest visible layer of the world sets the camera, lights and sky; the other layers are placed relative to it. Layers of one world must have the same resolution.", "Les calques réglés sur le même monde sont dessinés dans un seul espace avec un seul tampon de profondeur, si bien que leurs objets se masquent là où ils se chevauchent. Le calque visible le plus bas du monde définit la caméra, les lumières et le ciel ; les autres calques sont placés par rapport à lui. Les calques d'un monde doivent avoir la même résolution."},
+    {"Where this layer sits in the shared world, in units of the size of the lowest layer of the world. The lowest layer itself moves too, relative to the camera.", "Où se trouve ce calque dans le monde partagé, en unités de la taille du calque le plus bas du monde. Le calque le plus bas bouge aussi, par rapport à la caméra."},
+    {"When off, every 3D layer draws its own scene with its own depth buffer, whatever world the layers are set to. Turn this off if shared worlds cost too much on your graphics card.", "Désactivé, chaque calque 3D dessine sa propre scène avec son propre tampon de profondeur, quel que soit le monde choisi. Désactivez-le si les mondes partagés coûtent trop cher sur votre carte graphique."},
 };
 
 }

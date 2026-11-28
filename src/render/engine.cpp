@@ -3527,7 +3527,7 @@ void Engine::blit(const RenderTarget& source, const RenderTarget& target) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target) {
+void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target, bool worldOwner, bool inWorld) {
     const ClipDef& clipDef = clipLibrary()[static_cast<size_t>(clipIndex)];
     if (clipDef.isRoute()) {
         drawRouted(clipDef.sceneIndex, instance, target);
@@ -3555,6 +3555,11 @@ void Engine::drawLayerSource(int clipIndex, int instance, const Layer& layer, co
         frame.colorA = layer.colorA;
         frame.colorB = layer.colorB;
         frame.rainbow = layer.rainbow;
+        if (inWorld) {
+            frame.world = layer.world;
+            frame.worldOwner = worldOwner;
+            frame.placement = {layer.worldX, layer.worldY, layer.worldZ, layer.worldYaw, layer.worldScale};
+        }
         sceneRenderer_.draw(*scenes_[static_cast<size_t>(clipIndex)], frame, target);
     } else if (media_[static_cast<size_t>(clipIndex)]) {
         drawMedia(*media_[static_cast<size_t>(clipIndex)], scale, false, clock, &playback);
@@ -3811,6 +3816,8 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         clipOf[static_cast<size_t>(l)] = clipIndex;
     }
     const routing::Plan plan = planRouting(clipOf, deck);
+    sceneRenderer_.resetWorlds();
+    std::array<bool, kWorldCount> worldOpen{};
 
     if (landing) {
         int blendSwaps = 0;
@@ -3858,7 +3865,19 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         if (profiler_.enabled()) {
             profiler_.mark(PassKind::Source, deck, l + 1, 0, clipLibrary()[static_cast<size_t>(clipIndex)].name);
         }
-        drawLayerSource(clipIndex, deck * kLayerCount + l, layer, layer.playback[static_cast<size_t>(layer.activeColumn)], effective[li].scale, clocks[li], *chainSource);
+        bool inWorld = false;
+        bool worldOwner = false;
+        if (sceneWorlds_ && !hidden && layer.world >= 1 && layer.world <= kWorldCount) {
+            const std::unique_ptr<ScenePlayer>& scenePlayer = scenes_[static_cast<size_t>(clipIndex)];
+            if (scenePlayer && scenePlayer->state() == SceneState::Ready) {
+                inWorld = true;
+                const size_t slotIndex = static_cast<size_t>(layer.world - 1);
+                worldOwner = !worldOpen[slotIndex];
+                worldOpen[slotIndex] = true;
+                ++worldLayers_;
+            }
+        }
+        drawLayerSource(clipIndex, deck * kLayerCount + l, layer, layer.playback[static_cast<size_t>(layer.activeColumn)], effective[li].scale, clocks[li], *chainSource, worldOwner, inWorld);
 
         RenderTarget* result = runChain(layer.fx, chainFeedback(chainBase + l), chainUsed(chainBase + l), chainSource, chainScratch, deck, l + 1);
         routeCapture(deck, l, *result, plan);
@@ -4080,6 +4099,8 @@ void Engine::render() {
         glBeginQuery(GL_TIME_ELAPSED, gpuQueries_[slot]);
         gpuActive_ = true;
     }
+    sceneRenderer_.beginFrame();
+    worldLayers_ = 0;
     renderClipThumbnails(2);
     serviceScenes();
     serviceMedia();

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <functional>
 #include <set>
 
 namespace nvj {
@@ -558,6 +559,226 @@ bool docRemoveCamera(SceneDoc& doc, int index) {
     return true;
 }
 
+namespace {
+
+std::string idFor(size_t counter) {
+    return "o" + std::to_string(counter);
+}
+
+void assignObjectIds(SceneDoc& doc) {
+    std::set<std::string> used;
+    for (DocObject& o : doc.objects) {
+        if (!isSafeObjectId(o.id) || !used.insert(o.id).second) {
+            o.id.clear();
+        }
+    }
+    size_t counter = 1;
+    for (DocObject& o : doc.objects) {
+        if (!o.id.empty()) {
+            continue;
+        }
+        std::string id;
+        do {
+            id = idFor(counter++);
+        } while (used.count(id) != 0);
+        used.insert(id);
+        o.id = std::move(id);
+    }
+}
+
+void repairHierarchy(SceneDoc& doc, std::vector<std::string>* notes) {
+    for (DocObject& o : doc.objects) {
+        if (o.parent.empty()) {
+            continue;
+        }
+        const std::string shown = shownKey(o.parent);
+        if (o.parent == o.id) {
+            if (notes) {
+                addNote(*notes, "object '" + o.name + "' was its own parent and was moved to the top level");
+            }
+            o.parent.clear();
+        } else if (docObjectById(doc, o.parent) < 0) {
+            if (notes) {
+                addNote(*notes, "object '" + o.name + "' has the parent '" + shown + "' that does not exist and was moved to the top level");
+            }
+            o.parent.clear();
+        }
+    }
+    for (size_t i = 0; i < doc.objects.size(); ++i) {
+        if (doc.objects[i].parent.empty()) {
+            continue;
+        }
+        int depth = 0;
+        bool cycle = false;
+        int at = static_cast<int>(i);
+        while (!doc.objects[static_cast<size_t>(at)].parent.empty()) {
+            at = docObjectById(doc, doc.objects[static_cast<size_t>(at)].parent);
+            ++depth;
+            if (at < 0) {
+                break;
+            }
+            if (at == static_cast<int>(i) || depth > static_cast<int>(doc.objects.size())) {
+                cycle = true;
+                break;
+            }
+        }
+        if (cycle || depth > kDocMaxDepth) {
+            if (notes) {
+                addNote(*notes, "object '" + doc.objects[i].name + "' " + (cycle ? "was part of a parent loop" : "was nested deeper than " + std::to_string(kDocMaxDepth) + " levels") + " and was moved to the top level");
+            }
+            doc.objects[i].parent.clear();
+        }
+    }
+}
+
+}
+
+bool isSafeObjectId(const std::string& id) {
+    if (id.empty() || id.size() > kDocMaxIdBytes) {
+        return false;
+    }
+    for (const char c : id) {
+        const unsigned char u = static_cast<unsigned char>(c);
+        if (!(std::isalnum(u) || c == '_' || c == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int docObjectById(const SceneDoc& doc, const std::string& id) {
+    if (id.empty()) {
+        return -1;
+    }
+    for (size_t i = 0; i < doc.objects.size(); ++i) {
+        if (doc.objects[i].id == id) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+std::string docNewObjectId(const SceneDoc& doc) {
+    std::set<std::string> used;
+    for (const DocObject& o : doc.objects) {
+        used.insert(o.id);
+    }
+    size_t counter = doc.objects.size() + 1;
+    std::string id = idFor(counter);
+    while (used.count(id) != 0) {
+        id = idFor(++counter);
+    }
+    return id;
+}
+
+int docObjectDepth(const SceneDoc& doc, int index) {
+    int depth = 0;
+    int at = index;
+    while (at >= 0 && at < static_cast<int>(doc.objects.size()) && !doc.objects[static_cast<size_t>(at)].parent.empty() && depth <= static_cast<int>(doc.objects.size())) {
+        at = docObjectById(doc, doc.objects[static_cast<size_t>(at)].parent);
+        ++depth;
+    }
+    return depth;
+}
+
+bool docCanParent(const SceneDoc& doc, int child, int parent) {
+    const int count = static_cast<int>(doc.objects.size());
+    if (child < 0 || child >= count) {
+        return false;
+    }
+    if (parent < 0) {
+        return true;
+    }
+    if (parent >= count || parent == child) {
+        return false;
+    }
+    int at = parent;
+    int steps = 0;
+    while (at >= 0 && steps <= count) {
+        if (at == child) {
+            return false;
+        }
+        at = docObjectById(doc, doc.objects[static_cast<size_t>(at)].parent);
+        ++steps;
+    }
+    int deepest = 0;
+    for (int i = 0; i < count; ++i) {
+        int up = i;
+        int levels = 0;
+        while (up >= 0 && levels <= count) {
+            if (up == child) {
+                deepest = std::max(deepest, levels);
+                break;
+            }
+            up = docObjectById(doc, doc.objects[static_cast<size_t>(up)].parent);
+            ++levels;
+        }
+    }
+    return docObjectDepth(doc, parent) + 1 + deepest <= kDocMaxDepth;
+}
+
+bool docSetParent(SceneDoc& doc, int child, int parent) {
+    if (!docCanParent(doc, child, parent)) {
+        return false;
+    }
+    DocObject& object = doc.objects[static_cast<size_t>(child)];
+    if (object.id.empty()) {
+        object.id = docNewObjectId(doc);
+    }
+    object.parent = parent < 0 ? std::string() : doc.objects[static_cast<size_t>(parent)].id;
+    return true;
+}
+
+void docRemoveObject(SceneDoc& doc, int index) {
+    if (index < 0 || index >= static_cast<int>(doc.objects.size())) {
+        return;
+    }
+    const std::string id = doc.objects[static_cast<size_t>(index)].id;
+    const std::string parent = doc.objects[static_cast<size_t>(index)].parent;
+    for (DocObject& o : doc.objects) {
+        if (!id.empty() && o.parent == id) {
+            o.parent = parent;
+        }
+    }
+    doc.objects.erase(doc.objects.begin() + index);
+}
+
+std::vector<int> docObjectOrder(const SceneDoc& doc) {
+    std::vector<int> order;
+    std::vector<bool> placed(doc.objects.size(), false);
+    const std::function<void(int)> visit = [&](int index) {
+        if (placed[static_cast<size_t>(index)]) {
+            return;
+        }
+        placed[static_cast<size_t>(index)] = true;
+        order.push_back(index);
+        const std::string& id = doc.objects[static_cast<size_t>(index)].id;
+        for (size_t i = 0; i < doc.objects.size(); ++i) {
+            if (!placed[i] && !id.empty() && doc.objects[i].parent == id) {
+                visit(static_cast<int>(i));
+            }
+        }
+    };
+    for (size_t i = 0; i < doc.objects.size(); ++i) {
+        if (doc.objects[i].parent.empty()) {
+            visit(static_cast<int>(i));
+        }
+    }
+    for (size_t i = 0; i < doc.objects.size(); ++i) {
+        visit(static_cast<int>(i));
+    }
+    return order;
+}
+
+bool docUsesHierarchy(const SceneDoc& doc) {
+    for (const DocObject& o : doc.objects) {
+        if (!o.parent.empty()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void sanitizeDoc(SceneDoc& doc) {
     doc.name = cleanName(doc.name, "Untitled");
     if (doc.objects.size() > kDocMaxObjects) {
@@ -623,6 +844,8 @@ void sanitizeDoc(SceneDoc& doc) {
         }
         sanitizeBindings(o.bindings, false, false);
     }
+    assignObjectIds(doc);
+    repairHierarchy(doc, nullptr);
     for (DocLight& l : doc.lights) {
         l.name = cleanName(l.name, "Light");
         sanitizeVec(l.position, 500.0f);
@@ -685,8 +908,11 @@ DocCamera docCameraFromScene(const SceneCamera& camera, const std::string& name)
 int docRequiredVersion(const SceneDoc& source) {
     SceneDoc doc = source;
     sanitizeDoc(doc);
+    if (docUsesHierarchy(doc)) {
+        return kDocHierarchyVersion;
+    }
     if (docUsesCameraMoves(doc)) {
-        return kDocVersion;
+        return kDocCameraVersion;
     }
     bool newer = usesNewBindings(doc.camera.bindings, BindingOwner::Camera);
     for (const DocCamera& cam : doc.extraCameras) {
@@ -727,8 +953,15 @@ std::string docToJson(const SceneDoc& source) {
         root["glideShape"] = glideKey(doc.glideShape);
     }
     json objects = json::array();
+    const bool hierarchy = docUsesHierarchy(doc);
     for (const DocObject& o : doc.objects) {
         json entry;
+        if (hierarchy) {
+            entry["id"] = o.id;
+            if (!o.parent.empty()) {
+                entry["parent"] = o.parent;
+            }
+        }
         entry["name"] = o.name;
         entry["kind"] = primitiveKey(o.kind);
         if (o.kind == PrimitiveKind::Model) {
@@ -847,6 +1080,8 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
                 break;
             }
             DocObject o;
+            readString(entry, "id", o.id);
+            readString(entry, "parent", o.parent);
             readString(entry, "name", o.name);
             std::string key;
             if (readString(entry, "kind", key)) {
@@ -908,6 +1143,11 @@ bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error) {
             out.lights.push_back(std::move(l));
         }
     }
+    for (DocObject& o : out.objects) {
+        o.name = cleanName(o.name, "Object");
+    }
+    assignObjectIds(out);
+    repairHierarchy(out, &out.notes);
     sanitizeDoc(out);
     doc = std::move(out);
     return true;

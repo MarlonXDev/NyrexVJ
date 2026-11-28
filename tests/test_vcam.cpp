@@ -467,8 +467,9 @@ SceneDoc cameraDoc() {
 
 void testDocRoundTrip() {
     const SceneDoc doc = cameraDoc();
-    CHECK(docRequiredVersion(doc) == kDocVersion);
-    CHECK(kDocVersion == 3);
+    CHECK(docRequiredVersion(doc) == kDocCameraVersion);
+    CHECK(kDocCameraVersion == 3);
+    CHECK(kDocVersion == 4);
     const std::string text = docToJson(doc);
     const nlohmann::json parsed = nlohmann::json::parse(text);
     CHECK(parsed["version"] == 3);
@@ -491,7 +492,7 @@ void testDocRoundTrip() {
     for (const BindTarget target : {BindTarget::Orbit, BindTarget::Tilt, BindTarget::Roll, BindTarget::Fov, BindTarget::MoveX, BindTarget::MoveY, BindTarget::MoveZ}) {
         SceneDoc one = makeDefaultDoc();
         one.camera.bindings[0] = {true, BindSource::Bass, target, 0.5f};
-        CHECK(docRequiredVersion(one) == kDocVersion);
+        CHECK(docRequiredVersion(one) == kDocCameraVersion);
         SceneDoc read;
         CHECK(docFromJson(docToJson(one), read, error));
         CHECK(read.camera.bindings[0].enabled && read.camera.bindings[0].target == target);
@@ -520,7 +521,7 @@ void testOldFilesStayOld() {
 
     SceneDoc glideOnly = makeDefaultDoc();
     glideOnly.glide = 0.5f;
-    CHECK(docRequiredVersion(glideOnly) == kDocVersion);
+    CHECK(docRequiredVersion(glideOnly) == kDocCameraVersion);
     SceneDoc glideZero = makeDefaultDoc();
     glideZero.glideShape = CameraGlide::Cut;
     CHECK(docRequiredVersion(glideZero) == kDocBaseVersion);
@@ -530,9 +531,11 @@ void testOldFilesStayOld() {
     SceneDoc read;
     std::string future = text;
     nlohmann::json bumped = nlohmann::json::parse(text);
-    bumped["version"] = 4;
+    bumped["version"] = 5;
     CHECK(!docFromJson(bumped.dump(), read, error));
     CHECK(error.find("newer NyrexVJ") != std::string::npos);
+    bumped["version"] = 4;
+    CHECK(docFromJson(bumped.dump(), read, error));
     bumped["version"] = 3;
     CHECK(docFromJson(bumped.dump(), read, error));
     bumped["version"] = 2;

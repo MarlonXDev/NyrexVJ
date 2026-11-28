@@ -798,6 +798,7 @@ void App::frame(double dt, bool drawUi) {
     engine_.setGraphOptimizer(settings_.graphOptimizer);
     engine_.setSceneMaterialBindings(settings_.sceneMaterialBindings);
     engine_.setSceneCameraMoves(settings_.sceneCameraMoves);
+    engine_.setSceneWorlds(settings_.sceneWorlds);
     engine_.update(dt);
     netSync_.afterEngineUpdate(steadyNowSeconds(), dt);
     updatePlugins();

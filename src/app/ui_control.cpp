@@ -60,6 +60,14 @@ std::string itemName(const ControlTarget& target) {
         return tr("Camera tilt");
     case ControlItem::CameraFov:
         return tr("Camera field of view");
+    case ControlItem::WorldX:
+        return tr("World position X");
+    case ControlItem::WorldY:
+        return tr("World position Y");
+    case ControlItem::WorldZ:
+        return tr("World position Z");
+    case ControlItem::WorldYaw:
+        return tr("World turn");
     case ControlItem::Bypass:
         return tr("Bypass");
     case ControlItem::Solo:

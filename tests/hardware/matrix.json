@@ -3856,6 +3856,91 @@
           "criteria": "Proposed: a glide has no jump at the cut, every camera target and layer control moves the camera it is named for, the limits hold when sliders are dragged, a model camera shows the model as its file does, the settings survive saving and loading, an old program refuses only scenes that need the new keys, the frame time with the switch on is not more than 5 percent above the frame time with it off at the same scene, and the graphics memory does not change."
         }
       ]
+    },
+    {
+      "id": "scene-world",
+      "title": "Shared 3D scene: a parent for objects, a model used twice built once, shared worlds across layers with one depth buffer per world, culling of instances outside the view, four layer controls (world-x, world-y, world-z, world-yaw), scene version 4 only when needed, and the switch Shared 3D worlds",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SCENE3D.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/manual/manual.en.md",
+        "docs/TESTING.md",
+        "docs/adr/0064-shared-3d-scene-hierarchy-model-reuse-and-shared-worlds-across-layers.md"
+      ],
+      "sources": [
+        "src/scene3d/scene_world.hpp",
+        "src/scene3d/scene_doc.cpp",
+        "src/scene3d/doc_build.cpp",
+        "src/render/scene_player.cpp",
+        "src/render/engine.cpp",
+        "src/control/control_targets.cpp",
+        "src/core/preset.cpp",
+        "src/core/settings.cpp",
+        "src/app/ui_creator.cpp",
+        "src/app/ui_panels.cpp",
+        "src/app/ui_settings.cpp",
+        "src/app/scene_selftest.cpp",
+        "tests/test_world.cpp",
+        "scripts/test_shared_world.py"
+      ],
+      "automated": [
+        {
+          "id": "A-WLD-1",
+          "kind": "ctest",
+          "name": "nvj_world_tests",
+          "note": "object ids and their repair, every parent rule (itself, missing, loop, too deep, hidden parent, delete, duplicate), the document version written (1, 2, 3 or 4) and the refusal of 5, a round trip through JSON and a clip pack, transform and music inheritance against a hand-baked scene, a model used twice built once with the same picture and half the vertices, the placement matrix, the frustum test, the limits and bad numbers of the layer fields, the preset keys, the control ids and the setting, and the demo files"
+        },
+        {
+          "id": "A-WLD-2",
+          "kind": "ctest",
+          "name": "nvj_creator_tests",
+          "note": "the Clip Creator checks still pass with ids, parents and the reuse of a model (the mesh and morph counts of a scene with a repeated model were adjusted)"
+        },
+        {
+          "id": "A-WLD-3",
+          "kind": "cli",
+          "command": "NyrexVJ --scene-selftest tests/data/models",
+          "note": "draws scenes through a real OpenGL context: an owner alone equals an isolated scene, a member in front of and behind the owner equals one scene drawn together, occlusion follows the depth and not the layer order, two worlds do not see each other, the depth memory of a world is counted and freed when idle, a member with another resolution and a broken owner fall back to their own scenes, each layer keeps its own music rows, culling skips instances and every picture stays the same, and it reports the hashes of the built-in scenes and the music moments, which are the same as in 0.69.0 when two reports are compared"
+        },
+        {
+          "id": "A-WLD-4",
+          "kind": "script",
+          "command": "python3 scripts/test_shared_world.py build/NyrexVJ build/nvj_world_tests",
+          "note": "renders the demo preset through the real program with Shared 3D worlds on, off and with layers that have no world: both layers show in a world and the one in front covers part of the other, without a world the upper layer covers the lower, and the switch off equals no world"
+        },
+        {
+          "id": "A-WLD-5",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "the new texts have a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-WLD-1",
+          "title": "A shared 3D world on a real graphics card, in the real editor and in a real show",
+          "needs": "A PC with a graphics card, a music source or a line input, a MIDI controller or an OSC sender, the demo files of docs/examples/shared-3d-world and a few 3D scenes of your own, two PCs with NyrexVJ for the network sync, and optionally VRChat running next to NyrexVJ",
+          "steps": [
+            "Copy the clips and the preset of docs/examples/shared-3d-world to your folders, load the preset Shared 3D World and check that the arm and the cube both show, that they hide each other where they overlap and that the right one is in front, and that moving the cube layer to the other side of the arm in World position Z swaps which one is in front.",
+            "Set the layers back to Own scene and check that the upper layer covers the lower one as before; turn Shared 3D worlds off in Settings, Performance with the layers still on World 1 and check that it looks the same.",
+            "Open the Clip Creator, add an object, choose a Parent for it, and check that the child follows the parent when the parent moves, spins or gets a music reaction, that the list is indented, that the Parent list offers no loop, that deleting the parent lifts the children and that Duplicate copies only the object; use Undo and Redo through all of it.",
+            "Add the same model twice, check that the scene looks right, and save the scene and load it again, also from a preset and from a show package.",
+            "Drag World position X, Y, Z, World turn and World size by hand and check that the layer moves in the world and the limits hold; then drive world-x, world-y, world-z and world-yaw from MIDI, from OSC and from a lane of the Show timeline.",
+            "Put four layers in one world with different music bindings and check that each keeps its own music reaction, and that the effects, blend mode and opacity of each layer still work; put a translucent surface in a member and check what you see against the limit named in the manual.",
+            "Hide the lowest layer of a world and check that the next layer takes over the camera without a crash; change the resolution of one layer and check that it draws on its own.",
+            "Open the saved scene in 0.69.0 or older and check that a scene with a parent is refused with a message about a newer program and one without still opens.",
+            "Run two instances with the network sync, move a layer in its world on the master and check that the follower moves it too.",
+            "Play four worlds with four layers at the output size you use, compare the frame time with the switch on and off, watch the graphics memory, and let it run for an hour."
+          ],
+          "measure": "the frame time with the switch off and on at the output size you play at, the graphics memory over an hour (one depth buffer per world), the time from a MIDI or OSC message to the moved layer, and how the World section, the Parent list and the indented object list look at your interface scale",
+          "criteria": "Proposed: objects of two layers in one world hide each other by depth in either layer order, every layer keeps its own effects, blend mode, opacity and music reaction, a child follows its parent, a model used twice looks like two copies, the settings survive saving and loading, an old program refuses only scenes that need version 4, the follower shows the same placement as the master, the frame time with the switch on is not more than 5 percent above the frame time with it off at the same scenes, and the graphics memory grows by one depth buffer per world and no more."
+        }
+      ]
     }
   ]
 }

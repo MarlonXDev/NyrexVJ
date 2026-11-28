@@ -654,6 +654,31 @@ void App::drawClipPanel() {
         ImGui::SetItemTooltip("%s", cameraHint);
         ui::sliderFloat(trId("Camera field of view", "layerCameraFov"), &layer.cameraFov, -30.0f, 30.0f, "%.0f");
         ImGui::SetItemTooltip("%s", cameraHint);
+
+        ui::sectionHeader(tr("Shared 3D world"));
+        const std::string worldNames[kWorldCount + 1] = {tr("Own scene"), std::string(tr("World")) + " 1", std::string(tr("World")) + " 2", std::string(tr("World")) + " 3", std::string(tr("World")) + " 4"};
+        if (ui::beginCombo(trId("3D world", "layerWorld"), worldNames[std::clamp(layer.world, 0, kWorldCount)].c_str())) {
+            for (int w = 0; w <= kWorldCount; ++w) {
+                if (ImGui::Selectable(worldNames[w].c_str(), layer.world == w)) {
+                    layer.world = w;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SetItemTooltip("%s", tr("Layers set to the same world are drawn into one space with one depth buffer, so their objects hide each other where they overlap. The lowest visible layer of the world sets the camera, lights and sky; the other layers are placed relative to it. Layers of one world must have the same resolution."));
+        if (layer.world > 0) {
+            const char* placeHint = tr("Where this layer sits in the shared world, in units of the size of the lowest layer of the world. The lowest layer itself moves too, relative to the camera.");
+            ui::sliderFloat(trId("World position X", "layerWorldX"), &layer.worldX, -4.0f, 4.0f, "%.2f");
+            ImGui::SetItemTooltip("%s", placeHint);
+            ui::sliderFloat(trId("World position Y", "layerWorldY"), &layer.worldY, -4.0f, 4.0f, "%.2f");
+            ImGui::SetItemTooltip("%s", placeHint);
+            ui::sliderFloat(trId("World position Z", "layerWorldZ"), &layer.worldZ, -4.0f, 4.0f, "%.2f");
+            ImGui::SetItemTooltip("%s", placeHint);
+            ui::sliderFloat(trId("World turn", "layerWorldYaw"), &layer.worldYaw, -180.0f, 180.0f, "%.0f");
+            ImGui::SetItemTooltip("%s", placeHint);
+            ui::sliderFloat(trId("World size", "layerWorldScale"), &layer.worldScale, 0.1f, 4.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+            ImGui::SetItemTooltip("%s", placeHint);
+        }
     }
 
     ui::sectionHeader(tr("Look"));

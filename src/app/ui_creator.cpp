@@ -384,6 +384,31 @@ bool animationEditor(std::array<DocAnimation, 2>& animations) {
     return changed;
 }
 
+bool parentCombo(SceneDoc& doc, int index) {
+    bool changed = false;
+    const DocObject& self = doc.objects[static_cast<size_t>(index)];
+    const int current = docObjectById(doc, self.parent);
+    const std::string preview = current >= 0 ? doc.objects[static_cast<size_t>(current)].name : std::string(tr("(none)"));
+    if (ui::beginCombo(tr("Parent"), preview.c_str())) {
+        if (ImGui::Selectable(tr("(none)"), current < 0)) {
+            changed = docSetParent(doc, index, -1);
+        }
+        for (int i = 0; i < static_cast<int>(doc.objects.size()); ++i) {
+            if (i == index || !docCanParent(doc, index, i)) {
+                continue;
+            }
+            ImGui::PushID(i);
+            if (ImGui::Selectable(doc.objects[static_cast<size_t>(i)].name.c_str(), i == current)) {
+                changed = docSetParent(doc, index, i);
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", tr("The object moves, turns and scales with its parent and takes the music reactions of its parent on top of its own. Objects can be nested up to 8 levels. Deleting a parent moves its children up one level."));
+    return changed;
+}
+
 bool objectInspector(CreatorState& cs, DocObject& o) {
     bool changed = false;
     const char* repeatKinds[] = {tr("Off"), tr("Ring"), tr("Line")};
@@ -396,6 +421,9 @@ bool objectInspector(CreatorState& cs, DocObject& o) {
     changed |= ImGui::Checkbox(tr("Visible"), &o.visible);
     ImGui::SameLine();
     changed |= ImGui::Checkbox(tr("Counts for camera framing"), &o.framing);
+    if (cs.selectIndex >= 0 && cs.selectIndex < static_cast<int>(cs.doc.objects.size()) && &cs.doc.objects[static_cast<size_t>(cs.selectIndex)] == &o && cs.doc.objects.size() > 1) {
+        changed |= parentCombo(cs.doc, cs.selectIndex);
+    }
 
     if (ui::collapsingHeader(tr("Transform"), ImGuiTreeNodeFlags_DefaultOpen)) {
         changed |= dragVec3(tr("Position"), o.position, 0.02f, -1000.0f, 1000.0f);
@@ -835,13 +863,21 @@ void App::drawCreator() {
             cs.selectKind = CreatorSelect::Scene;
         }
         ui::sectionHeader(tr("Objects"));
-        for (int i = 0; i < static_cast<int>(cs.doc.objects.size()); ++i) {
+        const std::vector<int> listOrder = docObjectOrder(cs.doc);
+        for (const int i : listOrder) {
             const DocObject& o = cs.doc.objects[static_cast<size_t>(i)];
+            const int depth = docObjectDepth(cs.doc, i);
             ImGui::PushID(i);
+            if (depth > 0) {
+                ImGui::Indent(14.0f * static_cast<float>(depth));
+            }
             const std::string label = o.name + (o.visible ? "" : std::string("  (") + tr("hidden") + ")");
             if (ImGui::Selectable(label.c_str(), cs.selectKind == CreatorSelect::Object && cs.selectIndex == i)) {
                 cs.selectKind = CreatorSelect::Object;
                 cs.selectIndex = i;
+            }
+            if (depth > 0) {
+                ImGui::Unindent(14.0f * static_cast<float>(depth));
             }
             ImGui::PopID();
         }
@@ -865,6 +901,7 @@ void App::drawCreator() {
                 if (ImGui::MenuItem(labels[k]) && cs.doc.objects.size() < kDocMaxObjects) {
                     snapshot();
                     DocObject object = makeDefaultObject(static_cast<PrimitiveKind>(k));
+                    object.id = docNewObjectId(cs.doc);
                     object.name = labels[k];
                     cs.doc.objects.push_back(object);
                     cs.selectKind = CreatorSelect::Object;
@@ -882,6 +919,7 @@ void App::drawCreator() {
                     if (ImGui::MenuItem(asset.name.c_str()) && cs.doc.objects.size() < kDocMaxObjects) {
                         snapshot();
                         DocObject object = makeDefaultObject(PrimitiveKind::Model);
+                        object.id = docNewObjectId(cs.doc);
                         object.model = asset.name;
                         object.name = pathToUtf8(pathFromUtf8(asset.name).stem());
                         cs.doc.objects.push_back(object);
@@ -936,6 +974,7 @@ void App::drawCreator() {
             if (cs.selectKind == CreatorSelect::Object && cs.doc.objects.size() < kDocMaxObjects) {
                 snapshot();
                 DocObject copy = cs.doc.objects[static_cast<size_t>(cs.selectIndex)];
+                copy.id = docNewObjectId(cs.doc);
                 copy.name += " 2";
                 cs.doc.objects.insert(cs.doc.objects.begin() + cs.selectIndex + 1, copy);
                 ++cs.selectIndex;
@@ -953,23 +992,28 @@ void App::drawCreator() {
         if (ImGui::Button(tr("Delete"), ImVec2(half, 0.0f)) && haveSelection) {
             snapshot();
             if (cs.selectKind == CreatorSelect::Object) {
-                cs.doc.objects.erase(cs.doc.objects.begin() + cs.selectIndex);
+                docRemoveObject(cs.doc, cs.selectIndex);
             } else {
                 cs.doc.lights.erase(cs.doc.lights.begin() + cs.selectIndex);
             }
             markChanged(cs);
         }
-        if (ImGui::Button(tr("Move up"), ImVec2(half, 0.0f)) && cs.selectKind == CreatorSelect::Object && cs.selectIndex > 0) {
+        const std::vector<int> moveOrder = docObjectOrder(cs.doc);
+        const auto shownAt = std::find(moveOrder.begin(), moveOrder.end(), cs.selectIndex);
+        const int shownPos = shownAt == moveOrder.end() ? -1 : static_cast<int>(shownAt - moveOrder.begin());
+        if (ImGui::Button(tr("Move up"), ImVec2(half, 0.0f)) && cs.selectKind == CreatorSelect::Object && shownPos > 0) {
             snapshot();
-            std::swap(cs.doc.objects[static_cast<size_t>(cs.selectIndex)], cs.doc.objects[static_cast<size_t>(cs.selectIndex - 1)]);
-            --cs.selectIndex;
+            const int other = moveOrder[static_cast<size_t>(shownPos - 1)];
+            std::swap(cs.doc.objects[static_cast<size_t>(cs.selectIndex)], cs.doc.objects[static_cast<size_t>(other)]);
+            cs.selectIndex = other;
             markChanged(cs);
         }
         ImGui::SameLine();
-        if (ImGui::Button(tr("Move down"), ImVec2(half, 0.0f)) && cs.selectKind == CreatorSelect::Object && cs.selectIndex + 1 < static_cast<int>(cs.doc.objects.size())) {
+        if (ImGui::Button(tr("Move down"), ImVec2(half, 0.0f)) && cs.selectKind == CreatorSelect::Object && shownPos >= 0 && shownPos + 1 < static_cast<int>(moveOrder.size())) {
             snapshot();
-            std::swap(cs.doc.objects[static_cast<size_t>(cs.selectIndex)], cs.doc.objects[static_cast<size_t>(cs.selectIndex + 1)]);
-            ++cs.selectIndex;
+            const int other = moveOrder[static_cast<size_t>(shownPos + 1)];
+            std::swap(cs.doc.objects[static_cast<size_t>(cs.selectIndex)], cs.doc.objects[static_cast<size_t>(other)]);
+            cs.selectIndex = other;
             markChanged(cs);
         }
         ImGui::EndDisabled();

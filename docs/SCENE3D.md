@@ -9,12 +9,12 @@ This is the 3D scene player that [ADR 0001](adr/0001-native-3d-runtime.md) asked
     -> gltf.cpp / procedural.cpp          (src/scene3d, no OpenGL, loads on a worker thread)
     -> Scene (nodes, meshes, materials, images, animations)
     -> ScenePlayer                         (src/render/scene_player.*, uploads to the GPU on the render thread)
-    -> SceneRenderer                       (draws into the layer's own texture with a shared depth buffer)
+    -> SceneRenderer                       (draws into the layer's own texture; the depth buffer is one per world since 0.70.0)
     -> layer effect chain -> composite     (unchanged)
 ```
 
 - A scene clip is a `ClipDef` with `kind` `BuiltinScene`, `ModelFile` or `ScenePack` (a `.nyxclip` file) instead of a fragment shader body. Presets store it by name like any other clip, an unknown name stays an empty cell.
-- `SceneRenderer` attaches the layer texture (`layerA_`) to its own framebuffer together with one depth renderbuffer. There is no extra colour target, no blit and no per-clip framebuffer. The depth buffer is shared by every scene clip.
+- `SceneRenderer` attaches the layer texture (`layerA_`) to its own framebuffer together with one depth renderbuffer. There is no extra colour target, no blit and no per-clip framebuffer. There is one depth renderbuffer that every scene clip uses, and it is cleared before each draw, so it is one resource and not a depth that the layers share. Since 0.70.0 layers in a shared world use a depth buffer of their own that is kept between the layers of the world (see Shared 3D scene).
 - `Engine::renderDeck` draws a scene clip and a shader clip through the same code path afterwards: effects, blend mode, opacity and master chain are untouched.
 - Scene data is loaded by `std::async`, so file reading, parsing and image decoding never run on the render thread. The upload to the GPU is done on the render thread the first time the clip is in a deck cell. Until it is ready the layer is simply empty.
 - After the upload the CPU copy of the geometry and images is released. Several layers (and several decks) that play the same scene share one set of GPU buffers.
@@ -98,7 +98,7 @@ Memory is deterministic and was measured with 4 layers at 1920 x 1080:
 | Part | Size |
 | --- | --- |
 | Render targets (5 full size textures, no scene needed) | 39.5 MiB |
-| Shared depth buffer, only once a scene clip has drawn | 8.0 MiB |
+| Depth buffer, only once a scene clip has drawn (one more of this size for each shared world in use, at most four) | 8.0 MiB |
 | Geometry of Orbit Rings Mesh, shared by all 4 layers | 0.7 MiB |
 | Clip thumbnails and layer previews | 2.4 MiB |
 
@@ -165,6 +165,46 @@ Rows on the same target add up. The camera has the same four rows as every other
 
 **Files.** A scene is written as `"version": 3` when it uses a camera feature (roll, offset, shot length, glide, a camera target), as 2 when it uses the 0.68.0 bindings and as 1 otherwise; a program that does not know the version refuses it with its message about a newer program. The keys `move`, `roll` and `beats` of a camera and `glide` and `glideShape` of the scene are written only when they are not 0 (the curve only when the glide is above 0). The Free camera of the editor ignores all of it, as it ignored the camera of the scene before.
 
+## Shared 3D scene (0.70.0)
+
+[ADR 0064](adr/0064-shared-3d-scene-hierarchy-model-reuse-and-shared-worlds-across-layers.md). Objects of one clip always hid each other, because a clip is drawn as one scene with one view and one depth test. 0.70.0 adds three things on top: a parent for an object, a model that is used twice and is built once, and **worlds** in which several layers are drawn into one space with one depth buffer, so the objects of two layers hide each other where they overlap. Physics, collisions and ray casts are not part of it.
+
+**Hierarchy.** An object has an `id` (up to 24 characters of `A-Z a-z 0-9 _ -`, "o1", "o2" and so on when none is given) and a `parent`. A child is built under the node of its parent and so takes its move, turn and scale and the music reactions its parent got. Up to 8 levels. A parent that does not exist, is the object itself, forms a loop or is nested too deep is cleared on load and on build, the object goes to the top level and the warnings name it; the scene plays. A hidden parent hides its children. Deleting a parent moves its children to the parent of the deleted object; duplicating an object gives the copy a new id and the same parent, without its children. In the Clip Creator the object list is indented under the parents and each object has a Parent drop-down that offers only objects that make no loop and stay within 8 levels.
+
+**One model, several objects.** When objects name the same model, its meshes, materials and images are added to the scene once; nodes, skins and animations are made per object. The vertex limit counts the geometry once. A model used twice has 24 vertices and 2,448 bytes of graphics memory where a copy per use has 48 and 4,896, and draws the same picture. It is not GL instancing: each mesh of each object is still one draw call.
+
+**Worlds.** In the Layer panel a scene clip has a **Shared 3D world** section. The choice **World** is Own scene (the default and the old behaviour) or World 1 to 4. Layers in the same world are drawn into one space:
+
+| Part | What it does |
+| --- | --- |
+| Owner | the lowest visible layer of the world that has a scene which is ready; the first one drawn. It sets the camera (with all the camera features of 0.69.0), the lights, the sky and the exposure, and it clears colour and depth of the depth buffer of the world |
+| Member | every other layer of the world. It clears only its own colour (transparent), keeps the depth that is already there and draws with the view, projection, lights and sky of the owner. It keeps its own scene, its own animation time and its own audio rows |
+| World position X, Y, Z | where the layer sits, in sizes of the owner (the radius of the owner's bounding sphere), minus 4 to 4; the owner moves too, relative to the camera |
+| World turn | a turn around the vertical axis, minus 180 to 180 degrees |
+| World size | the size of the layer in sizes of the owner, 0.1 to 4 (a logarithmic slider); 1 fits the layer to the size of the owner |
+
+Each layer is still drawn into **its own texture**, so the layer effects, the blend mode, the opacity and the master chain work on every layer as before. The order is explicit: 3D draw with the shared depth, then the layer effects, then the 2D composite in the order of the layers, then the master chain. The effects see the colour of their layer and never the depth of the world. Where the geometry is opaque, a member composited over the owner with Normal blend is the picture of one joint scene (differing share 0.00 percent in the test, in front and behind). The occlusion comes from the depth, not from the order of the layers.
+
+The old renderer had **one depth renderbuffer for all scene layers** and cleared it before each layer, so the geometry of two layers never met. That is why the layers covered each other in the order of the list. A world has its own depth renderbuffer and framebuffer (at most four, one per world), kept from layer to layer and cleared only by the owner; two worlds do not see each other. A world that no layer used for 180 frames gives its depth buffer back.
+
+**Limits.**
+- **Transparency.** A translucent surface (blend material) blends with what is behind it inside its own layer only, sorted as before. Between layers the blend mode of the layer applies to the layer picture, so a translucent surface of a member does not blend with the geometry of the owner by depth.
+- **Camera.** A world has one view. A member ignores its own camera and its own Zoom.
+- **Resolution.** The layers of a world need the same size. A member with another size draws on its own.
+- **Lights.** PBR scenes (every scene from the Clip Creator and every glTF file) take the lights and the sky of the owner; the classic-shaded built-in scenes keep their fixed lights.
+- **Who is not in a world.** A hidden or bypassed layer, a scene that is not ready or failed to load, and every layer when the switch is off draw on their own. A broken owner leaves the others on their own. None of this writes to the log; the layer is an ordinary layer.
+- **Owner.** It is the lowest visible layer of the world, so hiding it hands the camera to the next one.
+
+**Culling.** An instance that is not skinned and has no Inflate, Ripple or morph target is tested with its bounding sphere (the mesh radius times the largest axis scale, with 2 percent and a small constant of margin) against the six planes of the view, and is not drawn when it is outside. It is conservative: the built-in scenes at three zoom levels and four test models are byte for byte the same picture with it on and off. In the test scene 26 of 40 instances were skipped. Skinned, inflated, rippled and morphed instances are always drawn.
+
+**Controls.** `layer/N/world-x`, `world-y`, `world-z` (minus 4 to 4) and `world-yaw` (minus 180 to 180) are control targets like `layer/N/scale`, so MIDI, OSC, the web interface, macros and the lanes of the Show timeline can move a layer in its world. The world number and the world size are choices and not controls.
+
+**The switch.** Settings, Performance, **Shared 3D worlds** (on at the start, written to `settings.json` only when off). Off draws every 3D layer on its own, whatever world the layers are set to.
+
+**Files.** A scene document is written as `"version": 4` only when an object has a parent; `id` and `parent` are written only then. A document without a parent is version 1, 2 or 3 and byte for byte the old file; a program older than 0.70.0 refuses version 4 with its message about a newer program. A layer is written to a preset with `world`, `worldX`, `worldY`, `worldZ`, `worldYaw` and `worldScale` only when they are not the default (0, 0, 0, 0, 0 and 1); old presets load with every layer on its own scene.
+
+**Demo.** `docs/examples/shared-3d-world/` has three clips and a preset. `World Demo Arm.nyxclip` is a skinned arm with a smaller copy of the same model as its child (one model used twice, with a parent). `World Demo Cube.nyxclip` is a spinning cube with a moon as its child. `Shared Scene Demo.nyxclip` puts the arm and the cube, two separately added models, into one scene where they overlap in space, with the moon as a child of the cube. `Shared 3D World.json` is a preset that plays the first two clips on two layers in World 1, the cube placed at 0.45 owner sizes in X and 0.6 in Z, turned 20 degrees and at 0.8 of the size, so the two clips overlap and hide each other by depth. Copy the clips to the `clips` folder and the preset to the `presets` folder of the user data folder (`%APPDATA%\NyrexVJ` on Windows, `~/.config/NyrexVJ` on Linux). `nvj_world_tests --write-demo <folder>` writes the same files.
+
 ## Decisions
 
 ADR 0001 said to benchmark before committing. The decisions that followed are recorded in the ADRs and implemented in v0.9.0:
@@ -178,5 +218,6 @@ ADR 0001 said to benchmark before committing. The decisions that followed are re
 - 3D Engine 2.0 (v0.32.0): skinning, morph targets, blended transparency, Meshopt and Draco import and the limits above, see [ADR 0025](adr/0025-3d-engine-2.md). glTF lights and cameras are read but not applied (cameras can be chosen by hand since v0.69.0).
 - Music on materials (v0.68.0): eight spectrum bands and the beat as new sources, six material targets, four rows, see [ADR 0062](adr/0062-audio-reactive-3d-materials-sources-and-targets-for-scene-bindings.md).
 - Virtual camera (v0.69.0): roll, look-at offset, shot lengths and a glide between cameras, seven camera targets, three layer controls, model cameras as a choice, see [ADR 0063](adr/0063-virtual-camera-glide-roll-offsets-and-gltf-cameras-for-3d-scenes.md).
+- Shared 3D scene (v0.70.0): a parent for objects, a model used twice is built once, shared worlds with one depth buffer across layers, culling, four layer controls, see [ADR 0064](adr/0064-shared-3d-scene-hierarchy-model-reuse-and-shared-worlds-across-layers.md).
 
 Still open: frame times on a real GPU. Run `NyrexVJ --bench-scene 4:300:"Torus Knot Mesh" --bench-out result.json` and the same with `Chrome Orbs Mesh` on the target PC and on a weaker one.

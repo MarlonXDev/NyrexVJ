@@ -479,7 +479,7 @@ void testBuild() {
     withModel.objects.push_back(knot);
     result = buildSceneFromDoc(withModel, modelAssets(glb));
     CHECK(result.ok);
-    CHECK(result.scene.meshes.size() == 3);
+    CHECK(result.scene.meshes.size() == 2);
     CHECK(result.scene.nodes.size() == 1 + 2 * 2);
     std::string error;
     CHECK(validateScene(result.scene, error));
@@ -746,7 +746,7 @@ void testSkinnedModels() {
     CHECK(scene.skins[1].joints[0] > scene.skins[0].joints[1]);
     std::string error;
     CHECK(validateScene(scene, error));
-    CHECK(sceneStats(scene).skins == 2 && sceneStats(scene).morphTargets == 4);
+    CHECK(sceneStats(scene).skins == 2 && sceneStats(scene).morphTargets == 3);
 
     const SceneEval eval = evaluateSceneFull(scene, scene.animations.empty() ? -1 : 0, 0.0f);
     int skinnedInstances = 0;

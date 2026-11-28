@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/playhead.hpp"
+#include "scene3d/scene_world.hpp"
 
 #include <array>
 #include <string>
@@ -215,6 +216,12 @@ struct Layer {
     float cameraOrbit = 0.0f;
     float cameraTilt = 0.0f;
     float cameraFov = 0.0f;
+    int world = 0;
+    float worldX = 0.0f;
+    float worldY = 0.0f;
+    float worldZ = 0.0f;
+    float worldYaw = 0.0f;
+    float worldScale = 1.0f;
     ColorGrade grade;
     std::array<AudioMod, kModSlots> mods;
     std::array<EffectSlot, kEffectSlots> fx;

@@ -9,9 +9,11 @@
 
 namespace nvj {
 
-constexpr int kDocVersion = 3;
+constexpr int kDocVersion = 4;
 constexpr int kDocBaseVersion = 1;
 constexpr int kDocBindingsVersion = 2;
+constexpr int kDocCameraVersion = 3;
+constexpr int kDocHierarchyVersion = 4;
 constexpr size_t kDocMaxObjects = 64;
 constexpr size_t kDocMaxLights = 4;
 constexpr size_t kDocMaxCameras = 8;
@@ -20,6 +22,8 @@ constexpr size_t kDocMaxNameBytes = 64;
 constexpr size_t kDocMaxBindings = 4;
 constexpr size_t kDocMaxNotes = 16;
 constexpr size_t kDocMaxAssetNameBytes = 96;
+constexpr size_t kDocMaxIdBytes = 24;
+constexpr int kDocMaxDepth = 8;
 
 struct DocAnimation {
     bool enabled = false;
@@ -53,6 +57,8 @@ struct DocMaterial {
 };
 
 struct DocObject {
+    std::string id;
+    std::string parent;
     std::string name = "Object";
     PrimitiveKind kind = PrimitiveKind::Sphere;
     std::string model;
@@ -126,6 +132,15 @@ bool docRemoveCamera(SceneDoc& doc, int index);
 void sanitizeDoc(SceneDoc& doc);
 int docRequiredVersion(const SceneDoc& doc);
 bool docUsesCameraMoves(const SceneDoc& doc);
+bool docUsesHierarchy(const SceneDoc& doc);
+bool isSafeObjectId(const std::string& id);
+std::string docNewObjectId(const SceneDoc& doc);
+int docObjectById(const SceneDoc& doc, const std::string& id);
+int docObjectDepth(const SceneDoc& doc, int index);
+bool docCanParent(const SceneDoc& doc, int child, int parent);
+bool docSetParent(SceneDoc& doc, int child, int parent);
+void docRemoveObject(SceneDoc& doc, int index);
+std::vector<int> docObjectOrder(const SceneDoc& doc);
 DocCamera docCameraFromScene(const SceneCamera& camera, const std::string& name);
 std::string docToJson(const SceneDoc& doc);
 bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error);

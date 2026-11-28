@@ -38,7 +38,11 @@ enum class ControlItem {
     FeedbackReset,
     CameraOrbit,
     CameraTilt,
-    CameraFov
+    CameraFov,
+    WorldX,
+    WorldY,
+    WorldZ,
+    WorldYaw
 };
 
 struct ControlTarget {

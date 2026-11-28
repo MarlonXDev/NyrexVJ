@@ -270,6 +270,9 @@ public:
     bool sceneMaterialBindings() const { return sceneMaterialBindings_; }
     void setSceneCameraMoves(bool on) { sceneCameraMoves_ = on; }
     bool sceneCameraMoves() const { return sceneCameraMoves_; }
+    void setSceneWorlds(bool on) { sceneWorlds_ = on; }
+    bool sceneWorlds() const { return sceneWorlds_; }
+    int sceneWorldLayers() const { return worldLayers_; }
     const GraphStats& graphStats() const { return graphStats_; }
     void resetGraphStats() { graphStats_ = GraphStats{}; }
     void requestShaderPlayground(double clock);
@@ -544,7 +547,7 @@ private:
     RenderTarget* runChain(const std::array<EffectSlot, kEffectSlots>& slots, FeedbackTarget* feedback, bool* feedbackUsed, RenderTarget* source, RenderTarget* scratch, int deck, int owner);
     FeedbackTarget* chainFeedback(int chain) { return &feedback_[static_cast<size_t>(chain * kEffectSlots)]; }
     bool* chainUsed(int chain) { return &feedbackUsed_[static_cast<size_t>(chain * kEffectSlots)]; }
-    void drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target);
+    void drawLayerSource(int clipIndex, int instance, const Layer& layer, const ClipPlayback& playback, float scale, double clock, const RenderTarget& target, bool worldOwner = false, bool inWorld = false);
     void releaseClipProgram(ClipProgram& clip);
     bool buildAdvancedClip(size_t index, const ClipDef& def, ClipProgram& clip);
     bool buildPlanPasses(const ShaderPlan& plan, bool shadertoy, const std::string& name, std::vector<PassProgram>& passes, std::string& errors);
@@ -655,6 +658,8 @@ private:
     bool graphOptimizer_ = true;
     bool sceneMaterialBindings_ = true;
     bool sceneCameraMoves_ = true;
+    bool sceneWorlds_ = true;
+    int worldLayers_ = 0;
     GraphStats graphStats_;
     void applyColorStage();
     VideoDecodeMode videoMode_ = VideoDecodeMode::Auto;

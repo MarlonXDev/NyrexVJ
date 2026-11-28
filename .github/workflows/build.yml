@@ -252,6 +252,7 @@ jobs:
           python3 scripts/test_unreal_link.py build/NyrexVJ --output "$RUNNER_TEMP/unreal-link.json"
           test -s "$RUNNER_TEMP/unreal-link.json"
           build/NyrexVJ --scene-selftest tests/data/models
+          python3 scripts/test_shared_world.py build/NyrexVJ build/nvj_world_tests
           if [ -n "${FFMPEG_SDK:-}" ]; then
             NYREXVJ_DATA_DIR="$RUNNER_TEMP/nyrexvj-video" build/NyrexVJ --fresh --no-update-check --no-welcome --video-selftest tests/data
           fi

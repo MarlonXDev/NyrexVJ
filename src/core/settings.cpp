@@ -115,6 +115,7 @@ bool loadSettings(Settings& settings) {
     result.graphOptimizer = boolean("graphOptimizer", true);
     result.sceneMaterialBindings = boolean("sceneMaterialBindings", true);
     result.sceneCameraMoves = boolean("sceneCameraMoves", true);
+    result.sceneWorlds = boolean("sceneWorlds", true);
     result.diagWarnings = boolean("diagWarnings", true);
     auto diagP99 = doc.find("diagP99Percent");
     if (diagP99 != doc.end() && diagP99->is_number_integer()) {
@@ -532,6 +533,9 @@ bool saveSettings(const Settings& settings) {
     }
     if (!settings.sceneCameraMoves) {
         doc["sceneCameraMoves"] = false;
+    }
+    if (!settings.sceneWorlds) {
+        doc["sceneWorlds"] = false;
     }
     doc["diagWarnings"] = settings.diagWarnings;
     doc["diagP99Percent"] = std::clamp(settings.diagP99Percent, 110, 600);

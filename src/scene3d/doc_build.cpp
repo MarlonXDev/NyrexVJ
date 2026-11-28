@@ -52,21 +52,29 @@ bool cancelled(const GltfLimits& limits) {
     return limits.cancel != nullptr && limits.cancel->load();
 }
 
-void mergeModel(Scene& dst, const Scene& src, int wrapperIndex, int nodeOffset, int meshOffset, int materialOffset, int imageOffset) {
-    dst.images.insert(dst.images.end(), src.images.begin(), src.images.end());
-    for (SceneMaterial material : src.materials) {
-        for (int* texture : {&material.baseTexture, &material.metallicRoughnessTexture, &material.normalTexture, &material.emissiveTexture}) {
-            if (*texture >= 0) {
-                *texture += imageOffset;
+struct MergedModel {
+    int meshOffset = 0;
+    int materialOffset = 0;
+    int imageOffset = 0;
+};
+
+void mergeModel(Scene& dst, const Scene& src, int wrapperIndex, int nodeOffset, int meshOffset, int materialOffset, int imageOffset, bool addGeometry) {
+    if (addGeometry) {
+        dst.images.insert(dst.images.end(), src.images.begin(), src.images.end());
+        for (SceneMaterial material : src.materials) {
+            for (int* texture : {&material.baseTexture, &material.metallicRoughnessTexture, &material.normalTexture, &material.emissiveTexture}) {
+                if (*texture >= 0) {
+                    *texture += imageOffset;
+                }
             }
+            dst.materials.push_back(material);
         }
-        dst.materials.push_back(material);
-    }
-    for (SceneMesh mesh : src.meshes) {
-        if (mesh.material >= 0) {
-            mesh.material += materialOffset;
+        for (SceneMesh mesh : src.meshes) {
+            if (mesh.material >= 0) {
+                mesh.material += materialOffset;
+            }
+            dst.meshes.push_back(std::move(mesh));
         }
-        dst.meshes.push_back(std::move(mesh));
     }
     const int skinOffset = static_cast<int>(dst.skins.size());
     for (SceneSkin skin : src.skins) {
@@ -165,13 +173,43 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
     };
 
     size_t vertices = 0;
-    for (const DocObject& object : doc.objects) {
+    std::vector<bool> shown(doc.objects.size(), true);
+    for (size_t i = 0; i < doc.objects.size(); ++i) {
+        int at = static_cast<int>(i);
+        int steps = 0;
+        while (at >= 0 && steps <= kDocMaxDepth + 1) {
+            if (!doc.objects[static_cast<size_t>(at)].visible) {
+                shown[i] = false;
+                break;
+            }
+            at = docObjectById(doc, doc.objects[static_cast<size_t>(at)].parent);
+            ++steps;
+        }
+    }
+    struct Link {
+        int child = 0;
+        std::string parent;
+        std::string name;
+    };
+    std::vector<Link> links;
+    std::map<std::string, int> nodeOfObject;
+    std::map<std::string, MergedModel> mergedModels;
+    const auto addRoot = [&](const DocObject& object, int nodeIndex) {
+        nodeOfObject[object.id] = nodeIndex;
+        if (object.parent.empty()) {
+            scene.roots.push_back(nodeIndex);
+        } else {
+            links.push_back({nodeIndex, object.parent, object.name});
+        }
+    };
+    for (size_t objectIndex = 0; objectIndex < doc.objects.size(); ++objectIndex) {
+        const DocObject& object = doc.objects[objectIndex];
         if (cancelled(limits)) {
             result.interrupted = true;
             result.error = "loading was cancelled";
             return result;
         }
-        if (!object.visible) {
+        if (!shown[objectIndex]) {
             continue;
         }
         SceneNode node;
@@ -215,11 +253,14 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
             for (const std::string& warning : model->warnings) {
                 result.warnings.push_back(object.model + ": " + warning);
             }
+            const auto reused = mergedModels.find(object.model);
+            const bool addGeometry = reused == mergedModels.end();
             size_t modelVertices = 0;
             for (const SceneMesh& mesh : model->scene.meshes) {
-                modelVertices += mesh.positions.size();
+                modelVertices += addGeometry ? mesh.positions.size() : 0;
             }
-            if (vertices + modelVertices > limits.maxVertices || scene.nodes.size() + model->scene.nodes.size() + 1 > limits.maxNodes || scene.meshes.size() + model->scene.meshes.size() > limits.maxMeshes) {
+            const size_t newMeshes = addGeometry ? model->scene.meshes.size() : 0;
+            if (vertices + modelVertices > limits.maxVertices || scene.nodes.size() + model->scene.nodes.size() + 1 > limits.maxNodes || scene.meshes.size() + newMeshes > limits.maxMeshes) {
                 result.error = "the scene is too large for its models";
                 return result;
             }
@@ -239,8 +280,15 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
                 scene.fileCameras.push_back(std::move(camera));
             }
             scene.nodes.push_back(std::move(node));
-            mergeModel(scene, model->scene, nodeIndex, nodeOffset, static_cast<int>(scene.meshes.size()), static_cast<int>(scene.materials.size()), static_cast<int>(scene.images.size()));
-            scene.roots.push_back(nodeIndex);
+            MergedModel offsets;
+            if (addGeometry) {
+                offsets = {static_cast<int>(scene.meshes.size()), static_cast<int>(scene.materials.size()), static_cast<int>(scene.images.size())};
+                mergedModels[object.model] = offsets;
+            } else {
+                offsets = reused->second;
+            }
+            mergeModel(scene, model->scene, nodeIndex, nodeOffset, offsets.meshOffset, offsets.materialOffset, offsets.imageOffset, addGeometry);
+            addRoot(object, nodeIndex);
             continue;
         }
         SceneMesh mesh = primitiveMesh(object.kind);
@@ -265,7 +313,16 @@ GltfResult buildSceneFromDoc(const SceneDoc& source, const DocAssets& assets, co
         node.meshes = {static_cast<int>(scene.meshes.size())};
         scene.meshes.push_back(std::move(mesh));
         scene.nodes.push_back(std::move(node));
-        scene.roots.push_back(nodeIndex);
+        addRoot(object, nodeIndex);
+    }
+    for (const Link& link : links) {
+        const auto parent = nodeOfObject.find(link.parent);
+        if (parent != nodeOfObject.end()) {
+            scene.nodes[static_cast<size_t>(parent->second)].children.push_back(link.child);
+        } else {
+            scene.roots.push_back(link.child);
+            result.warnings.push_back("object '" + link.name + "' lost its parent and was moved to the top level");
+        }
     }
     if (scene.meshes.empty()) {
         result.error = "the scene has no objects that can be drawn";

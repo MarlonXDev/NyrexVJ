@@ -797,6 +797,7 @@ void App::frame(double dt, bool drawUi) {
     engine_.setFeedbackReuse(settings_.feedbackReuse);
     engine_.setGraphOptimizer(settings_.graphOptimizer);
     engine_.setSceneMaterialBindings(settings_.sceneMaterialBindings);
+    engine_.setSceneCameraMoves(settings_.sceneCameraMoves);
     engine_.update(dt);
     netSync_.afterEngineUpdate(steadyNowSeconds(), dt);
     updatePlugins();

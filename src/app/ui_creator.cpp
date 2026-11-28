@@ -228,6 +228,20 @@ const char* bindTargetLabel(BindTarget target) {
         return tr("Inflate");
     case BindTarget::Ripple:
         return tr("Ripple");
+    case BindTarget::Orbit:
+        return tr("Orbit");
+    case BindTarget::Tilt:
+        return tr("Tilt");
+    case BindTarget::Roll:
+        return tr("Roll");
+    case BindTarget::Fov:
+        return tr("Field of view");
+    case BindTarget::MoveX:
+        return tr("Move X");
+    case BindTarget::MoveY:
+        return tr("Move Y");
+    case BindTarget::MoveZ:
+        return tr("Move Z");
     }
     return tr("Size");
 }
@@ -266,6 +280,12 @@ bool bindingEditor(DocBindings& bindings, bool light, bool camera) {
     for (int i = 0; i < kObjectTargets; ++i) {
         targets[i] = bindTargetLabel(objectTargets[i]);
     }
+    constexpr int kCameraTargets = 8;
+    constexpr BindTarget cameraTargets[kCameraTargets] = {BindTarget::Zoom, BindTarget::Orbit, BindTarget::Tilt, BindTarget::Roll, BindTarget::Fov, BindTarget::MoveX, BindTarget::MoveY, BindTarget::MoveZ};
+    const char* cameraLabels[kCameraTargets];
+    for (int i = 0; i < kCameraTargets; ++i) {
+        cameraLabels[i] = bindTargetLabel(cameraTargets[i]);
+    }
     bool changed = false;
     for (size_t i = 0; i < bindings.size(); ++i) {
         DocBinding& b = bindings[i];
@@ -280,8 +300,20 @@ bool bindingEditor(DocBindings& bindings, bool light, bool camera) {
             changed = true;
         }
         ImGui::SameLine();
-        if (light || camera) {
-            ImGui::TextUnformatted(bindTargetLabel(light ? BindTarget::Light : BindTarget::Zoom));
+        if (light) {
+            ImGui::TextUnformatted(bindTargetLabel(BindTarget::Light));
+        } else if (camera) {
+            ImGui::SetNextItemWidth(ui::px(128.0f));
+            int target = 0;
+            for (int t = 0; t < kCameraTargets; ++t) {
+                if (cameraTargets[t] == b.target) {
+                    target = t;
+                }
+            }
+            if (comboList("##target", target, cameraLabels, kCameraTargets)) {
+                b.target = cameraTargets[target];
+                changed = true;
+            }
         } else {
             ImGui::SetNextItemWidth(ui::px(128.0f));
             int target = 0;
@@ -430,7 +462,7 @@ bool lightInspector(DocLight& l) {
     return changed;
 }
 
-bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
+bool sceneInspector(SceneDoc& doc, int& cameraSelect, const ScenePlayer* shown) {
     bool changed = false;
     changed |= inputString(tr("Scene name"), doc.name, kDocMaxNameBytes);
     if (ui::collapsingHeader(tr("Cameras"), ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -478,6 +510,18 @@ bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
         ImGui::BeginDisabled(docCameraCount(doc) <= 1);
         changed |= ui::sliderFloat(tr("Cut (beats)"), &doc.cutBeats, 0.0f, 32.0f, "%.1f");
         ImGui::SetItemTooltip("%s", tr("Switches between all cameras of the scene after this many beats. 0 keeps the selected camera."));
+        ImGui::BeginDisabled(doc.cutBeats <= 0.0f);
+        changed |= ui::sliderFloat(tr("Glide into the next camera"), &doc.glide, 0.0f, 1.0f, "%.2f");
+        ImGui::SetItemTooltip("%s", tr("The share of each shot that is used to move to the next camera. 0 cuts at once like before, 1 glides all the time."));
+        int curve = doc.glideShape == CameraGlide::Linear ? 1 : 0;
+        const char* curves[] = {tr("Smooth"), tr("Linear")};
+        ImGui::BeginDisabled(doc.glide <= 0.0f);
+        if (comboList(tr("Glide curve"), curve, curves, 2)) {
+            doc.glideShape = curve == 1 ? CameraGlide::Linear : CameraGlide::Smooth;
+            changed = true;
+        }
+        ImGui::EndDisabled();
+        ImGui::EndDisabled();
         ImGui::EndDisabled();
         ImGui::Separator();
         DocCamera& c = docCameraAt(doc, cameraSelect);
@@ -488,6 +532,41 @@ bool sceneInspector(SceneDoc& doc, int& cameraSelect) {
         changed |= ui::sliderFloat(tr("Field of view"), &c.fovDegrees, 15.0f, 110.0f, "%.0f");
         changed |= ui::sliderFloat(tr("Orbit speed"), &c.orbitSpeed, -2.0f, 2.0f, "%.2f");
         changed |= ui::sliderFloat(tr("Height sway"), &c.pitchSway, 0.0f, 30.0f, "%.0f");
+        changed |= ui::sliderFloat(tr("Roll"), &c.rollDegrees, -180.0f, 180.0f, "%.0f");
+        changed |= ui::sliderFloat(tr("Move X"), &c.move.x, -kSceneMaxMove, kSceneMaxMove, "%.2f");
+        changed |= ui::sliderFloat(tr("Move Y"), &c.move.y, -kSceneMaxMove, kSceneMaxMove, "%.2f");
+        changed |= ui::sliderFloat(tr("Move Z"), &c.move.z, -kSceneMaxMove, kSceneMaxMove, "%.2f");
+        ImGui::BeginDisabled(docCameraCount(doc) <= 1 || doc.cutBeats <= 0.0f);
+        changed |= ui::sliderFloat(tr("Shot length (beats)"), &c.beats, 0.0f, 32.0f, "%.1f");
+        ImGui::SetItemTooltip("%s", tr("How many beats this camera stays before the next one. 0 uses the Cut value."));
+        ImGui::EndDisabled();
+        if (shown != nullptr && shown->state() == SceneState::Ready && !shown->scene().fileCameras.empty() && static_cast<size_t>(docCameraCount(doc)) < kDocMaxCameras) {
+            ImGui::TextDisabled("%s", tr("Cameras in the models"));
+            const std::vector<SceneFileCamera>& files = shown->scene().fileCameras;
+            for (size_t i = 0; i < files.size(); ++i) {
+                ImGui::PushID(static_cast<int>(i));
+                const SceneFileCamera& file = files[i];
+                const std::string name = file.name.empty() ? std::string(tr("Camera")) + " " + std::to_string(i + 1) : file.name;
+                if (file.orthographic) {
+                    ImGui::BeginDisabled();
+                    ImGui::SmallButton((name + " (" + tr("orthographic") + ")").c_str());
+                    ImGui::EndDisabled();
+                    ImGui::SetItemTooltip("%s", tr("Orthographic cameras cannot be used."));
+                } else {
+                    char label[160];
+                    std::snprintf(label, sizeof(label), tr("Use camera %s"), name.c_str());
+                    if (ImGui::SmallButton(label)) {
+                        const int added = docAddCamera(doc, docCameraFromScene(sceneCameraFromFile(file, shown->fitCenter(), shown->fitRadius()), name));
+                        docCameraAt(doc, added).name = name.substr(0, kDocMaxNameBytes);
+                        cameraSelect = added;
+                        doc.activeCamera = added;
+                        changed = true;
+                    }
+                    ImGui::SetItemTooltip("%s", tr("Copies this camera of the model file into the scene as a normal camera. Its view is stored relative to the centre and size of the whole scene, so it follows the scene and not the model."));
+                }
+                ImGui::PopID();
+            }
+        }
         ImGui::TextDisabled("%s", tr("Audio"));
         changed |= bindingEditor(c.bindings, false, true);
     }
@@ -908,6 +987,7 @@ void App::drawCreator() {
             frame.time = static_cast<float>(cs.time);
             frame.setAudio(audio, cs.simulateAudio ? cs.time * 2.0 : engine_.beat());
             frame.materialBindings = engine_.sceneMaterialBindings();
+            frame.cameraMoves = engine_.sceneCameraMoves();
             frame.editor = true;
             frame.editorCamera = cs.freeCamera;
             frame.editYaw = cs.yaw;
@@ -999,7 +1079,7 @@ void App::drawCreator() {
             changed |= lightInspector(cs.doc.lights[static_cast<size_t>(cs.selectIndex)]);
             ImGui::PopID();
         } else {
-            changed |= sceneInspector(cs.doc, cs.cameraSelect);
+            changed |= sceneInspector(cs.doc, cs.cameraSelect, cs.shown.get());
         }
         ImGui::EndChild();
         ImGui::EndTable();

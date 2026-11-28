@@ -3777,6 +3777,85 @@
           "criteria": "Proposed: every target moves what it is named for with the music, the preview repeats exactly, the rows survive saving and loading, an old program refuses only scenes that need the new rows, an unknown key is named and the scene plays, the frame time with the switch on is not more than 5 percent above the frame time with it off at the same scene, and the graphics memory does not change."
         }
       ]
+    },
+    {
+      "id": "scene-camera",
+      "title": "Virtual camera for 3D scenes: roll, look-at offset and shot length per camera, a glide between cameras on the Show timeline curves, seven camera targets for the audio bindings, three layer controls (camera-orbit, camera-tilt, camera-fov), model cameras as a choice in the Clip Creator, scene version 3 only when needed, and the switch Camera moves in 3D scenes",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/SCENE3D.md",
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/manual/manual.en.md",
+        "docs/TESTING.md",
+        "docs/adr/0063-virtual-camera-glide-roll-offsets-and-gltf-cameras-for-3d-scenes.md"
+      ],
+      "sources": [
+        "src/core/show_timeline.cpp",
+        "src/scene3d/scene_model.cpp",
+        "src/scene3d/scene_doc.cpp",
+        "src/scene3d/doc_build.cpp",
+        "src/render/scene_player.cpp",
+        "src/render/engine.cpp",
+        "src/control/control_targets.cpp",
+        "src/core/preset.cpp",
+        "src/core/settings.cpp",
+        "src/app/ui_creator.cpp",
+        "src/app/ui_panels.cpp",
+        "src/app/ui_settings.cpp",
+        "src/app/scene_selftest.cpp",
+        "tests/test_vcam.cpp",
+        "tests/test_matbind.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-VCM-1",
+          "kind": "ctest",
+          "name": "nvj_vcam_tests",
+          "note": "the curve against the Show timeline keys, the camera of every beat for uniform, timed and gliding cuts, the pose against the old formulas bit for bit with the features unused, every camera target with its limits and bad numbers, blending around the 180 degree seam, roll and look-at offset in the view, a model camera converted in and out, the document keys and versions 1, 2 and 3 and the refusal of a newer one, unknown and misplaced keys and their notes, the merge of model cameras, the layer controls and their preset round trip, a clip pack round trip and the setting (default on, written only when off, tolerant of wrong types)"
+        },
+        {
+          "id": "A-VCM-2",
+          "kind": "ctest",
+          "name": "nvj_matbind_tests",
+          "note": "the material binding checks still pass with the camera targets and scene version 3"
+        },
+        {
+          "id": "A-VCM-3",
+          "kind": "cli",
+          "command": "NyrexVJ --scene-selftest tests/data/models",
+          "note": "draws scenes through a real OpenGL context: the look-at offset moves the view and roll turns it, a half turn mirrors the picture, the free preview camera ignores both, Orbit, Tilt and Field of view bindings and the three layer controls give the same picture as a camera placed there, a hard cut jumps and a glide does not, a linear glide halfway gives the halfway picture, shot lengths hold a camera, the switch off equals the old camera, a model camera is imported and shows the model where the file puts it, two players give the same camera, the seven built-in scenes keep the hashes of 0.68.0, and it measures the frame time and the pose time"
+        },
+        {
+          "id": "A-VCM-4",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "the new texts have a translation in all seven tables, with the same printf specifiers"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-VCM-1",
+          "title": "The virtual camera on a real graphics card, in the real editor and in a real show",
+          "needs": "A PC with a graphics card, a music source or a line input, a MIDI controller or an OSC sender, a few 3D scenes (made in the Clip Creator) and glTF files that contain cameras, and optionally VRChat running next to NyrexVJ",
+          "steps": [
+            "Open the Clip Creator, add two cameras to a scene with a model, set Cut (beats) to 4 and Glide into the next camera to 0.5, play music and check that the camera moves to the next one over the last half of each shot, with Smooth and with Linear, and that nothing jumps.",
+            "Drag the sliders Roll, Move X, Move Y, Move Z, Shot length (beats) and Glide into the next camera by hand and check that the preview follows and the limits hold.",
+            "Open the target list of a camera row and bind Kick to Orbit, Beat to Roll, Band 2 to Field of view and Level to Move Y, play music and check that each one moves the camera with the part of the music it is named for.",
+            "Import a glTF file with cameras, open Cameras in the models, press Use camera and check that the scene camera shows the model the way the file's camera does; check that an orthographic camera cannot be used.",
+            "Save the scene, use it as a clip, load it again from a preset and from a show package and check that cameras, roll, offsets, shot lengths and the glide are still there.",
+            "Open the saved file in 0.68.0 or older and check that a scene that uses a camera feature is refused with a message about a newer program and a scene that uses none still opens.",
+            "Play the scene on a layer, move Camera orbit, Camera tilt and Camera field of view in the Clip window, then drive them from MIDI, from OSC and from a lane of the Show timeline with Smooth keys, and check that the camera follows all three.",
+            "Turn Camera moves in 3D scenes off in Settings, Performance and check that the glide, roll, offset and shot lengths stop, that the music bindings and the layer controls stop moving the camera and that the cuts and Zoom stay.",
+            "Play four layers of scenes with a gliding camera at the output size you use, compare the frame time with the switch on and off, watch the graphics memory, and let it run for an hour."
+          ],
+          "measure": "the frame time with the switch off and on at the output size you play at, the graphics memory over an hour, the time from a MIDI or OSC message to the moved camera, and how the camera page and the Clip window sections look at your interface scale",
+          "criteria": "Proposed: a glide has no jump at the cut, every camera target and layer control moves the camera it is named for, the limits hold when sliders are dragged, a model camera shows the model as its file does, the settings survive saving and loading, an old program refuses only scenes that need the new keys, the frame time with the switch on is not more than 5 percent above the frame time with it off at the same scene, and the graphics memory does not change."
+        }
+      ]
     }
   ]
 }

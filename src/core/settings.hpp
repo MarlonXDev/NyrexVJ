@@ -47,6 +47,7 @@ struct Settings {
     bool feedbackReuse = true;
     bool graphOptimizer = true;
     bool sceneMaterialBindings = true;
+    bool sceneCameraMoves = true;
     bool diagWarnings = true;
     int diagP99Percent = 150;
     int diagDroppedPerMinute = 5;

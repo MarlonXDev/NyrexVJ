@@ -9,8 +9,9 @@
 
 namespace nvj {
 
-constexpr int kDocVersion = 2;
+constexpr int kDocVersion = 3;
 constexpr int kDocBaseVersion = 1;
+constexpr int kDocBindingsVersion = 2;
 constexpr size_t kDocMaxObjects = 64;
 constexpr size_t kDocMaxLights = 4;
 constexpr size_t kDocMaxCameras = 8;
@@ -83,6 +84,9 @@ struct DocCamera {
     float fovDegrees = 46.0f;
     float orbitSpeed = 0.4f;
     float pitchSway = 0.0f;
+    Vec3 move{};
+    float rollDegrees = 0.0f;
+    float beats = 0.0f;
     DocBindings bindings;
 };
 
@@ -101,6 +105,8 @@ struct SceneDoc {
     std::vector<DocCamera> extraCameras;
     int activeCamera = 0;
     float cutBeats = 0.0f;
+    float glide = 0.0f;
+    CameraGlide glideShape = CameraGlide::Smooth;
     DocSky sky;
     float exposure = 1.0f;
     std::vector<std::string> notes;
@@ -119,6 +125,8 @@ int docAddCamera(SceneDoc& doc, const DocCamera& source);
 bool docRemoveCamera(SceneDoc& doc, int index);
 void sanitizeDoc(SceneDoc& doc);
 int docRequiredVersion(const SceneDoc& doc);
+bool docUsesCameraMoves(const SceneDoc& doc);
+DocCamera docCameraFromScene(const SceneCamera& camera, const std::string& name);
 std::string docToJson(const SceneDoc& doc);
 bool docFromJson(const std::string& text, SceneDoc& doc, std::string& error);
 std::vector<std::string> docModelNames(const SceneDoc& doc);

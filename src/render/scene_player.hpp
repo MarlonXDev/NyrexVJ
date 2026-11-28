@@ -28,6 +28,10 @@ struct SceneFrame {
     float beatPulse = 0.0f;
     std::array<float, kSceneBands> bands{};
     bool materialBindings = true;
+    bool cameraMoves = true;
+    float cameraOrbit = 0.0f;
+    float cameraTilt = 0.0f;
+    float cameraFov = 0.0f;
     bool editor = false;
     bool editorCamera = false;
     float editYaw = 0.0f;
@@ -65,6 +69,7 @@ public:
     double idleSeconds() const;
     const Scene& scene() const { return scene_; }
     float fitRadius() const { return radius_; }
+    Vec3 fitCenter() const { return center_; }
     double loadMilliseconds() const { return loadMs_; }
     double uploadMilliseconds() const { return uploadMs_; }
     bool thumbnailDone = false;

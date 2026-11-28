@@ -54,6 +54,12 @@ std::string itemName(const ControlTarget& target) {
         return tr("Speed");
     case ControlItem::Scale:
         return tr("Scale");
+    case ControlItem::CameraOrbit:
+        return tr("Camera orbit");
+    case ControlItem::CameraTilt:
+        return tr("Camera tilt");
+    case ControlItem::CameraFov:
+        return tr("Camera field of view");
     case ControlItem::Bypass:
         return tr("Bypass");
     case ControlItem::Solo:

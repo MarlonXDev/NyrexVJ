@@ -289,7 +289,7 @@ void testDocKeys() {
     for (int s = 0; s < kBindSourceCount; ++s) {
         for (int t = 0; t < kBindTargetCount - 0; ++t) {
             const BindTarget target = static_cast<BindTarget>(t);
-            if (target == BindTarget::Light || target == BindTarget::Zoom) {
+            if (target == BindTarget::Light || target == BindTarget::Zoom || bindTargetIsCamera(target)) {
                 continue;
             }
             const SceneDoc one = docWith({{true, static_cast<BindSource>(s), target, 0.5f}});
@@ -310,12 +310,12 @@ void testOldFilesStayOld() {
     CHECK(docFromJson(text, back, error));
     CHECK(back.notes.empty());
 
-    CHECK(docRequiredVersion(docWith({{true, BindSource::Beat, BindTarget::Scale, 0.5f}})) == kDocVersion);
-    CHECK(docRequiredVersion(docWith({{true, BindSource::Kick, BindTarget::Hue, 0.5f}})) == kDocVersion);
-    CHECK(docRequiredVersion(docWith({{true, BindSource::Kick, BindTarget::Scale, 0.5f}, {true, BindSource::Kick, BindTarget::Lift, 0.5f}, {true, BindSource::Kick, BindTarget::Twist, 0.5f}})) == kDocVersion);
+    CHECK(docRequiredVersion(docWith({{true, BindSource::Beat, BindTarget::Scale, 0.5f}})) == kDocBindingsVersion);
+    CHECK(docRequiredVersion(docWith({{true, BindSource::Kick, BindTarget::Hue, 0.5f}})) == kDocBindingsVersion);
+    CHECK(docRequiredVersion(docWith({{true, BindSource::Kick, BindTarget::Scale, 0.5f}, {true, BindSource::Kick, BindTarget::Lift, 0.5f}, {true, BindSource::Kick, BindTarget::Twist, 0.5f}})) == kDocBindingsVersion);
     CHECK(docRequiredVersion(docWith({{false, BindSource::Band3, BindTarget::Hue, 0.5f}})) == kDocBaseVersion);
 
-    const std::string future = "{\"format\":\"nyxscene\",\"version\":3,\"name\":\"x\",\"objects\":[]}";
+    const std::string future = "{\"format\":\"nyxscene\",\"version\":4,\"name\":\"x\",\"objects\":[]}";
     CHECK(!docFromJson(future, back, error));
     CHECK(error.find("newer") != std::string::npos);
 

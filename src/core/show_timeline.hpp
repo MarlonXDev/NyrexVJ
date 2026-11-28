@@ -54,6 +54,7 @@ struct TimelineDoc {
 const char* keyShapeName(KeyShape shape);
 KeyShape keyShapeFromName(const std::string& name);
 
+double easeAlong(KeyShape shape, double u);
 float evaluateKeys(const std::vector<Keyframe>& keys, double seconds, bool stepsOnly);
 size_t keySegment(const std::vector<Keyframe>& keys, double seconds);
 

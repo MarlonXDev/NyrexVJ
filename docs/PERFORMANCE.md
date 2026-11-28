@@ -323,6 +323,16 @@ Off by default; with Use hot standby off the failover system does nothing, and a
 - **The switch.** Settings, Performance, Music moves 3D materials (on at the start). Off leaves the six material targets out; Size, Glow, Twist, Lift, Light and Zoom are not affected.
 - **Not measured.** A graphics card, Windows, a deformed mesh with many vertices, and a long show (`M-MBD-1`).
 
+## What is new in 0.69.0: the virtual camera
+
+[ADR 0063](adr/0063-virtual-camera-glide-roll-offsets-and-gltf-cameras-for-3d-scenes.md). A scene camera got a roll, a look-at offset, shot lengths, a glide between cameras, seven camera targets for the bindings, three layer controls and cameras imported from a model. The camera is one view matrix per draw, as before.
+
+- **Processor.** Working out a pose and a view for a scene with 8 cameras, a glide and 3 bindings took 0.148 to 0.160 microseconds (best of 5 rounds of 20,000 evaluations, three runs, llvmpipe machine). It is done once per draw of a scene, not per object.
+- **Graphics card.** No texture, buffer, thread or readback is added, so the graphics memory does not change (`estimatedGpuBytes` 58,290,528 in both builds in the benchmark). The view matrix gets a roll and a look-at offset, and the far plane is moved out by the length of the offset so a moved camera does not clip the scene.
+- **Measured here.** 256 x 256, 8 cameras, average milliseconds per frame on Mesa llvmpipe, three runs: 0.80, 1.10 and 0.84 with hard cuts, 0.79, 1.00 and 0.88 with the switch off and 0.74, 0.82 and 0.86 with a glide and bindings; the modes are inside each other's noise. `--bench-scene` on the same machine, 0.68.0 against this version (average ms per frame): Torus Knot Mesh 154.9 and 154.5, Chrome Orbs Mesh 250.8 and 253.2. A scene that does not use the new features draws byte for byte the same picture as in 0.68.0.
+- **The switch.** Settings, Performance, Camera moves in 3D scenes (on at the start). Off gives the old camera.
+- **Not measured.** A graphics card, Windows, a long show with a gliding camera and live audio, and the cost next to VRChat (`M-VCM-1`).
+
 ## Measured
 
 Test machine: Linux, no graphics card, Mesa llvmpipe (OpenGL 4.5 core, a software rasteriser on the processor). 960 x 540 unless stated. Medians of three runs of 30 to 40 frames each, run to run spread about 5 percent. "Before" is the build of 0.18.0 (main at 6f19641), "after" is this version with the same preset file. The numbers are frame times of the whole frame (`--bench-comp`).

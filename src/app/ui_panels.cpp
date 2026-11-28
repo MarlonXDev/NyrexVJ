@@ -646,6 +646,14 @@ void App::drawClipPanel() {
     if (engine_.isSceneClip(clip)) {
         ImGui::Spacing();
         drawSceneControls(*engine_.scenePlayer(clip));
+        ui::sectionHeader(tr("Camera"));
+        const char* cameraHint = tr("Moves the camera of the 3D scene on top of its own camera. Zero leaves it alone. Turn the switch Camera moves in 3D scenes off in the settings to ignore these.");
+        ui::sliderFloat(trId("Camera orbit", "layerCameraOrbit"), &layer.cameraOrbit, -180.0f, 180.0f, "%.0f");
+        ImGui::SetItemTooltip("%s", cameraHint);
+        ui::sliderFloat(trId("Camera tilt", "layerCameraTilt"), &layer.cameraTilt, -60.0f, 60.0f, "%.0f");
+        ImGui::SetItemTooltip("%s", cameraHint);
+        ui::sliderFloat(trId("Camera field of view", "layerCameraFov"), &layer.cameraFov, -30.0f, 30.0f, "%.0f");
+        ImGui::SetItemTooltip("%s", cameraHint);
     }
 
     ui::sectionHeader(tr("Look"));

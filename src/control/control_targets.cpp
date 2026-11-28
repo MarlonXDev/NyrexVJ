@@ -64,6 +64,9 @@ std::vector<ControlTarget> buildTargets() {
         list.push_back(make(prefix + "opacity", ControlKind::Continuous, ControlItem::Opacity, layer));
         list.push_back(make(prefix + "speed", ControlKind::Continuous, ControlItem::Speed, layer));
         list.push_back(make(prefix + "scale", ControlKind::Continuous, ControlItem::Scale, layer));
+        list.push_back(make(prefix + "camera-orbit", ControlKind::Continuous, ControlItem::CameraOrbit, layer));
+        list.push_back(make(prefix + "camera-tilt", ControlKind::Continuous, ControlItem::CameraTilt, layer));
+        list.push_back(make(prefix + "camera-fov", ControlKind::Continuous, ControlItem::CameraFov, layer));
         addGrade(list, prefix, layer);
         list.push_back(make(prefix + "bypass", ControlKind::Toggle, ControlItem::Bypass, layer));
         list.push_back(make(prefix + "solo", ControlKind::Toggle, ControlItem::Solo, layer));
@@ -243,6 +246,12 @@ float ControlRouter::value(int index) const {
         return unlog(0.1f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].speed);
     case ControlItem::Scale:
         return unlog(0.25f, 4.0f, comp_.layers[static_cast<size_t>(target.layer)].scale);
+    case ControlItem::CameraOrbit:
+        return unlerp(-180.0f, 180.0f, comp_.layers[static_cast<size_t>(target.layer)].cameraOrbit);
+    case ControlItem::CameraTilt:
+        return unlerp(-60.0f, 60.0f, comp_.layers[static_cast<size_t>(target.layer)].cameraTilt);
+    case ControlItem::CameraFov:
+        return unlerp(-30.0f, 30.0f, comp_.layers[static_cast<size_t>(target.layer)].cameraFov);
     case ControlItem::EffectParam:
         return std::clamp(slotFor(target).params[static_cast<size_t>(target.param)], 0.0f, 1.0f);
     case ControlItem::Macro:
@@ -310,6 +319,15 @@ void ControlRouter::setContinuous(const ControlTarget& target, float value) {
         break;
     case ControlItem::Scale:
         comp_.layers[static_cast<size_t>(target.layer)].scale = logRange(0.25f, 4.0f, value);
+        break;
+    case ControlItem::CameraOrbit:
+        comp_.layers[static_cast<size_t>(target.layer)].cameraOrbit = lerp(-180.0f, 180.0f, value);
+        break;
+    case ControlItem::CameraTilt:
+        comp_.layers[static_cast<size_t>(target.layer)].cameraTilt = lerp(-60.0f, 60.0f, value);
+        break;
+    case ControlItem::CameraFov:
+        comp_.layers[static_cast<size_t>(target.layer)].cameraFov = lerp(-30.0f, 30.0f, value);
         break;
     case ControlItem::EffectParam:
         slotFor(target).params[static_cast<size_t>(target.param)] = value;

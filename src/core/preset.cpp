@@ -211,6 +211,15 @@ json layersToJson(const std::array<Layer, kLayerCount>& source) {
         entry["rainbow"] = layer.rainbow;
         entry["speed"] = layer.speed;
         entry["scale"] = layer.scale;
+        if (layer.cameraOrbit != 0.0f) {
+            entry["cameraOrbit"] = layer.cameraOrbit;
+        }
+        if (layer.cameraTilt != 0.0f) {
+            entry["cameraTilt"] = layer.cameraTilt;
+        }
+        if (layer.cameraFov != 0.0f) {
+            entry["cameraFov"] = layer.cameraFov;
+        }
         entry["grade"] = gradeToJson(layer.grade);
         entry["mods"] = modsToJson(layer.mods);
         entry["fx"] = effectsToJson(layer.fx);
@@ -282,6 +291,9 @@ void layersFromJson(const json& layers, std::array<Layer, kLayerCount>& result, 
         layer.rainbow = readBool(entry, "rainbow", false);
         layer.speed = readNumber(entry, "speed", 1.0f, 0.1f, 4.0f);
         layer.scale = readNumber(entry, "scale", 1.0f, 0.25f, 4.0f);
+        layer.cameraOrbit = readNumber(entry, "cameraOrbit", 0.0f, -180.0f, 180.0f);
+        layer.cameraTilt = readNumber(entry, "cameraTilt", 0.0f, -60.0f, 60.0f);
+        layer.cameraFov = readNumber(entry, "cameraFov", 0.0f, -30.0f, 30.0f);
         if (entry.contains("grade")) {
             layer.grade = gradeFromJson(entry["grade"]);
         }

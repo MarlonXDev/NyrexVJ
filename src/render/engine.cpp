@@ -954,6 +954,23 @@ std::uint64_t Engine::colorStageBytes() const {
     return static_cast<std::uint64_t>(colorScratch_.bytes()) + colorStage_.lutBytes();
 }
 
+void Engine::applyColorStageFrom(const RenderTarget& source) {
+    profiler_.mark(PassKind::Other, 0, 0, 0, "colour");
+    colorStage_.apply(source, out_, colorStrength_, triangle_);
+    ++graphStats_.copiesSkipped;
+}
+
+void Engine::setGraphOptimizer(bool on) {
+    if (on == graphOptimizer_) {
+        return;
+    }
+    if (on) {
+        colorScratch_.destroy();
+    }
+    graphOptimizer_ = on;
+    graphStats_ = GraphStats{};
+}
+
 void Engine::applyColorStage() {
     if (!colorScratch_.fbo || colorScratch_.width != out_.width || colorScratch_.height != out_.height) {
         if (!colorScratch_.create(out_.width, out_.height)) {
@@ -3768,7 +3785,7 @@ RenderTarget* Engine::runPlanEffect(size_t effectIndex, int stateKey, const Effe
     return out;
 }
 
-RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews) {
+RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, const Master& master, const std::array<Effective, kLayerCount>& effective, const std::array<double, kLayerCount>& clocks, int feedbackSet, bool updatePreviews, RenderTarget* landing) {
     const int chainBase = feedbackSet * kChainsPerSet;
     const int deck = updatePreviews ? 0 : 1;
 
@@ -3777,10 +3794,6 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
     const bool scaledChains = layerScale_ < 0.999f && layerLoA_.fbo && layerLoB_.fbo;
     RenderTarget* chainSource = scaledChains ? &layerLoA_ : &layerA_;
     RenderTarget* chainScratch = scaledChains ? &layerLoB_ : &layerB_;
-    accum->bind();
-    glDisable(GL_BLEND);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
 
     bool anySolo = false;
     for (const Layer& layer : layers) {
@@ -3800,6 +3813,24 @@ RenderTarget* Engine::renderDeck(const std::array<Layer, kLayerCount>& layers, c
         clipOf[static_cast<size_t>(l)] = clipIndex;
     }
     const routing::Plan plan = planRouting(clipOf, deck);
+
+    if (landing) {
+        int blendSwaps = 0;
+        for (int l = 0; l < kLayerCount; ++l) {
+            const Layer& layer = layers[static_cast<size_t>(l)];
+            const bool hiddenLayer = !layerVisible(effective[static_cast<size_t>(l)].opacity) && !chainHasFeedback(layer.fx);
+            if (clipOf[static_cast<size_t>(l)] >= 0 && !hiddenLayer && layer.blend >= BlendSubtract) {
+                ++blendSwaps;
+            }
+        }
+        RenderTarget* other = landing == &compA_ ? &compB_ : &compA_;
+        accum = resultStaysInFirst(blendSwaps) ? landing : other;
+        spare = resultStaysInFirst(blendSwaps) ? other : landing;
+    }
+    accum->bind();
+    glDisable(GL_BLEND);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     for (int l = 0; l < kLayerCount; ++l) {
         const Layer& layer = layers[static_cast<size_t>(l)];
@@ -3895,6 +3926,14 @@ void Engine::finalPass(const RenderTarget& source, const ColorGrade& grade, floa
     glUniform1f(final_.level, (blackout || holdOutput) ? 0.0f : level);
     glUniform4f(final_.grade, grade.hue, grade.saturation, grade.brightness, grade.contrast);
     triangle_.draw();
+}
+
+void Engine::settleDeck(RenderTarget* result, const ColorGrade& grade, float level, RenderTarget& destination) {
+    if (result == &destination) {
+        ++graphStats_.finalSkipped;
+        return;
+    }
+    finalPass(*result, grade, level, destination);
 }
 
 void Engine::transitionPass(const RenderTarget& a, const RenderTarget& b, float progress, int type, const RenderTarget& destination) {
@@ -4061,29 +4100,48 @@ void Engine::render() {
         destroyTransitionTargets();
     }
 
+    ++graphStats_.frames;
+    const bool colour = colorActive_ && colorStage_.hasLut();
+    const int effectCount = static_cast<int>(effects_.size());
     if (!transition_.active) {
-        RenderTarget* master = renderDeck(comp.layers, comp.master, effective_, layerClock_, feedbackSet_, true);
-        finalPass(*master, effectiveMasterGrade_, effectiveLevel_, out_);
+        const DeckRoute route = planDeckRoute(graphOptimizer_, finalIsNeutral(effectiveMasterGrade_, effectiveLevel_, blackout, holdOutput), chainIsEmpty(comp.master.fx, effectCount), colour);
+        RenderTarget* master = renderDeck(comp.layers, comp.master, effective_, layerClock_, feedbackSet_, true, route == DeckRoute::Land ? &out_ : nullptr);
+        if (route == DeckRoute::Direct) {
+            ++graphStats_.finalSkipped;
+            applyColorStageFrom(*master);
+        } else if (route == DeckRoute::ViaScratch) {
+            RenderTarget* scratch = master == &compA_ ? &compB_ : &compA_;
+            finalPass(*master, effectiveMasterGrade_, effectiveLevel_, *scratch);
+            applyColorStageFrom(*scratch);
+        } else {
+            settleDeck(master, effectiveMasterGrade_, effectiveLevel_, out_);
+        }
     } else {
         if (!transition_.frozen) {
-            RenderTarget* previous = renderDeck(outLayers_, outMaster_, outEffective_, outClocks_, feedbackSet_ ^ 1, false);
-            finalPass(*previous, outGrade_, outLevel_, deckTex_[0]);
+            const DeckRoute route = planDeckRoute(graphOptimizer_, finalIsNeutral(outGrade_, outLevel_, blackout, holdOutput), chainIsEmpty(outMaster_.fx, effectCount), false);
+            RenderTarget* previous = renderDeck(outLayers_, outMaster_, outEffective_, outClocks_, feedbackSet_ ^ 1, false, route == DeckRoute::Land ? &deckTex_[0] : nullptr);
+            settleDeck(previous, outGrade_, outLevel_, deckTex_[0]);
         }
-        RenderTarget* master = renderDeck(comp.layers, comp.master, effective_, layerClock_, feedbackSet_, true);
-        finalPass(*master, effectiveMasterGrade_, effectiveLevel_, deckTex_[1]);
+        const DeckRoute route = planDeckRoute(graphOptimizer_, finalIsNeutral(effectiveMasterGrade_, effectiveLevel_, blackout, holdOutput), chainIsEmpty(comp.master.fx, effectCount), false);
+        RenderTarget* master = renderDeck(comp.layers, comp.master, effective_, layerClock_, feedbackSet_, true, route == DeckRoute::Land ? &deckTex_[1] : nullptr);
+        settleDeck(master, effectiveMasterGrade_, effectiveLevel_, deckTex_[1]);
+        RenderTarget* mixed = colour && graphOptimizer_ ? &compA_ : &out_;
         bool custom = false;
         if (!transition_.custom.empty() && ensureCustomTransition(transition_.custom)) {
-            customTransitionPass(customTransitions_[transition_.custom], deckTex_[0], deckTex_[1], transitionProgress(), transition_.values, out_);
+            customTransitionPass(customTransitions_[transition_.custom], deckTex_[0], deckTex_[1], transitionProgress(), transition_.values, *mixed);
             custom = true;
         }
         if (!custom) {
             transition_.custom.clear();
-            transitionPass(deckTex_[0], deckTex_[1], transitionProgress(), transition_.type, out_);
+            transitionPass(deckTex_[0], deckTex_[1], transitionProgress(), transition_.type, *mixed);
+        }
+        if (mixed != &out_) {
+            applyColorStageFrom(*mixed);
         }
     }
     renderTransitionPreview();
 
-    if (colorActive_ && colorStage_.hasLut()) {
+    if (colour && !graphOptimizer_) {
         applyColorStage();
     }
 

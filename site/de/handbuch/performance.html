@@ -108,7 +108,7 @@
 <li><a href="shortcuts.html">Tastenkürzel und Maus</a>
 </li>
 <li><a href="performance.html" aria-current="page">Leistung</a>
-<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-memory">Grafikspeicher und Warnungen</a></li><li><a href="#perf-generators">Text und Partikel</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
+<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-memory">Grafikspeicher und Warnungen</a></li><li><a href="#perf-generators">Text und Partikel</a></li><li><a href="#perf-graph">Durchläufe, die nur kopieren</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
 </li>
 <li><a href="files.html">Dateien und der Datenordner</a>
 </li>
@@ -202,7 +202,7 @@
 <li><a href="shortcuts.html">Tastenkürzel und Maus</a>
 </li>
 <li><a href="performance.html" aria-current="page">Leistung</a>
-<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-memory">Grafikspeicher und Warnungen</a></li><li><a href="#perf-generators">Text und Partikel</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
+<ul><li><a href="#perf-why">Warum sie wichtig ist</a></li><li><a href="#perf-frame">Bildrate und Budget</a></li><li><a href="#perf-quality">Renderqualität</a></li><li><a href="#perf-memory">Grafikspeicher und Warnungen</a></li><li><a href="#perf-generators">Text und Partikel</a></li><li><a href="#perf-graph">Durchläufe, die nur kopieren</a></li><li><a href="#perf-cost">Was Zeit kostet</a></li></ul>
 </li>
 <li><a href="files.html">Dateien und der Datenordner</a>
 </li>
@@ -217,8 +217,8 @@
 </ul></details>
 <p class="crumb"><a href="index.html">Handbuch</a> / Nachschlagen und Hilfe</p>
 <h1>Leistung</h1>
-<p class="meta">Kapitel 33 von 38 &middot; 4 Min. Lesezeit</p>
-<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#perf-why">Warum sie wichtig ist</a><a href="#perf-frame">Bildrate und Budget</a><a href="#perf-quality">Renderqualität</a><a href="#perf-memory">Grafikspeicher und Warnungen</a><a href="#perf-generators">Text und Partikel</a><a href="#perf-cost">Was Zeit kostet</a></nav>
+<p class="meta">Kapitel 33 von 38 &middot; 5 Min. Lesezeit</p>
+<nav class="onpage" aria-label="Auf dieser Seite"><span>Auf dieser Seite</span><a href="#perf-why">Warum sie wichtig ist</a><a href="#perf-frame">Bildrate und Budget</a><a href="#perf-quality">Renderqualität</a><a href="#perf-memory">Grafikspeicher und Warnungen</a><a href="#perf-generators">Text und Partikel</a><a href="#perf-graph">Durchläufe, die nur kopieren</a><a href="#perf-cost">Was Zeit kostet</a></nav>
 <h2 id="perf-why"><a class="anchor" href="#perf-why" aria-label="Link">#</a>Warum sie wichtig ist</h2>
 <p>Eine Live-Show braucht eine gleichmäßige Bildrate. NyrexVJ ist leicht, aber viele Layer, schwere Effekte, große Videos und 3D-Modelle summieren sich. Einstellungen, Leistung zeigt, was die Zeit braucht, und die Statusleiste kann die Zeiten zeigen, wenn du Zeiten in der Statusleiste zeigen anhakst.</p>
 <figure class="shot"><a href="../../assets/manual/de/settings-performance.webp"><img src="../../assets/manual/de/settings-performance.webp" width="874" height="584" loading="lazy" alt="Die Seite Leistung in den Einstellungen"></a><figcaption>Die Seite Leistung in den Einstellungen</figcaption></figure>
@@ -234,6 +234,10 @@
 <aside class="note warning"><strong class="note-label">Warnung</strong><p>Die Schätzung zählt, was NyrexVJ angelegt hat, nicht was die Karte noch frei hat, und ein Budget kann VRChat nicht sehen. Liegt das Budget unter dem, was die laufenden Clips brauchen, lässt sich nichts freigeben, und die Seite sagt es. Erhöhe das Budget oder senke die Ebenenauflösung.</p></aside>
 <h2 id="perf-generators"><a class="anchor" href="#perf-generators" aria-label="Link">#</a>Text und Partikel</h2>
 <p>Partikel-Obergrenze pro Ebene ist die größte Zahl an Partikeln, die ein Partikel-Clip gleichzeitig am Leben haben darf, von 64 bis 16.384, am Anfang 2048. Ist die Grenze erreicht, werden neuere Partikel verworfen und das Bild bleibt flüssig. Jedes Partikel kostet 24 Byte Grafikspeicher. Text- und Partikel-Clips in der Bibliothek zeigen blendet sie alle aus der Bibliothek aus. Experimentelle GPU-Partikel lässt Clips, die es verlangen, auf der Grafikkarte laufen, und Grafikspeicher für GPU-Partikel ist das Budget für alle zusammen, 8 bis 512 MB. Siehe <a href="generators.html#gpu-particles">Text, Partikel und Effektketten</a>.</p>
+<h2 id="perf-graph"><a class="anchor" href="#perf-graph" aria-label="Link">#</a>Durchläufe, die nur kopieren</h2>
+<p>NyrexVJ baut das Bild Layer für Layer auf und kopiert das Ergebnis dann in die Ausgabe. Hat das Master-Bild keinen Effekt, keine Farbänderung und den vollen Pegel, ist diese letzte Kopie ein ganzer zusätzlicher Durchlauf über das Bild, der nichts ändert; dann wird der letzte Layer gleich in die Ausgabe gezeichnet. Dasselbe gilt für jedes der zwei Decks, solange ein Übergang läuft. Mit einem Farblook (LUT) fallen außerdem das zusätzliche Bild, das er früher brauchte, und das Zurückkopieren weg, und der Grafikspeicher dafür wird frei. Das Ergebnis ist dasselbe Bild, Bit für Bit; die Tests vergleichen jedes Pixel mit dem Schalter an und aus.</p>
+<p>Der Schalter heißt <strong>Durchläufe überspringen, die nur kopieren</strong> und steht unter Einstellungen, Leistung, Render-Graph. Zu Beginn ist er an. Die Zeile darunter zählt die übersprungenen Durchläufe und Kopien. Schalte ihn aus, wenn du je einen Unterschied vermutest; sonst ändert sich nichts.</p>
+<p>Ein Master-Effekt, eine Farbänderung im Master, ein Pegel unter voll, Blackout und ein Standby, der seine Ausgänge schwarz hält, ändern das Bild wirklich, deshalb bleibt der Durchlauf bei ihnen. Rückkopplungs-Effekte behalten ihre Puffer und Kopien, wie unter <a href="effects.html#feedback-effects">Rückkopplungs-Effekte</a> beschrieben. Effekte werden nicht zu einem Shader zusammengefasst, weil es dann nicht mehr genau die Effekte wären, die du gewählt hast.</p>
 <h2 id="perf-cost"><a class="anchor" href="#perf-cost" aria-label="Link">#</a>Was Zeit kostet</h2>
 <ul><li>Ein Layer mit Deckkraft null wird nicht gezeichnet, verborgene Layer kosten also nichts.</li><li>Jeder Effekt ist ein weiterer Durchgang über das Bild. Ersetze einen Stapel Effekte durch einen Node-Effekt, wenn es geht.</li><li>Große Videos kosten Dekodierzeit. HAP-Videos kosten fast nichts am Prozessor, siehe <a href="video.html">Video- und Bild-Clips</a>.</li><li>Live-Quellen werden drei Sekunden nach der letzten Nutzung geschlossen.</li><li>3D-Modelle und -Szenen kosten Grafikzeit entsprechend ihrer Dreieckszahl.</li></ul>
 <p>Die Seite zeigt auch den Speicher: eine Schätzung des Grafikspeichers, den Videospeicher und den Programmspeicher, und welcher Clip oder Effekt die Zeit braucht. Was der Treiber misst, das Speicherbudget und die Warnungen stehen in <a href="performance.html#perf-memory">Grafikspeicher und Warnungen</a>. Gemessene Zahlen und Grenzen stehen in <a href="https://github.com/MarlonXDev/NyrexVJ/blob/main/docs/PERFORMANCE.md" target="_blank" rel="noopener noreferrer">docs/PERFORMANCE.md</a> des Projekts.</p>

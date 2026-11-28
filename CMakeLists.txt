@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(NyrexVJ VERSION 0.66.0 LANGUAGES C CXX)
+project(NyrexVJ VERSION 0.67.0 LANGUAGES C CXX)
 
 option(NYREXVJ_RELEASE "Build an official release (no -dev suffix)" OFF)
 option(NYREXVJ_BUILD_TESTS "Build the unit tests" ON)
@@ -254,6 +254,7 @@ set(NYREXVJ_CORE_SOURCES
     src/core/frame_lock.cpp
     src/core/hardware_sync.cpp
     src/core/render_policy.cpp
+    src/core/graph_plan.cpp
     src/core/frame_stats.cpp
     src/core/growth_check.cpp
     src/core/soak_plan.cpp
@@ -781,6 +782,10 @@ if(NYREXVJ_BUILD_TESTS)
     target_link_libraries(nvj_feedback_tests PRIVATE nvj_core glad)
     target_include_directories(nvj_feedback_tests PRIVATE tests)
     add_test(NAME nvj_feedback_tests COMMAND nvj_feedback_tests)
+    add_executable(nvj_graph_tests tests/test_graph.cpp)
+    target_link_libraries(nvj_graph_tests PRIVATE nvj_core)
+    target_include_directories(nvj_graph_tests PRIVATE tests)
+    add_test(NAME nvj_graph_tests COMMAND nvj_graph_tests)
     add_executable(nvj_transition_tests tests/test_transitions.cpp)
     target_link_libraries(nvj_transition_tests PRIVATE nvj_core)
     target_include_directories(nvj_transition_tests PRIVATE tests)

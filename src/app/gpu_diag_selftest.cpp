@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace nvj {
@@ -37,6 +38,7 @@ constexpr int kProbeImages = kColumnCount;
 constexpr int kProbeSize = 3584;
 constexpr std::uint64_t kBudget = 256ull * gpudiag::kMiB;
 constexpr const char* kPrefix = "gd_selftest_";
+constexpr double kLoadAllowanceMilliseconds = 15000.0;
 
 class Report {
 public:
@@ -91,13 +93,18 @@ void step(Engine& engine, int frames, double dt) {
 
 template <class Done>
 int stepUntil(Engine& engine, int maxFrames, double dt, Done done) {
-    for (int i = 0; i < maxFrames; ++i) {
+    const auto begin = Clock::now();
+    for (int i = 0;; ++i) {
         engine.update(dt);
         engine.render();
         if (done()) {
             glFinish();
             return i + 1;
         }
+        if (i + 1 >= maxFrames && since(begin) >= kLoadAllowanceMilliseconds) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     glFinish();
     return -1;

@@ -3017,6 +3017,11 @@ const Translation kJapanese[] = {
     {"Clears all feedback pictures and restarts the buffers of shaders. MIDI, OSC and the web interface can do the same.", "すべてのフィードバック画像をクリアし、シェーダーのバッファを再起動します。MIDI、OSC、Web インターフェースでも同じことができます。"},
     {"Holds the feedback pictures where they are. Applies to all feedback effects.", "フィードバック画像をそのまま保持します。すべてのフィードバックエフェクトに適用されます。"},
     {"Clears all feedback pictures.", "すべてのフィードバック画像をクリアします。"},
+    {"Render graph", "レンダーグラフ"},
+    {"Skip passes that only copy", "コピーだけのパスをスキップする"},
+    {"When the master picture needs no colour change, no effect and full level, it is built straight into the output instead of being copied there in an extra pass. With a colour look (LUT) the extra target and the copy back are dropped as well. The picture is bit for bit the same. Turn it off if you suspect a difference.", "マスター映像に色の変更もエフェクトもなく、レベルが最大のときは、別のパスでコピーせず、出力へ直接描画します。カラールック(LUT)がある場合は、追加のターゲットと書き戻しのコピーも省きます。映像はビット単位で同じです。違いがありそうなときはオフにしてください。"},
+    {"%llu passes and %llu copies skipped in %llu frames.", "%llu 個のパスと %llu 個のコピーを %llu フレームでスキップしました。"},
+    {"Counted since the program started or since the switch was last changed.", "プログラムの起動時、またはスイッチを最後に変更したときからの合計です。"},
 };
 
 }

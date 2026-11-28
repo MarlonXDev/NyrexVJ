@@ -66,6 +66,7 @@ The table is generated from `tests/hardware/matrix.json` and `tests/hardware/res
 | Audio analysis 2: the optional beat tracker (tempo, phase, confidence, grid beats), the audio latency setting, the adjustable band split and the left, right or mixed channel choice | implemented | implemented | 2 | M-AUD-1 open |
 | Transition designer: deck transitions of your own as GLSL or ISF files (outgoing and incoming picture, progress, controls, preview, fallback to the built-in transition) | implemented | implemented | 5 | M-TRN-1 open |
 | GPU feedback lab: a memory budget for feedback buffers, buffer reuse, freeze and reset, the frame time as uDelta, and the new effects Time Echo, Motion Smear, Feedback Transform and Accumulate | implemented | implemented | 6 | M-FBK-1 open |
+| GPU effect graph optimizer: the last layer is drawn straight into the output, the colour look needs no extra picture, and a transition draws its two decks without a copy, with the switch Skip passes that only copy | implemented | implemented | 6 | M-GRF-1 open |
 <!-- matrix:end -->
 
 Each area in `matrix.json` lists its automatic tests (`A-...`) and its manual tests (`M-...`) with the steps, what to measure and a proposed pass criterion. The pass criteria are proposals: the maintainer decides the real limits.

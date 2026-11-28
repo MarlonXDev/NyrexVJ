@@ -1640,6 +1640,14 @@ Die Seite zeigt außerdem:
 
 Partikel-Obergrenze pro Ebene ist die größte Zahl an Partikeln, die ein Partikel-Clip gleichzeitig am Leben haben darf, von 64 bis 16.384, am Anfang 2048. Ist die Grenze erreicht, werden neuere Partikel verworfen und das Bild bleibt flüssig. Jedes Partikel kostet 24 Byte Grafikspeicher. Text- und Partikel-Clips in der Bibliothek zeigen blendet sie alle aus der Bibliothek aus. Experimentelle GPU-Partikel lässt Clips, die es verlangen, auf der Grafikkarte laufen, und Grafikspeicher für GPU-Partikel ist das Budget für alle zusammen, 8 bis 512 MB. Siehe [Text, Partikel und Effektketten](#generators/gpu-particles).
 
+## Durchläufe, die nur kopieren {#perf-graph}
+
+NyrexVJ baut das Bild Layer für Layer auf und kopiert das Ergebnis dann in die Ausgabe. Hat das Master-Bild keinen Effekt, keine Farbänderung und den vollen Pegel, ist diese letzte Kopie ein ganzer zusätzlicher Durchlauf über das Bild, der nichts ändert; dann wird der letzte Layer gleich in die Ausgabe gezeichnet. Dasselbe gilt für jedes der zwei Decks, solange ein Übergang läuft. Mit einem Farblook (LUT) fallen außerdem das zusätzliche Bild, das er früher brauchte, und das Zurückkopieren weg, und der Grafikspeicher dafür wird frei. Das Ergebnis ist dasselbe Bild, Bit für Bit; die Tests vergleichen jedes Pixel mit dem Schalter an und aus.
+
+Der Schalter heißt **Durchläufe überspringen, die nur kopieren** und steht unter Einstellungen, Leistung, Render-Graph. Zu Beginn ist er an. Die Zeile darunter zählt die übersprungenen Durchläufe und Kopien. Schalte ihn aus, wenn du je einen Unterschied vermutest; sonst ändert sich nichts.
+
+Ein Master-Effekt, eine Farbänderung im Master, ein Pegel unter voll, Blackout und ein Standby, der seine Ausgänge schwarz hält, ändern das Bild wirklich, deshalb bleibt der Durchlauf bei ihnen. Rückkopplungs-Effekte behalten ihre Puffer und Kopien, wie unter [Rückkopplungs-Effekte](#effects/feedback-effects) beschrieben. Effekte werden nicht zu einem Shader zusammengefasst, weil es dann nicht mehr genau die Effekte wären, die du gewählt hast.
+
 ## Was Zeit kostet {#perf-cost}
 
 - Ein Layer mit Deckkraft null wird nicht gezeichnet, verborgene Layer kosten also nichts.

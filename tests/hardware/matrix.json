@@ -3622,6 +3622,87 @@
           "criteria": "Proposed: the half-life within 10 percent of the slider value at 30, 60 and 144 frames per second, no visible jump or black frame when a buffer shrinks or grows, a refused buffer never stops the output, the feedback memory after an hour within 5 percent of the start, and Freeze and Reset through MIDI and OSC working in the same frame."
         }
       ]
+    },
+    {
+      "id": "graph-optimizer",
+      "title": "GPU effect graph optimizer: the last layer is drawn straight into the output, the colour look needs no extra picture, and a transition draws its two decks without a copy, with the switch Skip passes that only copy",
+      "platforms": {
+        "windows": true,
+        "linux": true
+      },
+      "docs": [
+        "docs/PERFORMANCE.md",
+        "docs/INTERFACES.md",
+        "docs/manual/manual.en.md",
+        "docs/TESTING.md",
+        "docs/adr/0061-gpu-effect-graph-optimizer-skip-passes-that-only-copy.md"
+      ],
+      "sources": [
+        "src/core/graph_plan.cpp",
+        "src/render/engine.cpp",
+        "src/core/settings.cpp",
+        "src/app/ui_diagnostics.cpp",
+        "src/app/shader_selftest.cpp",
+        "src/app/color_selftest.cpp",
+        "tests/test_graph.cpp",
+        "src/app/gpu_diag_selftest.cpp"
+      ],
+      "automated": [
+        {
+          "id": "A-GRF-1",
+          "kind": "ctest",
+          "name": "nvj_graph_tests",
+          "note": "the setting and its tolerance (default on, written only when off), when the last pass is neutral (grade, level, Blackout, hold), when a chain is empty, the route table for the optimizer on and off with and without a colour stage, the layer swap parity from 0 to 64 swaps, and the counters"
+        },
+        {
+          "id": "A-GRF-2",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest",
+          "note": "renders every route through a real OpenGL context twice, with the optimizer off and on, in the same frame, and compares every pixel: one to four layers, all 14 blend modes, five blend orders, a hidden layer, bypass, solo, six colour grades, three levels, Blackout, hold, master and layer effects, reduced layer resolution, three output sizes, the colour look (direct, half strength, graded, dimmed, with a master effect, even and odd swaps), fade, Radial, Glitch and custom transitions (graded, with an effect, with a colour look), four feedback sequences of 20 frames each (Trails on a layer and on the master, a hidden feedback layer with a swapping blend, three layers with two feedback), switching the optimizer in the middle of a transition, and the counters; the alpha of the picture stays 255"
+        },
+        {
+          "id": "A-GRF-3",
+          "kind": "cli",
+          "command": "NyrexVJ --shader-selftest 200",
+          "note": "adds the frame time (average, median, 95th and 99th percentile, worst), the graphics memory and the skipped passes per frame of one layer, four layers, four layers with a colour look, four layers with a master effect and a transition, each with the optimizer off and on in four alternating rounds, and the number of different pixels"
+        },
+        {
+          "id": "A-GRF-4",
+          "kind": "cli",
+          "command": "NyrexVJ --color-selftest tests/data",
+          "note": "the memory the colour look reports: only the look itself with the optimizer on, the look and a picture of the output size with it off"
+        },
+        {
+          "id": "A-GRF-5",
+          "kind": "script",
+          "command": "python3 scripts/check_i18n.py",
+          "note": "the five new texts of the Render graph section have a translation in all seven tables, with the same printf specifiers"
+        },
+        {
+          "id": "A-GRF-6",
+          "kind": "cli",
+          "command": "NyrexVJ --gpu-diag-selftest",
+          "note": "runs with the optimizer on and found that a released image takes more wall time to load than 1,200 empty frames take to draw; the wait now follows the clock as well as the frame count"
+        }
+      ],
+      "manual": [
+        {
+          "id": "M-GRF-1",
+          "title": "Skip passes that only copy on a real graphics card in a real show, with and without a colour look and during transitions",
+          "needs": "A PC with a graphics card, an output window or Spout or NDI to OBS, a show with four layers of video and effects, a LUT file, and optionally a second PC on the network sync",
+          "steps": [
+            "Play a show with four layers, no master effect and a full level, open Settings, Performance, Render graph and note the frame time and the counter. Turn Skip passes that only copy off and on and compare the frame time at the output size you play at.",
+            "Look at the output while switching the setting off and on during a bright, busy scene and check that no frame changes, flashes or goes dark.",
+            "Switch on a colour look (LUT) and check the frame time and the Extra graphics memory in Settings, Colour with the setting on and off; the memory must be lower with it on and the picture the same.",
+            "Run a fade, a wipe and a custom transition between two decks, switch the setting in the middle of one, and check the picture does not jump.",
+            "Add a master effect and a level below full and check that the picture is still right and the counter stops counting while they are on.",
+            "Play for an hour with the setting on and compare the graphics memory at the start and at the end.",
+            "Repeat the first step at 4K output and on a second PC with the network sync, if you have them."
+          ],
+          "measure": "the frame time with the setting off and on at the output size you play at, the graphics memory with a colour look on and off, and the passes and copies skipped in the counter",
+          "criteria": "Proposed: the picture with the setting on is the same as with it off in every case you try, no flash or jump when the setting is switched, the frame time with it on is not above the frame time with it off, the graphics memory with a colour look is lower with it on, and the memory after an hour is within 5 percent of the start."
+        }
+      ]
     }
   ]
 }

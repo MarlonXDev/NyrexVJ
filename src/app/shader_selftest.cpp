@@ -3,6 +3,7 @@
 #include "audio/audio_features.hpp"
 #include "core/log.hpp"
 #include "render/clip_library.hpp"
+#include "core/color_lut.hpp"
 #include "core/render_policy.hpp"
 #include "render/effect_library.hpp"
 #include "render/transition_library.hpp"
@@ -20,6 +21,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -1840,6 +1842,537 @@ void testIsfExamples(Runner& run) {
     run.step(2);
 }
 
+
+const char* kGraphStripes = "void mainImage(out vec4 c, in vec2 p) { vec2 uv = p / iResolution.xy; float s = step(0.5, fract(uv.x * 8.0 + uv.y * 4.0)); c = vec4(vec3(s, 0.3 + 0.4 * s, 1.0 - s), 1.0); }\n";
+const char* kGraphAlpha = "#pragma nyrexvj alpha\nvoid mainImage(out vec4 c, in vec2 p) { vec2 uv = p / iResolution.xy; c = vec4(uv.x * 0.8, 0.4, uv.y, 0.25 + 0.5 * uv.x); }\n";
+
+struct GraphClips {
+    int plain = -1;
+    int stripes = -1;
+    int alpha = -1;
+    int bar = -1;
+};
+
+GraphClips graphClips(Runner& run) {
+    GraphClips clips;
+    clips.plain = run.add("graph_plain", kSinglePassBench);
+    clips.stripes = run.add("graph_stripes", kGraphStripes);
+    clips.alpha = run.add("graph_alpha", kGraphAlpha);
+    clips.bar = run.add("graph_bar", kFbBar);
+    return clips;
+}
+
+struct GraphShot {
+    std::vector<unsigned char> off;
+    std::vector<unsigned char> on;
+    int width = 0;
+    int height = 0;
+    GraphStats stats;
+    bool ok = false;
+};
+
+GraphShot graphPair(Runner& run) {
+    Engine& engine = run.engine();
+    GraphShot shot;
+    engine.setAudio(virtualAudio(engine.beat(), engine.time()));
+    engine.update(1.0 / 60.0);
+    int width = 0;
+    int height = 0;
+    engine.setGraphOptimizer(false);
+    engine.render();
+    glFinish();
+    const bool offOk = engine.readOutput(shot.off, width, height);
+    engine.setGraphOptimizer(true);
+    engine.render();
+    glFinish();
+    shot.stats = engine.graphStats();
+    int onWidth = 0;
+    int onHeight = 0;
+    const bool onOk = engine.readOutput(shot.on, onWidth, onHeight);
+    shot.width = width;
+    shot.height = height;
+    shot.ok = offOk && onOk && width == onWidth && height == onHeight && shot.off.size() == shot.on.size() && !shot.on.empty();
+    return shot;
+}
+
+int graphDifferences(const GraphShot& shot, int* largest = nullptr) {
+    int count = 0;
+    int worst = 0;
+    const size_t n = std::min(shot.on.size(), shot.off.size());
+    for (size_t i = 0; i < n; ++i) {
+        const int d = std::abs(static_cast<int>(shot.on[i]) - static_cast<int>(shot.off[i]));
+        count += d != 0 ? 1 : 0;
+        worst = std::max(worst, d);
+    }
+    if (largest) {
+        *largest = worst;
+    }
+    return count + static_cast<int>(shot.on.size() > shot.off.size() ? shot.on.size() - n : shot.off.size() - n);
+}
+
+int graphAlphaMinimum(const GraphShot& shot) {
+    int lowest = 255;
+    for (size_t i = 3; i < shot.on.size(); i += 4) {
+        lowest = std::min(lowest, static_cast<int>(shot.on[i]));
+    }
+    return lowest;
+}
+
+int graphLit(const GraphShot& shot) {
+    int count = 0;
+    for (size_t i = 0; i + 3 < shot.on.size(); i += 4) {
+        count += (shot.on[i] + shot.on[i + 1] + shot.on[i + 2]) > 30 ? 1 : 0;
+    }
+    return count;
+}
+
+void graphDefaults(Runner& run) {
+    Engine& engine = run.engine();
+    engine.setGraphOptimizer(true);
+    engine.setColorStage(false, nullptr, 1.0f);
+    engine.setQuality(QualityFull, 16.0);
+    engine.blackout = false;
+    engine.holdOutput = false;
+    engine.paused = false;
+    feedbackDefaults(run);
+    run.clearAll();
+    engine.setResolutionIndex(1);
+    engine.comp.deckSettings = DeckSettings{};
+    engine.comp.deckSettings.syncBeats = false;
+    engine.comp.deckSettings.seconds = 600.0f;
+    if (engine.comp.activeDeck != 0) {
+        engine.switchDeck(0);
+    }
+}
+
+void graphCheck(Runner& run, const std::string& name, int expectedFinalSkips, int expectedCopySkips, bool needLight = true) {
+    GraphShot shot = graphPair(run);
+    int largest = 0;
+    const int differing = shot.ok ? graphDifferences(shot, &largest) : -1;
+    const bool skipsOk = (expectedFinalSkips < 0 || static_cast<int>(shot.stats.finalSkipped) == expectedFinalSkips) && (expectedCopySkips < 0 || static_cast<int>(shot.stats.copiesSkipped) == expectedCopySkips);
+    run.record("graph_" + name, shot.ok && differing == 0 && skipsOk && (!needLight || graphLit(shot) > 0),
+        "bytes that differ " + std::to_string(differing) + ", largest " + std::to_string(largest) + ", final passes skipped " + std::to_string(shot.stats.finalSkipped) + " (wanted " + std::to_string(expectedFinalSkips) + "), copies skipped " + std::to_string(shot.stats.copiesSkipped) + " (wanted " + std::to_string(expectedCopySkips) + "), lit pixels " + std::to_string(graphLit(shot)));
+}
+
+void testGraphBasics(Runner& run, const GraphClips& clips) {
+    Engine& engine = run.engine();
+    graphDefaults(run);
+    run.place(0, clips.plain);
+    run.step(3);
+    graphCheck(run, "single_layer", 1, 0);
+
+    run.place(1, clips.stripes);
+    run.place(2, clips.alpha);
+    run.place(3, clips.plain);
+    engine.comp.layers[0].opacity = 0.9f;
+    engine.comp.layers[1].opacity = 0.7f;
+    engine.comp.layers[2].opacity = 0.5f;
+    engine.comp.layers[3].opacity = 0.3f;
+    run.step(3);
+    graphCheck(run, "four_layers_normal", 1, 0);
+    GraphShot alphaShot = graphPair(run);
+    run.record("graph_alpha_is_kept_at_255", alphaShot.ok && graphAlphaMinimum(alphaShot) == 255, "lowest alpha " + std::to_string(graphAlphaMinimum(alphaShot)));
+
+    run.clearAll();
+    engine.setResolutionIndex(1);
+    for (int mode = 0; mode < BlendModeCount; ++mode) {
+        engine.comp.layers[0] = Layer{};
+        engine.comp.layers[1] = Layer{};
+        run.place(0, clips.plain);
+        run.place(1, clips.stripes);
+        engine.comp.layers[1].blend = mode;
+        engine.comp.layers[1].opacity = 0.8f;
+        run.step(2);
+        graphCheck(run, "blend_mode_" + std::to_string(mode), 1, 0);
+    }
+
+    const std::vector<std::array<int, 3>> orders = {
+        {BlendNormal, BlendDifference, BlendExclusion},
+        {BlendSubtract, BlendNormal, BlendLighten},
+        {BlendDifference, BlendDifference, BlendDifference},
+        {BlendAdd, BlendSubtract, BlendMultiply},
+        {BlendSoftLight, BlendOverlay, BlendNormal},
+    };
+    int index = 0;
+    for (const std::array<int, 3>& order : orders) {
+        run.clearAll();
+        engine.setResolutionIndex(1);
+        run.place(0, clips.plain);
+        run.place(1, clips.stripes);
+        run.place(2, clips.alpha);
+        for (int l = 0; l < 3; ++l) {
+            engine.comp.layers[static_cast<size_t>(l)].blend = order[static_cast<size_t>(l)];
+            engine.comp.layers[static_cast<size_t>(l)].opacity = 0.85f - 0.2f * static_cast<float>(l);
+        }
+        run.step(2);
+        graphCheck(run, "blend_order_" + std::to_string(index++), 1, 0);
+    }
+
+    run.clearAll();
+    engine.setResolutionIndex(1);
+    run.place(0, clips.plain);
+    run.place(1, clips.stripes);
+    run.place(2, clips.plain);
+    engine.comp.layers[1].opacity = 0.0f;
+    engine.comp.layers[1].blend = BlendDifference;
+    run.step(2);
+    graphCheck(run, "hidden_layer_with_swap_blend", 1, 0);
+    engine.comp.layers[2].bypass = true;
+    run.step(2);
+    graphCheck(run, "bypassed_layer", 1, 0);
+    engine.comp.layers[2].bypass = false;
+    engine.comp.layers[0].solo = true;
+    run.step(2);
+    graphCheck(run, "solo_layer", 1, 0);
+    run.clearAll();
+    engine.setResolutionIndex(1);
+    run.step(2);
+    GraphShot empty = graphPair(run);
+    run.record("graph_empty_composition", empty.ok && graphDifferences(empty) == 0 && empty.stats.finalSkipped == 1, "differences " + std::to_string(graphDifferences(empty)) + ", skipped " + std::to_string(empty.stats.finalSkipped));
+}
+
+void testGraphFallbacks(Runner& run, const GraphClips& clips) {
+    Engine& engine = run.engine();
+    graphDefaults(run);
+    run.place(0, clips.plain);
+    run.place(1, clips.stripes);
+    engine.comp.layers[1].blend = BlendOverlay;
+    engine.comp.layers[1].opacity = 0.6f;
+    run.step(3);
+
+    const std::vector<std::pair<std::string, ColorGrade>> grades = {
+        {"hue", {0.2f, 1.0f, 0.0f, 1.0f}},
+        {"saturation", {0.0f, 0.5f, 0.0f, 1.0f}},
+        {"brightness", {0.0f, 1.0f, 0.1f, 1.0f}},
+        {"contrast", {0.0f, 1.0f, 0.0f, 1.4f}},
+        {"all", {-0.1f, 1.3f, -0.05f, 0.8f}},
+        {"tiny_hue", {0.00002f, 1.0f, 0.0f, 1.0f}},
+    };
+    for (const auto& entry : grades) {
+        engine.comp.master.grade = entry.second;
+        run.step(2);
+        graphCheck(run, "master_grade_" + entry.first, 0, 0);
+    }
+    engine.comp.master.grade = ColorGrade{};
+
+    for (const float level : {0.0f, 0.4f, 0.9f}) {
+        engine.comp.master.level = level;
+        run.step(2);
+        graphCheck(run, "master_level_" + std::to_string(static_cast<int>(level * 10.0f)), 0, 0, level > 0.0f);
+    }
+    engine.comp.master.level = 1.0f;
+
+    engine.blackout = true;
+    run.step(2);
+    {
+        GraphShot shot = graphPair(run);
+        run.record("graph_blackout", shot.ok && graphDifferences(shot) == 0 && shot.stats.finalSkipped == 0, "differences " + std::to_string(graphDifferences(shot)) + ", skipped " + std::to_string(shot.stats.finalSkipped));
+    }
+    engine.blackout = false;
+    engine.holdOutput = true;
+    run.step(2);
+    {
+        GraphShot shot = graphPair(run);
+        run.record("graph_hold_output", shot.ok && graphDifferences(shot) == 0 && shot.stats.finalSkipped == 0, "differences " + std::to_string(graphDifferences(shot)) + ", skipped " + std::to_string(shot.stats.finalSkipped));
+    }
+    engine.holdOutput = false;
+
+    EffectSlot& slot = engine.comp.master.fx[0];
+    setEffect(slot, effectIndexByName("Invert"));
+    slot.enabled = true;
+    run.step(2);
+    graphCheck(run, "master_effect", 0, 0);
+    slot.enabled = false;
+    run.step(2);
+    graphCheck(run, "master_effect_off", 1, 0);
+    slot.enabled = true;
+    setEffect(engine.comp.master.fx[3], effectIndexByName("Mirror"));
+    run.step(2);
+    graphCheck(run, "master_two_effects", 0, 0);
+    engine.comp.master.fx = {};
+    EffectSlot& layerSlot = engine.comp.layers[0].fx[0];
+    setEffect(layerSlot, effectIndexByName("Kaleidoscope"));
+    layerSlot.enabled = true;
+    run.step(2);
+    graphCheck(run, "layer_effect", 1, 0);
+    engine.comp.layers[0].fx = {};
+
+    engine.setQuality(QualityPerformance, 16.0);
+    run.step(8);
+    graphCheck(run, "reduced_layer_resolution", 1, 0);
+    engine.setQuality(QualityFull, 16.0);
+    run.step(8);
+
+    for (const int resolution : {0, 2, 1}) {
+        engine.setResolutionIndex(resolution);
+        run.place(0, clips.plain);
+        run.place(1, clips.stripes);
+        run.step(3);
+        graphCheck(run, "resolution_" + std::to_string(resolution), 1, 0);
+    }
+}
+
+CubeLut graphLut(int size, bool invert) {
+    CubeLut lut;
+    lut.title = invert ? "graph invert" : "graph tint";
+    lut.size = size;
+    lut.rgb.resize(lut.entries() * 3);
+    size_t at = 0;
+    for (int b = 0; b < size; ++b) {
+        for (int g = 0; g < size; ++g) {
+            for (int r = 0; r < size; ++r) {
+                const float fr = static_cast<float>(r) / static_cast<float>(size - 1);
+                const float fg = static_cast<float>(g) / static_cast<float>(size - 1);
+                const float fb = static_cast<float>(b) / static_cast<float>(size - 1);
+                lut.rgb[at++] = invert ? 1.0f - fr : std::min(1.0f, fr * 1.2f);
+                lut.rgb[at++] = invert ? 1.0f - fg : fg * 0.8f;
+                lut.rgb[at++] = invert ? 1.0f - fb : std::min(1.0f, fb + 0.1f);
+            }
+        }
+    }
+    return lut;
+}
+
+void testGraphColourStage(Runner& run, const GraphClips& clips) {
+    Engine& engine = run.engine();
+    graphDefaults(run);
+    run.place(0, clips.plain);
+    run.place(1, clips.stripes);
+    engine.comp.layers[1].blend = BlendDifference;
+    engine.comp.layers[1].opacity = 0.7f;
+    const CubeLut invert = graphLut(9, true);
+    const CubeLut tint = graphLut(17, false);
+
+    engine.setColorStage(true, &invert, 1.0f);
+    run.step(3);
+    graphCheck(run, "colour_direct", 1, 1);
+    engine.setColorStage(true, &tint, 0.5f);
+    run.step(3);
+    graphCheck(run, "colour_direct_half_strength", 1, 1);
+
+    engine.comp.master.grade = ColorGrade{0.1f, 1.2f, 0.0f, 1.1f};
+    run.step(2);
+    graphCheck(run, "colour_graded_master", 0, 1);
+    engine.comp.master.grade = ColorGrade{};
+    engine.comp.master.level = 0.6f;
+    run.step(2);
+    graphCheck(run, "colour_dimmed_master", 0, 1);
+    engine.comp.master.level = 1.0f;
+    setEffect(engine.comp.master.fx[0], effectIndexByName("Invert"));
+    engine.comp.master.fx[0].enabled = true;
+    run.step(2);
+    graphCheck(run, "colour_master_effect", 0, 1);
+    engine.comp.master.fx = {};
+
+    engine.comp.layers[1].blend = BlendNormal;
+    run.step(2);
+    graphCheck(run, "colour_even_swaps", 1, 1);
+
+    engine.setColorStage(true, &invert, 1.0f);
+    run.step(3);
+    {
+        engine.setGraphOptimizer(false);
+        engine.render();
+        const std::uint64_t legacy = engine.colorStageBytes();
+        engine.setGraphOptimizer(true);
+        engine.render();
+        const std::uint64_t optimized = engine.colorStageBytes();
+        run.record("graph_colour_stage_memory",
+            legacy == colorStageBytes(engine.width(), engine.height(), invert.size) && optimized == cubeGpuBytes(invert.size) && optimized < legacy,
+            "optimizer off " + std::to_string(legacy) + " B, on " + std::to_string(optimized) + " B");
+    }
+    engine.setColorStage(false, nullptr, 1.0f);
+    run.step(2);
+    graphCheck(run, "colour_stage_off_again", 1, 0);
+}
+
+void testGraphTransitions(Runner& run, const GraphClips& clips) {
+    Engine& engine = run.engine();
+    const std::string custom = run.addTransition("graph_tr_mix", kCrossMix);
+    const CubeLut tint = graphLut(9, false);
+
+    const auto start = [&](int builtin, const std::string& customName) {
+        graphDefaults(run);
+        run.place(0, clips.plain);
+        run.place(1, clips.alpha);
+        engine.comp.layers[1].opacity = 0.8f;
+        run.step(3);
+        engine.comp.deckSettings.transition = builtin;
+        engine.comp.deckSettings.customTransition = customName;
+        engine.comp.deckSettings.seconds = 600.0f;
+        engine.comp.deckSettings.syncBeats = false;
+    };
+    const auto enter = [&]() {
+        engine.switchDeck(1);
+        run.place(0, clips.stripes);
+        run.place(1, clips.plain);
+        engine.comp.layers[1].blend = BlendOverlay;
+        engine.comp.layers[1].opacity = 0.6f;
+        run.step(4);
+    };
+
+    start(TransitionFade, "");
+    enter();
+    run.record("graph_transition_running", engine.transitioning(), "transitioning");
+    graphCheck(run, "transition_fade_neutral", 2, 0);
+
+    engine.comp.master.grade = ColorGrade{0.0f, 1.3f, 0.0f, 1.0f};
+    run.step(2);
+    graphCheck(run, "transition_current_graded", 1, 0);
+    engine.comp.master.grade = ColorGrade{};
+    setEffect(engine.comp.master.fx[1], effectIndexByName("Mirror"));
+    engine.comp.master.fx[1].enabled = true;
+    run.step(2);
+    graphCheck(run, "transition_current_with_effect", 1, 0);
+    engine.comp.master.fx = {};
+
+    engine.setColorStage(true, &tint, 1.0f);
+    run.step(2);
+    graphCheck(run, "transition_with_colour_stage", 2, 1);
+    engine.setColorStage(false, nullptr, 1.0f);
+
+    engine.switchDeck(0);
+    run.step(2);
+    run.record("graph_transition_switch_back_frozen", engine.transitioning(), "still transitioning");
+    graphCheck(run, "transition_after_switch_in_the_middle", -1, -1);
+
+    for (const int type : {TransitionRadial, TransitionGlitch}) {
+        start(type, "");
+        enter();
+        graphCheck(run, "transition_builtin_" + std::to_string(type), 2, 0);
+    }
+
+    if (!custom.empty()) {
+        start(TransitionFade, custom);
+        enter();
+        graphCheck(run, "transition_custom_mix", 2, 0);
+        engine.setColorStage(true, &tint, 0.8f);
+        run.step(2);
+        graphCheck(run, "transition_custom_with_colour_stage", 2, 1);
+        engine.setColorStage(false, nullptr, 1.0f);
+    }
+
+    start(TransitionFade, "");
+    engine.comp.master.grade = ColorGrade{0.1f, 1.0f, 0.0f, 1.0f};
+    enter();
+    graphCheck(run, "transition_new_deck_neutral_old_graded", -1, 0);
+
+    engine.comp.deckSettings.seconds = 0.2f;
+    run.step(60);
+    engine.switchDeck(0);
+    run.step(40);
+    graphDefaults(run);
+}
+
+void testGraphSequences(Runner& run, const GraphClips& clips) {
+    Engine& engine = run.engine();
+    struct Scene {
+        std::string name;
+        std::function<void()> build;
+    };
+    const std::vector<Scene> scenes = {
+        {"layer_trails", [&]() {
+             run.place(0, clips.bar);
+             feedbackEffect(run, 0, "Trails", 0.7f, 0.5f, 0.5f, 0.4f);
+         }},
+        {"master_trails", [&]() {
+             run.place(0, clips.bar);
+             setEffect(engine.comp.master.fx[0], effectIndexByName("Trails"));
+             engine.comp.master.fx[0].enabled = true;
+             engine.comp.master.fx[0].params = {0.6f, 0.5f, 0.5f, 0.4f};
+         }},
+        {"hidden_feedback_layer_with_swap_blend", [&]() {
+             run.place(0, clips.bar);
+             run.place(1, clips.stripes);
+             feedbackEffect(run, 1, "Trails", 0.8f, 0.5f, 0.5f, 0.4f);
+             engine.comp.layers[1].opacity = 0.0f;
+             engine.comp.layers[1].blend = BlendDifference;
+         }},
+        {"three_layers_two_feedback", [&]() {
+             run.place(0, clips.bar);
+             run.place(1, clips.stripes);
+             run.place(2, clips.plain);
+             feedbackEffect(run, 0, "Trails", 0.6f, 0.5f, 0.5f, 0.4f);
+             feedbackEffect(run, 2, "Trails", 0.5f, 0.5f, 0.5f, 0.4f);
+             engine.comp.layers[1].blend = BlendExclusion;
+             engine.comp.layers[1].opacity = 0.5f;
+             engine.comp.layers[2].opacity = 0.4f;
+         }},
+    };
+    constexpr int kFrames = 20;
+    for (const Scene& scene : scenes) {
+        std::array<std::vector<std::vector<unsigned char>>, 2> runs;
+        for (int mode = 0; mode < 2; ++mode) {
+            graphDefaults(run);
+            engine.setGraphOptimizer(mode == 1);
+            scene.build();
+            engine.resetFeedback();
+            run.step(1);
+            engine.resetFeedback();
+            for (int frame = 0; frame < kFrames; ++frame) {
+                run.step(1);
+                std::vector<unsigned char> pixels;
+                int width = 0;
+                int height = 0;
+                engine.readOutput(pixels, width, height);
+                runs[static_cast<size_t>(mode)].push_back(std::move(pixels));
+            }
+        }
+        int differing = 0;
+        int firstBad = -1;
+        for (int frame = 0; frame < kFrames; ++frame) {
+            if (runs[0][static_cast<size_t>(frame)] != runs[1][static_cast<size_t>(frame)] || runs[0][static_cast<size_t>(frame)].empty()) {
+                ++differing;
+                firstBad = firstBad < 0 ? frame : firstBad;
+            }
+        }
+        run.record("graph_sequence_" + scene.name, differing == 0, std::to_string(differing) + " of " + std::to_string(kFrames) + " frames differ, first " + std::to_string(firstBad));
+    }
+    graphDefaults(run);
+}
+
+void testGraphSwitching(Runner& run, const GraphClips& clips) {
+    Engine& engine = run.engine();
+    graphDefaults(run);
+    run.place(0, clips.plain);
+    run.step(3);
+    engine.setGraphOptimizer(true);
+    engine.resetGraphStats();
+    run.step(10);
+    const GraphStats on = engine.graphStats();
+    run.record("graph_counts_skipped_passes", on.frames == 10 && on.finalSkipped == 10 && on.copiesSkipped == 0, "frames " + std::to_string(on.frames) + ", skipped " + std::to_string(on.finalSkipped));
+    engine.setGraphOptimizer(false);
+    run.step(10);
+    const GraphStats off = engine.graphStats();
+    run.record("graph_off_skips_nothing", off.frames == 10 && off.finalSkipped == 0 && off.copiesSkipped == 0, "frames " + std::to_string(off.frames) + ", skipped " + std::to_string(off.finalSkipped));
+    engine.setGraphOptimizer(true);
+    engine.setGraphOptimizer(true);
+    run.step(2);
+    run.record("graph_switch_resets_the_counters_once", engine.graphStats().frames == 2, "frames " + std::to_string(engine.graphStats().frames));
+    for (int i = 0; i < 12; ++i) {
+        engine.setGraphOptimizer(i % 2 == 0);
+        run.step(1);
+    }
+    graphCheck(run, "after_switching_back_and_forth", 1, 0);
+    graphDefaults(run);
+}
+
+void testGraphOptimizer(Runner& run) {
+    const GraphClips clips = graphClips(run);
+    if (clips.plain < 0 || clips.stripes < 0 || clips.alpha < 0 || clips.bar < 0) {
+        run.record("graph_clips", false, "the test clips did not load");
+        return;
+    }
+    testGraphBasics(run, clips);
+    testGraphFallbacks(run, clips);
+    testGraphColourStage(run, clips);
+    testGraphTransitions(run, clips);
+    testGraphSequences(run, clips);
+    testGraphSwitching(run, clips);
+    run.clearAll();
+    graphDefaults(run);
+}
+
 struct BenchCase {
     std::string name;
     std::string clipText;
@@ -1976,6 +2509,123 @@ void benchFeedbackLab(Runner& run, json& result, int frames) {
     feedbackDefaults(run);
 }
 
+double graphPercentile(std::vector<double> values, double fraction) {
+    if (values.empty()) {
+        return 0.0;
+    }
+    std::sort(values.begin(), values.end());
+    const double position = fraction * static_cast<double>(values.size() - 1);
+    const size_t low = static_cast<size_t>(std::floor(position));
+    const size_t high = static_cast<size_t>(std::ceil(position));
+    return values[low] + (values[high] - values[low]) * (position - static_cast<double>(low));
+}
+
+json graphStatistics(const std::vector<double>& samples) {
+    json item;
+    double total = 0.0;
+    for (const double value : samples) {
+        total += value;
+    }
+    item["samples"] = samples.size();
+    item["averageMs"] = samples.empty() ? 0.0 : total / static_cast<double>(samples.size());
+    item["p50Ms"] = graphPercentile(samples, 0.50);
+    item["p95Ms"] = graphPercentile(samples, 0.95);
+    item["p99Ms"] = graphPercentile(samples, 0.99);
+    item["worstMs"] = samples.empty() ? 0.0 : *std::max_element(samples.begin(), samples.end());
+    return item;
+}
+
+void benchGraphCase(Runner& run, json& result, const std::string& name, int frames, const std::function<void()>& build) {
+    Engine& engine = run.engine();
+    graphDefaults(run);
+    build();
+    run.step(10);
+    constexpr int kRounds = 4;
+    const int block = std::max(frames / kRounds, 20);
+    std::array<std::vector<double>, 2> samples;
+    std::array<size_t, 2> total{};
+    std::array<size_t, 2> targets{};
+    std::array<GraphStats, 2> stats{};
+    for (int round = 0; round < kRounds; ++round) {
+        for (int mode = 0; mode < 2; ++mode) {
+            const bool on = (round % 2 == 0) ? mode == 1 : mode == 0;
+            engine.setGraphOptimizer(on);
+            run.step(4);
+            for (int i = 0; i < block; ++i) {
+                const auto begin = std::chrono::steady_clock::now();
+                run.step(1);
+                samples[on ? 1 : 0].push_back(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - begin).count());
+            }
+            const GpuMemory memory = engine.gpuMemory();
+            total[on ? 1 : 0] = memory.total();
+            targets[on ? 1 : 0] = memory.targets;
+            stats[on ? 1 : 0] = engine.graphStats();
+        }
+    }
+    const GraphShot shot = graphPair(run);
+    json item;
+    item["name"] = name;
+    item["optimizerOff"] = graphStatistics(samples[0]);
+    item["optimizerOn"] = graphStatistics(samples[1]);
+    item["optimizerOff"]["gpuMemoryBytes"] = total[0];
+    item["optimizerOn"]["gpuMemoryBytes"] = total[1];
+    item["optimizerOff"]["targetBytes"] = targets[0];
+    item["optimizerOn"]["targetBytes"] = targets[1];
+    item["optimizerOn"]["finalPassesSkippedPerFrame"] = stats[1].frames > 0 ? static_cast<double>(stats[1].finalSkipped) / static_cast<double>(stats[1].frames) : 0.0;
+    item["optimizerOn"]["copiesSkippedPerFrame"] = stats[1].frames > 0 ? static_cast<double>(stats[1].copiesSkipped) / static_cast<double>(stats[1].frames) : 0.0;
+    item["pixelDifferences"] = shot.ok ? graphDifferences(shot) : -1;
+    result.push_back(std::move(item));
+    logLine("Shader benchmark " + name + ": off " + std::to_string(result.back()["optimizerOff"]["averageMs"].get<double>()) + " ms (p99 " + std::to_string(result.back()["optimizerOff"]["p99Ms"].get<double>()) + "), on " + std::to_string(result.back()["optimizerOn"]["averageMs"].get<double>()) + " ms (p99 " + std::to_string(result.back()["optimizerOn"]["p99Ms"].get<double>()) + "), pixel differences " + std::to_string(result.back()["pixelDifferences"].get<int>()));
+    engine.setColorStage(false, nullptr, 1.0f);
+    graphDefaults(run);
+}
+
+void benchGraphLab(Runner& run, json& result, int frames) {
+    const GraphClips clips = graphClips(run);
+    if (clips.plain < 0 || clips.stripes < 0 || clips.alpha < 0) {
+        return;
+    }
+    Engine& engine = run.engine();
+    const int samples = std::max(frames, 160);
+    const CubeLut lut = graphLut(17, false);
+    benchGraphCase(run, result, "bench_graph_one_layer", samples, [&]() { run.place(0, clips.plain); });
+    const auto four = [&]() {
+        run.place(0, clips.plain);
+        run.place(1, clips.stripes);
+        run.place(2, clips.alpha);
+        run.place(3, clips.plain);
+        engine.comp.layers[1].blend = BlendOverlay;
+        engine.comp.layers[1].opacity = 0.7f;
+        engine.comp.layers[2].blend = BlendNormal;
+        engine.comp.layers[2].opacity = 0.6f;
+        engine.comp.layers[3].blend = BlendDifference;
+        engine.comp.layers[3].opacity = 0.4f;
+    };
+    benchGraphCase(run, result, "bench_graph_four_layers", samples, four);
+    benchGraphCase(run, result, "bench_graph_four_layers_lut", samples, [&]() {
+        four();
+        engine.setColorStage(true, &lut, 1.0f);
+    });
+    benchGraphCase(run, result, "bench_graph_four_layers_master_effect", samples, [&]() {
+        four();
+        setEffect(engine.comp.master.fx[0], effectIndexByName("Invert"));
+        engine.comp.master.fx[0].enabled = true;
+    });
+    benchGraphCase(run, result, "bench_graph_transition", samples, [&]() {
+        four();
+        engine.comp.deckSettings.transition = TransitionFade;
+        engine.comp.deckSettings.seconds = 600.0f;
+        engine.comp.deckSettings.syncBeats = false;
+        engine.switchDeck(1);
+        run.place(0, clips.stripes);
+        run.place(1, clips.plain);
+        engine.comp.layers[1].blend = BlendOverlay;
+        engine.comp.layers[1].opacity = 0.5f;
+    });
+    engine.setColorStage(false, nullptr, 1.0f);
+    graphDefaults(run);
+}
+
 json benchmark(Runner& run, int frames) {
     json result = json::array();
     run.engine().setResolutionIndex(1);
@@ -2046,6 +2696,7 @@ json benchmark(Runner& run, int frames) {
         benchTransition(run, result, "bench_transition_custom_heavy16", frames, trHeavy, TransitionFade, trFrom, trTo);
     }
     benchFeedbackLab(run, result, frames);
+    benchGraphLab(run, result, frames);
     return result;
 }
 
@@ -2077,6 +2728,7 @@ int runShaderSelfTest(Engine& engine, int benchFrames, const std::string& output
     testCustomTransitionPreview(run);
     testBuiltinsAfterCustom(run);
     testFeedbackLab(run);
+    testGraphOptimizer(run);
     report["resolution"] = std::to_string(engine.width()) + "x" + std::to_string(engine.height());
     report["checks"] = run.items();
     report["failed"] = run.failed();

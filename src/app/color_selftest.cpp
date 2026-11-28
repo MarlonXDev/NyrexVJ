@@ -405,7 +405,7 @@ void testLifecycle(Probe& p) {
     const CubeLut lut = makeLut(33, "mixed", mixedColor);
     e.setColorStage(true, &lut, 1.0f);
     p.step(3);
-    const std::uint64_t expected = colorStageBytes(e.width(), e.height(), 33);
+    const std::uint64_t expected = e.graphOptimizer() ? cubeGpuBytes(33) : colorStageBytes(e.width(), e.height(), 33);
     p.record("the colour stage reports the memory it uses", e.colorStageBytes() == expected && expected > 0, "measured " + std::to_string(e.colorStageBytes()) + " B, planned " + std::to_string(expected) + " B");
     p.summary()["stageBytes33"] = e.colorStageBytes();
 
@@ -417,7 +417,7 @@ void testLifecycle(Probe& p) {
     p.step(4);
     const Shot small = p.capture();
     const Pixel inverted = small.at(0.5, 0.5);
-    const std::uint64_t smallBytes = colorStageBytes(e.width(), e.height(), 2);
+    const std::uint64_t smallBytes = e.graphOptimizer() ? cubeGpuBytes(2) : colorStageBytes(e.width(), e.height(), 2);
     p.record("the colour stage follows a change of the picture size", resized && std::abs(inverted.r - 204) <= 1 && std::abs(inverted.g - 128) <= 1 && std::abs(inverted.b - 51) <= 1 && e.colorStageBytes() == smallBytes, "got " + show(inverted) + " at " + std::to_string(small.width) + "x" + std::to_string(small.height) + ", " + std::to_string(e.colorStageBytes()) + " B");
     e.setResolutionIndex(0);
     p.step(3);

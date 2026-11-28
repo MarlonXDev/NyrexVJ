@@ -112,6 +112,7 @@ bool loadSettings(Settings& settings) {
         result.feedbackBudgetMb = value <= 0 ? 0 : std::clamp(value, 64, 8192);
     }
     result.feedbackReuse = boolean("feedbackReuse", true);
+    result.graphOptimizer = boolean("graphOptimizer", true);
     result.diagWarnings = boolean("diagWarnings", true);
     auto diagP99 = doc.find("diagP99Percent");
     if (diagP99 != doc.end() && diagP99->is_number_integer()) {
@@ -520,6 +521,9 @@ bool saveSettings(const Settings& settings) {
     }
     if (!settings.feedbackReuse) {
         doc["feedbackReuse"] = false;
+    }
+    if (!settings.graphOptimizer) {
+        doc["graphOptimizer"] = false;
     }
     doc["diagWarnings"] = settings.diagWarnings;
     doc["diagP99Percent"] = std::clamp(settings.diagP99Percent, 110, 600);
